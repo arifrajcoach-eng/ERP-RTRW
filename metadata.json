@@ -1,0 +1,6 @@
+{
+  "name": "ERP RT/RW",
+  "description": "Aplikasi pengelolaan Warga RT/RW dengan integrasi Google Sheets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
