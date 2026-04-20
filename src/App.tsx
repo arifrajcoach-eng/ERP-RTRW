@@ -1,34 +1,147 @@
-import React, { useState } from 'react';
-import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, Search, Settings, Edit, Trash2, X, Download } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, Cell } from 'recharts';
+
+// --- INITIAL DUMMY DATA ---
+const INITIAL_WARGA_DATA = [
+  { nama: "Bpk. Ahmad Suhendar", nik: "3271012345670001", kk: "3271012345678881", rt: "01", rw: "05", blok: "A/01", status: "Warga Tetap", hp: "081234567890", posisi: "Ketua RT", profesi: "Guru", jk: "Laki-Laki", tglLahir: "1980-05-15", tglDaftar: "2024-01-10" },
+  { nama: "Ibu Siti Aminah", nik: "3271012345670002", kk: "3271012345678882", rt: "01", rw: "05", blok: "A/02", status: "Warga Tetap", hp: "081234567891", posisi: "Ibu Rumah Tangga", profesi: "Ibu Rumah Tangga", jk: "Perempuan", tglLahir: "1983-08-20", tglDaftar: "2024-01-12" },
+  { nama: "Bpk. Joko Anas", nik: "3271012345670003", kk: "3271012345678883", rt: "02", rw: "05", blok: "B/05", status: "Warga Tetap", hp: "081234567892", posisi: "Wiraswasta", profesi: "Pedagang", jk: "Laki-Laki", tglLahir: "1975-12-10", tglDaftar: "2024-01-15" },
+  { nama: "Sdr. Bayu Pratama", nik: "3271012345670004", kk: "3271012345678884", rt: "03", rw: "05", blok: "C/10", status: "Kontrak", hp: "081234567893", posisi: "Karyawan Swasta", profesi: "Programmer", jk: "Laki-Laki", tglLahir: "1998-03-25", tglDaftar: "2024-03-20" },
+  { nama: "Ibu Ratna Sari", nik: "3271012345670005", kk: "3271012345678883", rt: "02", rw: "05", blok: "B/05", status: "Warga Tetap", hp: "081234567894", posisi: "Istri", profesi: "Karyawan", jk: "Perempuan", tglLahir: "1978-02-14", tglDaftar: "2024-01-15" },
+  { nama: "Bpk. Bambang Pamungkas", nik: "3271012345670006", kk: "3271012345678886", rt: "04", rw: "05", blok: "D/12", status: "Warga Tetap", hp: "081234567895", posisi: "PNS", profesi: "ASN", jk: "Laki-Laki", tglLahir: "1970-07-07", tglDaftar: "2024-02-10" },
+  { nama: "Bpk. Agus Riyadi", nik: "3271012345670007", kk: "3271012345678887", rt: "01", rw: "05", blok: "A/15", status: "Warga Tetap", hp: "081234567896", posisi: "Buruh", profesi: "Buruh", jk: "Laki-Laki", tglLahir: "1985-11-30", tglDaftar: "2024-04-05" },
+  { nama: "Ibu Lilis Suriani", nik: "3271012345670008", kk: "3271012345678887", rt: "01", rw: "05", blok: "A/15", status: "Warga Tetap", hp: "081234567897", posisi: "Istri", profesi: "Desainer", jk: "Perempuan", tglLahir: "1988-04-12", tglDaftar: "2024-04-05" },
+];
+
+const INITIAL_KAS_DATA = [
+  { id: "TRX-001", tanggal: "20 Jan 2026", tipe: "Masuk", transaksi: "Kas Lingkungan", nama: "Warga", keterangan: "Saldo Awal Tahun", debit: 4500000, kredit: 0 },
+  { id: "TRX-002", tanggal: "05 Feb 2026", tipe: "Keluar", transaksi: "Biaya Listrik", nama: "PLN", keterangan: "Lampu Jalan & Pos", debit: 0, kredit: 250000 },
+  { id: "TRX-003", tanggal: "12 Feb 2026", tipe: "Masuk", transaksi: "Iuran Warga", nama: "RT 01", keterangan: "Iuran Sampah Kolektif Feb", debit: 1200000, kredit: 0 },
+  { id: "TRX-004", tanggal: "02 Mar 2026", tipe: "Keluar", transaksi: "Biaya Perbaikan", nama: "Toko Bangunan", keterangan: "Semen & Cat Pos Ronda", debit: 0, kredit: 450000 },
+  { id: "TRX-005", tanggal: "15 Mar 2026", tipe: "Masuk", transaksi: "Donasi", nama: "Bpk. Bambang", keterangan: "Sumbangan Acara Bukber", debit: 1000000, kredit: 0 },
+  { id: "TRX-006", tanggal: "02 Apr 2026", tipe: "Masuk", transaksi: "Iuran Warga", nama: "Bpk. Joko", keterangan: "Iuran Keamanan Apr", debit: 50000, kredit: 0 },
+  { id: "TRX-007", tanggal: "05 Apr 2026", tipe: "Keluar", transaksi: "Konsumsi", nama: "Warung Makan", keterangan: "Rapat Pengurus", debit: 0, kredit: 150000 },
+  { id: "TRX-008", tanggal: "10 Apr 2026", tipe: "Masuk", transaksi: "Iuran Warga", nama: "Ibu Siti", keterangan: "Iuran Kebersihan Apr", debit: 50000, kredit: 0 },
+  { id: "TRX-009", tanggal: "15 Apr 2026", tipe: "Keluar", transaksi: "Operasional", nama: "Kurir", keterangan: "Kirim Berkas RW", debit: 0, kredit: 25000 },
+  { id: "TRX-010", tanggal: "18 Apr 2026", tipe: "Masuk", transaksi: "Sumbangan", nama: "Hamba Allah", keterangan: "Kas Mesjid", debit: 500000, kredit: 0 },
+  { id: "TRX-011", tanggal: "19 Apr 2026", tipe: "Masuk", transaksi: "Iuran Warga", nama: "Bpk. Ahmad", keterangan: "Iuran Keamanan Apr", debit: 50000, kredit: 0 },
+  { id: "TRX-012", tanggal: "20 Apr 2026", tipe: "Keluar", transaksi: "Kebersihan", nama: "Petugas Sampah", keterangan: "Gaji Petugas Apr", debit: 0, kredit: 750000 },
+];
+
+const INITIAL_SURAT_DATA = [
+  { id: "SRT-1004", tanggal: "19 Apr 2026", pemohon: "Ibu Siti Aminah", jenis: "Surat Domisili", status: "Diajukan" },
+  { id: "SRT-1003", tanggal: "17 Apr 2026", pemohon: "Bpk. Ahmad Suhendar", jenis: "Pengantar Kelurahan", status: "Selesai" },
+  { id: "SRT-1002", tanggal: "16 Apr 2026", pemohon: "Sdr. Bayu Pratama", jenis: "Surat Keterangan Usaha", status: "Diajukan" },
+  { id: "SRT-1001", tanggal: "10 Apr 2026", pemohon: "Bpk. Joko Anas", jenis: "Surat Domisili", status: "Selesai" },
+];
+
+const INITIAL_IURAN_DATA = [
+  { id: "INV-2604-001", tanggal: "19 Apr 2026, 08:30", transaksi: "Iuran Keamanan", nama: "Bpk. Ahmad Suhendar", periode: "Apr 2026", nominal: 50000, status: "Lunas", keterangan: "-" },
+  { id: "INV-2604-002", tanggal: "18 Apr 2026, 14:15", transaksi: "Iuran Kebersihan", nama: "Ibu Siti Aminah", periode: "Apr 2026", nominal: 50000, status: "Pending", keterangan: "Janji bayar akhir bulan" },
+  { id: "INV-2604-003", tanggal: "02 Apr 2026, 09:10", transaksi: "Iuran Keamanan", nama: "Bpk. Joko Anas", periode: "Apr 2026", nominal: 50000, status: "Lunas", keterangan: "-" },
+];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{name: string, role: string} | null>(() => {
+    const saved = localStorage.getItem('rw26_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleLogin = (user: {name: string, role: string}) => {
+    setCurrentUser(user);
+    localStorage.setItem('rw26_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('rw26_user');
+    setActiveTab('dashboard');
+  };
+
+  // --- CENTRAL STATE WITH LOCALSTORAGE PERSISTENCE ---
+  const [wargaData, setWargaData] = useState(() => {
+    const saved = localStorage.getItem('rw26_wargaData');
+    return saved ? JSON.parse(saved) : INITIAL_WARGA_DATA;
+  });
+
+  const [kasData, setKasData] = useState(() => {
+    const saved = localStorage.getItem('rw26_kasData');
+    return saved ? JSON.parse(saved) : INITIAL_KAS_DATA;
+  });
+
+  const [suratData, setSuratData] = useState(() => {
+    const saved = localStorage.getItem('rw26_suratData');
+    return saved ? JSON.parse(saved) : INITIAL_SURAT_DATA;
+  });
+
+  const [iuranData, setIuranData] = useState(() => {
+    const saved = localStorage.getItem('rw26_iuranData');
+    return saved ? JSON.parse(saved) : INITIAL_IURAN_DATA;
+  });
+
+  // Effect to sync data to localStorage
+  useEffect(() => { localStorage.setItem('rw26_wargaData', JSON.stringify(wargaData)); }, [wargaData]);
+  useEffect(() => { localStorage.setItem('rw26_kasData', JSON.stringify(kasData)); }, [kasData]);
+  useEffect(() => { localStorage.setItem('rw26_suratData', JSON.stringify(suratData)); }, [suratData]);
+  useEffect(() => { localStorage.setItem('rw26_iuranData', JSON.stringify(iuranData)); }, [iuranData]);
+
+  if (!currentUser) {
+    return <LoginView onLogin={handleLogin} />;
+  }
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans print:h-auto print:bg-white text-sm">
+    <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans print:h-auto print:bg-white text-sm relative">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col print:hidden">
-        <div className="p-6 border-b border-slate-100 flex-shrink-0">
-          <h1 className="text-xl font-bold tracking-tight text-blue-600 flex items-center gap-2">
-            <Users className="w-6 h-6" />
-            RT-Digital
-          </h1>
-          <p className="text-xs text-slate-400 font-medium mt-1">Management System v1.0</p>
+      <aside className={`fixed md:relative z-50 md:z-auto w-64 bg-white border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-blue-600 flex items-center gap-2">
+              <Users className="w-6 h-6" />
+              RW 26 BERJUANG
+            </h1>
+            <p className="text-xs text-slate-400 font-medium mt-1">Smart System by Nexapps - Arifraj</p>
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-1 text-slate-400 hover:text-slate-600 md:hidden"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <nav className="flex-1 px-4 space-y-1 mt-4">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
-            { id: 'iuran', label: 'Iuran Bulanan', icon: CreditCard },
+            { id: 'transaksi', label: 'Transaksi', icon: CreditCard },
             { id: 'surat', label: 'Surat Pengantar', icon: FileText },
             { id: 'kas', label: 'Laporan Kas', icon: BookOpen },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
-          ].map((item) => (
+          ].filter(item => {
+            if (currentUser?.role === 'Viewer' && item.id === 'pengaturan') return false;
+            if (currentUser?.role === 'Operator' && item.id === 'pengaturan') return false;
+            return true;
+          }).map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                setIsSidebarOpen(false); // Close sidebar on mobile after selection
+              }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
                 activeTab === item.id
                   ? 'bg-slate-100 text-slate-800 font-semibold'
@@ -49,11 +162,17 @@ export default function App() {
       </aside>
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible">
+      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 print:hidden">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 print:hidden">
           <div className="flex items-center space-x-3">
-             <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded border border-slate-200 uppercase font-mono tracking-wider">
+             <button 
+               onClick={() => setIsSidebarOpen(true)}
+               className="p-2 -ml-2 text-slate-500 hover:text-slate-700 md:hidden"
+             >
+               <Menu className="w-6 h-6" />
+             </button>
+             <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded border border-slate-200 uppercase font-mono tracking-wider hidden sm:inline-block">
                GAS-DB-V4
              </span>
              <h2 className="text-sm font-semibold text-slate-500 capitalize">{activeTab.replace('-', ' ')}</h2>
@@ -62,23 +181,30 @@ export default function App() {
 
              <div className="flex items-center space-x-3 pl-4 border-l border-slate-200">
                <div className="text-right hidden sm:block">
-                 <p className="text-sm font-bold leading-none text-slate-800">Bpk. Bambang</p>
-                 <p className="text-xs text-slate-400 mt-1">Ketua RT</p>
+                 <p className="text-sm font-bold leading-none text-slate-800">{currentUser.name}</p>
+                 <span className="text-[10px] uppercase font-bold text-blue-600 mt-1 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block">{currentUser.role}</span>
                </div>
-               <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-sm font-bold border border-slate-300">
-                 B
+               <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-100 border border-blue-400">
+                 {currentUser.name.charAt(0)}
                </div>
+               <button 
+                 onClick={handleLogout}
+                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all ml-2"
+                 title="Keluar"
+               >
+                 <LogOut className="w-5 h-5" />
+               </button>
              </div>
           </div>
         </header>
 
         {/* Content Area */}
         <div className="p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
-          {activeTab === 'dashboard' && <DashboardView />}
-          {activeTab === 'warga' && <WargaView />}
-          {activeTab === 'iuran' && <IuranView />}
-          {activeTab === 'surat' && <SuratView />}
-          {activeTab === 'kas' && <KasView />}
+          {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} />}
+          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} />}
+          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} userRole={currentUser.role} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} userRole={currentUser.role} />}
+          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} userRole={currentUser.role} />}
           {activeTab === 'pengaturan' && <PengaturanView />}
         </div>
       </main>
@@ -86,108 +212,382 @@ export default function App() {
   );
 }
 
-function DashboardView() {
+function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: { kasData: any[], wargaData: any[], suratData: any[], iuranData: any[], userRole: string }) {
+  const [kasPeriod, setKasPeriod] = useState('yearly');
+  const [piePeriod, setPiePeriod] = useState('30days');
+
+  const months = [
+    { id: 'Jan', label: 'Jan' }, { id: 'Feb', label: 'Feb' }, { id: 'Mar', label: 'Mar' },
+    { id: 'Apr', label: 'Apr' }, { id: 'Mei', label: 'Mei' }, { id: 'Jun', label: 'Jun' },
+    { id: 'Jul', label: 'Jul' }, { id: 'Agu', label: 'Agu' }, { id: 'Sep', label: 'Sep' },
+    { id: 'Okt', label: 'Okt' }, { id: 'Nov', label: 'Nov' }, { id: 'Des', label: 'Des' }
+  ];
+
+  // Helper formatting
+  const formatRupiah = (angka: number) => {
+    return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(angka);
+  };
+
+  // Stats calculation
+  const totalWarga = wargaData.length;
+  const kepalaKeluarga = wargaData.filter(w => w.posisi === 'Ketua RT' || w.posisi === 'Suami' || w.posisi === 'Kepala Keluarga').length;
+  const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
+  const suratPending = suratData.filter(s => s.status === 'Diajukan').length;
+  
+  // Arus Kas Setahun Data
+  const dataYearly = months.map(m => {
+    const trxInMonth = kasData.filter(trx => trx.tanggal.includes(m.id));
+    return {
+      name: m.id,
+      masuk: trxInMonth.reduce((acc, curr) => acc + curr.debit, 0),
+      keluar: trxInMonth.reduce((acc, curr) => acc + curr.kredit, 0)
+    };
+  });
+
+  // Simplified monthly detail for 30 days chart
+  const data30Days = [
+    { name: '1-6', masuk: 1200000, keluar: 800000 },
+    { name: '7-12', masuk: 2100000, keluar: 450000 },
+    { name: '13-18', masuk: 1500000, keluar: 1200000 },
+    { name: '19-24', masuk: 2800000, keluar: 900000 },
+    { name: '25-30', masuk: 1950000, keluar: 540000 },
+  ];
+
+  // Frequency Stats for Activity Bar Chart
+  const getActData = (period: string) => {
+    const filteredIuran = period === 'yearly' ? iuranData : iuranData.filter(i => i.tanggal.includes('Apr'));
+    const filteredSurat = period === 'yearly' ? suratData : suratData.filter(s => s.tanggal.includes('Apr'));
+    const filteredKas = period === 'yearly' ? kasData : kasData.filter(k => k.tanggal.includes('Apr'));
+
+    return [
+      { name: 'Iuran Masuk', value: filteredIuran.length * 10 },
+      { name: 'Surat Pengantar', value: filteredSurat.length * 8 },
+      { name: 'Pengeluaran Kas', value: filteredKas.filter(k => k.tipe === 'Keluar').length * 12 },
+      { name: 'Data Warga', value: wargaData.length * 2 },
+    ];
+  };
+
+  const pieData30Days = getActData('30days');
+  const pieDataYearly = getActData('yearly');
+
+  // Merged Recent Activities
+  const recentActivities = [
+    ...kasData.map(k => ({ date: k.tanggal, title: k.transaksi, desc: `${k.nama}: ${k.keterangan}`, type: k.tipe === 'Masuk' ? 'in' : 'out', amount: k.debit || k.kredit })),
+    ...suratData.map(s => ({ date: s.tanggal, title: `Surat: ${s.jenis}`, desc: `Pemohon: ${s.pemohon}`, type: 'doc', status: s.status })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Warga</p>
           <p className="text-2xl font-black text-slate-800 flex items-baseline gap-2">
-            124 <span className="text-[11px] font-normal text-slate-400">Kepala Keluarga: 45</span>
+            {totalWarga} <span className="text-[11px] font-normal text-slate-400">Kepala Keluarga: {kepalaKeluarga}</span>
           </p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Saldo Kas</p>
           <p className="text-2xl font-black text-green-600 flex items-baseline gap-2">
-            Rp 4.500.000 <span className="text-[11px] font-normal text-slate-400">+ Rp 450.000 (bln ini)</span>
+            Rp {formatRupiah(saldoTotal)} <span className="text-[11px] font-normal text-slate-400">+ Sinkron Otomatis</span>
           </p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Surat Pending</p>
           <p className="text-2xl font-black text-orange-500 flex items-baseline gap-2">
-            3 <span className="text-[11px] font-normal text-slate-400">Pengajuan</span>
+            {suratPending} <span className="text-[11px] font-normal text-slate-400">Pengajuan</span>
           </p>
         </div>
       </div>
-      
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col">
+
+      {/* Grafik Keuangan Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative">
+          <div className="flex flex-col space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center">
+                <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+                Grafik Arus Kas ({kasPeriod === 'yearly' ? 'Januari - Desember' : `Bulan ${kasPeriod}`})
+              </h3>
+              <button 
+                onClick={() => setKasPeriod('yearly')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all border ${kasPeriod === 'yearly' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+              >
+                Setahun
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+              {months.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setKasPeriod(m.id)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+                    kasPeriod === m.id 
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' 
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={kasPeriod === 'yearly' ? dataYearly : data30Days}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorMasuk" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: number) => [`Rp ${new Intl.NumberFormat('id-ID').format(value)}`]}
+                />
+                <Area type="monotone" dataKey="masuk" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorMasuk)" name="Pemasukan" />
+                <Area type="monotone" dataKey="keluar" stroke="#ef4444" strokeWidth={3} fill="transparent" name="Pengeluaran" />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 'bold' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative">
+          <div className="flex flex-col space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center">
+                <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+                Statistik Aktivitas ({piePeriod === 'yearly' ? 'Januari - Desember' : `Bulan ${piePeriod}`})
+              </h3>
+              <button 
+                onClick={() => setPiePeriod('yearly')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all border ${piePeriod === 'yearly' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+              >
+                Setahun
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+              {months.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setPiePeriod(m.id)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+                    piePeriod === m.id 
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' 
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={piePeriod === 'yearly' ? pieDataYearly : pieData30Days}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                <XAxis type="number" hide />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fontSize: 10, fill: '#64748b', fontWeight: 600}}
+                  width={100}
+                />
+                <Tooltip 
+                  cursor={{fill: 'transparent'}}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar 
+                  dataKey="value" 
+                  radius={[0, 4, 4, 0]} 
+                  barSize={20}
+                  name="Jumlah"
+                >
+                  {(piePeriod === 'yearly' ? pieDataYearly : pieData30Days).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#ef4444', '#f59e0b'][index % 4]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Aktivitas Terbaru Section */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
           Aktivitas Terbaru
         </h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-            <div>
-              <p className="font-semibold text-sm text-slate-800">Pembayaran Iuran - Bpk. Ahmad (Blok A1)</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Iuran Keamanan & Kebersihan (Agustus)</p>
+          {recentActivities.map((act: any, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${
+                  act.type === 'in' ? 'bg-green-50 text-green-600' : 
+                  act.type === 'out' ? 'bg-red-50 text-red-600' : 
+                  act.type === 'doc' ? 'bg-blue-50 text-blue-600' :
+                  'bg-slate-100 text-slate-600'
+                }`}>
+                  {act.type === 'in' ? <PlusCircle className="w-4 h-4" /> : 
+                   act.type === 'out' ? <MinusCircle className="w-4 h-4" /> : 
+                   act.type === 'doc' ? <FileText className="w-4 h-4" /> :
+                   <Users className="w-4 h-4" />}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800">{act.title}</p>
+                  <p className="text-[10px] text-slate-400">{act.desc}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-xs font-bold ${
+                  act.type === 'in' ? 'text-green-600' : 
+                  act.type === 'out' ? 'text-red-600' : 
+                  'text-slate-600'
+                }`}>
+                  {act.amount ? `Rp ${formatRupiah(act.amount)}` : (act.status || 'Aktif')}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{act.date}</p>
+              </div>
             </div>
-            <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-100">+ Rp 50.000</span>
-          </div>
-          <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-            <div>
-              <p className="font-semibold text-sm text-slate-800">Pengajuan Surat Domisili</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Ibu Siti Aminah (Blok C3)</p>
-            </div>
-            <span className="px-2 py-1 bg-orange-50 text-orange-600 border border-orange-100 text-[10px] font-bold rounded uppercase tracking-wider">Pending</span>
-          </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function WargaView() {
+function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], setWargaData: any, userRole: string }) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingWarga, setEditingWarga] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRT, setFilterRT] = useState("Semua");
   const [filterRW, setFilterRW] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const itemsPerPage = 8; // Tampilkan 8 data per halaman agar rapi
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const wargaData = [
-    { nama: "Bpk. Ahmad Suhendar", posisi: "Suami", nik: "3271012345678001", kk: "1012012345678001", rt: "01", rw: "05", blok: "Blok A / 01", status: "Warga Tetap", hp: "081234567001" },
-    { nama: "Ibu Siti Aminah", posisi: "Istri", nik: "3271012345678002", kk: "1012012345678001", rt: "01", rw: "05", blok: "Blok A / 01", status: "Warga Tetap", hp: "081234567002" },
-    { nama: "Bpk. Budi Santoso", posisi: "Suami", nik: "3271012345678003", kk: "1012012345678002", rt: "01", rw: "05", blok: "Blok A / 02", status: "Warga Tetap", hp: "081234567003" },
-    { nama: "Ananda Budi Junior", posisi: "Anak", nik: "3271012345678004", kk: "1012012345678002", rt: "01", rw: "05", blok: "Blok A / 02", status: "Warga Tetap", hp: "-" },
-    { nama: "Bpk. Candra Wijaya", posisi: "Suami", nik: "3271012345678005", kk: "1012012345678003", rt: "01", rw: "05", blok: "Blok A / 03", status: "Kontrak", hp: "081234567005" },
-    { nama: "Ibu Rina Marlina", posisi: "Istri", nik: "3271012345678006", kk: "1012012345678003", rt: "01", rw: "05", blok: "Blok A / 03", status: "Kontrak", hp: "081234567006" },
-    { nama: "Bpk. Dedi Kurniawan", posisi: "Suami", nik: "3271012345678007", kk: "1012012345678004", rt: "01", rw: "05", blok: "Blok A / 04", status: "Warga Tetap", hp: "081234567007" },
-    { nama: "Bpk. Eko Prasetyo", posisi: "Suami", nik: "3271012345678008", kk: "1012012345678005", rt: "01", rw: "05", blok: "Blok A / 05", status: "Kos", hp: "081234567008" },
-    { nama: "Bpk. Fajar Ramadhan", posisi: "Suami", nik: "3271012345678009", kk: "1012012345678006", rt: "01", rw: "05", blok: "Blok B / 01", status: "Warga Tetap", hp: "081234567009" },
-    { nama: "Ibu Eka Fitriani", posisi: "Istri", nik: "3271012345678010", kk: "1012012345678006", rt: "01", rw: "05", blok: "Blok B / 01", status: "Warga Tetap", hp: "081234567010" },
-    { nama: "Bpk. Gilang Pratama", posisi: "Suami", nik: "3271012345678011", kk: "1012012345678007", rt: "01", rw: "05", blok: "Blok B / 02", status: "Warga Tetap", hp: "081234567011" },
-    { nama: "Bpk. Hadi Saputra", posisi: "Suami", nik: "3271012345678012", kk: "1012012345678008", rt: "01", rw: "05", blok: "Blok B / 03", status: "Warga Tetap", hp: "081234567012" },
-    { nama: "Ibu Hani Mulyani", posisi: "Istri", nik: "3271012345678013", kk: "1012012345678008", rt: "01", rw: "05", blok: "Blok B / 03", status: "Warga Tetap", hp: "081234567013" },
-    { nama: "Bpk. Iwan Setiawan", posisi: "Suami", nik: "3271012345678014", kk: "1012012345678009", rt: "01", rw: "05", blok: "Blok B / 04", status: "Kontrak", hp: "081234567014" },
-    { nama: "Bpk. Joko Susilo", posisi: "Suami", nik: "3271012345678015", kk: "1012012345678010", rt: "01", rw: "05", blok: "Blok B / 05", status: "Kos", hp: "081234567015" },
-    { nama: "Bpk. Kemal Mustafa", posisi: "Suami", nik: "3271012345678016", kk: "1012012345678011", rt: "02", rw: "05", blok: "Blok C / 01", status: "Warga Tetap", hp: "081234567016" },
-    { nama: "Ibu Kiki Amalia", posisi: "Istri", nik: "3271012345678017", kk: "1012012345678011", rt: "02", rw: "05", blok: "Blok C / 01", status: "Warga Tetap", hp: "081234567017" },
-    { nama: "Ananda Kemal Junior", posisi: "Anak", nik: "3271012345678018", kk: "1012012345678011", rt: "02", rw: "05", blok: "Blok C / 01", status: "Warga Tetap", hp: "-" },
-    { nama: "Bpk. Lukman Hakim", posisi: "Suami", nik: "3271012345678019", kk: "1012012345678012", rt: "02", rw: "05", blok: "Blok C / 02", status: "Warga Tetap", hp: "081234567019" },
-    { nama: "Bpk. Mahmudin", posisi: "Suami", nik: "3271012345678020", kk: "1012012345678013", rt: "02", rw: "05", blok: "Blok C / 03", status: "Warga Tetap", hp: "081234567020" },
-    { nama: "Ibu Maya Safitri", posisi: "Istri", nik: "3271012345678021", kk: "1012012345678013", rt: "02", rw: "05", blok: "Blok C / 03", status: "Warga Tetap", hp: "081234567021" },
-    { nama: "Bpk. Nano Supriatna", posisi: "Suami", nik: "3271012345678022", kk: "1012012345678014", rt: "02", rw: "05", blok: "Blok C / 04", status: "Kontrak", hp: "081234567022" },
-    { nama: "Bpk. Oki Lukman", posisi: "Suami", nik: "3271012345678023", kk: "1012012345678015", rt: "02", rw: "05", blok: "Blok C / 05", status: "Kos", hp: "081234567023" },
-    { nama: "Bpk. Putu Bagita", posisi: "Suami", nik: "3271012345678024", kk: "1012012345678016", rt: "02", rw: "05", blok: "Blok D / 01", status: "Warga Tetap", hp: "081234567024" },
-    { nama: "Bpk. Qusyairi", posisi: "Suami", nik: "3271012345678025", kk: "1012012345678017", rt: "02", rw: "05", blok: "Blok D / 02", status: "Warga Tetap", hp: "081234567025" },
-    { nama: "Ibu Putri Rahmawati", posisi: "Istri", nik: "3271012345678026", kk: "1012012345678017", rt: "02", rw: "05", blok: "Blok D / 02", status: "Warga Tetap", hp: "081234567026" },
-    { nama: "Bpk. Rahmat Hidayat", posisi: "Suami", nik: "3271012345678027", kk: "1012012345678018", rt: "02", rw: "05", blok: "Blok D / 03", status: "Kontrak", hp: "081234567027" },
-    { nama: "Bpk. Surya Dharma", posisi: "Suami", nik: "3271012345678028", kk: "1012012345678019", rt: "02", rw: "05", blok: "Blok D / 04", status: "Warga Tetap", hp: "081234567028" },
-    { nama: "Bpk. Tito Karnavian", posisi: "Suami", nik: "3271012345678029", kk: "1012012345678020", rt: "02", rw: "05", blok: "Blok D / 05", status: "Warga Tetap", hp: "081234567029" },
-    { nama: "Ibu Rini Yulianti", posisi: "Istri", nik: "3271012345678030", kk: "1012012345678020", rt: "02", rw: "05", blok: "Blok D / 05", status: "Warga Tetap", hp: "081234567030" },
-    { nama: "Bpk. Umar Wirahadikusumah", posisi: "Suami", nik: "3271012345678031", kk: "1012012345678021", rt: "03", rw: "05", blok: "Blok E / 01", status: "Warga Tetap", hp: "081234567031" },
-    { nama: "Bpk. Vian Mahardika", posisi: "Suami", nik: "3271012345678032", kk: "1012012345678022", rt: "03", rw: "05", blok: "Blok E / 02", status: "Warga Tetap", hp: "081234567032" },
-    { nama: "Bpk. Wahyu Hidayat", posisi: "Suami", nik: "3271012345678033", kk: "1012012345678023", rt: "03", rw: "05", blok: "Blok E / 03", status: "Kontrak", hp: "081234567033" },
-    { nama: "Ibu Sari Indah", posisi: "Istri", nik: "3271012345678034", kk: "1012012345678023", rt: "03", rw: "05", blok: "Blok E / 03", status: "Kontrak", hp: "081234567034" },
-    { nama: "Bpk. Xaverius", posisi: "Suami", nik: "3271012345678035", kk: "1012012345678024", rt: "03", rw: "05", blok: "Blok E / 04", status: "Warga Tetap", hp: "081234567035" },
-    { nama: "Bpk. Yusuf Mansur", posisi: "Suami", nik: "3271012345678036", kk: "1012012345678025", rt: "03", rw: "05", blok: "Blok E / 05", status: "Kos", hp: "081234567036" },
-    { nama: "Bpk. Zainal Abidin", posisi: "Suami", nik: "3271012345678037", kk: "1012012345678026", rt: "03", rw: "05", blok: "Blok F / 01", status: "Warga Tetap", hp: "081234567037" },
-    { nama: "Bpk. Andi Syahputra", posisi: "Suami", nik: "3271012345678038", kk: "1012012345678027", rt: "03", rw: "05", blok: "Blok F / 02", status: "Warga Tetap", hp: "081234567038" },
-    { nama: "Ibu Tari Larasati", posisi: "Istri", nik: "3271012345678039", kk: "1012012345678027", rt: "03", rw: "05", blok: "Blok F / 02", status: "Warga Tetap", hp: "081234567039" },
-    { nama: "Bpk. Bagus Triyono", posisi: "Suami", nik: "3271012345678040", kk: "1012012345678028", rt: "03", rw: "05", blok: "Blok F / 03", status: "Warga Tetap", hp: "081234567040" },
-    { nama: "Bpk. Chaerul Tanjung", posisi: "Suami", nik: "3271012345678041", kk: "1012012345678029", rt: "03", rw: "05", blok: "Blok F / 04", status: "Kontrak", hp: "081234567041" },
-    { nama: "Bpk. Darmansyah", posisi: "Suami", nik: "3271012345678042", kk: "1012012345678030", rt: "03", rw: "05", blok: "Blok F / 05", status: "Warga Tetap", hp: "081234567042" }
-  ];
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        processImportedData(data);
+      };
+      reader.readAsBinaryString(file);
+    } else {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          processImportedData(results.data);
+        },
+        error: (error) => {
+          console.error("CSV Merge Error:", error);
+          alert("Gagal mengimpor data. Pastikan format CSV benar.");
+        }
+      });
+    }
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const processImportedData = (data: any[]) => {
+    const newData = data.map((row: any) => ({
+      nama: row['Nama Lengkap'] || row['nama'] || "",
+      nik: row['NIK'] || row['nik'] || "",
+      kk: row['No. KK'] || row['no_kk'] || row['kk'] || "",
+      rt: row['RT'] || row['rt'] || "01",
+      rw: row['RW'] || row['rw'] || "05",
+      blok: row['Alamat'] || row['alamat'] || row['blok'] || "",
+      status: row['Status Warga'] || row['status'] || "Warga Tetap",
+      hp: row['No. HP'] || row['hp'] || "",
+      posisi: row['Posisi dalam Keluarga'] || row['posisi'] || "",
+      profesi: row['Profesi'] || row['profesi'] || "",
+      jk: row['Jenis Kelamin'] || row['jk'] || "Laki-Laki",
+      tglLahir: row['Tanggal Lahir'] || row['tgl_lahir'] || "",
+      tempatLahir: row['Tempat Lahir'] || row['tempat_lahir'] || "",
+      kawin: row['Status Kawin'] || row['kawin'] || "Belum Kawin",
+      kewarganegaraan: row['Kewarganegaraan'] || row['kewarganegaraan'] || "WNI",
+      tglDaftar: new Date().toISOString().split('T')[0]
+    }));
+
+    if (newData.length > 0) {
+      setWargaData((prev: any) => [...prev, ...newData]);
+      alert(`Berhasil mengimpor ${newData.length} data warga.`);
+    } else {
+      alert("Tidak ada data valid yang ditemukan.");
+    }
+  };
+
+  // Form State for Adding/Editing
+  const [formData, setFormData] = useState({
+    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setWargaData((prev: any) => [...prev, { ...formData, tglDaftar: new Date().toISOString().split('T')[0] }]);
+    setShowAddForm(false);
+    resetForm();
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setWargaData((prev: any) => prev.map((w: any) => w.nik === editingWarga.nik ? formData : w));
+    setShowEditForm(false);
+    setEditingWarga(null);
+    resetForm();
+  };
+
+  const handleDeleteWarga = (nik: string) => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus data warga ini?")) {
+      setWargaData((prev: any) => prev.filter((w: any) => w.nik !== nik));
+    }
+  };
+
+  const startEdit = (warga: any) => {
+    setEditingWarga(warga);
+    setFormData(warga);
+    setShowEditForm(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+    });
+  };
 
   // Membuat daftar opsi statis untuk RT (20) dan RW (50)
   const uniqueRTs = ["Semua", ...Array.from({ length: 20 }, (_, i) => String(i + 1).padStart(2, '0'))];
@@ -211,15 +611,15 @@ function WargaView() {
   });
 
   const handleExportExcel = () => {
-    const headers = ['Nama Lengkap', 'Posisi', 'NIK', 'No. KK', 'RT/RW', 'Blok/No', 'Status Warga', 'No. HP'];
+    const headers = ['Nama Lengkap', 'Posisi dalam Keluarga', 'Profesi', 'NIK', 'No. KK', 'RT/RW', 'Alamat', 'Status Warga', 'No. HP'];
     const rows = filteredWargaData.map(w => 
-      [w.nama, w.posisi, `'${w.nik}`, `'${w.kk}`, `${w.rt}/${w.rw}`, w.blok, w.status, `'${w.hp}`].join(',')
+      [w.nama, w.posisi, w.profesi, `'${w.nik}`, `'${w.kk}`, `${w.rt}/${w.rw}`, w.blok, w.status, `'${w.hp}`].join(',')
     );
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Data_Warga_RT.csv");
+    link.setAttribute("download", "Data_Warga_RW26.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -230,20 +630,21 @@ function WargaView() {
     
     // Konfigurasi Judul PDF
     doc.setFontSize(16);
-    doc.text("DATA WARGA RT", 14, 15);
+    doc.text("DATA WARGA RW 26 BERJUANG", 14, 15);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
     // Konfigurasi Tabel Data Warga
-    const tableColumn = ["Nama Lengkap", "Posisi", "NIK", "No. KK", "RT/RW", "Blok/No", "Status", "No. HP"];
+    const tableColumn = ["Nama Lengkap", "Posisi dalam Keluarga", "Profesi", "NIK", "No. KK", "RT/RW", "Alamat", "Status", "No. HP"];
     const tableRows = [];
 
     filteredWargaData.forEach(warga => {
       const rowData = [
         warga.nama,
         warga.posisi,
+        warga.profesi,
         warga.nik,
         warga.kk,
         `${warga.rt}/${warga.rw}`,
@@ -266,7 +667,7 @@ function WargaView() {
     });
 
     // Simpan dokumen PDF
-    doc.save(`Data_Warga_RT_${new Date().getTime()}.pdf`);
+    doc.save(`Data_Warga_RW26_${new Date().getTime()}.pdf`);
   };
 
   // Reset page when filter changes
@@ -337,18 +738,36 @@ function WargaView() {
             <Download className="w-3.5 h-3.5 text-green-600" />
             Excel
           </button>
-          <button 
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            Tambah
-          </button>
+          {userRole !== 'Viewer' && (
+            <>
+              <button 
+                onClick={() => fileInputRef.current?.click()} 
+                className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5 text-blue-500" />
+                Upload
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImportFile} 
+                accept=".csv, .xlsx, .xls" 
+                className="hidden" 
+              />
+              <button 
+                onClick={() => { resetForm(); setShowAddForm(true); }}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                Tambah
+              </button>
+            </>
+          )}
         </div>
       </div>
       {/* Header Khusus Print */}
       <div className="hidden print:block p-4 mb-4 text-center border-b-2 border-slate-800">
-        <h2 className="text-xl font-bold text-slate-900">DATA WARGA RT</h2>
+        <h2 className="text-xl font-bold text-slate-900">DATA WARGA RW 26 BERJUANG</h2>
         <p className="text-sm text-slate-600">Dicetak pada: {new Date().toLocaleDateString('id-ID')}</p>
       </div>
       <div className="overflow-x-auto print:overflow-visible">
@@ -356,11 +775,12 @@ function WargaView() {
           <thead className="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-wider print:bg-white print:text-slate-800 print:border-b-2 print:border-slate-800">
             <tr>
               <th className="px-6 py-3 print:px-2">Nama Lengkap</th>
-              <th className="px-6 py-3 print:px-2">Posisi</th>
+              <th className="px-6 py-3 print:px-2">Posisi dalam Keluarga</th>
+              <th className="px-6 py-3 print:px-2">Profesi</th>
               <th className="px-6 py-3 print:px-2">NIK</th>
               <th className="px-6 py-3 print:px-2">No. KK</th>
               <th className="px-6 py-3 print:px-2 text-center">RT/RW</th>
-              <th className="px-6 py-3 print:px-2">Blok/No</th>
+              <th className="px-6 py-3 print:px-2">Alamat</th>
               <th className="px-6 py-3 text-center print:px-2">Status</th>
               <th className="px-6 py-3 print:px-2">No. HP</th>
               <th className="px-6 py-3 text-right print:hidden">Aksi</th>
@@ -374,6 +794,7 @@ function WargaView() {
               <tr key={idx} className={`${isVisible ? '' : 'hidden print:table-row'} hover:bg-slate-50 transition-colors print:break-inside-avoid`}>
                 <td className="px-6 py-3 font-semibold text-slate-800 print:px-2">{warga.nama}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 font-medium print:px-2">{warga.posisi}</td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.profesi}</td>
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.nik}</td>
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.kk}</td>
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black text-center">{warga.rt}/{warga.rw}</td>
@@ -384,16 +805,26 @@ function WargaView() {
                   </span>
                 </td>
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.hp}</td>
-                <td className="px-6 py-3 text-right print:hidden">
-                  <div className="flex items-center justify-end gap-2">
-                    <button className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors" title="Edit">
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    <button className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors" title="Hapus">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </td>
+                {userRole !== 'Viewer' && (
+                  <td className="px-6 py-3 text-right print:hidden">
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => startEdit(warga)}
+                        className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors" title="Edit"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      {userRole === 'Admin' && (
+                        <button 
+                          onClick={() => handleDeleteWarga(warga.nik)}
+                          className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors" title="Hapus"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
               );
             }) : (
@@ -426,64 +857,67 @@ function WargaView() {
         </div>
       </div>
 
-      {/* Modal Tambah Warga */}
-      {showAddForm && (
+      {/* Modal Tambah/Edit Warga */}
+      {(showAddForm || showEditForm) && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800">Tambah Data Warga</h3>
-              <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
+              <h3 className="text-sm font-bold text-slate-800">{showAddForm ? 'Tambah Data Warga' : 'Edit Data Warga'}</h3>
+              <button onClick={() => { setShowAddForm(false); setShowEditForm(false); resetForm(); }} className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form className="p-4 space-y-4" onSubmit={(e) => { e.preventDefault(); setShowAddForm(false); alert("Sinyal siap dikemas untuk POST /TAMBAH_WARGA ke App Script!"); }}>
+            <form className="p-4 space-y-4 overflow-y-auto" onSubmit={showAddForm ? handleAddSubmit : handleEditSubmit}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">NIK</label>
-                  <input required type="number" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit NIK" />
+                  <input required name="nik" value={formData.nik} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit NIK" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">No. KK</label>
-                  <input required type="number" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit KK" />
+                  <input required name="kk" value={formData.kk} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit KK" />
                 </div>
               </div>
               
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Lengkap</label>
-                <input required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Sesuai KTP" />
+                <input required name="nama" value={formData.nama} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Sesuai KTP" />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Profesi</label>
+                <input required name="profesi" value={formData.profesi} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Pekerjaan saat ini" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Tempat Lahir</label>
-                  <input required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Cth: Jakarta" />
+                  <input required name="tempatLahir" value={formData.tempatLahir} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Cth: Jakarta" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Tanggal Lahir</label>
-                  <input required type="date" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
+                  <input required name="tglLahir" value={formData.tglLahir} onChange={handleInputChange} type="date" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Jenis Kelamin</label>
-                  <select required defaultValue="" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
-                    <option value="" disabled>Pilih...</option>
+                  <select required name="jk" value={formData.jk} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
                     <option value="Laki-Laki">Laki-Laki</option>
                     <option value="Perempuan">Perempuan</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Kewarga<span className="hidden sm:inline">negaraan</span></label>
-                  <select required defaultValue="WNI" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Kewarganegaraan</label>
+                  <select required name="kewarganegaraan" value={(formData as any).kewarganegaraan} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
                     <option value="WNI">WNI</option>
                     <option value="WNA">WNA</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Status Kawin</label>
-                  <select required defaultValue="" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
-                    <option value="" disabled>Pilih...</option>
+                  <select required name="kawin" value={formData.kawin} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
                     <option value="Belum Kawin">Belum Kawin</option>
                     <option value="Kawin">Kawin</option>
                     <option value="Cerai Hidup">Cerai Hidup</option>
@@ -495,17 +929,23 @@ function WargaView() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Posisi dalam Keluarga</label>
-                  <select required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                    <option value="" disabled selected>Pilih posisi...</option>
+                  <select required name="posisi" value={formData.posisi} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                    <option value="" disabled>Pilih posisi...</option>
+                    <option value="Ketua RT">Ketua RT</option>
                     <option value="Suami">Suami (Kepala Keluarga)</option>
                     <option value="Istri">Istri</option>
                     <option value="Anak">Anak</option>
                     <option value="Famili Lain">Famili Lain</option>
+                    <option value="Wiraswasta">Wiraswasta</option>
+                    <option value="Karyawan Swasta">Karyawan Swasta</option>
+                    <option value="PNS">PNS</option>
+                    <option value="Buruh">Buruh</option>
+                    <option value="Ibu Rumah Tangga">Ibu Rumah Tangga</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Status Warga</label>
-                  <select required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                  <select required name="status" value={formData.status} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
                     <option value="Warga Tetap">Warga Tetap</option>
                     <option value="Kontrak">Kontrak</option>
                     <option value="Kos">Kos</option>
@@ -516,7 +956,7 @@ function WargaView() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">RT</label>
-                  <select required defaultValue="01" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono cursor-pointer">
+                  <select required name="rt" value={formData.rt} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono cursor-pointer">
                     {Array.from({ length: 20 }, (_, i) => String(i + 1).padStart(2, '0')).map(rt => (
                       <option key={`add-rt-${rt}`} value={rt}>{rt}</option>
                     ))}
@@ -524,7 +964,7 @@ function WargaView() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">RW</label>
-                  <select required defaultValue="05" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono cursor-pointer">
+                  <select required name="rw" value={formData.rw} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono cursor-pointer">
                     {Array.from({ length: 50 }, (_, i) => String(i + 1).padStart(2, '0')).map(rw => (
                       <option key={`add-rw-${rw}`} value={rw}>{rw}</option>
                     ))}
@@ -534,26 +974,21 @@ function WargaView() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">No. Handphone (WA)</label>
-                  <input required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="08..." />
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">No. HP (WA)</label>
+                  <input required name="hp" value={formData.hp} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="08..." />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Email</label>
-                  <input type="email" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="nama@email.com" />
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat</label>
+                  <input required name="blok" value={formData.blok} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="A/01" />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat (Blok / No)</label>
-                <input required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Blok A / 01" />
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
+                <button type="button" onClick={() => { setShowAddForm(false); setShowEditForm(false); resetForm(); }} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                   Batal
                 </button>
                 <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                  Simpan Data
+                  {showAddForm ? 'Simpan Data' : 'Simpan Perubahan'}
                 </button>
               </div>
             </form>
@@ -564,32 +999,55 @@ function WargaView() {
   );
 }
 
-function IuranView() {
+function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, userRole: string }) {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [iuranData, setIuranData] = useState([
-    { id: "INV-2604-001", tanggal: "19 Apr 2026, 08:30", transaksi: "Iuran Keamanan", nama: "Bpk. Ahmad Suhendar", periode: "Apr 2026", nominal: 50000, status: "Lunas", keterangan: "-" },
-    { id: "INV-2604-002", tanggal: "18 Apr 2026, 14:15", transaksi: "Iuran Kebersihan", nama: "Ibu Siti Aminah", periode: "Apr 2026", nominal: 50000, status: "Pending", keterangan: "Janji bayar akhir bulan" }
-  ]);
+  const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const handleAddPayment = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const dateObj = new Date();
-    const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
+    const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    const formattedDateTime = formattedDate + ', ' + dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
     
+    const nominalRaw = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
+    const transaksi = formData.get('transaksi') as string;
+    const nama = formData.get('nama') as string;
+    const keterangan = formData.get('keterangan') as string || "-";
+    const status = formData.get('status') as string;
+    const periode = formData.get('periode') as string;
+
+    // 1. Update Transaksi Data (Dulu hanya Iuran, sekarang semua)
     const newPayment = {
       id: `INV-${dateObj.getFullYear().toString().slice(-2)}${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${String(iuranData.length + 1).padStart(3, '0')}`,
-      tanggal: formattedDate,
-      transaksi: formData.get('transaksi') as string,
-      nama: formData.get('nama') as string,
-      periode: formData.get('periode') as string,
-      nominal: parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0"),
-      status: formData.get('status') as string,
-      keterangan: formData.get('keterangan') as string || "-"
+      tanggal: formattedDateTime,
+      transaksi: transaksi,
+      nama: nama,
+      tipe: trxType === 'Masuk' ? 'Debit' : 'Kredit',
+      periode: periode,
+      nominal: nominalRaw,
+      status: status,
+      keterangan: keterangan
     };
-
     setIuranData([newPayment, ...iuranData]);
+
+    // 2. Update General Kas Ledger
+    const newKasEntry = {
+      id: `TRX-${String(kasData.length + 1).padStart(3, '0')}`,
+      tanggal: formattedDate,
+      tipe: trxType,
+      transaksi: transaksi,
+      nama: nama,
+      keterangan: keterangan,
+      debit: trxType === 'Masuk' ? nominalRaw : 0,
+      kredit: trxType === 'Keluar' ? nominalRaw : 0
+    };
+    setKasData([newKasEntry, ...kasData]);
+
     setShowAddForm(false);
+    setTrxType('Masuk');
   };
 
   const formatRupiah = (angka: number) => {
@@ -597,15 +1055,15 @@ function IuranView() {
   };
 
   const handleExportExcelIuran = () => {
-    const headers = ['ID Bayar', 'Tanggal Waktu', 'Transaksi', 'Nama Warga', 'Periode', 'Nominal', 'Status', 'Keterangan'];
+    const headers = ['ID Bayar', 'Tanggal Waktu', 'Transaksi', 'Nama', 'Debit/ Kredit', 'Nominal', 'Status', 'Keterangan'];
     const rows = iuranData.map(trx => 
-      [trx.id, `"${trx.tanggal}"`, trx.transaksi, trx.nama, trx.periode, trx.nominal, trx.status, `"${trx.keterangan}"`].join(',')
+      [trx.id, `"${trx.tanggal}"`, trx.transaksi, trx.nama, trx.tipe || (trx.periode ? 'Debit' : '-'), trx.nominal, trx.status, `"${trx.keterangan}"`].join(',')
     );
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Laporan_Iuran_Warga.csv");
+    link.setAttribute("download", "Laporan_Catatan_Transaksi.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -615,13 +1073,13 @@ function IuranView() {
     const doc = new jsPDF();
     
     doc.setFontSize(16);
-    doc.text("LAPORAN IURAN WARGA", 14, 15);
+    doc.text("LAPORAN CATATAN TRANSAKSI", 14, 15);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
-    const tableColumn = ["ID Bayar", "Tanggal", "Transaksi", "Nama Warga", "Periode", "Nominal", "Status"];
+    const tableColumn = ["ID Bayar", "Tanggal", "Transaksi", "Nama", "Debit/ Kredit", "Nominal", "Status"];
     const tableRows: any[] = [];
 
     iuranData.forEach(trx => {
@@ -630,7 +1088,7 @@ function IuranView() {
         trx.tanggal.split(',')[0],
         trx.transaksi,
         trx.nama,
-        trx.periode,
+        trx.tipe || (trx.periode ? 'Debit' : '-'),
         formatRupiah(trx.nominal),
         trx.status
       ]);
@@ -646,7 +1104,7 @@ function IuranView() {
       alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
-    doc.save(`Laporan_Iuran_${new Date().getTime()}.pdf`);
+    doc.save(`Laporan_Transaksi_${new Date().getTime()}.pdf`);
   };
 
   return (
@@ -654,19 +1112,23 @@ function IuranView() {
       <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
         <h3 className="text-sm font-bold text-slate-800 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-          Pencatatan Iuran Warga
+          Catatan Transaksi
         </h3>
         <div className="flex gap-2">
-          <button onClick={handleExportExcelIuran} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-            <Download className="w-3.5 h-3.5 text-green-600" /> Excel
-          </button>
-          <button onClick={handleExportPDFIuran} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-            <FileText className="w-3.5 h-3.5 text-red-500" /> PDF
-          </button>
-          <button onClick={() => setShowAddForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ml-2">
-            <PlusCircle className="w-3.5 h-3.5" />
-            Catat Pembayaran
-          </button>
+          {userRole !== 'Viewer' && (
+            <>
+              <button onClick={handleExportExcelIuran} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                <Download className="w-3.5 h-3.5 text-green-600" /> Excel
+              </button>
+              <button onClick={handleExportPDFIuran} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                <FileText className="w-3.5 h-3.5 text-red-500" /> PDF
+              </button>
+              <button onClick={() => setShowAddForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ml-2">
+                <PlusCircle className="w-3.5 h-3.5" />
+                Catat
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -676,8 +1138,8 @@ function IuranView() {
               <th className="px-6 py-3">ID Bayar</th>
               <th className="px-6 py-3">Tanggal Waktu</th>
               <th className="px-6 py-3">Transaksi</th>
-              <th className="px-6 py-3">Nama Warga</th>
-              <th className="px-6 py-3">Periode</th>
+              <th className="px-6 py-3">Nama</th>
+              <th className="px-6 py-3">Debit/ Kredit</th>
               <th className="px-6 py-3 text-right">Nominal</th>
               <th className="px-6 py-3">Status</th>
               <th className="px-6 py-3">Keterangan</th>
@@ -690,7 +1152,11 @@ function IuranView() {
                 <td className="px-6 py-3 text-xs">{trx.tanggal}</td>
                 <td className="px-6 py-3 text-xs font-semibold">{trx.transaksi}</td>
                 <td className="px-6 py-3 font-semibold text-slate-800">{trx.nama}</td>
-                <td className="px-6 py-3 text-xs font-medium">{trx.periode}</td>
+                <td className="px-6 py-3 text-xs font-medium">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${trx.tipe === 'Kredit' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+                   {trx.tipe || (trx.periode ? 'Debit' : '-')}
+                  </span>
+                </td>
                 <td className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-700">{formatRupiah(trx.nominal)}</td>
                 <td className="px-6 py-3">
                    <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${trx.status === 'Lunas' ? 'border-green-200 bg-green-50 text-green-700' : 'border-orange-200 bg-orange-50 text-orange-700'}`}>
@@ -711,7 +1177,7 @@ function IuranView() {
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-blue-600" />
-                Catat Pembayaran Iuran
+                Catat
               </h3>
               <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
                 <X className="w-4 h-4" />
@@ -719,31 +1185,67 @@ function IuranView() {
             </div>
             
             <form onSubmit={handleAddPayment} className="p-5 overflow-y-auto space-y-4">
+              {/* Tipe Transaksi Selector */}
+              <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                <button 
+                  type="button"
+                  onClick={() => setTrxType('Masuk')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Masuk' ? 'bg-green-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+                >
+                  Pemasukan
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setTrxType('Keluar')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Keluar' ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+                >
+                  Pengeluaran
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Jenis Transaksi</label>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                    {trxType === 'Masuk' ? 'Jenis Pemasukan' : 'Jenis Pengeluaran'}
+                  </label>
                   <select name="transaksi" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
-                    <option value="Iuran Keamanan">Iuran Keamanan</option>
-                    <option value="Iuran Kebersihan">Iuran Kebersihan (Sampah)</option>
-                    <option value="Kas / Kas RW">Kas / Kas RW</option>
-                    <option value="Sumbangan Sosial">Sumbangan Sosial / Kematian</option>
-                    <option value="Lainnya">Lainnya...</option>
+                    {trxType === 'Masuk' ? (
+                      <>
+                        <option value="Iuran Keamanan">Iuran Keamanan</option>
+                        <option value="Iuran Kebersihan">Iuran Kebersihan (Sampah)</option>
+                        <option value="Kas / Kas RW">Kas / Kas RW</option>
+                        <option value="Donasi / Sumbangan">Donasi / Sumbangan</option>
+                        <option value="Lainnya">Lainnya...</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Biaya Kebersihan">Gaji / Honor Petugas</option>
+                        <option value="Biaya Listrik">Listrik & Air Pos</option>
+                        <option value="Perbaikan Inventaris">Perbaikan / Maintenance</option>
+                        <option value="Konsumsi Rapat">Konsumsi & Snack</option>
+                        <option value="Operasional Kantor">ATK & Administrasi</option>
+                        <option value="Dana Sosial">Bantuan Sosial</option>
+                        <option value="Lain-lain">Lain-lain...</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Warga / Penyetor</label>
-                  <input name="nama" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder="Cth: Bpk. Bambang" />
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                    {trxType === 'Masuk' ? 'Nama Penyetor' : 'Nama Penerima / Vendor'}
+                  </label>
+                  <input name="nama" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder={trxType === 'Masuk' ? 'Nama' : 'Toko / Nama Orang'} />
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Periode Bulan</label>
-                  <select name="periode" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
+                  <select name="periode" required defaultValue="Apr 2026" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
                     <option value="Jan 2026">Jan 2026</option>
                     <option value="Feb 2026">Feb 2026</option>
                     <option value="Mar 2026">Mar 2026</option>
-                    <option value="Apr 2026" selected>Apr 2026</option>
+                    <option value="Apr 2026">Apr 2026</option>
                     <option value="Mei 2026">Mei 2026</option>
                     <option value="Jun 2026">Jun 2026</option>
                   </select>
@@ -768,11 +1270,11 @@ function IuranView() {
               </div>
 
               <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <button type="button" onClick={() => { setShowAddForm(false); setTrxType('Masuk'); }} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                   Batal
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                  Simpan Iuran
+                <button type="submit" className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-all ${trxType === 'Masuk' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                  Simpan {trxType}
                 </button>
               </div>
             </form>
@@ -783,20 +1285,15 @@ function IuranView() {
   );
 }
 
-function SuratView() {
+function SuratView({ suratData, setSuratData, userRole }: { suratData: any[], setSuratData: any, userRole: string }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
-  const [suratData, setSuratData] = useState([
-    { id: "SRT-1004", tanggal: "19 Apr 2026", pemohon: "Ibu Siti Aminah", jenis: "Surat Domisili", status: "Diajukan" },
-    { id: "SRT-1003", tanggal: "17 Apr 2026", pemohon: "Bpk. Ahmad Suhendar", jenis: "Pengantar Kelurahan", status: "Selesai" },
-    { id: "SRT-1002", tanggal: "16 Apr 2026", pemohon: "Sdr. Bayu Pratama", jenis: "Surat Keterangan Usaha", status: "Diajukan" }
-  ]);
 
   const handleSetujui = (id: string) => {
-    setSuratData(prev => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
+    setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
   };
 
   const handleTolak = (id: string) => {
-    setSuratData(prev => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
+    setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
   };
 
   const handleCetak = (id: string) => {
@@ -934,10 +1431,12 @@ function SuratView() {
               Semua Tuntas
             </span>
           )}
-          <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-            <PlusCircle className="w-3.5 h-3.5" />
-            Buat Surat
-          </button>
+          {userRole !== 'Viewer' && (
+            <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+              <PlusCircle className="w-3.5 h-3.5" />
+              Buat Surat
+            </button>
+          )}
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -969,19 +1468,23 @@ function SuratView() {
                   </span>
                 </td>
                 <td className="px-6 py-3 text-right flex justify-end gap-2">
-                  {surat.status === 'Diajukan' ? (
+                  {userRole !== 'Viewer' && (
                     <>
-                      <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-bold text-green-700 hover:bg-green-100 transition-colors cursor-pointer bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1">
-                        Setujui
-                      </button>
-                      <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-bold text-red-700 hover:bg-red-100 transition-colors cursor-pointer bg-red-50 px-3 py-1.5 rounded border border-red-200 flex items-center gap-1">
-                        Tolak
-                      </button>
+                      {surat.status === 'Diajukan' ? (
+                        <>
+                          <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-bold text-green-700 hover:bg-green-100 transition-colors cursor-pointer bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1">
+                            Setujui
+                          </button>
+                          <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-bold text-red-700 hover:bg-red-100 transition-colors cursor-pointer bg-red-50 px-3 py-1.5 rounded border border-red-200 flex items-center gap-1">
+                            Tolak
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => handleCetak(surat.id)} disabled={surat.status === 'Ditolak'} className={`text-[10px] font-bold flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${surat.status === 'Selesai' ? 'text-slate-700 bg-white border-slate-300 hover:bg-slate-50 cursor-pointer' : 'text-slate-400 bg-transparent border-transparent cursor-not-allowed hidden'}`}>
+                          Cetak Surat
+                        </button>
+                      )}
                     </>
-                  ) : (
-                    <button onClick={() => handleCetak(surat.id)} disabled={surat.status === 'Ditolak'} className={`text-[10px] font-bold flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${surat.status === 'Selesai' ? 'text-slate-700 bg-white border-slate-300 hover:bg-slate-50 cursor-pointer' : 'text-slate-400 bg-transparent border-transparent cursor-not-allowed hidden'}`}>
-                      Cetak Surat
-                    </button>
                   )}
                 </td>
               </tr>
@@ -1038,12 +1541,17 @@ function SuratView() {
   );
 }
 
-function KasView() {
+function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, userRole: string }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
-  const [kasData, setKasData] = useState([
-    { id: "TRX-002", tanggal: "19 Apr 2026", tipe: "Masuk", transaksi: "Iuran Warga", nama: "Kel. Bpk. Agus", keterangan: "Pembayaran Iuran NIK 3271..01", debit: 50000, kredit: 0 },
-    { id: "TRX-001", tanggal: "15 Apr 2026", tipe: "Keluar", transaksi: "Biaya Operasional", nama: "Pengurus RT", keterangan: "Biaya Kebersihan Lingkungan RT", debit: 0, kredit: 750000 }
-  ]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  
+  const months = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+
+  const years = [2024, 2025, 2026, 2027];
 
   const handleAddPemasukan = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1068,6 +1576,23 @@ function KasView() {
     };
 
     setKasData([newTrx, ...kasData]);
+
+    // Sync with IuranData if applicable
+    if (tipe === 'Masuk' && (formData.get('transaksi') === 'Iuran Warga')) {
+      const formattedDateTime = formattedDate + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
+      const newIuran = {
+        id: `INV-${dateObj.getFullYear().toString().slice(-2)}${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${String(iuranData.length + 1).padStart(3, '0')}`,
+        tanggal: formattedDateTime,
+        transaksi: formData.get('transaksi') as string,
+        nama: formData.get('nama') as string,
+        periode: "Umum", // Default since it's from Kas view
+        nominal: nominal,
+        status: "Lunas",
+        keterangan: formData.get('keterangan') as string || "-"
+      };
+      setIuranData([newIuran, ...iuranData]);
+    }
+
     setShowMasukForm(false);
   };
 
@@ -1075,27 +1600,37 @@ function KasView() {
     return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(angka);
   };
 
-  // Saldo awal bayangan sebelum inputan TRX
-  let runningBalance = 5200000; 
-  const processedData = [...kasData].reverse().map(trx => {
-     runningBalance = runningBalance + trx.debit - trx.kredit;
-     return { ...trx, saldoAkhir: runningBalance };
+  // Processing data with balance calculation
+  let balance = 0;
+  const allProcessedData = [...kasData].sort((a, b) => {
+    const dateA = new Date(a.tanggal);
+    const dateB = new Date(b.tanggal);
+    return dateA.getTime() - dateB.getTime();
+  }).map(trx => {
+    balance = balance + trx.debit - trx.kredit;
+    return { ...trx, saldoAkhir: balance };
+  });
+
+  // Filter based on selected month and year
+  const filteredData = allProcessedData.filter(trx => {
+    const date = new Date(trx.tanggal);
+    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
   }).reverse();
 
-  const totalPemasukan = 5200000 + kasData.reduce((sum, trx) => sum + trx.debit, 0);
-  const totalPengeluaran = kasData.reduce((sum, trx) => sum + trx.kredit, 0);
-  const saldoAkhir = totalPemasukan - totalPengeluaran;
+  const totalPemasukan = filteredData.reduce((sum, trx) => sum + trx.debit, 0);
+  const totalPengeluaran = filteredData.reduce((sum, trx) => sum + trx.kredit, 0);
+  const saldoTotal = allProcessedData.length > 0 ? allProcessedData[allProcessedData.length - 1].saldoAkhir : 0;
 
   const handleExportExcelKas = () => {
     const headers = ['ID Transaksi', 'Tanggal', 'Tipe', 'Kategori Transaksi', 'Nama', 'Keterangan', 'Debit (Masuk)', 'Kredit (Keluar)', 'Saldo Akhir'];
-    const rows = processedData.map(trx => 
+    const rows = filteredData.map(trx => 
       [trx.id, trx.tanggal, trx.tipe, `"${trx.transaksi || ''}"`, `"${trx.nama || ''}"`, `"${trx.keterangan || ''}"`, trx.debit, trx.kredit, trx.saldoAkhir].join(',')
     );
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Laporan_Buku_Kas.csv");
+    link.setAttribute("download", `Laporan_Kas_${months[selectedMonth]}_${selectedYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1105,7 +1640,7 @@ function KasView() {
     const doc = new jsPDF();
     
     doc.setFontSize(16);
-    doc.text("LAPORAN BUKU KAS", 14, 15);
+    doc.text(`LAPORAN KAS - ${months[selectedMonth].toUpperCase()} ${selectedYear}`, 14, 15);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -1114,7 +1649,7 @@ function KasView() {
     const tableColumn = ["ID Transaksi", "Tanggal", "Tipe", "Kategori", "Nama", "Keterangan", "Debit", "Kredit", "Saldo"];
     const tableRows: any[] = [];
 
-    processedData.forEach(trx => {
+    filteredData.forEach(trx => {
       tableRows.push([
         trx.id,
         trx.tanggal,
@@ -1138,24 +1673,59 @@ function KasView() {
       alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
-    doc.save(`Laporan_Buku_Kas_${new Date().getTime()}.pdf`);
+    doc.save(`Laporan_Kas_${months[selectedMonth]}_${selectedYear}.pdf`);
   };
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Pemasukan</p>
-          <p className="text-2xl font-black text-green-600">Rp {formatRupiah(totalPemasukan)}</p>
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-xl shadow-lg shadow-green-100 flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><PlusCircle className="w-16 h-16 text-white" /></div>
+          <p className="text-[11px] text-green-50 font-bold uppercase tracking-wider mb-1 relative z-10">Pemasukan Bulan Ini</p>
+          <p className="text-2xl font-black text-white relative z-10">Rp {formatRupiah(totalPemasukan)}</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Pengeluaran</p>
-          <p className="text-2xl font-black text-red-500">Rp {formatRupiah(totalPengeluaran)}</p>
+        <div className="bg-gradient-to-br from-red-500 to-rose-600 p-4 rounded-xl shadow-lg shadow-red-100 flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><MinusCircle className="w-16 h-16 text-white" /></div>
+          <p className="text-[11px] text-red-50 font-bold uppercase tracking-wider mb-1 relative z-10">Pengeluaran Bulan Ini</p>
+          <p className="text-2xl font-black text-white relative z-10">Rp {formatRupiah(totalPengeluaran)}</p>
         </div>
-        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-sm flex flex-col justify-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-xl shadow-lg shadow-slate-200 flex flex-col justify-center relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10"><BookOpen className="w-16 h-16 text-white" /></div>
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1 relative z-10">Saldo Akhir</p>
-          <p className="text-2xl font-black text-white relative z-10">Rp {formatRupiah(saldoAkhir)}</p>
+          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1 relative z-10">Total Saldo Kas</p>
+          <p className="text-2xl font-black text-white relative z-10">Rp {formatRupiah(saldoTotal)}</p>
+        </div>
+      </div>
+
+      {/* Filter Bulan dan Tahun */}
+      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-slate-400" />
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Periode Laporan:</span>
+        </div>
+        <div className="flex gap-2">
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+          >
+            {months.map((month, idx) => (
+              <option key={month} value={idx}>{month}</option>
+            ))}
+          </select>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+          >
+            {years.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase italic">
+            Menampilkan {filteredData.length} transaksi di bulan {months[selectedMonth]}
+          </span>
         </div>
       </div>
 
@@ -1166,15 +1736,20 @@ function KasView() {
             Riwayat Transaksi
           </h3>
           <div className="flex gap-2">
-             <button onClick={handleExportExcelKas} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-              <Download className="w-3.5 h-3.5 text-green-600" /> Excel
-             </button>
-             <button onClick={handleExportPDFKas} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-              <FileText className="w-3.5 h-3.5 text-red-500" /> PDF
-             </button>
-             <button onClick={() => setShowMasukForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ml-2">
-              <PlusCircle className="w-3.5 h-3.5" /> Tambah
-             </button>
+            {userRole !== 'Viewer' && (
+              <>
+                <button onClick={handleExportExcelKas} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                  <Download className="w-3.5 h-3.5 text-green-600" /> Excel
+                </button>
+                <button onClick={handleExportPDFKas} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                  <FileText className="w-3.5 h-3.5 text-red-500" /> PDF
+                </button>
+                <button onClick={() => setShowMasukForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ml-2">
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Catat
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -1191,7 +1766,7 @@ function KasView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {processedData.map((trx) => (
+              {filteredData.length > 0 ? filteredData.map((trx) => (
                 <tr key={trx.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-3 text-slate-500 font-mono text-xs">{trx.id}</td>
                   <td className="px-6 py-3 text-xs">{trx.tanggal}</td>
@@ -1202,7 +1777,7 @@ function KasView() {
                   </td>
                   <td className="px-6 py-3 text-xs">
                     <div className="font-bold text-slate-800">{trx.transaksi}</div>
-                    <div className="text-slate-500 mt-0.5">{trx.nama && `${trx.nama} - `}{trx.keterangan}</div>
+                    <div className="text-slate-500 mt-0.5">{trx.nama && `${trx.nama} - ` }{trx.keterangan}</div>
                   </td>
                   <td className={`px-6 py-3 text-right font-mono text-xs ${trx.debit > 0 ? 'text-green-600' : 'text-slate-400'}`}>
                     {trx.debit > 0 ? formatRupiah(trx.debit) : '0'}
@@ -1214,7 +1789,14 @@ function KasView() {
                     {formatRupiah(trx.saldoAkhir)}
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                    <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-50">Tidak Ada Transaksi</p>
+                    <p className="text-[10px]">Silakan pilih periode lain atau tambahkan data baru.</p>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1226,8 +1808,8 @@ function KasView() {
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <PlusCircle className="w-4 h-4 text-green-600" />
-                Catatan Kas
+                <PlusCircle className="w-4 h-4 text-blue-600" />
+                Catat
               </h3>
               <button onClick={() => setShowMasukForm(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
                 <X className="w-4 h-4" />
@@ -1283,7 +1865,7 @@ function KasView() {
                   Batal
                 </button>
                 <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                  Simpan Catatan
+                  Simpan Transaksi
                 </button>
               </div>
             </form>
@@ -1319,7 +1901,7 @@ function PengaturanView() {
             </div>
             
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Ketua RT</label>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Ketua</label>
               <input type="text" defaultValue="Bpk. Bambang" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
             </div>
           </div>
@@ -1385,6 +1967,100 @@ function PengaturanView() {
                </tr>
              </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoginView({ onLogin }: { onLogin: (user: {name: string, role: string}) => void }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    setTimeout(() => {
+      if (username === 'admin' && password === 'admin') {
+        onLogin({ name: 'Bpk. Bambang', role: 'Admin' });
+      } else if (username === 'operator' && password === 'operator') {
+        onLogin({ name: 'Petugas RT', role: 'Operator' });
+      } else if (username === 'viewer' && password === 'viewer') {
+        onLogin({ name: 'Warga Umum', role: 'Viewer' });
+      } else {
+        setError('Username atau password tidak sesuai.');
+        setIsLoading(false);
+      }
+    }, 800);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md text-slate-900">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-200 mb-4 animate-[bounce_2s_infinite]">
+            <Users className="w-8 h-8" />
+          </div>
+          <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none">RW 26 BERJUANG</h1>
+          <p className="text-slate-500 font-medium mt-2 tracking-tight">Smart Management Information System</p>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
+          <div className="p-8">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary text-slate-900">Silakan Masuk</h2>
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+                <X className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 font-medium">{error}</p>
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Username</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                    placeholder="Masukkan username"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                    placeholder="Masukkan password"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+              >
+                {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
+              </button>
+            </form>
+          </div>
+          <div className="p-6 bg-slate-50 border-t border-slate-100 italic">
+            <p className="text-center text-[10px] text-slate-400">
+              Demo: admin / admin | operator / operator | viewer / viewer
+            </p>
+          </div>
         </div>
       </div>
     </div>
