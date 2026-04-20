@@ -278,7 +278,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
   const suratPending = suratData.filter(s => s.status === 'Diajukan').length;
 
   const calculateAge = (tglLahir: string) => {
-    if (!tglLahir) return 0;
+    if (!tglLahir) return -1;
     const birthDate = new Date(tglLahir);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -290,12 +290,23 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
   };
 
   const totalKK = new Set(wargaData.map(w => w.kk).filter(Boolean)).size || kepalaKeluarga;
-  const totalLansia = wargaData.filter(w => calculateAge(w.tglLahir) >= 60).length;
-  const totalBalita = wargaData.filter(w => calculateAge(w.tglLahir) <= 5).length;
-  const totalUsiaProduktif = wargaData.filter(w => {
+  const totalLansia = wargaData.filter(w => {
     const age = calculateAge(w.tglLahir);
-    return age >= 15 && age < 60;
+    return age >= 60;
   }).length;
+  const totalBalita = wargaData.filter(w => {
+    const age = calculateAge(w.tglLahir);
+    return age >= 0 && age <= 5;
+  }).length;
+  const totalRemaja = wargaData.filter(w => {
+    const age = calculateAge(w.tglLahir);
+    return age >= 6 && age <= 17;
+  }).length;
+  const totalDewasa = wargaData.filter(w => {
+    const age = calculateAge(w.tglLahir);
+    return age >= 18 && age < 60;
+  }).length;
+
   
   // Arus Kas Setahun Data
   const dataYearly = months.map(m => {
@@ -439,16 +450,20 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
               <p className="text-2xl font-black text-blue-600">{totalWarga}</p>
             </div>
             <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Lansia {'>'} 60 thn</p>
-              <p className="text-2xl font-black text-emerald-600">{totalLansia}</p>
-            </div>
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Balita {'<'} 5 thn</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Balita (0-5)</p>
               <p className="text-2xl font-black text-rose-500">{totalBalita}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center sm:col-span-2 md:col-span-1">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Usia Produktif</p>
-              <p className="text-2xl font-black text-indigo-600">{totalUsiaProduktif}</p>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Remaja (6-17)</p>
+              <p className="text-2xl font-black text-violet-500">{totalRemaja}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Dewasa (18-59)</p>
+              <p className="text-2xl font-black text-indigo-600">{totalDewasa}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Lansia ({'>'} 60)</p>
+              <p className="text-2xl font-black text-emerald-600">{totalLansia}</p>
             </div>
           </div>
         </div>
@@ -506,6 +521,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRT, setFilterRT] = useState("Semua");
   const [filterRW, setFilterRW] = useState("Semua");
+  const [filterKategoriUmur, setFilterKategoriUmur] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const itemsPerPage = 8; // Tampilkan 8 data per halaman agar rapi
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -662,6 +678,32 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
     const matchRT = filterRT === "Semua" || w.rt === filterRT;
     const matchRW = filterRW === "Semua" || w.rw === filterRW;
     
+    // Filter Kategori Umur
+    let matchUmur = true;
+    if (filterKategoriUmur !== "Semua") {
+      const calculateAge = (tglLahir: string) => {
+        if (!tglLahir) return -1;
+        const birthDate = new Date(tglLahir);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        return age;
+      };
+      
+      const age = calculateAge(w.tglLahir);
+      if (age !== -1) {
+        if (filterKategoriUmur === "Balita") matchUmur = age <= 5;
+        else if (filterKategoriUmur === "Remaja") matchUmur = age >= 6 && age <= 17;
+        else if (filterKategoriUmur === "Dewasa") matchUmur = age >= 18 && age < 60;
+        else if (filterKategoriUmur === "Lansia") matchUmur = age >= 60;
+      } else {
+        matchUmur = false; // Jika tgl_lahir kosong, abaikan dari filter umur kecuali "Semua"
+      }
+    }
+    
     // Fiter Pencarian
     const searchLower = searchQuery.toLowerCase();
     const matchSearch = searchQuery === "" || 
@@ -670,7 +712,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
       w.kk.includes(searchQuery) ||
       w.hp.includes(searchQuery);
 
-    return matchRT && matchRW && matchSearch;
+    return matchRT && matchRW && matchUmur && matchSearch;
   });
 
   const handleExportExcel = () => {
@@ -774,9 +816,9 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
             />
           </div>
           
-          {/* Filter Dropdowns & Actions */}
+            {/* Filter Dropdowns & Actions */}
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-slate-500 font-bold uppercase">Filter:</span>
               <select 
                 value={filterRW}
@@ -791,6 +833,17 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
                 className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
               >
                 {uniqueRTs.map(rt => <option key={`rt-${rt}`} value={rt}>RT {rt === 'Semua' ? 'Semua' : rt}</option>)}
+              </select>
+              <select 
+                value={filterKategoriUmur}
+                onChange={handleFilterChange(setFilterKategoriUmur)}
+                className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+              >
+                <option value="Semua">Semua Umur</option>
+                <option value="Balita">Balita (0-5)</option>
+                <option value="Remaja">Remaja (6-17)</option>
+                <option value="Dewasa">Dewasa (18-59)</option>
+                <option value="Lansia">Lansia ({'>'}= 60)</option>
               </select>
             </div>
 
@@ -1772,23 +1825,20 @@ function SuratView({ suratData, setSuratData, userRole, setIsLoadingDB }: { sura
                   </span>
                 </td>
                 <td className="px-6 py-3 text-right flex justify-end gap-2">
-                  {userRole !== 'Viewer' && (
+                  {userRole !== 'Viewer' && surat.status === 'Diajukan' && (
                     <>
-                      {surat.status === 'Diajukan' ? (
-                        <>
-                          <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-bold text-green-700 hover:bg-green-100 transition-colors cursor-pointer bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1">
-                            Setujui
-                          </button>
-                          <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-bold text-red-700 hover:bg-red-100 transition-colors cursor-pointer bg-red-50 px-3 py-1.5 rounded border border-red-200 flex items-center gap-1">
-                            Tolak
-                          </button>
-                        </>
-                      ) : (
-                        <button onClick={() => handleCetak(surat.id)} disabled={surat.status === 'Ditolak'} className={`text-[10px] font-bold flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${surat.status === 'Selesai' ? 'text-slate-700 bg-white border-slate-300 hover:bg-slate-50 cursor-pointer' : 'text-slate-400 bg-transparent border-transparent cursor-not-allowed hidden'}`}>
-                          Cetak Surat
-                        </button>
-                      )}
+                      <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-bold text-green-700 hover:bg-green-100 transition-colors cursor-pointer bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1">
+                        Setujui
+                      </button>
+                      <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-bold text-red-700 hover:bg-red-100 transition-colors cursor-pointer bg-red-50 px-3 py-1.5 rounded border border-red-200 flex items-center gap-1">
+                        Tolak
+                      </button>
                     </>
+                  )}
+                  {surat.status !== 'Diajukan' && (
+                    <button onClick={() => handleCetak(surat.id)} disabled={surat.status === 'Ditolak'} className={`text-[10px] font-bold flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${surat.status === 'Selesai' ? 'text-slate-700 bg-white border-slate-300 hover:bg-slate-50 cursor-pointer' : 'text-slate-400 bg-transparent border-transparent cursor-not-allowed hidden'}`}>
+                      Cetak Surat
+                    </button>
                   )}
                 </td>
               </tr>
