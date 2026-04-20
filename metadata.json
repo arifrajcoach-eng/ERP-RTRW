@@ -1,6 +1,6 @@
 {
-  "name": "ERP RT/RW",
-  "description": "Aplikasi pengelolaan Warga RT/RW dengan integrasi Google Sheets.",
+  "name": "Sistem Informasi RW 26",
+  "description": "Smart Management Information System untuk RW 26 dengan sistem login multi-role (Admin, Operator, Viewer).",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

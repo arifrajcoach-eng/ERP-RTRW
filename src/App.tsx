@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User } from 'lucide-react';
+import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, Cell } from 'recharts';
+import { supabase } from './supabaseClient';
 
 // --- INITIAL DUMMY DATA ---
 const INITIAL_WARGA_DATA = [
@@ -86,7 +87,47 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_IURAN_DATA;
   });
 
-  // Effect to sync data to localStorage
+  const [isLoadingDB, setIsLoadingDB] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  // --- SUPABASE SYNC ---
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setIsLoadingDB(true);
+      try {
+        const [
+          { data: warga, error: wargaErr },
+          { data: kas, error: kasErr },
+          { data: surat, error: suratErr },
+          { data: iuran, error: iuranErr }
+        ] = await Promise.all([
+          supabase.from('warga').select('*'),
+          supabase.from('kas').select('*'),
+          supabase.from('surat').select('*'),
+          supabase.from('iuran').select('*')
+        ]);
+
+        if (wargaErr || kasErr || suratErr || iuranErr) {
+          console.error("Supabase fetch error:", { wargaErr, kasErr, suratErr, iuranErr });
+          // Fallback to local storage if DB fails
+          return;
+        }
+
+        if (warga && warga.length > 0) setWargaData(warga);
+        if (kas && kas.length > 0) setKasData(kas);
+        if (surat && surat.length > 0) setSuratData(surat);
+        if (iuran && iuran.length > 0) setIuranData(iuran);
+      } catch (err) {
+        console.error("System error fetching from Supabase:", err);
+      } finally {
+        setIsLoadingDB(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+
+  // Effect to sync data to localStorage (keep as secondary backup)
   useEffect(() => { localStorage.setItem('rw26_wargaData', JSON.stringify(wargaData)); }, [wargaData]);
   useEffect(() => { localStorage.setItem('rw26_kasData', JSON.stringify(kasData)); }, [kasData]);
   useEffect(() => { localStorage.setItem('rw26_suratData', JSON.stringify(suratData)); }, [suratData]);
@@ -98,6 +139,14 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans print:h-auto print:bg-white text-sm relative">
+      {isLoadingDB && (
+        <div className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Sinkronisasi Database</h2>
+          <p className="text-slate-500 max-w-xs mx-auto">Mohon tunggu sebentar, sistem sedang memuat data dari Supabase...</p>
+        </div>
+      )}
+
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
@@ -107,23 +156,23 @@ export default function App() {
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed md:relative z-50 md:z-auto w-64 bg-white border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'}`}>
         <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-blue-600 flex items-center gap-2">
               <Users className="w-6 h-6" />
               RW 26 BERJUANG
             </h1>
-            <p className="text-xs text-slate-400 font-medium mt-1">Smart System by Nexapps - Arifraj</p>
+            <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Smart System by Nexapps</p>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(false)}
-            className="p-1 text-slate-400 hover:text-slate-600 md:hidden"
+            className="p-2 text-slate-400 hover:text-red-500 md:hidden bg-slate-50 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
-        <nav className="flex-1 px-4 space-y-1 mt-4">
+        <nav className="flex-1 px-4 space-y-2 mt-6">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
@@ -153,12 +202,6 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-slate-100 flex-shrink-0">
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-[10px] font-bold text-blue-700">BACKEND STATUS</p>
-            <p className="text-[11px] text-blue-600 truncate mt-0.5">Apps Script Connected</p>
-          </div>
-        </div>
       </aside>
 
       {/* Main Workspace */}
@@ -168,7 +211,7 @@ export default function App() {
           <div className="flex items-center space-x-3">
              <button 
                onClick={() => setIsSidebarOpen(true)}
-               className="p-2 -ml-2 text-slate-500 hover:text-slate-700 md:hidden"
+               className="p-2.5 -ml-2 text-slate-500 hover:text-blue-600 md:hidden bg-slate-50 rounded-xl transition-all active:scale-95 shadow-sm border border-slate-200/50"
              >
                <Menu className="w-6 h-6" />
              </button>
@@ -177,20 +220,20 @@ export default function App() {
              </span>
              <h2 className="text-sm font-semibold text-slate-500 capitalize">{activeTab.replace('-', ' ')}</h2>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
 
-             <div className="flex items-center space-x-3 pl-4 border-l border-slate-200">
-               <div className="text-right hidden sm:block">
+             <div className="flex items-center space-x-2 md:space-x-3 pl-4 border-l border-slate-200">
+               <div className="text-right hidden lg:block">
                  <p className="text-sm font-bold leading-none text-slate-800">{currentUser.name}</p>
                  <span className="text-[10px] uppercase font-bold text-blue-600 mt-1 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block">{currentUser.role}</span>
                </div>
-               <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-100 border border-blue-400">
+               <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-100 border border-blue-400">
                  {currentUser.name.charAt(0)}
                </div>
                <button 
-                 onClick={handleLogout}
-                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all ml-2"
-                 title="Keluar"
+                onClick={handleLogout}
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all ml-1 md:ml-2"
+                title="Keluar"
                >
                  <LogOut className="w-5 h-5" />
                </button>
@@ -199,12 +242,12 @@ export default function App() {
         </header>
 
         {/* Content Area */}
-        <div className="p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
+        <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} />}
-          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} />}
-          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} userRole={currentUser.role} />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} userRole={currentUser.role} />}
-          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} userRole={currentUser.role} />}
+          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
+          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
+          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
           {activeTab === 'pengaturan' && <PengaturanView />}
         </div>
       </main>
@@ -233,6 +276,26 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
   const kepalaKeluarga = wargaData.filter(w => w.posisi === 'Ketua RT' || w.posisi === 'Suami' || w.posisi === 'Kepala Keluarga').length;
   const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
   const suratPending = suratData.filter(s => s.status === 'Diajukan').length;
+
+  const calculateAge = (tglLahir: string) => {
+    if (!tglLahir) return 0;
+    const birthDate = new Date(tglLahir);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const totalKK = new Set(wargaData.map(w => w.kk).filter(Boolean)).size || kepalaKeluarga;
+  const totalLansia = wargaData.filter(w => calculateAge(w.tglLahir) >= 60).length;
+  const totalBalita = wargaData.filter(w => calculateAge(w.tglLahir) <= 5).length;
+  const totalUsiaProduktif = wargaData.filter(w => {
+    const age = calculateAge(w.tglLahir);
+    return age >= 15 && age < 60;
+  }).length;
   
   // Arus Kas Setahun Data
   const dataYearly = months.map(m => {
@@ -360,71 +423,36 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative">
-          <div className="flex flex-col space-y-4 mb-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center">
-                <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-                Statistik Aktivitas ({piePeriod === 'yearly' ? 'Januari - Desember' : `Bulan ${piePeriod}`})
-              </h3>
-              <button 
-                onClick={() => setPiePeriod('yearly')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all border ${piePeriod === 'yearly' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
-              >
-                Setahun
-              </button>
-            </div>
-            
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-              {months.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setPiePeriod(m.id)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
-                    piePeriod === m.id 
-                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' 
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col mb-6">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center">
+              <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+              Demografi Warga
+            </h3>
           </div>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={piePeriod === 'yearly' ? pieDataYearly : pieData30Days}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                <XAxis type="number" hide />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fontSize: 10, fill: '#64748b', fontWeight: 600}}
-                  width={100}
-                />
-                <Tooltip 
-                  cursor={{fill: 'transparent'}}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar 
-                  dataKey="value" 
-                  radius={[0, 4, 4, 0]} 
-                  barSize={20}
-                  name="Jumlah"
-                >
-                  {(piePeriod === 'yearly' ? pieDataYearly : pieData30Days).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#ef4444', '#f59e0b'][index % 4]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total KK</p>
+              <p className="text-2xl font-black text-blue-600">{totalKK}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Warga</p>
+              <p className="text-2xl font-black text-blue-600">{totalWarga}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Lansia {'>'} 60 thn</p>
+              <p className="text-2xl font-black text-emerald-600">{totalLansia}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Balita {'<'} 5 thn</p>
+              <p className="text-2xl font-black text-rose-500">{totalBalita}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center sm:col-span-2 md:col-span-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Usia Produktif</p>
+              <p className="text-2xl font-black text-indigo-600">{totalUsiaProduktif}</p>
+            </div>
           </div>
         </div>
+
       </div>
 
       {/* Aktivitas Terbaru Section */}
@@ -471,7 +499,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
   );
 }
 
-function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], setWargaData: any, userRole: string }) {
+function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { wargaData: any[], setWargaData: any, userRole: string, setIsLoadingDB: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
@@ -518,7 +546,7 @@ function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], se
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const processImportedData = (data: any[]) => {
+  const processImportedData = async (data: any[]) => {
     const newData = data.map((row: any) => ({
       nama: row['Nama Lengkap'] || row['nama'] || "",
       nik: row['NIK'] || row['nik'] || "",
@@ -539,6 +567,11 @@ function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], se
     }));
 
     if (newData.length > 0) {
+      const { error } = await supabase.from('warga').upsert(newData, { onConflict: 'nik' });
+      if (error) {
+        console.error("Supabase Import Error:", error);
+        alert("Gagal sinkronisasi data ke Supabase.");
+      }
       setWargaData((prev: any) => [...prev, ...newData]);
       alert(`Berhasil mengimpor ${newData.length} data warga.`);
     } else {
@@ -556,23 +589,53 @@ function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], se
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setWargaData((prev: any) => [...prev, { ...formData, tglDaftar: new Date().toISOString().split('T')[0] }]);
+    const newWarga = { ...formData, tglDaftar: new Date().toISOString().split('T')[0] };
+    
+    setIsLoadingDB(true);
+    const { error } = await supabase.from('warga').insert([newWarga]);
+    setIsLoadingDB(false);
+
+    if (error) {
+      alert("Gagal menyimpan ke Supabase: " + error.message);
+      return;
+    }
+
+    setWargaData((prev: any) => [...prev, newWarga]);
     setShowAddForm(false);
     resetForm();
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    setIsLoadingDB(true);
+    const { error } = await supabase.from('warga').update(formData).eq('nik', editingWarga.nik);
+    setIsLoadingDB(false);
+
+    if (error) {
+      alert("Gagal memperbarui di Supabase: " + error.message);
+      return;
+    }
+
     setWargaData((prev: any) => prev.map((w: any) => w.nik === editingWarga.nik ? formData : w));
     setShowEditForm(false);
     setEditingWarga(null);
     resetForm();
   };
 
-  const handleDeleteWarga = (nik: string) => {
+  const handleDeleteWarga = async (nik: string) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus data warga ini?")) {
+      setIsLoadingDB(true);
+      const { error } = await supabase.from('warga').delete().eq('nik', nik);
+      setIsLoadingDB(false);
+
+      if (error) {
+        alert("Gagal menghapus di Supabase: " + error.message);
+        return;
+      }
+
       setWargaData((prev: any) => prev.filter((w: any) => w.nik !== nik));
     }
   };
@@ -691,14 +754,14 @@ function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], se
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative print:border-none print:shadow-none print:overflow-visible">
-      <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white print:hidden">
+      <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:justify-between lg:items-center bg-white print:hidden gap-4">
         <h3 className="text-sm font-bold text-slate-800 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
           Daftar Warga
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {/* Kolom Pencarian */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
               <Search className="h-3.5 w-3.5 text-slate-400" />
             </div>
@@ -707,62 +770,67 @@ function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], se
               placeholder="Cari Nama/NIK/KK/HP..."
               value={searchQuery}
               onChange={handleFilterChange(setSearchQuery)}
-              className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-48 transition-all"
+              className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full sm:w-48 transition-all"
             />
           </div>
           
-          {/* Filter Dropdowns */}
-          <div className="flex items-center gap-1.5 mx-2">
-            <span className="text-xs text-slate-500 font-medium">Filter:</span>
-            <select 
-              value={filterRW}
-              onChange={handleFilterChange(setFilterRW)}
-              className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-            >
-              {uniqueRWs.map(rw => <option key={`rw-${rw}`} value={rw}>RW {rw === 'Semua' ? 'Semua' : rw}</option>)}
-            </select>
-            <select 
-              value={filterRT}
-              onChange={handleFilterChange(setFilterRT)}
-              className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-            >
-              {uniqueRTs.map(rt => <option key={`rt-${rt}`} value={rt}>RT {rt === 'Semua' ? 'Semua' : rt}</option>)}
-            </select>
-          </div>
+          {/* Filter Dropdowns & Actions */}
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-slate-500 font-bold uppercase">Filter:</span>
+              <select 
+                value={filterRW}
+                onChange={handleFilterChange(setFilterRW)}
+                className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+              >
+                {uniqueRWs.map(rw => <option key={`rw-${rw}`} value={rw}>RW {rw === 'Semua' ? 'Semua' : rw}</option>)}
+              </select>
+              <select 
+                value={filterRT}
+                onChange={handleFilterChange(setFilterRT)}
+                className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+              >
+                {uniqueRTs.map(rt => <option key={`rt-${rt}`} value={rt}>RT {rt === 'Semua' ? 'Semua' : rt}</option>)}
+              </select>
+            </div>
 
-          <button onClick={handleExportPDF} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-            <Download className="w-3.5 h-3.5 text-red-500" />
-            PDF
-          </button>
-          <button onClick={handleExportExcel} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-            <Download className="w-3.5 h-3.5 text-green-600" />
-            Excel
-          </button>
-          {userRole !== 'Viewer' && (
-            <>
-              <button 
-                onClick={() => fileInputRef.current?.click()} 
-                className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-              >
-                <Upload className="w-3.5 h-3.5 text-blue-500" />
-                Upload
+            <div className="flex items-center gap-2 ml-auto">
+              <button onClick={handleExportPDF} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm" title="Download PDF">
+                <Download className="w-3.5 h-3.5 text-red-500" />
+                <span className="hidden xl:inline">PDF</span>
               </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImportFile} 
-                accept=".csv, .xlsx, .xls" 
-                className="hidden" 
-              />
-              <button 
-                onClick={() => { resetForm(); setShowAddForm(true); }}
-                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                Tambah
+              <button onClick={handleExportExcel} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm" title="Download Excel">
+                <Download className="w-3.5 h-3.5 text-green-600" />
+                <span className="hidden xl:inline">Excel</span>
               </button>
-            </>
-          )}
+              {userRole !== 'Viewer' && (
+                <>
+                  <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                    title="Upload Data"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="hidden xl:inline">Upload</span>
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleImportFile} 
+                    accept=".csv, .xlsx, .xls" 
+                    className="hidden" 
+                  />
+                  <button 
+                    onClick={() => { resetForm(); setShowAddForm(true); }}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Tambah</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
       {/* Header Khusus Print */}
@@ -999,13 +1067,175 @@ function WargaView({ wargaData, setWargaData, userRole }: { wargaData: any[], se
   );
 }
 
-function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, userRole: string }) {
+function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, setIsLoadingDB }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, userRole: string, setIsLoadingDB: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTrx, setEditingTrx] = useState<any>(null);
   const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddPayment = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleDeleteTransaction = async (id: string) => {
+    if (!id) return;
+    if (!window.confirm("Apakah Anda yakin ingin menghapus catatan transaksi ini? Ini akan menghapus data secara permanen dari database.")) return;
+
+    setIsLoadingDB(true);
+    const { error } = await supabase.from('iuran').delete().eq('id', id);
+    setIsLoadingDB(false);
+
+    if (error) {
+      console.warn("Peringatan: Gagal menghapus dari Supabase (mungkin masalah RLS/Sesi), tapi akan dihapus dari tampilan lokal.", error);
+    }
+
+    setIuranData((prev: any[]) => prev.filter(t => t.id !== id));
+    alert("Data berhasil dihapus dari sistem.");
+  };
+
+  const handlePrintKwitansi = (trx: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <html>
+        <head>
+          <title>Kwitansi Pembayaran - RW 26</title>
+          <style>
+            body { font-family: 'Courier New', Courier, monospace; padding: 20px; line-height: 1.5; color: #333; max-width: 600px; margin: 0 auto; }
+            .border { border: 2px dashed #ccc; padding: 30px; position: relative; }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+            .title { font-size: 24px; font-weight: bold; margin: 0; }
+            .receipt-no { position: absolute; top: 10px; right: 10px; font-size: 12px; }
+            .content { margin-bottom: 30px; }
+            .row { display: flex; margin-bottom: 10px; border-bottom: 1px dotted #ccc; }
+            .label { width: 150px; font-weight: bold; }
+            .value { flex: 1; }
+            .amount { font-size: 24px; font-weight: bold; background: #f0f0f0; padding: 10px; display: inline-block; margin-top: 20px; }
+            .footer { display: flex; justify-content: space-between; margin-top: 40px; }
+            .signature { text-align: center; width: 200px; }
+            .signature-box { height: 60px; margin-top: 10px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="border">
+            <div class="receipt-no">No: ${trx.id}</div>
+            <div class="header">
+              <h1 class="title">KWITANSI PEMBAYARAN</h1>
+              <p>RUKUN WARGA 26 BERJUANG</p>
+            </div>
+            
+            <div class="content">
+              <div class="row"><div class="label">Telah Terima Dari</div><div class="value">: ${trx.nama}</div></div>
+              <div class="row"><div class="label">Untuk Pembayaran</div><div class="value">: ${trx.transaksi}</div></div>
+              <div class="row"><div class="label">Periode</div><div class="value">: ${trx.periode}</div></div>
+              <div class="row"><div class="label">Keterangan</div><div class="value">: ${trx.keterangan || '-'}</div></div>
+              <div class="row"><div class="label">Tanggal</div><div class="value">: ${trx.tanggal}</div></div>
+              
+              <div class="amount">Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(trx.nominal)},-</div>
+            </div>
+
+            <div class="footer">
+              <div class="signature">
+                <p>Penyetor</p>
+                <div class="signature-box"></div>
+                <p>( ${trx.nama} )</p>
+              </div>
+              <div class="signature">
+                <p>Penerima / Bendahara</p>
+                <div class="signature-box"></div>
+                <p>( ..................... )</p>
+              </div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handleEditTransaction = (trx: any) => {
+    setEditingTrx(trx);
+    setTrxType(trx.tipe === 'Kredit' ? 'Keluar' : 'Masuk');
+    setShowAddForm(true);
+  };
+
+  const handleImportFileIuran = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        processImportedIuranData(data);
+      };
+      reader.readAsBinaryString(file);
+    } else {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          processImportedIuranData(results.data);
+        },
+        error: (error) => {
+          console.error("CSV Merge Error:", error);
+          alert("Gagal mengimpor data. Pastikan format CSV benar.");
+        }
+      });
+    }
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const processImportedIuranData = async (data: any[]) => {
+    const dateObj = new Date();
+    const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    const formattedDateTime = formattedDate + ', ' + dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
+
+    const newData = data.map((row: any, idx: number) => ({
+      id: row['ID Bayar'] || row['id'] || `INV-IMP-${Date.now()}-${idx}`,
+      tanggal: row['Tanggal'] || row['tanggal'] || formattedDateTime,
+      transaksi: row['Transaksi'] || row['transaksi'] || "Iuran Lainnya",
+      nama: row['Nama'] || row['nama'] || "Umum",
+      tipe: row['Tipe'] || row['tipe'] || "Debit",
+      periode: row['Periode'] || row['periode'] || "Apr 2026",
+      nominal: parseInt(row['Nominal'] || row['nominal'] || "0"),
+      status: row['Status'] || row['status'] || "Lunas",
+      keterangan: row['Keterangan'] || row['keterangan'] || "Import Data"
+    }));
+
+    if (newData.length > 0) {
+      setIsLoadingDB(true);
+      const { error } = await supabase.from('iuran').upsert(newData, { onConflict: 'id' });
+      setIsLoadingDB(false);
+      
+      if (error) {
+        console.error("Supabase Import Error:", error);
+        alert("Gagal sinkronisasi data ke Supabase.");
+      }
+      setIuranData((prev: any) => [...newData, ...prev]);
+      alert(`Berhasil mengimpor ${newData.length} data transaksi.`);
+    } else {
+      alert("Tidak ada data valid yang ditemukan.");
+    }
+  };
+
+  const handleAddPayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const dateObj = new Date();
@@ -1019,10 +1249,12 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
     const status = formData.get('status') as string;
     const periode = formData.get('periode') as string;
 
-    // 1. Update Transaksi Data (Dulu hanya Iuran, sekarang semua)
+    // 1. Prepare Data
+    const transactionId = editingTrx ? editingTrx.id : `INV-${dateObj.getFullYear().toString().slice(-2)}${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${String(iuranData.length + 1).padStart(3, '0')}`;
+    
     const newPayment = {
-      id: `INV-${dateObj.getFullYear().toString().slice(-2)}${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${String(iuranData.length + 1).padStart(3, '0')}`,
-      tanggal: formattedDateTime,
+      id: transactionId,
+      tanggal: editingTrx ? editingTrx.tanggal : formattedDateTime,
       transaksi: transaksi,
       nama: nama,
       tipe: trxType === 'Masuk' ? 'Debit' : 'Kredit',
@@ -1031,22 +1263,46 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
       status: status,
       keterangan: keterangan
     };
-    setIuranData([newPayment, ...iuranData]);
 
-    // 2. Update General Kas Ledger
-    const newKasEntry = {
-      id: `TRX-${String(kasData.length + 1).padStart(3, '0')}`,
-      tanggal: formattedDate,
-      tipe: trxType,
-      transaksi: transaksi,
-      nama: nama,
-      keterangan: keterangan,
-      debit: trxType === 'Masuk' ? nominalRaw : 0,
-      kredit: trxType === 'Keluar' ? nominalRaw : 0
-    };
-    setKasData([newKasEntry, ...kasData]);
+    setIsLoadingDB(true);
+    let error;
+    if (editingTrx) {
+      const { error: updateErr } = await supabase.from('iuran').update(newPayment).eq('id', editingTrx.id);
+      error = updateErr;
+    } else {
+      const { error: insertErr } = await supabase.from('iuran').insert([newPayment]);
+      error = insertErr;
+      
+      // Also record to Kas if NEW transaction
+      const newKasEntry = {
+        id: `TRX-${String(kasData.length + 1).padStart(3, '0')}`,
+        tanggal: formattedDate,
+        tipe: trxType,
+        transaksi: transaksi,
+        nama: nama,
+        keterangan: keterangan,
+        debit: trxType === 'Masuk' ? nominalRaw : 0,
+        kredit: trxType === 'Keluar' ? nominalRaw : 0
+      };
+      await supabase.from('kas').insert([newKasEntry]);
+      setKasData([newKasEntry, ...kasData]);
+    }
+    setIsLoadingDB(false);
+
+    if (error) {
+      console.warn("Peringatan: Gagal sinkronisasi data ke Supabase, namun data akan diperbarui di tampilan lokal.", error);
+    }
+
+    if (editingTrx) {
+      setIuranData((prev: any[]) => prev.map(t => t.id === editingTrx.id ? newPayment : t));
+      alert("Data berhasil diperbarui.");
+    } else {
+      setIuranData([newPayment, ...iuranData]);
+      alert("Data berhasil dicatat.");
+    }
 
     setShowAddForm(false);
+    setEditingTrx(null);
     setTrxType('Masuk');
   };
 
@@ -1109,21 +1365,31 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
+      <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white gap-3">
         <h3 className="text-sm font-bold text-slate-800 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
           Catatan Transaksi
         </h3>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {userRole !== 'Viewer' && (
             <>
-              <button onClick={handleExportExcelIuran} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                <Download className="w-3.5 h-3.5 text-green-600" /> Excel
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImportFileIuran} 
+                className="hidden" 
+                accept=".csv, .xlsx, .xls" 
+              />
+              <button onClick={() => fileInputRef.current?.click()} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
+                <Upload className="w-3.5 h-3.5 text-blue-600" /> <span className="sm:hidden lg:inline">Upload</span>
               </button>
-              <button onClick={handleExportPDFIuran} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                <FileText className="w-3.5 h-3.5 text-red-500" /> PDF
+              <button onClick={handleExportExcelIuran} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
+                <Download className="w-3.5 h-3.5 text-green-600" /> <span className="sm:hidden lg:inline">Excel</span>
               </button>
-              <button onClick={() => setShowAddForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ml-2">
+              <button onClick={handleExportPDFIuran} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
+                <FileText className="w-3.5 h-3.5 text-red-500" /> <span className="sm:hidden lg:inline">PDF</span>
+              </button>
+              <button onClick={() => setShowAddForm(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
                 <PlusCircle className="w-3.5 h-3.5" />
                 Catat
               </button>
@@ -1139,31 +1405,59 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
               <th className="px-6 py-3">Tanggal Waktu</th>
               <th className="px-6 py-3">Transaksi</th>
               <th className="px-6 py-3">Nama</th>
-              <th className="px-6 py-3">Debit/ Kredit</th>
               <th className="px-6 py-3 text-right">Nominal</th>
               <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3">Keterangan</th>
+              <th className="px-6 py-3 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {iuranData.map((trx, idx) => (
-              <tr key={idx} className="hover:bg-slate-50 transition-colors">
+              <tr key={trx.id || `trx-${idx}`} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs">{trx.id}</td>
                 <td className="px-6 py-3 text-xs">{trx.tanggal}</td>
                 <td className="px-6 py-3 text-xs font-semibold">{trx.transaksi}</td>
                 <td className="px-6 py-3 font-semibold text-slate-800">{trx.nama}</td>
-                <td className="px-6 py-3 text-xs font-medium">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${trx.tipe === 'Kredit' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
-                   {trx.tipe || (trx.periode ? 'Debit' : '-')}
-                  </span>
-                </td>
                 <td className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-700">{formatRupiah(trx.nominal)}</td>
-                <td className="px-6 py-3">
+                <td className="px-6 py-3 text-center">
                    <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${trx.status === 'Lunas' ? 'border-green-200 bg-green-50 text-green-700' : 'border-orange-200 bg-orange-50 text-orange-700'}`}>
                      {trx.status}
                    </span>
                 </td>
-                <td className="px-6 py-3 text-xs text-slate-500 italic max-w-[150px] truncate" title={trx.keterangan}>{trx.keterangan}</td>
+                <td className="px-6 py-3 text-center">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button 
+                      onClick={() => handlePrintKwitansi(trx)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 border border-slate-100 rounded-lg transition-all shadow-sm active:scale-95"
+                      title="Cetak Kwitansi"
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
+                    {(userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'operator') && (
+                      <>
+                        <button 
+                          onClick={() => handleEditTransaction(trx)}
+                          className="p-2 text-orange-600 hover:bg-orange-50 border border-slate-100 rounded-lg transition-all shadow-sm active:scale-95"
+                          title="Edit Catatan"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (trx.id) {
+                              handleDeleteTransaction(trx.id);
+                            } else {
+                              alert("ID Transaksi tidak ditemukan, tidak bisa menghapus.");
+                            }
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-50 border border-slate-100 rounded-lg transition-all shadow-sm active:scale-95 group"
+                          title="Hapus Transaksi"
+                        >
+                          <Trash2 className="w-4 h-4 group-hover:scale-110" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -1176,10 +1470,10 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-blue-600" />
-                Catat
+                {editingTrx ? <Edit className="w-4 h-4 text-orange-600" /> : <CreditCard className="w-4 h-4 text-blue-600" />}
+                {editingTrx ? 'Edit Transaksi' : 'Catat'}
               </h3>
-              <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
+              <button onClick={() => { setShowAddForm(false); setEditingTrx(null); setTrxType('Masuk'); }} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1189,15 +1483,17 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
               <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
                 <button 
                   type="button"
+                  disabled={!!editingTrx}
                   onClick={() => setTrxType('Masuk')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Masuk' ? 'bg-green-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Masuk' ? 'bg-green-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'} ${editingTrx ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   Pemasukan
                 </button>
                 <button 
                   type="button"
+                  disabled={!!editingTrx}
                   onClick={() => setTrxType('Keluar')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Keluar' ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Keluar' ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'} ${editingTrx ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   Pengeluaran
                 </button>
@@ -1208,7 +1504,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">
                     {trxType === 'Masuk' ? 'Jenis Pemasukan' : 'Jenis Pengeluaran'}
                   </label>
-                  <select name="transaksi" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
+                  <select name="transaksi" defaultValue={editingTrx?.transaksi} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
                     {trxType === 'Masuk' ? (
                       <>
                         <option value="Iuran Keamanan">Iuran Keamanan</option>
@@ -1234,14 +1530,14 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">
                     {trxType === 'Masuk' ? 'Nama Penyetor' : 'Nama Penerima / Vendor'}
                   </label>
-                  <input name="nama" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder={trxType === 'Masuk' ? 'Nama' : 'Toko / Nama Orang'} />
+                  <input name="nama" defaultValue={editingTrx?.nama} required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder={trxType === 'Masuk' ? 'Nama' : 'Toko / Nama Orang'} />
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Periode Bulan</label>
-                  <select name="periode" required defaultValue="Apr 2026" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
+                  <select name="periode" required defaultValue={editingTrx?.periode || "Apr 2026"} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
                     <option value="Jan 2026">Jan 2026</option>
                     <option value="Feb 2026">Feb 2026</option>
                     <option value="Mar 2026">Mar 2026</option>
@@ -1252,13 +1548,13 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Nominal (Rp)</label>
-                  <input name="nominal" required type="number" defaultValue="50000" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
+                  <input name="nominal" required type="number" defaultValue={editingTrx?.nominal || "50000"} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">Status Pembayaran</label>
-                <select name="status" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold cursor-pointer">
+                <select name="status" defaultValue={editingTrx?.status} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold cursor-pointer">
                   <option value="Lunas">Lunas (Selesai)</option>
                   <option value="Pending">Pending (Cicilan/Menunggu)</option>
                 </select>
@@ -1266,15 +1562,15 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">Keterangan Tambahan / Catatan</label>
-                <textarea name="keterangan" rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Ada catatan khusus? (Opsional)"></textarea>
+                <textarea name="keterangan" defaultValue={editingTrx?.keterangan} rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Ada catatan khusus? (Opsional)"></textarea>
               </div>
 
               <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
-                <button type="button" onClick={() => { setShowAddForm(false); setTrxType('Masuk'); }} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <button type="button" onClick={() => { setShowAddForm(false); setEditingTrx(null); setTrxType('Masuk'); }} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                   Batal
                 </button>
                 <button type="submit" className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-all ${trxType === 'Masuk' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
-                  Simpan {trxType}
+                  {editingTrx ? 'Perbarui Data' : `Simpan ${trxType}`}
                 </button>
               </div>
             </form>
@@ -1285,14 +1581,22 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole }: {
   );
 }
 
-function SuratView({ suratData, setSuratData, userRole }: { suratData: any[], setSuratData: any, userRole: string }) {
+function SuratView({ suratData, setSuratData, userRole, setIsLoadingDB }: { suratData: any[], setSuratData: any, userRole: string, setIsLoadingDB: any }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
 
-  const handleSetujui = (id: string) => {
+  const handleSetujui = async (id: string) => {
+    setIsLoadingDB(true);
+    const { error } = await supabase.from('surat').update({ status: "Selesai" }).eq('id', id);
+    setIsLoadingDB(false);
+    if (error) return alert("Gagal memperbarui: " + error.message);
     setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
   };
 
-  const handleTolak = (id: string) => {
+  const handleTolak = async (id: string) => {
+    setIsLoadingDB(true);
+    const { error } = await supabase.from('surat').update({ status: "Ditolak" }).eq('id', id);
+    setIsLoadingDB(false);
+    if (error) return alert("Gagal memperbarui: " + error.message);
     setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
   };
 
@@ -1416,23 +1720,23 @@ function SuratView({ suratData, setSuratData, userRole }: { suratData: any[], se
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
+      <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white gap-3">
         <h3 className="text-sm font-bold text-slate-800 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
           Layanan Surat Pengantar
         </h3>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           {pendingCount > 0 ? (
-            <span className="bg-orange-50 text-orange-600 border border-orange-100 text-[10px] px-3 py-1.5 rounded font-bold tracking-wider uppercase">
-              {pendingCount} Menunggu Review
+            <span className="flex-1 sm:flex-none text-center bg-orange-50 text-orange-600 border border-orange-100 text-[10px] px-3 py-1.5 rounded font-bold tracking-wider uppercase">
+              {pendingCount} Pending
             </span>
           ) : (
-            <span className="bg-green-50 text-green-600 border border-green-100 text-[10px] px-3 py-1.5 rounded font-bold tracking-wider uppercase">
-              Semua Tuntas
+            <span className="flex-1 sm:flex-none text-center bg-green-50 text-green-600 border border-green-100 text-[10px] px-3 py-1.5 rounded font-bold tracking-wider uppercase">
+              Tuntas
             </span>
           )}
           {userRole !== 'Viewer' && (
-            <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+            <button onClick={() => setShowSuratForm(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
               <PlusCircle className="w-3.5 h-3.5" />
               Buat Surat
             </button>
@@ -1541,7 +1845,7 @@ function SuratView({ suratData, setSuratData, userRole }: { suratData: any[], se
   );
 }
 
-function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, userRole: string }) {
+function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIsLoadingDB }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, userRole: string, setIsLoadingDB: any }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -1553,7 +1857,22 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
 
   const years = [2024, 2025, 2026, 2027];
 
-  const handleAddPemasukan = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleDeleteKas = async (id: string) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus data kas ini?")) return;
+
+    setIsLoadingDB(true);
+    const { error } = await supabase.from('kas').delete().eq('id', id);
+    setIsLoadingDB(false);
+
+    if (error) {
+      alert("Gagal menghapus data dari Supabase.");
+      return;
+    }
+
+    setKasData((prev: any[]) => prev.filter(t => t.id !== id));
+  };
+
+  const handleAddPemasukan = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const dateInput = formData.get('tanggal') as string;
@@ -1575,7 +1894,9 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
       kredit: tipe === 'Keluar' ? nominal : 0
     };
 
-    setKasData([newTrx, ...kasData]);
+    setIsLoadingDB(true);
+    const { error: kasErr } = await supabase.from('kas').insert([newTrx]);
+    let iuranErr = null;
 
     // Sync with IuranData if applicable
     if (tipe === 'Masuk' && (formData.get('transaksi') === 'Iuran Warga')) {
@@ -1590,9 +1911,20 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
         status: "Lunas",
         keterangan: formData.get('keterangan') as string || "-"
       };
-      setIuranData([newIuran, ...iuranData]);
+      
+      const { error } = await supabase.from('iuran').insert([newIuran]);
+      iuranErr = error;
+      if (!iuranErr) setIuranData([newIuran, ...iuranData]);
     }
 
+    setIsLoadingDB(false);
+
+    if (kasErr || iuranErr) {
+      alert("Gagal sinkronisasi data ke Supabase.");
+      return;
+    }
+
+    setKasData([newTrx, ...kasData]);
     setShowMasukForm(false);
   };
 
@@ -1614,7 +1946,8 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
   // Filter based on selected month and year
   const filteredData = allProcessedData.filter(trx => {
     const date = new Date(trx.tanggal);
-    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+    const mMatch = selectedMonth === -1 || date.getMonth() === selectedMonth;
+    return mMatch && date.getFullYear() === selectedYear;
   }).reverse();
 
   const totalPemasukan = filteredData.reduce((sum, trx) => sum + trx.debit, 0);
@@ -1630,7 +1963,8 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Laporan_Kas_${months[selectedMonth]}_${selectedYear}.csv`);
+    const monthName = selectedMonth === -1 ? 'Semua_Bulan' : months[selectedMonth];
+    link.setAttribute("download", `Laporan_Kas_${monthName}_${selectedYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1640,7 +1974,8 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
     const doc = new jsPDF();
     
     doc.setFontSize(16);
-    doc.text(`LAPORAN KAS - ${months[selectedMonth].toUpperCase()} ${selectedYear}`, 14, 15);
+    const monthTitle = selectedMonth === -1 ? 'SEMUA BULAN' : months[selectedMonth].toUpperCase();
+    doc.text(`LAPORAN KAS - ${monthTitle} ${selectedYear}`, 14, 15);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -1673,7 +2008,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
       alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
-    doc.save(`Laporan_Kas_${months[selectedMonth]}_${selectedYear}.pdf`);
+    doc.save(`Laporan_Kas_${selectedMonth === -1 ? 'Semua_Bulan' : months[selectedMonth]}_${selectedYear}.pdf`);
   };
 
   return (
@@ -1697,17 +2032,18 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
       </div>
 
       {/* Filter Bulan dan Tahun */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center">
+      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Periode Laporan:</span>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Periode Laporan</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto">
           <select 
             value={selectedMonth} 
             onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            className="flex-1 md:flex-none bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-2 md:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
           >
+            <option value={-1}>Semua Bulan</option>
             {months.map((month, idx) => (
               <option key={month} value={idx}>{month}</option>
             ))}
@@ -1715,17 +2051,25 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
           <select 
             value={selectedYear} 
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            className="flex-1 md:flex-none bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-2 md:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
           >
             {years.map(year => (
               <option key={year} value={year}>{year}</option>
             ))}
           </select>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="md:ml-auto w-full md:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <span className="text-[10px] font-bold text-slate-400 uppercase italic">
-            Menampilkan {filteredData.length} transaksi di bulan {months[selectedMonth]}
+            {filteredData.length} transaksi di {selectedMonth === -1 ? `tahun ${selectedYear}` : `bulan ${months[selectedMonth]}`}
           </span>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button onClick={handleExportExcelKas} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors shadow-sm">
+              <Download className="w-3.5 h-3.5 text-green-600" /> EXCEL
+            </button>
+            <button onClick={handleExportPDFKas} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors shadow-sm">
+              <Download className="w-3.5 h-3.5 text-red-500" /> PDF
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1743,10 +2087,6 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole }: { k
                 </button>
                 <button onClick={handleExportPDFKas} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
                   <FileText className="w-3.5 h-3.5 text-red-500" /> PDF
-                </button>
-                <button onClick={() => setShowMasukForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ml-2">
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  Catat
                 </button>
               </>
             )}
@@ -1931,8 +2271,11 @@ function PengaturanView() {
           </div>
         </div>
 
-        <div className="mt-8 pt-4 border-t border-slate-100 flex justify-end">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors">
+        <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+          <button className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg text-sm font-bold transition-colors">
+            Reset Default
+          </button>
+          <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95">
             Simpan Pengaturan
           </button>
         </div>
@@ -2011,7 +2354,7 @@ function LoginView({ onLogin }: { onLogin: (user: {name: string, role: string}) 
 
         <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
           <div className="p-8">
-            <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary text-slate-900">Silakan Masuk</h2>
+            <h2 className="text-xl font-bold text-slate-800 mb-6 text-slate-900">Silakan Masuk</h2>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
                 <X className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
