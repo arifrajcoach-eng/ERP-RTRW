@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "Warga": {
+      "title": "Warga",
+      "description": "Data kependudukan warga RT/RW",
+      "type": "object",
+      "properties": {
+        "nik": { "type": "string", "description": "Nomor Induk Kependudukan (Unique ID)" },
+        "kk": { "type": "string" },
+        "nama": { "type": "string" },
+        "rt": { "type": "string" },
+        "rw": { "type": "string" },
+        "blok": { "type": "string" },
+        "status": { "type": "string" },
+        "hp": { "type": "string" },
+        "posisi": { "type": "string" },
+        "profesi": { "type": "string" },
+        "jk": { "type": "string" },
+        "tglLahir": { "type": "string", "format": "date" },
+        "tglDaftar": { "type": "string", "format": "date" }
+      },
+      "required": ["nik", "nama"]
+    },
+    "Kas": {
+      "title": "Kas",
+      "description": "Catatan keuangan kas lingkungan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tanggal": { "type": "string" },
+        "tipe": { "type": "string", "enum": ["Masuk", "Keluar"] },
+        "transaksi": { "type": "string" },
+        "nama": { "type": "string" },
+        "keterangan": { "type": "string" },
+        "debit": { "type": "number" },
+        "kredit": { "type": "number" }
+      },
+      "required": ["id", "tanggal", "tipe"]
+    },
+    "Surat": {
+      "title": "Surat",
+      "description": "Permohonan surat pengantar",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tanggal": { "type": "string" },
+        "pemohon": { "type": "string" },
+        "jenis": { "type": "string" },
+        "status": { "type": "string", "enum": ["Diajukan", "Selesai", "Ditolak"] }
+      },
+      "required": ["id", "pemohon", "status"]
+    },
+    "Iuran": {
+      "title": "Iuran",
+      "description": "Catatan iuran bulanan warga",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tanggal": { "type": "string" },
+        "transaksi": { "type": "string" },
+        "nama": { "type": "string" },
+        "periode": { "type": "string" },
+        "nominal": { "type": "number" },
+        "status": { "type": "string", "enum": ["Lunas", "Pending"] },
+        "keterangan": { "type": "string" }
+      },
+      "required": ["id", "nama", "nominal", "status"]
+    }
+  },
+  "firestore": {
+    "/warga/{nik}": {
+      "schema": "Warga",
+      "description": "Koleksi data warga"
+    },
+    "/kas/{id}": {
+      "schema": "Kas",
+      "description": "Koleksi mutasi kas"
+    },
+    "/surat/{id}": {
+      "schema": "Surat",
+      "description": "Koleksi permohonan surat"
+    },
+    "/iuran/{id}": {
+      "schema": "Iuran",
+      "description": "Koleksi catatan iuran"
+    }
+  }
+}

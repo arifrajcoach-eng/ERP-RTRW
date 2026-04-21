@@ -1,12 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle } from 'lucide-react';
+import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, Cell } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from './supabaseClient';
+import { db } from './firebase';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, onSnapshot, getDocFromServer } from 'firebase/firestore';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  signOut,
+  setPersistence,
+  browserLocalPersistence
+} from 'firebase/auth';
+import { auth } from './firebase';
 
 // --- INITIAL DUMMY DATA ---
 const INITIAL_WARGA_DATA = [
@@ -51,20 +60,70 @@ const INITIAL_IURAN_DATA = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{name: string, role: string} | null>(() => {
-    const saved = localStorage.getItem('rw26_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentUser, setCurrentUser] = useState<{name: string, role: string, email?: string} | null>(null);
+  const [isAuthInitializing, setIsAuthInitializing] = useState(true);
 
-  const handleLogin = (user: {name: string, role: string}) => {
-    setCurrentUser(user);
-    localStorage.setItem('rw26_user', JSON.stringify(user));
-  };
+  // --- FIREBASE AUTH SYNC ---
+  useEffect(() => {
+    // 0. Validate Connection to Firestore (Critical Constraint)
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error: any) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Firestore connection failed. Please check your configuration.");
+        }
+      }
+    };
+    testConnection();
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('rw26_user');
-    setActiveTab('dashboard');
+    // Ensure persistence
+    setPersistence(auth, browserLocalPersistence);
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          // Fetch additional user info/role from Firestore
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            setCurrentUser(userDoc.data() as any);
+          } else {
+            // If No Firestore doc yet, use default based on email (for easy migration)
+            let role = 'Viewer';
+            let name = user.email?.split('@')[0] || 'User';
+            
+            const isAdminEmail = user.email === 'admin@rw26.com' || user.email === 'arifrajcoach@gmail.com';
+            
+            if (isAdminEmail) { role = 'Admin'; name = 'Bpk. Arif (Admin)'; }
+            else if (user.email === 'operator@rw26.com') { role = 'Operator'; name = 'Petugas RT'; }
+            
+            const newUser = { name, role, email: user.email };
+            setCurrentUser(newUser);
+            // Optionally auto-create the doc
+            await setDoc(userDocRef, newUser);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setCurrentUser({ name: user.email || 'User', role: 'Viewer' });
+        }
+      } else {
+        setCurrentUser(null);
+      }
+      setIsAuthInitializing(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setActiveTab('dashboard');
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   // --- CENTRAL STATE WITH LOCALSTORAGE PERSISTENCE ---
@@ -91,42 +150,65 @@ export default function App() {
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // --- SUPABASE SYNC ---
+  // --- FIREBASE SYNC ---
   useEffect(() => {
     const fetchAllData = async () => {
+      if (!currentUser) return;
       setIsLoadingDB(true);
       try {
-        const [
-          { data: warga, error: wargaErr },
-          { data: kas, error: kasErr },
-          { data: surat, error: suratErr },
-          { data: iuran, error: iuranErr }
-        ] = await Promise.all([
-          supabase.from('warga').select('*'),
-          supabase.from('kas').select('*'),
-          supabase.from('surat').select('*'),
-          supabase.from('iuran').select('*')
+        const [wargaSnap, kasSnap, suratSnap, iuranSnap] = await Promise.all([
+          getDocs(collection(db, 'warga')),
+          getDocs(collection(db, 'kas')),
+          getDocs(collection(db, 'surat')),
+          getDocs(collection(db, 'iuran'))
         ]);
+        
+        const warga = wargaSnap.docs.map(doc => ({ ...doc.data() }));
+        const kas = kasSnap.docs.map(doc => ({ ...doc.data() }));
+        const surat = suratSnap.docs.map(doc => ({ ...doc.data() }));
+        const iuran = iuranSnap.docs.map(doc => ({ ...doc.data() }));
 
-        if (wargaErr || kasErr || suratErr || iuranErr) {
-          console.error("Supabase fetch error:", { wargaErr, kasErr, suratErr, iuranErr });
-          // Fallback to local storage if DB fails
-          return;
-        }
-
-        if (warga && warga.length > 0) setWargaData(warga);
-        if (kas && kas.length > 0) setKasData(kas);
-        if (surat && surat.length > 0) setSuratData(surat);
-        if (iuran && iuran.length > 0) setIuranData(iuran);
-      } catch (err) {
-        console.error("System error fetching from Supabase:", err);
+        if (warga.length > 0) setWargaData(warga);
+        if (kas.length > 0) setKasData(kas);
+        if (surat.length > 0) setSuratData(surat);
+        if (iuran.length > 0) setIuranData(iuran);
+      } catch (error: any) {
+        console.error("System error fetching from Firebase:", error);
+        handleFirestoreError(error, 'list', 'all');
+        setDbError("Gagal sinkronisasi dengan database.");
       } finally {
         setIsLoadingDB(false);
       }
     };
 
     fetchAllData();
-  }, []);
+  }, [currentUser]);
+
+  // Centralized Error Handler for Firestore
+  const handleFirestoreError = (err: any, op: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write', path: string) => {
+    if (err?.code === 'permission-denied') {
+      const errorInfo = {
+        error: "Missing or insufficient permissions",
+        operationType: op,
+        path: path,
+        authInfo: {
+          userId: auth.currentUser?.uid || 'anonymous',
+          email: auth.currentUser?.email || '',
+          emailVerified: auth.currentUser?.emailVerified || false,
+          isAnonymous: auth.currentUser?.isAnonymous || true,
+          providerInfo: auth.currentUser?.providerData.map(p => ({
+            providerId: p.providerId,
+            displayName: p.displayName || '',
+            email: p.email || ''
+          })) || []
+        }
+      };
+      console.error("Firestore Security Error:", JSON.stringify(errorInfo, null, 2));
+      alert(`Akses Ditolak: Anda tidak memiliki izin untuk operasi ini (${op} pada ${path}).`);
+    } else {
+      console.error(`Firestore ${op} error on ${path}:`, err);
+    }
+  };
 
   // Effect to sync data to localStorage (keep as secondary backup)
   useEffect(() => { localStorage.setItem('rw26_wargaData', JSON.stringify(wargaData)); }, [wargaData]);
@@ -134,8 +216,17 @@ export default function App() {
   useEffect(() => { localStorage.setItem('rw26_suratData', JSON.stringify(suratData)); }, [suratData]);
   useEffect(() => { localStorage.setItem('rw26_iuranData', JSON.stringify(iuranData)); }, [iuranData]);
 
+  if (isAuthInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-medium tracking-tight">Menyiapkan Sesi Keamanan...</p>
+      </div>
+    );
+  }
+
   if (!currentUser) {
-    return <LoginView onLogin={handleLogin} />;
+    return <LoginView />;
   }
 
   return (
@@ -144,7 +235,7 @@ export default function App() {
         <div className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
           <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Sinkronisasi Database</h2>
-          <p className="text-slate-500 max-w-xs mx-auto">Mohon tunggu sebentar, sistem sedang memuat data dari Supabase...</p>
+          <p className="text-slate-500 max-w-xs mx-auto">Mohon tunggu sebentar, sistem sedang memuat data dari Firebase...</p>
         </div>
       )}
 
@@ -245,10 +336,10 @@ export default function App() {
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} />}
-          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
-          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
-          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} />}
+          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
           {activeTab === 'pengaturan' && <PengaturanView />}
         </div>
       </main>
@@ -589,7 +680,7 @@ function ConfirmModal({
   );
 }
 
-function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { wargaData: any[], setWargaData: any, userRole: string, setIsLoadingDB: any }) {
+function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFirestoreError }: { wargaData: any[], setWargaData: any, userRole: string, setIsLoadingDB: any, handleFirestoreError: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
@@ -660,13 +751,17 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
     }));
 
     if (newData.length > 0) {
-      const { error } = await supabase.from('warga').upsert(newData, { onConflict: 'nik' });
-      if (error) {
-        console.error("Supabase Import Error:", error);
-        alert("Gagal sinkronisasi data ke Supabase.");
+      try {
+        // In Firestore, we set documents by their ID (NIK)
+        for (const item of newData) {
+          await setDoc(doc(db, 'warga', item.nik), item);
+        }
+        setWargaData((prev: any) => [...prev, ...newData]);
+        alert(`Berhasil mengimpor ${newData.length} data warga.`);
+      } catch (error: any) {
+        console.error("Firebase Import Error:", error);
+        alert("Gagal sinkronisasi data ke Firebase: " + error.message);
       }
-      setWargaData((prev: any) => [...prev, ...newData]);
-      alert(`Berhasil mengimpor ${newData.length} data warga.`);
     } else {
       alert("Tidak ada data valid yang ditemukan.");
     }
@@ -687,52 +782,49 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
     const newWarga = { ...formData, tglDaftar: new Date().toISOString().split('T')[0] };
     
     setIsLoadingDB(true);
-    const { error } = await supabase.from('warga').insert([newWarga]);
-    setIsLoadingDB(false);
-
-    if (error) {
-      alert("Gagal menyimpan ke Supabase: " + error.message);
-      return;
+    try {
+      await setDoc(doc(db, 'warga', newWarga.nik), newWarga);
+      setWargaData((prev: any) => [...prev, newWarga]);
+      setShowAddForm(false);
+      resetForm();
+    } catch (error: any) {
+      handleFirestoreError(error, 'create', `/warga/${newWarga.nik}`);
+    } finally {
+      setIsLoadingDB(false);
     }
-
-    setWargaData((prev: any) => [...prev, newWarga]);
-    setShowAddForm(false);
-    resetForm();
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     setIsLoadingDB(true);
-    const { error } = await supabase.from('warga').update(formData).eq('nik', editingWarga.nik);
-    setIsLoadingDB(false);
-
-    if (error) {
-      alert("Gagal memperbarui di Supabase: " + error.message);
-      return;
+    try {
+      await updateDoc(doc(db, 'warga', editingWarga.nik), formData);
+      setWargaData((prev: any) => prev.map((w: any) => w.nik === editingWarga.nik ? formData : w));
+      setShowEditForm(false);
+      setEditingWarga(null);
+      resetForm();
+    } catch (error: any) {
+      handleFirestoreError(error, 'update', `/warga/${editingWarga.nik}`);
+    } finally {
+      setIsLoadingDB(false);
     }
-
-    setWargaData((prev: any) => prev.map((w: any) => w.nik === editingWarga.nik ? formData : w));
-    setShowEditForm(false);
-    setEditingWarga(null);
-    resetForm();
   };
 
   const handleDeleteWarga = async () => {
     if (!wargaToDelete) return;
     
     setIsDeletingWarga(true);
-    const { error } = await supabase.from('warga').delete().eq('nik', wargaToDelete.nik);
-    setIsDeletingWarga(false);
-
-    if (error) {
-      alert("Gagal menghapus di Supabase: " + error.message);
+    try {
+      await deleteDoc(doc(db, 'warga', wargaToDelete.nik));
+      setWargaData((prev: any) => prev.filter((w: any) => w.nik !== wargaToDelete.nik));
       setWargaToDelete(null);
-      return;
+    } catch (error: any) {
+      alert("Gagal menghapus di Firebase: " + error.message);
+      setWargaToDelete(null);
+    } finally {
+      setIsDeletingWarga(false);
     }
-
-    setWargaData((prev: any) => prev.filter((w: any) => w.nik !== wargaToDelete.nik));
-    setWargaToDelete(null);
   };
 
   const startEdit = (warga: any) => {
@@ -1214,7 +1306,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
   );
 }
 
-function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, setIsLoadingDB }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, userRole: string, setIsLoadingDB: any }) {
+function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, setIsLoadingDB, handleFirestoreError }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, userRole: string, setIsLoadingDB: any, handleFirestoreError: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTrx, setEditingTrx] = useState<any>(null);
   const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
@@ -1228,18 +1320,17 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
     if (!trxToDelete) return;
 
     setIsDeletingTrx(true);
-    const { error } = await supabase.from('iuran').delete().eq('id', trxToDelete.id);
-    setIsDeletingTrx(false);
-
-    if (error) {
-       alert("Gagal menghapus data: " + error.message);
-       setTrxToDelete(null);
-       return;
+    try {
+      await deleteDoc(doc(db, 'iuran', trxToDelete.id));
+      setIuranData((prev: any[]) => prev.filter(t => t.id !== trxToDelete.id));
+      setTrxToDelete(null);
+      alert("Data berhasil dihapus dari sistem.");
+    } catch (error: any) {
+      handleFirestoreError(error, 'delete', `/iuran/${trxToDelete.id}`);
+      setTrxToDelete(null);
+    } finally {
+      setIsDeletingTrx(false);
     }
-
-    setIuranData((prev: any[]) => prev.filter(t => t.id !== trxToDelete.id));
-    setTrxToDelete(null);
-    alert("Data berhasil dihapus dari sistem.");
   };
 
   const handlePrintKwitansi = (trx: any) => {
@@ -1372,15 +1463,18 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
 
     if (newData.length > 0) {
       setIsLoadingDB(true);
-      const { error } = await supabase.from('iuran').upsert(newData, { onConflict: 'id' });
-      setIsLoadingDB(false);
-      
-      if (error) {
-        console.error("Supabase Import Error:", error);
-        alert("Gagal sinkronisasi data ke Supabase.");
+      try {
+        for (const item of newData) {
+          await setDoc(doc(db, 'iuran', item.id), item);
+        }
+        setIuranData((prev: any) => [...newData, ...prev]);
+        alert(`Berhasil mengimpor ${newData.length} data transaksi.`);
+      } catch (error: any) {
+        console.error("Firebase Import Error:", error);
+        handleFirestoreError(error, 'create', '/iuran/import');
+      } finally {
+        setIsLoadingDB(false);
       }
-      setIuranData((prev: any) => [...newData, ...prev]);
-      alert(`Berhasil mengimpor ${newData.length} data transaksi.`);
     } else {
       alert("Tidak ada data valid yang ditemukan.");
     }
@@ -1416,45 +1510,40 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
     };
 
     setIsLoadingDB(true);
-    let error;
-    if (editingTrx) {
-      const { error: updateErr } = await supabase.from('iuran').update(newPayment).eq('id', editingTrx.id);
-      error = updateErr;
-    } else {
-      const { error: insertErr } = await supabase.from('iuran').insert([newPayment]);
-      error = insertErr;
-      
-      // Also record to Kas if NEW transaction
-      const newKasEntry = {
-        id: `TRX-${String(kasData.length + 1).padStart(3, '0')}`,
-        tanggal: formattedDate,
-        tipe: trxType,
-        transaksi: transaksi,
-        nama: nama,
-        keterangan: keterangan,
-        debit: trxType === 'Masuk' ? nominalRaw : 0,
-        kredit: trxType === 'Keluar' ? nominalRaw : 0
-      };
-      await supabase.from('kas').insert([newKasEntry]);
-      setKasData([newKasEntry, ...kasData]);
+    try {
+      if (editingTrx) {
+        await updateDoc(doc(db, 'iuran', editingTrx.id), newPayment);
+        setIuranData((prev: any[]) => prev.map(t => t.id === editingTrx.id ? newPayment : t));
+        alert("Data berhasil diperbarui.");
+      } else {
+        await setDoc(doc(db, 'iuran', newPayment.id), newPayment);
+        
+        // Also record to Kas if NEW transaction
+        const newKasEntry = {
+          id: `TRX-${String(kasData.length + 1).padStart(3, '0')}`,
+          tanggal: formattedDate,
+          tipe: trxType,
+          transaksi: transaksi,
+          nama: nama,
+          keterangan: keterangan,
+          debit: trxType === 'Masuk' ? nominalRaw : 0,
+          kredit: trxType === 'Keluar' ? nominalRaw : 0
+        };
+        await setDoc(doc(db, 'kas', newKasEntry.id), newKasEntry);
+        
+        setKasData([newKasEntry, ...kasData]);
+        setIuranData([newPayment, ...iuranData]);
+        alert("Data berhasil dicatat.");
+      }
+    } catch (error: any) {
+      console.error("Firebase operation error:", error);
+      handleFirestoreError(error, editingTrx ? 'update' : 'create', `/iuran/${editingTrx?.id || 'new'}`);
+    } finally {
+      setIsLoadingDB(false);
+      setShowAddForm(false);
+      setEditingTrx(null);
+      setTrxType('Masuk');
     }
-    setIsLoadingDB(false);
-
-    if (error) {
-      console.warn("Peringatan: Gagal sinkronisasi data ke Supabase, namun data akan diperbarui di tampilan lokal.", error);
-    }
-
-    if (editingTrx) {
-      setIuranData((prev: any[]) => prev.map(t => t.id === editingTrx.id ? newPayment : t));
-      alert("Data berhasil diperbarui.");
-    } else {
-      setIuranData([newPayment, ...iuranData]);
-      alert("Data berhasil dicatat.");
-    }
-
-    setShowAddForm(false);
-    setEditingTrx(null);
-    setTrxType('Masuk');
   };
 
   const formatRupiah = (angka: number) => {
@@ -1747,23 +1836,31 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
   );
 }
 
-function SuratView({ suratData, setSuratData, userRole, setIsLoadingDB }: { suratData: any[], setSuratData: any, userRole: string, setIsLoadingDB: any }) {
+function SuratView({ suratData, setSuratData, userRole, setIsLoadingDB, handleFirestoreError }: { suratData: any[], setSuratData: any, userRole: string, setIsLoadingDB: any, handleFirestoreError: any }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
 
   const handleSetujui = async (id: string) => {
     setIsLoadingDB(true);
-    const { error } = await supabase.from('surat').update({ status: "Selesai" }).eq('id', id);
-    setIsLoadingDB(false);
-    if (error) return alert("Gagal memperbarui: " + error.message);
-    setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
+    try {
+      await updateDoc(doc(db, 'surat', id), { status: "Selesai" });
+      setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
+    } catch (error: any) {
+      handleFirestoreError(error, 'update', `/surat/${id}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
   };
 
   const handleTolak = async (id: string) => {
     setIsLoadingDB(true);
-    const { error } = await supabase.from('surat').update({ status: "Ditolak" }).eq('id', id);
-    setIsLoadingDB(false);
-    if (error) return alert("Gagal memperbarui: " + error.message);
-    setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
+    try {
+      await updateDoc(doc(db, 'surat', id), { status: "Ditolak" });
+      setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
+    } catch (error: any) {
+      handleFirestoreError(error, 'update', `/surat/${id}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
   };
 
   const handleCetak = (id: string) => {
@@ -1861,14 +1958,14 @@ function SuratView({ suratData, setSuratData, userRole, setIsLoadingDB }: { sura
     printWindow.document.close();
   };
 
-  const handleAddSurat = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddSurat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const dateObj = new Date();
     const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     
     // Auto Id (SRT-100X)
-    const newId = `SRT-${1000 + suratData.length + 1}`;
+    const newId = `SRT-${Date.now()}`;
     
     const newSurat = {
       id: newId,
@@ -1878,8 +1975,16 @@ function SuratView({ suratData, setSuratData, userRole, setIsLoadingDB }: { sura
       status: "Diajukan"
     };
 
-    setSuratData([newSurat, ...suratData]);
-    setShowSuratForm(false);
+    setIsLoadingDB(true);
+    try {
+      await setDoc(doc(db, 'surat', newId), newSurat);
+      setSuratData([newSurat, ...suratData]);
+      setShowSuratForm(false);
+    } catch (error: any) {
+      handleFirestoreError(error, 'create', `/surat/${newId}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
   };
 
   const pendingCount = suratData.filter(s => s.status === 'Diajukan').length;
@@ -2008,7 +2113,7 @@ function SuratView({ suratData, setSuratData, userRole, setIsLoadingDB }: { sura
   );
 }
 
-function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIsLoadingDB }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, userRole: string, setIsLoadingDB: any }) {
+function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIsLoadingDB, handleFirestoreError }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, userRole: string, setIsLoadingDB: any, handleFirestoreError: any }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -2026,17 +2131,16 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
     if (!kasToDelete) return;
     
     setIsDeletingKas(true);
-    const { error } = await supabase.from('kas').delete().eq('id', kasToDelete.id);
-    setIsDeletingKas(false);
-
-    if (error) {
-      alert("Gagal menghapus data dari Supabase.");
+    try {
+      await deleteDoc(doc(db, 'kas', kasToDelete.id));
+      setKasData((prev: any[]) => prev.filter(t => t.id !== kasToDelete.id));
       setKasToDelete(null);
-      return;
+    } catch (error: any) {
+      handleFirestoreError(error, 'delete', `/kas/${kasToDelete.id}`);
+      setKasToDelete(null);
+    } finally {
+      setIsDeletingKas(false);
     }
-
-    setKasData((prev: any[]) => prev.filter(t => t.id !== kasToDelete.id));
-    setKasToDelete(null);
   };
 
   const handleAddPemasukan = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2046,7 +2150,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
     const dateObj = dateInput ? new Date(dateInput) : new Date();
     const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     
-    const newId = `TRX-${String(kasData.length + 1).padStart(3, '0')}`;
+    const newId = `TRX-${Date.now()}`;
     const nominal = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
     const tipe = formData.get('tipe') as string;
     
@@ -2062,37 +2166,34 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
     };
 
     setIsLoadingDB(true);
-    const { error: kasErr } = await supabase.from('kas').insert([newTrx]);
-    let iuranErr = null;
+    try {
+      await setDoc(doc(db, 'kas', newId), newTrx);
 
-    // Sync with IuranData if applicable
-    if (tipe === 'Masuk' && (formData.get('transaksi') === 'Iuran Warga')) {
-      const formattedDateTime = formattedDate + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
-      const newIuran = {
-        id: `INV-${dateObj.getFullYear().toString().slice(-2)}${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${String(iuranData.length + 1).padStart(3, '0')}`,
-        tanggal: formattedDateTime,
-        transaksi: formData.get('transaksi') as string,
-        nama: formData.get('nama') as string,
-        periode: "Umum", // Default since it's from Kas view
-        nominal: nominal,
-        status: "Lunas",
-        keterangan: formData.get('keterangan') as string || "-"
-      };
-      
-      const { error } = await supabase.from('iuran').insert([newIuran]);
-      iuranErr = error;
-      if (!iuranErr) setIuranData([newIuran, ...iuranData]);
+      // Sync with IuranData if applicable
+      if (tipe === 'Masuk' && (formData.get('transaksi') === 'Iuran Warga')) {
+        const formattedDateTime = formattedDate + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
+        const newIuran = {
+          id: `INV-${Date.now()}-IUR`,
+          tanggal: formattedDateTime,
+          transaksi: formData.get('transaksi') as string,
+          nama: formData.get('nama') as string,
+          periode: "Umum", // Default since it's from Kas view
+          nominal: nominal,
+          status: "Lunas",
+          keterangan: formData.get('keterangan') as string || "-"
+        };
+        
+        await setDoc(doc(db, 'iuran', newIuran.id), newIuran);
+        setIuranData([newIuran, ...iuranData]);
+      }
+
+      setKasData([newTrx, ...kasData]);
+      setShowMasukForm(false);
+    } catch (error: any) {
+      handleFirestoreError(error, 'create', `/kas/${newId}`);
+    } finally {
+      setIsLoadingDB(false);
     }
-
-    setIsLoadingDB(false);
-
-    if (kasErr || iuranErr) {
-      alert("Gagal sinkronisasi data ke Supabase.");
-      return;
-    }
-
-    setKasData([newTrx, ...kasData]);
-    setShowMasukForm(false);
   };
 
   const formatRupiah = (angka: number) => {
@@ -2477,29 +2578,47 @@ function PengaturanView() {
   );
 }
 
-function LoginView({ onLogin }: { onLogin: (user: {name: string, role: string}) => void }) {
-  const [username, setUsername] = useState('');
+function LoginView() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    setTimeout(() => {
-      if (username === 'admin' && password === 'admin') {
-        onLogin({ name: 'Bpk. Bambang', role: 'Admin' });
-      } else if (username === 'operator' && password === 'operator') {
-        onLogin({ name: 'Petugas RT', role: 'Operator' });
-      } else if (username === 'viewer' && password === 'viewer') {
-        onLogin({ name: 'Warga Umum', role: 'Viewer' });
-      } else {
-        setError('Username atau password tidak sesuai.');
-        setIsLoading(false);
+    try {
+      // Logic for easy demo: if user types "admin" and not an email, append a domain
+      let finalEmail = email;
+      if (!email.includes('@')) {
+        finalEmail = `${email}@rw26.com`;
       }
-    }, 800);
+      
+      await signInWithEmailAndPassword(auth, finalEmail, password);
+    } catch (err: any) {
+      console.error("Login Error:", err);
+      let msg = `Gagal masuk (${err.code}). Periksa kembali email dan password Anda.`;
+      
+      if (err.code === 'auth/user-not-found') {
+        msg = 'PENGGUNA TIDAK DITEMUKAN: Pastikan Anda sudah mendaftarkan email ini di tab "Users" pada Firebase Console.';
+      } else if (err.code === 'auth/wrong-password') {
+        msg = 'PASSWORD SALAH: Cek kembali password yang Anda masukkan.';
+      } else if (err.code === 'auth/invalid-credential') {
+        msg = 'KREDENSIAL TIDAK VALID: Email atau password tidak sesuai (atau user belum dibuat).';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = 'FORMAT EMAIL SALAH: Masukkan format email yang benar.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        msg = 'METODE LOGIN BELUM AKTIF: Anda harus mengaktifkan "Email/Password" di tab "Sign-in method" di Firebase Console.';
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = 'MASALAH JARINGAN: Periksa koneksi internet Anda atau cek apakah Firebase config sudah benar.';
+      }
+      
+      setError(msg);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -2510,30 +2629,30 @@ function LoginView({ onLogin }: { onLogin: (user: {name: string, role: string}) 
             <Users className="w-8 h-8" />
           </div>
           <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none">RW 26 BERJUANG</h1>
-          <p className="text-slate-500 font-medium mt-2 tracking-tight">Smart Management Information System</p>
+          <p className="text-slate-500 font-medium mt-2 tracking-tight">Smart Management Information System (Firebase Edition)</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
           <div className="p-8">
-            <h2 className="text-xl font-bold text-slate-800 mb-6 text-slate-900">Silakan Masuk</h2>
+            <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary text-slate-900">Silakan Masuk</h2>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
-                <X className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Username</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                   <input
                     type="text"
                     required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                    placeholder="Masukkan username"
+                    placeholder="Contoh: admin@rw26.com atau admin"
                   />
                 </div>
               </div>
@@ -2542,13 +2661,20 @@ function LoginView({ onLogin }: { onLogin: (user: {name: string, role: string}) 
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                    className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
                     placeholder="Masukkan password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
               <button
@@ -2559,10 +2685,20 @@ function LoginView({ onLogin }: { onLogin: (user: {name: string, role: string}) 
                 {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
               </button>
             </form>
+            <div className="mt-6 text-center">
+              <a 
+                href="https://console.firebase.google.com/project/gen-lang-client-0332165962/authentication/users" 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-[10px] text-blue-500 hover:underline font-bold"
+              >
+                Lupa Password atau Belum Daftar? Klik di sini untuk ke Firebase Console
+              </a>
+            </div>
           </div>
           <div className="p-6 bg-slate-50 border-t border-slate-100 italic">
             <p className="text-center text-[10px] text-slate-400">
-              Demo: admin / admin | operator / operator | viewer / viewer
+              Demo Users (Firestore): admin@rw26.com | operator@rw26.com | viewer@rw26.com
             </p>
           </div>
         </div>
