@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer } from 'lucide-react';
+import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, Cell } from 'recharts';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
 
 // --- INITIAL DUMMY DATA ---
@@ -514,6 +515,80 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
   );
 }
 
+function ConfirmModal({ 
+  isOpen, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  confirmText = "Hapus", 
+  cancelText = "Batal", 
+  type = "danger",
+  isLoading = false
+}: { 
+  isOpen: boolean, 
+  title: string, 
+  message: string, 
+  onConfirm: () => void, 
+  onCancel: () => void, 
+  confirmText?: string, 
+  cancelText?: string, 
+  type?: "danger" | "warning" | "info",
+  isLoading?: boolean
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4 print:hidden">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div className="p-8 text-center">
+          <div className={`w-16 h-16 ${
+            type === 'danger' ? 'bg-red-50 text-red-600' : 
+            type === 'warning' ? 'bg-amber-50 text-amber-600' : 
+            'bg-blue-50 text-blue-600'
+          } rounded-full flex items-center justify-center mx-auto mb-4`}>
+            {type === 'danger' ? <Trash2 className="w-8 h-8" /> : 
+             type === 'warning' ? <AlertTriangle className="w-8 h-8" /> : 
+             <PlusCircle className="w-8 h-8" />}
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">{title}</h3>
+          <p className="text-sm text-slate-500 leading-relaxed">{message}</p>
+        </div>
+        <div className="flex border-t border-slate-100">
+          <button 
+            onClick={onCancel}
+            disabled={isLoading}
+            className="flex-1 px-4 py-4 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-100 disabled:opacity-50"
+          >
+            {cancelText}
+          </button>
+          <button 
+            onClick={onConfirm}
+            disabled={isLoading}
+            className={`flex-1 px-4 py-4 text-sm font-bold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
+              type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 
+              type === 'warning' ? 'bg-amber-500 hover:bg-amber-600' : 
+              'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Proses...</span>
+              </>
+            ) : confirmText}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { wargaData: any[], setWargaData: any, userRole: string, setIsLoadingDB: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -523,6 +598,8 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
   const [filterRW, setFilterRW] = useState("Semua");
   const [filterKategoriUmur, setFilterKategoriUmur] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
+  const [wargaToDelete, setWargaToDelete] = useState<any>(null);
+  const [isDeletingWarga, setIsDeletingWarga] = useState(false);
   const itemsPerPage = 8; // Tampilkan 8 data per halaman agar rapi
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -641,19 +718,21 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
     resetForm();
   };
 
-  const handleDeleteWarga = async (nik: string) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus data warga ini?")) {
-      setIsLoadingDB(true);
-      const { error } = await supabase.from('warga').delete().eq('nik', nik);
-      setIsLoadingDB(false);
+  const handleDeleteWarga = async () => {
+    if (!wargaToDelete) return;
+    
+    setIsDeletingWarga(true);
+    const { error } = await supabase.from('warga').delete().eq('nik', wargaToDelete.nik);
+    setIsDeletingWarga(false);
 
-      if (error) {
-        alert("Gagal menghapus di Supabase: " + error.message);
-        return;
-      }
-
-      setWargaData((prev: any) => prev.filter((w: any) => w.nik !== nik));
+    if (error) {
+      alert("Gagal menghapus di Supabase: " + error.message);
+      setWargaToDelete(null);
+      return;
     }
+
+    setWargaData((prev: any) => prev.filter((w: any) => w.nik !== wargaToDelete.nik));
+    setWargaToDelete(null);
   };
 
   const startEdit = (warga: any) => {
@@ -937,7 +1016,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
                       </button>
                       {userRole === 'Admin' && (
                         <button 
-                          onClick={() => handleDeleteWarga(warga.nik)}
+                          onClick={() => setWargaToDelete(warga)}
                           className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors" title="Hapus"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1116,6 +1195,21 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB }: { warg
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {wargaToDelete && (
+          <ConfirmModal 
+            isOpen={true}
+            title="Hapus Data Warga"
+            message={`Apakah Anda yakin ingin menghapus data "${wargaToDelete?.nama}"? Tindakan ini tidak dapat dibatalkan.`}
+            onConfirm={handleDeleteWarga}
+            onCancel={() => setWargaToDelete(null)}
+            confirmText="Ya, Hapus"
+            cancelText="Batal"
+            isLoading={isDeletingWarga}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1126,21 +1220,25 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
   const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [trxToDelete, setTrxToDelete] = useState<any>(null);
+  const [isDeletingTrx, setIsDeletingTrx] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDeleteTransaction = async (id: string) => {
-    if (!id) return;
-    if (!window.confirm("Apakah Anda yakin ingin menghapus catatan transaksi ini? Ini akan menghapus data secara permanen dari database.")) return;
+  const handleDeleteTransaction = async () => {
+    if (!trxToDelete) return;
 
-    setIsLoadingDB(true);
-    const { error } = await supabase.from('iuran').delete().eq('id', id);
-    setIsLoadingDB(false);
+    setIsDeletingTrx(true);
+    const { error } = await supabase.from('iuran').delete().eq('id', trxToDelete.id);
+    setIsDeletingTrx(false);
 
     if (error) {
-      console.warn("Peringatan: Gagal menghapus dari Supabase (mungkin masalah RLS/Sesi), tapi akan dihapus dari tampilan lokal.", error);
+       alert("Gagal menghapus data: " + error.message);
+       setTrxToDelete(null);
+       return;
     }
 
-    setIuranData((prev: any[]) => prev.filter(t => t.id !== id));
+    setIuranData((prev: any[]) => prev.filter(t => t.id !== trxToDelete.id));
+    setTrxToDelete(null);
     alert("Data berhasil dihapus dari sistem.");
   };
 
@@ -1497,7 +1595,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
                         <button 
                           onClick={() => {
                             if (trx.id) {
-                              handleDeleteTransaction(trx.id);
+                              setTrxToDelete(trx);
                             } else {
                               alert("ID Transaksi tidak ditemukan, tidak bisa menghapus.");
                             }
@@ -1630,6 +1728,21 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {trxToDelete && (
+          <ConfirmModal 
+            isOpen={true}
+            title="Hapus Transaksi"
+            message={`Apakah Anda yakin ingin menghapus catatan transaksi "${trxToDelete?.transaksi} - ${trxToDelete?.nama}"? Data akan dihapus secara permanen.`}
+            onConfirm={handleDeleteTransaction}
+            onCancel={() => setTrxToDelete(null)}
+            confirmText="Ya, Hapus"
+            cancelText="Batal"
+            isLoading={isDeletingTrx}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1905,21 +2018,25 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
   ];
 
-  const years = [2024, 2025, 2026, 2027];
+  const [years, setYears] = useState([2024, 2025, 2026, 2027]);
+  const [kasToDelete, setKasToDelete] = useState<any>(null);
+  const [isDeletingKas, setIsDeletingKas] = useState(false);
 
-  const handleDeleteKas = async (id: string) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus data kas ini?")) return;
-
-    setIsLoadingDB(true);
-    const { error } = await supabase.from('kas').delete().eq('id', id);
-    setIsLoadingDB(false);
+  const handleDeleteKas = async () => {
+    if (!kasToDelete) return;
+    
+    setIsDeletingKas(true);
+    const { error } = await supabase.from('kas').delete().eq('id', kasToDelete.id);
+    setIsDeletingKas(false);
 
     if (error) {
       alert("Gagal menghapus data dari Supabase.");
+      setKasToDelete(null);
       return;
     }
 
-    setKasData((prev: any[]) => prev.filter(t => t.id !== id));
+    setKasData((prev: any[]) => prev.filter(t => t.id !== kasToDelete.id));
+    setKasToDelete(null);
   };
 
   const handleAddPemasukan = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2148,7 +2265,6 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
               <tr>
                 <th className="px-6 py-3">ID Transaksi</th>
                 <th className="px-6 py-3">Tanggal</th>
-                <th className="px-6 py-3">Tipe</th>
                 <th className="px-6 py-3">Keterangan</th>
                 <th className="px-6 py-3 text-right">Debit (Masuk)</th>
                 <th className="px-6 py-3 text-right">Kredit (Keluar)</th>
@@ -2160,11 +2276,6 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
                 <tr key={trx.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-3 text-slate-500 font-mono text-xs">{trx.id}</td>
                   <td className="px-6 py-3 text-xs">{trx.tanggal}</td>
-                  <td className="px-6 py-3">
-                    <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${trx.tipe === 'Masuk' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
-                      {trx.tipe}
-                    </span>
-                  </td>
                   <td className="px-6 py-3 text-xs">
                     <div className="font-bold text-slate-800">{trx.transaksi}</div>
                     <div className="text-slate-500 mt-0.5">{trx.nama && `${trx.nama} - ` }{trx.keterangan}</div>
