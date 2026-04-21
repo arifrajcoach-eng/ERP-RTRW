@@ -5,6 +5,7 @@
       "description": "Data kependudukan warga RT/RW",
       "type": "object",
       "properties": {
+        "tenantId": { "type": "string", "description": "ID Penyewa (Multi-tenancy)" },
         "nik": { "type": "string", "description": "Nomor Induk Kependudukan (Unique ID)" },
         "kk": { "type": "string" },
         "nama": { "type": "string" },
@@ -22,13 +23,14 @@
         "tglLahir": { "type": "string", "format": "date" },
         "tglDaftar": { "type": "string", "format": "date" }
       },
-      "required": ["nik", "nama"]
+      "required": ["nik", "nama", "tenantId"]
     },
     "Kas": {
       "title": "Kas",
       "description": "Catatan keuangan kas lingkungan",
       "type": "object",
       "properties": {
+        "tenantId": { "type": "string" },
         "id": { "type": "string" },
         "tanggal": { "type": "string" },
         "tipe": { "type": "string", "enum": ["Masuk", "Keluar"] },
@@ -38,14 +40,16 @@
         "debit": { "type": "number" },
         "kredit": { "type": "number" }
       },
-      "required": ["id", "tanggal", "tipe"]
+      "required": ["id", "tanggal", "tipe", "tenantId"]
     },
     "Surat": {
       "title": "Surat",
       "description": "Permohonan surat pengantar dengan identitas lengkap",
       "type": "object",
       "properties": {
+        "tenantId": { "type": "string" },
         "id": { "type": "string" },
+        "rt": { "type": "string" },
         "tanggal": { "type": "string" },
         "pemohon": { "type": "string" },
         "nik": { "type": "string" },
@@ -66,14 +70,16 @@
         "jenis": { "type": "string" },
         "status": { "type": "string", "enum": ["Diajukan", "Selesai", "Ditolak"] }
       },
-      "required": ["id", "pemohon", "status", "nik", "jenis"]
+      "required": ["id", "pemohon", "status", "nik", "jenis", "tenantId"]
     },
     "Iuran": {
       "title": "Iuran",
       "description": "Catatan iuran bulanan warga",
       "type": "object",
       "properties": {
+        "tenantId": { "type": "string" },
         "id": { "type": "string" },
+        "rt": { "type": "string" },
         "tanggal": { "type": "string" },
         "transaksi": { "type": "string" },
         "nama": { "type": "string" },
@@ -82,21 +88,50 @@
         "status": { "type": "string", "enum": ["Lunas", "Pending"] },
         "keterangan": { "type": "string" }
       },
-      "required": ["id", "nama", "nominal", "status"]
+      "required": ["id", "nama", "nominal", "status", "tenantId"]
     },
     "User": {
       "title": "User",
-      "description": "User profiles and roles",
+      "description": "User profiles and roles with unit mapping",
       "type": "object",
       "properties": {
+        "tenantId": { "type": "string" },
         "email": { "type": "string" },
         "name": { "type": "string" },
-        "role": { "type": "string", "enum": ["Admin", "Operator", "Viewer"] }
+        "role": { "type": "string", "enum": ["Admin", "Operator", "Viewer"] },
+        "isSuperAdmin": { "type": "boolean" },
+        "unitMapping": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of RT/Units this user can manage (for Operators)"
+        },
+        "nikMapping": { 
+          "type": "string", 
+          "description": "Linked NIK for residents (for Viewers)"
+        }
       },
-      "required": ["email", "role"]
+      "required": ["email", "role", "tenantId"]
+    },
+    "Tenant": {
+      "title": "Tenant",
+      "description": "Tenant (RT/RW) configuration and subscription info",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive", "Trial"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "status"]
     }
   },
   "firestore": {
+    "/tenants/{tenantId}": {
+      "schema": "Tenant",
+      "description": "Koleksi data penyewa (RT/RW)"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "Koleksi profil pengguna dan peran"

@@ -13,8 +13,6 @@ service cloud.firestore {
     }
     
     function isEmailVerified() {
-      // Untuk demo kita izinkan yang tidak verifikasi dulu jika testing, 
-      // tapi idealnya: return request.auth.token.email_verified == true;
       return isSignedIn();
     }
 
@@ -22,16 +20,42 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function getTenantId() {
+      return getUserData().get('tenantId', 'RW26_SMART');
+    }
+
+    function isSameTenant(data) {
+      return data.get('tenantId', 'RW26_SMART') == getTenantId();
+    }
+
+    function getUnitMapping() {
+      return getUserData().get('unitMapping', []);
+    }
+
+    function isUnitMapped(data) {
+      let mapping = getUnitMapping();
+      // Admin has all access, Operator if mapping is empty (all) or if RT matches mapping
+      return isAdmin() || mapping.size() == 0 || (data.get('rt', '') in mapping);
+    }
+
+    function isNikMapped(nik) {
+      let mappedNik = getUserData().get('nikMapping', '');
+      return isAdmin() || isOperator() || (mappedNik != '' && mappedNik == nik);
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && (request.auth.token.email == 'arifrajcoach@gmail.com' || getUserData().get('isSuperAdmin', false) == true);
+    }
+
     function isAdmin() {
-      // Use data.get() to safely access fields with a default value to prevent rule crashes
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'Viewer') == 'Admin';
+             (getUserData().get('role', 'Viewer') == 'Admin' || isSuperAdmin());
     }
 
     function isOperator() {
       let role = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
-                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'Viewer') : 'Viewer';
-      return role == 'Operator' || role == 'Admin';
+                 getUserData().get('role', 'Viewer') : 'Viewer';
+      return role == 'Operator' || role == 'Admin' || isSuperAdmin();
     }
 
     function isValidId(id) {
@@ -46,56 +70,103 @@ service cloud.firestore {
       return resource.data;
     }
 
+    // --- Validation Blueprints (Pillar 2) ---
+    
+    function isValidUser(data) {
+      return data.email is string && data.email.size() <= 100 &&
+             data.role in ['Admin', 'Operator', 'Viewer'] &&
+             data.tenantId is string && data.tenantId.size() <= 50 &&
+             data.name is string && data.name.size() <= 100 &&
+             (!('isSuperAdmin' in data) || data.isSuperAdmin is bool) &&
+             (!('unitMapping' in data) || data.unitMapping is list) &&
+             (!('nikMapping' in data) || data.nikMapping is string);
+    }
+
+    function isValidWarga(data) {
+      return data.nik is string && data.nik.size() == 16 &&
+             data.nama is string && data.nama.size() <= 100 &&
+             data.rt is string && data.rt.size() <= 10 &&
+             data.rw is string && data.rw.size() <= 10 &&
+             data.tenantId is string && data.tenantId.size() <= 50;
+    }
+
+    function isValidKas(data) {
+      return data.id is string && data.id.size() <= 100 &&
+             data.jumlah is number &&
+             data.tipe in ['Masuk', 'Keluar'] &&
+             data.tenantId is string && data.tenantId.size() <= 50;
+    }
+
+    function isValidSurat(data) {
+      return data.id is string && data.id.size() <= 100 &&
+             data.nik is string && data.nik.size() == 16 &&
+             data.status in ['Draft', 'Terkirim', 'Selesai', 'Ditolak'] &&
+             data.tenantId is string && data.tenantId.size() <= 50;
+    }
+
+    function isValidIuran(data) {
+      return data.id is string && data.id.size() <= 100 &&
+             data.nik is string && data.nik.size() == 16 &&
+             data.jumlah is number &&
+             data.tenantId is string && data.tenantId.size() <= 50;
+    }
+
+    function isValidTenant(data) {
+      return data.id is string && data.id.size() <= 50 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.status in ['Active', 'Trial', 'Inactive'];
+    }
+
+    // --- Tenants Collection ---
+    match /tenants/{tenantId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin() && isValidTenant(incoming());
+    }
+
     // --- Users Collection ---
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == userId && 
-                    (incoming().role == 'Viewer' || 
-                     (request.auth.token.email == 'admin@rw26.com' && incoming().role == 'Admin') || 
-                     (request.auth.token.email == 'arifrajcoach@gmail.com' && incoming().role == 'Admin') || 
-                     (request.auth.token.email == 'operator@rw26.com' && incoming().role == 'Operator'));
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId && 
-                    !incoming().diff(existing()).affectedKeys().hasAny(['role']));
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isSuperAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if (isSignedIn() && request.auth.uid == userId && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'tenantId', 'isSuperAdmin']) && isValidUser(incoming())) || (isAdmin() && isValidUser(incoming())) || isSuperAdmin();
     }
 
     // --- Warga Collection ---
     match /warga/{nik} {
-      allow read: if isSignedIn();
-      allow create, update: if isOperator() && isValidId(nik) && 
-                            incoming().nama is string && incoming().nama.size() <= 100;
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isSameTenant(existing()) && (
+          isAdmin() || 
+          (isOperator() && isUnitMapped(existing())) || 
+          isNikMapped(nik)
+        ))
+      );
+      allow create: if (isOperator() || isSuperAdmin()) && isValidId(nik) && isValidWarga(incoming()) && (isSuperAdmin() || (isSameTenant(incoming()) && isUnitMapped(incoming())));
+      allow update: if (isOperator() || isSuperAdmin()) && isValidId(nik) && isValidWarga(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming()) && isUnitMapped(existing()) && isUnitMapped(incoming())));
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
     // --- Kas Collection ---
     match /kas/{id} {
-      allow read: if isSignedIn();
-      allow create: if isOperator() && isValidId(id) &&
-                    incoming().tipe in ['Masuk', 'Keluar'] &&
-                    incoming().debit is number && incoming().kredit is number;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (isOperator() || isAdmin())));
+      allow create: if (isOperator() || isSuperAdmin()) && isValidId(id) && isValidKas(incoming()) && (isSuperAdmin() || isSameTenant(incoming()));
+      allow update: if (isAdmin() || isSuperAdmin()) && isValidKas(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming())));
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
     // --- Surat Collection ---
     match /surat/{id} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(id) &&
-                    incoming().status == 'Diajukan' &&
-                    incoming().pemohon is string;
-      allow update: if isOperator() && 
-                    (existing().status == 'Diajukan' || isAdmin()) &&
-                    incoming().status in ['Diajukan', 'Selesai', 'Ditolak'];
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (isOperator() || isNikMapped(existing().get('nik', '')))));
+      allow create: if isSignedIn() && isValidId(id) && isValidSurat(incoming()) && (isSuperAdmin() || isSameTenant(incoming()));
+      allow update: if (isOperator() || isSuperAdmin()) && isValidSurat(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming())));
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
     // --- Iuran Collection ---
     match /iuran/{id} {
-      allow read: if isSignedIn();
-      allow create: if isOperator() && isValidId(id) &&
-                    incoming().nominal is number && incoming().nominal > 0;
-      allow update: if isOperator() &&
-                    incoming().nominal == existing().nominal; // Nominal immutable usually
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (isOperator() || isNikMapped(existing().get('nik', '')))));
+      allow create: if (isOperator() || isSuperAdmin()) && isValidId(id) && isValidIuran(incoming()) && (isSuperAdmin() || isSameTenant(incoming()));
+      allow update: if (isOperator() || isSuperAdmin()) && isValidIuran(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming())));
+      allow delete: if isAdmin() || isSuperAdmin();
     }
   }
 }

@@ -1,6 +1,6 @@
 {
-  "name": "Sistem Informasi RW 26",
-  "description": "Smart Management Information System untuk RW 26 dengan sistem login multi-role (Admin, Operator, Viewer).",
+  "name": "SmartRW Multi-Tenant System",
+  "description": "Sistem Manajemen Lingkungan (SmartRW) tingkat RW/RT dengan arsitektur Multi-Tenant, User Mapping per RT, dan Panel Super Admin untuk skalabilitas layanan.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

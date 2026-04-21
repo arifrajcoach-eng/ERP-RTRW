@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database } from 'lucide-react';
+import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -61,7 +61,7 @@ const INITIAL_IURAN_DATA = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{name: string, role: string, email?: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{name: string, role: string, email?: string, tenantId?: string, isSuperAdmin?: boolean} | null>(null);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
 
   // --- FIREBASE AUTH SYNC ---
@@ -96,11 +96,17 @@ export default function App() {
             let name = user.email?.split('@')[0] || 'User';
             
             const isAdminEmail = user.email === 'admin@rw26.com' || user.email === 'arifrajcoach@gmail.com';
+            const isOperatorEmail = user.email === 'operator@rw26.com';
+            
+            // Set default tenantId to 'RW26_SMART' for the current user
+            const tenantId = 'RW26_SMART';
+            const isSuperAdmin = user.email === 'arifrajcoach@gmail.com';
             
             if (isAdminEmail) { role = 'Admin'; name = 'Bpk. Arif (Admin)'; }
-            else if (user.email === 'operator@rw26.com') { role = 'Operator'; name = 'Petugas RT'; }
+            else if (isOperatorEmail) { role = 'Operator'; name = 'Petugas RT'; }
+            else { role = 'Viewer'; name = user.email?.split('@')[0] || 'Warga'; }
             
-            const newUser = { name, role, email: user.email };
+            const newUser = { name, role, email: user.email, tenantId, isSuperAdmin };
             // Auto-create the doc BEFORE setting state to avoid race condition with rules
             await setDoc(userDocRef, newUser);
             setCurrentUser(newUser);
@@ -154,6 +160,9 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_IURAN_DATA;
   });
 
+  const [usersData, setUsersData] = useState<any[]>([]);
+  const [tenantsData, setTenantsData] = useState<any[]>([]);
+
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
@@ -166,7 +175,7 @@ export default function App() {
 
     setIsLoadingDB(true);
     let loadedSections = 0;
-    const totalSections = 4;
+    const totalSections = currentUser?.isSuperAdmin ? 6 : (currentUser?.role === 'Admin' ? 5 : 4);
 
     const onDataLoaded = () => {
       loadedSections++;
@@ -176,7 +185,27 @@ export default function App() {
     };
 
     // 1. Warga Listener
-    const unsubWarga = onSnapshot(collection(db, 'warga'), 
+    const getWargaQuery = () => {
+      const base = collection(db, 'warga');
+      if (currentUser?.isSuperAdmin) return query(base);
+      
+      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
+      
+      if (currentUser?.role === 'Operator') {
+        const mapping = currentUser.unitMapping || [];
+        if (mapping.length > 0) {
+          constraints.push(where('rt', 'in', mapping.slice(0, 10)));
+        }
+      } else if (currentUser?.role === 'Viewer') {
+        if (currentUser.nikMapping) {
+          constraints.push(where('nik', '==', currentUser.nikMapping));
+        }
+      }
+      
+      return query(base, ...constraints);
+    };
+
+    const unsubWarga = onSnapshot(getWargaQuery(), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         setWargaData(data);
@@ -189,7 +218,7 @@ export default function App() {
     );
 
     // 2. Kas Listener
-    const unsubKas = onSnapshot(collection(db, 'kas'), 
+    const unsubKas = onSnapshot(query(collection(db, 'kas'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         setKasData(data);
@@ -202,7 +231,20 @@ export default function App() {
     );
 
     // 3. Surat Listener
-    const unsubSurat = onSnapshot(collection(db, 'surat'), 
+    const getSuratQuery = () => {
+      const base = collection(db, 'surat');
+      if (currentUser?.isSuperAdmin) return query(base);
+      
+      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
+      
+      if (currentUser?.role === 'Viewer' && currentUser.nikMapping) {
+        constraints.push(where('nik', '==', currentUser.nikMapping));
+      }
+      
+      return query(base, ...constraints);
+    };
+
+    const unsubSurat = onSnapshot(getSuratQuery(), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         setSuratData(data);
@@ -215,7 +257,20 @@ export default function App() {
     );
 
     // 4. Iuran Listener
-    const unsubIuran = onSnapshot(collection(db, 'iuran'), 
+    const getIuranQuery = () => {
+      const base = collection(db, 'iuran');
+      if (currentUser?.isSuperAdmin) return query(base);
+      
+      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
+      
+      if (currentUser?.role === 'Viewer' && currentUser.nikMapping) {
+        constraints.push(where('nik', '==', currentUser.nikMapping));
+      }
+      
+      return query(base, ...constraints);
+    };
+
+    const unsubIuran = onSnapshot(getIuranQuery(), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         setIuranData(data);
@@ -227,11 +282,49 @@ export default function App() {
       }
     );
 
+    // 5. Users Listener (Admin Only)
+    let unsubUsers = () => {};
+    if (currentUser?.role === 'Admin' || currentUser?.isSuperAdmin) {
+      const usersQuery = currentUser.isSuperAdmin 
+        ? query(collection(db, 'users'))
+        : query(collection(db, 'users'), where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'));
+
+      unsubUsers = onSnapshot(usersQuery, 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+          setUsersData(data);
+          onDataLoaded();
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'users');
+          onDataLoaded();
+        }
+      );
+    }
+
+    // 6. Tenants Listener (Super Admin Only)
+    let unsubTenants = () => {};
+    if (currentUser?.isSuperAdmin) {
+      unsubTenants = onSnapshot(collection(db, 'tenants'), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          setTenantsData(data);
+          onDataLoaded();
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'tenants');
+          onDataLoaded();
+        }
+      );
+    }
+
     return () => {
       unsubWarga();
       unsubKas();
       unsubSurat();
       unsubIuran();
+      unsubUsers();
+      unsubTenants();
     };
   }, [currentUser]);
 
@@ -328,6 +421,16 @@ export default function App() {
             <X className="w-6 h-6" />
           </button>
         </div>
+        <div className="flex-shrink-0 px-6 py-4 bg-slate-50 border-b border-slate-100">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Multi-Tenant Aktif</p>
+          </div>
+          <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
+            <p className="text-[9px] text-blue-600 font-bold uppercase tracking-tight">ID Penyewa:</p>
+            <p className="text-[10px] text-slate-700 font-mono font-bold truncate">{currentUser.tenantId || 'RW26_SMART'}</p>
+          </div>
+        </div>
         <nav className="flex-1 px-4 space-y-2 mt-6">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -335,10 +438,17 @@ export default function App() {
             { id: 'transaksi', label: 'Transaksi', icon: CreditCard },
             { id: 'surat', label: 'Surat Pengantar', icon: FileText },
             { id: 'kas', label: 'Laporan Kas', icon: BookOpen },
+            { id: 'users', label: 'Manajemen User', icon: User },
+            { id: 'super-admin', label: 'Super Admin', icon: Shield },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
           ].filter(item => {
             if (currentUser?.role === 'Viewer' && item.id === 'pengaturan') return false;
+            if (currentUser?.role === 'Viewer' && item.id === 'users') return false;
+            if (currentUser?.role === 'Viewer' && item.id === 'super-admin') return false;
             if (currentUser?.role === 'Operator' && item.id === 'pengaturan') return false;
+            if (currentUser?.role === 'Operator' && item.id === 'users') return false;
+            if (currentUser?.role === 'Operator' && item.id === 'super-admin') return false;
+            if (item.id === 'super-admin' && !currentUser?.isSuperAdmin) return false;
             return true;
           }).map((item) => (
             <button
@@ -404,11 +514,13 @@ export default function App() {
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} setActiveTab={setActiveTab} />}
-          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
-          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
-          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
-          {activeTab === 'pengaturan' && <PengaturanView />}
+          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
+          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
+          {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} />}
         </div>
       </main>
     </div>
@@ -817,7 +929,7 @@ function ConfirmModal({
   );
 }
 
-function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { wargaData: any[], setWargaData: any, userRole: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { wargaData: any[], setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
@@ -870,6 +982,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
 
   const processImportedData = async (data: any[]) => {
     const newData = data.map((row: any) => ({
+      tenantId: tenantId,
       nama: row['Nama Lengkap'] || row['nama'] || "",
       nik: row['NIK'] || row['nik'] || "",
       kk: row['No. KK'] || row['no_kk'] || row['kk'] || "",
@@ -931,7 +1044,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
       return;
     }
     
-    const newWarga = { ...formData, tglDaftar: new Date().toISOString().split('T')[0] };
+    const newWarga = { ...formData, tenantId: tenantId, tglDaftar: new Date().toISOString().split('T')[0] };
     
     setIsLoadingDB(true);
     try {
@@ -955,7 +1068,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
 
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'warga', editingWarga.nik), formData);
+      await updateDoc(doc(db, 'warga', editingWarga.nik), { ...formData, tenantId: tenantId });
       setShowEditForm(false);
       setEditingWarga(null);
       resetForm();
@@ -1644,7 +1757,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
   );
 }
 
-function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, wargaData?: any[], userRole: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTrx, setEditingTrx] = useState<any>(null);
   const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
@@ -1779,6 +1892,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
     const formattedDateTime = formattedDate + ', ' + dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
 
     const newData = data.map((row: any, idx: number) => ({
+      tenantId: tenantId,
       id: row['ID Bayar'] || row['id'] || `INV-IMP-${Date.now()}-${idx}`,
       tanggal: row['Tanggal'] || row['tanggal'] || formattedDateTime,
       transaksi: row['Transaksi'] || row['transaksi'] || "Iuran Lainnya",
@@ -1828,9 +1942,13 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
 
     // 1. Prepare Data
     const transactionId = editingTrx ? editingTrx.id : `INV-${dateObj.getFullYear().toString().slice(-2)}${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${String(iuranData.length + 1).padStart(3, '0')}`;
-    
+    const warga = wargaData.find(w => w.nama === nama);
+    const rt = warga?.rt || "";
+
     const newPayment = {
+      tenantId: tenantId,
       id: transactionId,
+      rt: rt,
       tanggal: editingTrx ? editingTrx.tanggal : formattedDateTime,
       transaksi: transaksi,
       nama: nama,
@@ -1854,6 +1972,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
         
         // Also record to Kas if NEW transaction
         const newKasEntry = {
+          tenantId: tenantId,
           id: `TRX-${String(kasData.length + 1).padStart(3, '0')}`,
           tanggal: formattedDate,
           tipe: trxType,
@@ -2248,7 +2367,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
   );
 }
 
-function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoadingDB, handleFirestoreError }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, setIsLoadingDB: any, handleFirestoreError: any }) {
+function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -2299,7 +2418,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
   const handleSetujui = async (id: string) => {
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'surat', id), { status: "Selesai" });
+      await updateDoc(doc(db, 'surat', id), { status: "Selesai", tenantId: tenantId });
       setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/surat/${id}`);
@@ -2311,7 +2430,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
   const handleTolak = async (id: string) => {
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'surat', id), { status: "Ditolak" });
+      await updateDoc(doc(db, 'surat', id), { status: "Ditolak", tenantId: tenantId });
       setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/surat/${id}`);
@@ -2488,8 +2607,10 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
     const newId = `SRT-${Date.now()}`;
     
     const newSurat = {
+      tenantId: tenantId,
       id: newId,
       tanggal: formattedDate,
+      rt: (formData.get('rt_rw') as string)?.split('/')[0]?.trim() || '',
       pemohon: formData.get('pemohon') as string,
       nik: formData.get('nik') as string,
       ttl: formData.get('ttl') as string,
@@ -2810,7 +2931,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
   );
 }
 
-function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -2860,6 +2981,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
     const tipe = formData.get('tipe') as string;
     
     const newTrx = {
+      tenantId: tenantId,
       id: newId,
       tanggal: formattedDate,
       tipe: tipe,
@@ -2880,6 +3002,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
       if (tipe === 'Masuk' && (formData.get('transaksi') === 'Iuran Warga')) {
         const formattedDateTime = formattedDate + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
         const newIuran = {
+          tenantId: tenantId,
           id: `INV-${Date.now()}-IUR`,
           tanggal: formattedDateTime,
           transaksi: formData.get('transaksi') as string,
@@ -3258,7 +3381,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
   );
 }
 
-function PengaturanView() {
+function PengaturanView({ tenantId }: { tenantId: string }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState('');
 
@@ -3293,6 +3416,7 @@ function PengaturanView() {
           const wId = `WARGA-${Date.now()}-${wIdx}`;
           const newWarga = {
             id: wId,
+            tenantId: tenantId,
             nik: `321606${Date.now().toString().slice(-6)}${wIdx.toString().padStart(4, '0')}`,
             kk: kel.kk,
             nama: member.nama,
@@ -3348,6 +3472,7 @@ function PengaturanView() {
           
           batch.set(doc(db, 'kas', kasId), {
             id: kasId,
+            tenantId: tenantId,
             tanggal: formattedDate,
             tipe: 'Keluar',
             transaksi: jenis,
@@ -3366,6 +3491,7 @@ function PengaturanView() {
           
           // Set ke kas
           batch.set(doc(db, 'kas', kasId), {
+            tenantId: tenantId,
             id: kasId,
             tanggal: formattedDate,
             tipe: 'Masuk',
@@ -3380,7 +3506,9 @@ function PengaturanView() {
 
           // Set ke iuran
           batch.set(doc(db, 'iuran', iuranId), {
+            tenantId: tenantId,
             id: iuranId,
+            rt: RandomWarga.rt,
             tanggal: formattedDateTime,
             transaksi: jenis,
             nama: RandomWarga.nama,
@@ -3410,11 +3538,13 @@ function PengaturanView() {
         const suratId = `SRT-DUMMY-${Date.now()}-${i}`;
         
         batch.set(doc(db, 'surat', suratId), {
+          tenantId: tenantId,
           id: suratId,
+          rt: RandomWarga.rt,
           tanggal: formattedDate,
-          jenisSurat: jSurat,
+          jenis: jSurat,
           pemohon: RandomWarga.nama,
-          status: i % 5 === 0 ? 'Tertunda' : (i % 7 === 0 ? 'Ditolak' : 'Disetujui'),
+          status: i % 5 === 0 ? 'Draft' : (i % 7 === 0 ? 'Ditolak' : 'Selesai'),
           keterangan: 'Keperluan administrasi'
         });
       }
@@ -3679,6 +3809,323 @@ function LoginView() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function UsersView({ usersData, setIsLoadingDB, handleFirestoreError }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any }) {
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
+
+  const handleUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const role = formData.get('role') as string;
+    const unitMappingRaw = formData.get('unitMapping') as string;
+    const nikMapping = formData.get('nikMapping') as string;
+
+    const unitMapping = unitMappingRaw ? unitMappingRaw.split(',').map(s => s.trim()).filter(s => s !== '') : [];
+
+    setIsLoadingDB(true);
+    try {
+      await updateDoc(doc(db, 'users', editingUser.uid), {
+        role,
+        unitMapping,
+        nikMapping
+      });
+      setShowEditForm(false);
+      setEditingUser(null);
+    } catch (error: any) {
+      handleFirestoreError(error, 'update', `/users/${editingUser.uid}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
+         <h3 className="text-sm font-bold text-slate-800 mb-6 flex items-center">
+           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+           Manajemen Pengguna & Pemetaan Unit
+         </h3>
+         
+         <div className="overflow-x-auto border border-slate-100 rounded-lg">
+           <table className="w-full text-left border-collapse border-transparent">
+             <thead>
+               <tr className="bg-slate-50 border-b border-slate-100">
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pengguna</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Peran</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pemetaan Unit (RT)</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pemetaan NIK</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Aksi</th>
+               </tr>
+             </thead>
+             <tbody className="divide-y divide-slate-50">
+               {usersData.length === 0 && (
+                 <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic text-xs">Belum ada data pengguna ditemukan.</td>
+                 </tr>
+               )}
+               {usersData.map((user) => (
+                 <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
+                   <td className="px-4 py-3">
+                     <p className="text-xs font-bold text-slate-700">{user.name}</p>
+                     <p className="text-[10px] text-slate-400 font-medium">{user.email}</p>
+                   </td>
+                   <td className="px-4 py-3">
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${
+                        user.role === 'Admin' ? 'bg-red-50 text-red-600 border-red-100' :
+                        user.role === 'Operator' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                        'bg-blue-50 text-blue-600 border-blue-100'
+                      }`}>{user.role}</span>
+                   </td>
+                   <td className="px-4 py-3">
+                     <p className="text-[11px] text-slate-600 font-bold font-mono">
+                       {user.unitMapping?.length > 0 ? user.unitMapping.join(', ') : 'Semua RT'}
+                     </p>
+                   </td>
+                   <td className="px-4 py-3">
+                     <p className="text-[11px] text-slate-600 font-bold font-mono">{user.nikMapping || '-'}</p>
+                   </td>
+                   <td className="px-4 py-3 text-right">
+                     <button 
+                       onClick={() => { setEditingUser(user); setShowEditForm(true); }}
+                       className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
+                     >
+                       <Edit className="w-3.5 h-3.5" />
+                     </button>
+                   </td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
+         </div>
+       </div>
+
+       {showEditForm && editingUser && (
+         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden"
+            >
+               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                     <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                        <User className="w-4 h-4" />
+                     </div>
+                     <h3 className="font-bold text-slate-800">Edit Akses & Pemetaan</h3>
+                  </div>
+                  <button onClick={() => setShowEditForm(false)} className="p-1.5 hover:text-red-500 rounded-lg bg-white border border-slate-200 transition-colors"><X className="w-4 h-4" /></button>
+               </div>
+               <form className="p-6 space-y-4" onSubmit={handleUpdateUser}>
+                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 mb-2">
+                     <p className="text-[11px] font-bold text-blue-700 mb-1">User Info</p>
+                     <p className="text-sm font-bold text-slate-800">{editingUser.name}</p>
+                     <p className="text-[10px] text-slate-500 font-mono italic">{editingUser.email}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Peran Sistem</label>
+                    <select name="role" defaultValue={editingUser.role} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-100 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold">
+                       <option value="Admin">Admin (Akses Penuh)</option>
+                       <option value="Operator">Operator (Petugas RT)</option>
+                       <option value="Viewer">Viewer (Warga)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Pemetaan Unit (RT)</label>
+                    <input type="text" name="unitMapping" defaultValue={editingUser.unitMapping?.join(', ') || ''} placeholder="Pisahkan dengan koma, Cth: 01, 02, 03" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-100 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
+                    <div className="flex items-start gap-1.5 p-2 bg-amber-50 rounded-lg border border-amber-100">
+                       <AlertTriangle className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                       <p className="text-[9px] text-amber-700 leading-tight italic font-medium">Hanya berlaku untuk Operator. Membatasi pengolahan data hanya pada RT yang dipilih. Kosongkan untuk akses semua RT.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Pemetaan NIK Warga</label>
+                    <input type="text" name="nikMapping" defaultValue={editingUser.nikMapping || ''} placeholder="Masukkan 16 digit NIK" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-100 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
+                    <div className="flex items-start gap-1.5 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                       <Database className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" />
+                       <p className="text-[9px] text-blue-700 leading-tight italic font-medium">Hanya berlaku untuk Viewer. Membatasi akses melihat profil warga hanya untuk NIK ini.</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button type="button" onClick={() => setShowEditForm(false)} className="flex-1 py-2.5 text-slate-500 font-black uppercase text-[10px] tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+                    <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">Simpan Perubahan</button>
+                  </div>
+               </form>
+            </motion.div>
+         </div>
+       )}
+    </div>
+  );
+}
+
+function TenantsView({ tenantsData, setIsLoadingDB, handleFirestoreError }: { tenantsData: any[], setIsLoadingDB: any, handleFirestoreError: any }) {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<any>(null);
+
+  const handleSaveTenant = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const tenant = {
+      id: formData.get('id') as string,
+      name: formData.get('name') as string,
+      address: formData.get('address') as string,
+      adminEmail: formData.get('adminEmail') as string,
+      status: formData.get('status') as string,
+      createdAt: editingTenant ? editingTenant.createdAt : new Date().toISOString()
+    };
+
+    setIsLoadingDB(true);
+    try {
+      await setDoc(doc(db, 'tenants', tenant.id), tenant);
+      setShowAddForm(false);
+      setEditingTenant(null);
+    } catch (error: any) {
+      handleFirestoreError(error, 'write', `/tenants/${tenant.id}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleDeleteTenant = async (id: string) => {
+    if (!confirm("Hapus tenant ini? Semua data terkait di rules akan terputus.")) return;
+    setIsLoadingDB(true);
+    try {
+      await deleteDoc(doc(db, 'tenants', id));
+    } catch (error: any) {
+      handleFirestoreError(error, 'delete', `/tenants/${id}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+       <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
+               <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Manajemen Tenant (Client RW/RT)</h3>
+              <p className="text-sm text-slate-500">Ekosistem Multi-Tenant RW 26 Smart System.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => { setEditingTenant(null); setShowAddForm(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Tambah Tenant Baru
+          </button>
+       </div>
+
+       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+         <div className="overflow-x-auto">
+           <table className="w-full text-left border-collapse">
+             <thead>
+               <tr className="bg-slate-50 border-b border-slate-100">
+                 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Detail Tenant</th>
+                 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Admin Utama</th>
+                 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
+                 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Aksi</th>
+               </tr>
+             </thead>
+             <tbody className="divide-y divide-slate-50">
+                {tenantsData.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-10 text-center text-slate-400 italic text-sm">Belum ada tenant terdaftar.</td>
+                  </tr>
+                )}
+                {tenantsData.map((tenant) => (
+                  <tr key={tenant.id} className="hover:bg-blue-50/20 transition-colors">
+                    <td className="px-6 py-4">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                             <Database className="w-5 h-5" />
+                          </div>
+                          <div>
+                             <p className="text-sm font-bold text-slate-800">{tenant.name}</p>
+                             <p className="text-[10px] font-mono text-blue-600 font-bold bg-blue-50 px-1 rounded inline-block">ID: {tenant.id}</p>
+                          </div>
+                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                       <p className="text-xs text-slate-600 font-bold">{tenant.adminEmail || '-'}</p>
+                       <p className="text-[10px] text-slate-400 truncate max-w-[200px]">{tenant.address || '-'}</p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                       <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter border ${
+                         tenant.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' :
+                         tenant.status === 'Trial' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                         'bg-slate-50 text-slate-700 border-slate-200'
+                       }`}>
+                         {tenant.status}
+                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                       <div className="flex justify-end gap-2 text-[10px] uppercase font-black tracking-widest">
+                          <button onClick={() => { setEditingTenant(tenant); setShowAddForm(true); }} className="px-3 py-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100">Edit</button>
+                          <button onClick={() => handleDeleteTenant(tenant.id)} className="px-3 py-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-100">Hapus</button>
+                       </div>
+                    </td>
+                  </tr>
+                ))}
+             </tbody>
+           </table>
+         </div>
+       </div>
+
+       {showAddForm && (
+         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.9 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200"
+            >
+               <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-slate-800">{editingTenant ? 'Edit Tenant' : 'Daftarkan Tenant Baru'}</h3>
+                  <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+               </div>
+               <form className="p-8 grid grid-cols-2 gap-5" onSubmit={handleSaveTenant}>
+                  <div className="col-span-2">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">ID Penyewa (Unique)</label>
+                    <input name="id" defaultValue={editingTenant?.id} readOnly={!!editingTenant} required placeholder="Contoh: RT01_WARGA" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold text-blue-600" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Nama Organisasi/RT</label>
+                    <input name="name" defaultValue={editingTenant?.name} required placeholder="Contoh: RT 01 / RW 25 Kedaton" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700" />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Status Berlangganan</label>
+                    <select name="status" defaultValue={editingTenant?.status || 'Trial'} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700">
+                       <option value="Active">Active (Berlangganan)</option>
+                       <option value="Trial">Trial (Uji Coba)</option>
+                       <option value="Inactive">Inactive (Non-aktif)</option>
+                    </select>
+                  </div>
+                  <div className="col-span-1">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Email Admin RW/RT</label>
+                    <input name="adminEmail" defaultValue={editingTenant?.adminEmail} type="email" placeholder="admin@rt01.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-medium text-slate-700" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Alamat / Keterangan Lokasi</label>
+                    <textarea name="address" defaultValue={editingTenant?.address} rows={2} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-medium text-slate-700" />
+                  </div>
+                  <div className="col-span-2 flex gap-4 mt-4">
+                     <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-4 text-slate-500 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-slate-50 transition-all border border-slate-200">Batal</button>
+                     <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-bold uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">Simpan Data Tenant</button>
+                  </div>
+               </form>
+            </motion.div>
+         </div>
+       )}
     </div>
   );
 }
