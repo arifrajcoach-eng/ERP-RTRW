@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight } from 'lucide-react';
+import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, Cell } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, onSnapshot, getDocFromServer } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, onSnapshot, getDocFromServer, writeBatch } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -316,7 +316,7 @@ export default function App() {
         <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-blue-600 flex items-center gap-2">
-              <Users className="w-6 h-6" />
+              <img src="/logo_rw26.png" alt="Logo RW 26" className="w-8 h-8" referrerPolicy="no-referrer" />
               RW 26 BERJUANG
             </h1>
             <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Smart System by Nexapps</p>
@@ -403,11 +403,11 @@ export default function App() {
 
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
-          {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} />}
+          {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} setActiveTab={setActiveTab} />}
           {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
-          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
+          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
           {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
-          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
+          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
           {activeTab === 'pengaturan' && <PengaturanView />}
         </div>
       </main>
@@ -415,7 +415,7 @@ export default function App() {
   );
 }
 
-function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: { kasData: any[], wargaData: any[], suratData: any[], iuranData: any[], userRole: string }) {
+function DashboardView({ kasData, wargaData, suratData, iuranData, userRole, setActiveTab }: { kasData: any[], wargaData: any[], suratData: any[], iuranData: any[], userRole: string, setActiveTab: (tab: string) => void }) {
   const [kasPeriod, setKasPeriod] = useState('yearly');
   const [piePeriod, setPiePeriod] = useState('30days');
 
@@ -533,6 +533,46 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole }: {
 
   return (
     <div className="space-y-6">
+      {/* Quick Access Shortcuts */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button 
+          onClick={() => setActiveTab('warga')}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col items-center justify-center gap-2 group"
+        >
+          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Users className="w-5 h-5 text-blue-600" />
+          </div>
+          <span className="text-xs font-bold text-slate-700">Data Warga</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('transaksi')}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-green-300 transition-all flex flex-col items-center justify-center gap-2 group"
+        >
+          <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <CreditCard className="w-5 h-5 text-green-600" />
+          </div>
+          <span className="text-xs font-bold text-slate-700">Transaksi</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('surat')}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-purple-300 transition-all flex flex-col items-center justify-center gap-2 group"
+        >
+          <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <FileText className="w-5 h-5 text-purple-600" />
+          </div>
+          <span className="text-xs font-bold text-slate-700">Surat Pengantar</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('kas')}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all flex flex-col items-center justify-center gap-2 group"
+        >
+          <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <BookOpen className="w-5 h-5 text-amber-600" />
+          </div>
+          <span className="text-xs font-bold text-slate-700">Laporan Kas</span>
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Warga</p>
@@ -781,6 +821,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
+  const [viewWarga, setViewWarga] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRT, setFilterRT] = useState("Semua");
   const [filterRW, setFilterRW] = useState("Semua");
@@ -866,22 +907,35 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
 
   // Form State for Adding/Editing
   const [formData, setFormData] = useState({
-    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+    
+    // Auto-restrict NIK and KK to digits only, max 16 chars
+    if (name === 'nik' || name === 'kk') {
+      value = value.replace(/\D/g, ''); // Remove non-numeric characters
+      if (value.length > 16) {
+        value = value.slice(0, 16);
+      }
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.nik && formData.nik.length !== 16) {
+      alert("NIK harus terdiri dari tepat 16 digit angka.");
+      return;
+    }
+    
     const newWarga = { ...formData, tglDaftar: new Date().toISOString().split('T')[0] };
     
     setIsLoadingDB(true);
     try {
       await setDoc(doc(db, 'warga', newWarga.nik), newWarga);
-      setWargaData((prev: any) => [...prev, newWarga]);
       setShowAddForm(false);
       resetForm();
     } catch (error: any) {
@@ -894,10 +948,14 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (formData.nik && formData.nik.length !== 16) {
+      alert("NIK harus terdiri dari tepat 16 digit angka.");
+      return;
+    }
+
     setIsLoadingDB(true);
     try {
       await updateDoc(doc(db, 'warga', editingWarga.nik), formData);
-      setWargaData((prev: any) => prev.map((w: any) => w.nik === editingWarga.nik ? formData : w));
       setShowEditForm(false);
       setEditingWarga(null);
       resetForm();
@@ -932,7 +990,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
 
   const resetForm = () => {
     setFormData({
-      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
     });
   };
 
@@ -984,9 +1042,17 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
   });
 
   const handleExportExcel = () => {
-    const headers = ['Nama Lengkap', 'Posisi dalam Keluarga', 'Profesi', 'NIK', 'No. KK', 'RT/RW', 'Alamat', 'Status Warga', 'No. HP'];
+    const headers = [
+      'Nama Lengkap', 'NIK', 'No. KK', 'Tempat Lahir', 'Tgl Lahir', 'Jenis Kelamin', 
+      'Posisi dalam Keluarga', 'Profesi / Pekerjaan', 'Agama', 'Status Kawin', 'Kewarganegaraan', 
+      'RT', 'RW', 'Alamat/Blok', 'Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Status Warga', 'No. HP (WA)'
+    ];
     const rows = filteredWargaData.map(w => 
-      [w.nama, w.posisi, w.profesi, `'${w.nik}`, `'${w.kk}`, `${w.rt}/${w.rw}`, w.blok, w.status, `'${w.hp}`].join(',')
+      [
+        `"${w.nama || ''}"`, `"${w.nik || ''}"`, `"${w.kk || ''}"`, `"${w.tempatLahir || ''}"`, `"${w.tglLahir || ''}"`, `"${w.jk || ''}"`,
+        `"${w.posisi || ''}"`, `"${w.profesi || ''}"`, `"${w.agama || ''}"`, `"${w.kawin || ''}"`, `"${w.kewarganegaraan || ''}"`,
+        `"${w.rt || ''}"`, `"${w.rw || ''}"`, `"${w.blok || ''}"`, `"${w.kelurahan || ''}"`, `"${w.kecamatan || ''}"`, `"${w.kota_kab || ''}"`, `"${w.status || ''}"`, `"${w.hp || ''}"`
+      ].join(',')
     );
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
     const encodedUri = encodeURI(csvContent);
@@ -999,31 +1065,41 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
   };
 
   const handleExportPDF = () => {
-    const doc = new jsPDF();
+    // Gunakan orientasi lanskap ('l') agar tabel yang lebar bisa muat
+    const doc = new jsPDF('l', 'mm', 'a4');
     
     // Konfigurasi Judul PDF
     doc.setFontSize(16);
-    doc.text("DATA WARGA RW 26 BERJUANG", 14, 15);
+    doc.text("DATA WARGA LENGKAP RW 26 BERJUANG", 14, 15);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
-    // Konfigurasi Tabel Data Warga
-    const tableColumn = ["Nama Lengkap", "Posisi dalam Keluarga", "Profesi", "NIK", "No. KK", "RT/RW", "Alamat", "Status", "No. HP"];
-    const tableRows = [];
+    // Konfigurasi Tabel Data Warga yang Lebih Lengkap
+    const tableColumn = [
+      "Nama Lengkap", "NIK / KK", "L/P", "Posisi", 
+      "TTL & Agama", "Pekerjaan", "RT/RW", "Alamat Domisili", 
+      "Status", "No HP"
+    ];
+    const tableRows: any[] = [];
 
     filteredWargaData.forEach(warga => {
+      const ttl_agama = `${warga.tempatLahir || '-'}, ${warga.tglLahir || '-'}\n${warga.agama || '-'}`;
+      const nik_kk = `${warga.nik || '-'}\n${warga.kk || '-'}`;
+      const alamat_lengkap = `${warga.blok || '-'}\nKel: ${warga.kelurahan || '-'}, Kec: ${warga.kecamatan || '-'}\nKota: ${warga.kota_kab || '-'}`;
+      
       const rowData = [
-        warga.nama,
-        warga.posisi,
-        warga.profesi,
-        warga.nik,
-        warga.kk,
-        `${warga.rt}/${warga.rw}`,
-        warga.blok,
-        warga.status,
-        warga.hp
+        warga.nama || "-",
+        nik_kk,
+        warga.jk === 'Laki-Laki' ? 'L' : (warga.jk === 'Perempuan' ? 'P' : '-'),
+        warga.posisi || "-",
+        ttl_agama,
+        warga.profesi || "-",
+        `${warga.rt || '-'}/${warga.rw || '-'}`,
+        alamat_lengkap,
+        warga.status || "-",
+        warga.hp || "-"
       ];
       tableRows.push(rowData);
     });
@@ -1034,13 +1110,25 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
       body: tableRows,
       startY: 28,
       theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [59, 130, 246] }, // Warna biru
+      styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+      headStyles: { fillColor: [59, 130, 246], halign: 'center', valign: 'middle' }, // Warna biru
+      columnStyles: {
+        0: { cellWidth: 35 }, // Nama
+        1: { cellWidth: 35 }, // NIK / KK
+        2: { cellWidth: 8, halign: 'center' }, // L/P
+        3: { cellWidth: 20 }, // Posisi
+        4: { cellWidth: 30 }, // TTL & Agama
+        5: { cellWidth: 25 }, // Pekerjaan
+        6: { cellWidth: 12, halign: 'center' }, // RT/RW
+        7: { cellWidth: 60 }, // Alamat
+        8: { cellWidth: 20 }, // Status
+        9: { cellWidth: 25 }  // No HP
+      },
       alternateRowStyles: { fillColor: [248, 250, 252] }, // Warna slate-50
     });
 
     // Simpan dokumen PDF
-    doc.save(`Data_Warga_RW26_${new Date().getTime()}.pdf`);
+    doc.save(`Data_Warga_Lengkap_RW26_${new Date().getTime()}.pdf`);
   };
 
   // Reset page when filter changes
@@ -1209,6 +1297,12 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
                 {userRole !== 'Viewer' && (
                   <td className="px-6 py-3 text-right print:hidden">
                     <div className="flex items-center justify-end gap-2">
+                       <button 
+                        onClick={() => setViewWarga(warga)}
+                        className="text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 p-1.5 rounded transition-colors" title="Detail Profil"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
                       <button 
                         onClick={() => startEdit(warga)}
                         className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors" title="Edit"
@@ -1272,11 +1366,11 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">NIK</label>
-                  <input required name="nik" value={formData.nik} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit NIK" />
+                  <input required name="nik" value={formData.nik} onChange={handleInputChange} type="text" minLength={16} maxLength={16} pattern="\d{16}" title="NIK harus 16 digit angka" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit NIK" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">No. KK</label>
-                  <input required name="kk" value={formData.kk} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit KK" />
+                  <input required name="kk" value={formData.kk} onChange={handleInputChange} type="text" minLength={16} maxLength={16} pattern="\d{16}" title="No KK harus 16 digit angka" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="16 digit KK" />
                 </div>
               </div>
               
@@ -1374,9 +1468,25 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
                   <input required name="hp" value={formData.hp} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="08..." />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat</label>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat (Jalur/Blok)</label>
                   <input required name="blok" value={formData.blok} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="A/01" />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Kelurahan</label>
+                  <input required name="kelurahan" value={formData.kelurahan} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Kel. Sukamaju" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Kecamatan</label>
+                  <input required name="kecamatan" value={formData.kecamatan} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Kec. Sukajaya" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Kota / Kabupaten</label>
+                <input required name="kota_kab" value={formData.kota_kab} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Kota Metropolitan" />
               </div>
 
               <div>
@@ -1427,6 +1537,96 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
       )}
 
       <AnimatePresence>
+        {viewWarga && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 print:hidden">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <User className="w-4 h-4 text-blue-600" />
+                  Detail Profil Warga
+                </h3>
+                <button onClick={() => setViewWarga(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto space-y-6">
+                <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                    {viewWarga.ktpUrl ? (
+                      <img src={viewWarga.ktpUrl} alt="Foto" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-8 h-8 text-slate-400" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-slate-900">{viewWarga.nama}</h2>
+                    <p className="text-sm text-slate-500 font-medium">{viewWarga.nik}</p>
+                    <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${viewWarga.status === 'Warga Tetap' ? 'border-green-200 bg-green-50 text-green-700' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
+                      {viewWarga.status}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Nomor KK</p>
+                    <p className="font-medium text-slate-800">{viewWarga.kk || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">No. HP (WA)</p>
+                    <p className="font-medium text-slate-800">{viewWarga.hp || '-'}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tempat, Tanggal Lahir</p>
+                    <p className="font-medium text-slate-800">{(viewWarga.tempatLahir && viewWarga.tglLahir) ? `${viewWarga.tempatLahir}, ${viewWarga.tglLahir}` : '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Jenis Kelamin</p>
+                    <p className="font-medium text-slate-800">{viewWarga.jk || '-'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Profesi / Pekerjaan</p>
+                    <p className="font-medium text-slate-800">{viewWarga.profesi || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Posisi dalam Keluarga</p>
+                    <p className="font-medium text-slate-800">{viewWarga.posisi || '-'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Agama / Status Kawin</p>
+                    <p className="font-medium text-slate-800">{(viewWarga.agama || '-') + ' / ' + (viewWarga.kawin || '-')}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Kewarganegaraan</p>
+                    <p className="font-medium text-slate-800">{viewWarga.kewarganegaraan || '-'}</p>
+                  </div>
+
+                  <div className="col-span-2 pt-4 border-t border-slate-100">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Alamat Lengkap (Domisili)</p>
+                    <p className="font-medium text-slate-800">
+                      {viewWarga.blok ? `${viewWarga.blok}, ` : ''} 
+                      RT {viewWarga.rt} / RW {viewWarga.rw} 
+                      {viewWarga.kelurahan ? `, Kel. ${viewWarga.kelurahan}` : ''}
+                      {viewWarga.kecamatan ? `, Kec. ${viewWarga.kecamatan}` : ''}
+                      {viewWarga.kota_kab ? `, ${viewWarga.kota_kab}` : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {wargaToDelete && (
           <ConfirmModal 
             isOpen={true}
@@ -1444,7 +1644,7 @@ function WargaView({ wargaData, setWargaData, userRole, setIsLoadingDB, handleFi
   );
 }
 
-function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, userRole: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, wargaData?: any[], userRole: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTrx, setEditingTrx] = useState<any>(null);
   const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
@@ -1482,73 +1682,54 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
   };
 
   const handlePrintKwitansi = (trx: any) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const html = `
-      <html>
-        <head>
-          <title>Kwitansi Pembayaran - RW 26</title>
-          <style>
-            body { font-family: 'Courier New', Courier, monospace; padding: 20px; line-height: 1.5; color: #333; max-width: 600px; margin: 0 auto; }
-            .border { border: 2px dashed #ccc; padding: 30px; position: relative; }
-            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-            .title { font-size: 24px; font-weight: bold; margin: 0; }
-            .receipt-no { position: absolute; top: 10px; right: 10px; font-size: 12px; }
-            .content { margin-bottom: 30px; }
-            .row { display: flex; margin-bottom: 10px; border-bottom: 1px dotted #ccc; }
-            .label { width: 150px; font-weight: bold; }
-            .value { flex: 1; }
-            .amount { font-size: 24px; font-weight: bold; background: #f0f0f0; padding: 10px; display: inline-block; margin-top: 20px; }
-            .footer { display: flex; justify-content: space-between; margin-top: 40px; }
-            .signature { text-align: center; width: 200px; }
-            .signature-box { height: 60px; margin-top: 10px; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="border">
-            <div class="receipt-no">No: ${trx.id}</div>
-            <div class="header">
-              <h1 class="title">KWITANSI PEMBAYARAN</h1>
-              <p>RUKUN WARGA 26 BERJUANG</p>
-            </div>
-            
-            <div class="content">
-              <div class="row"><div class="label">Telah Terima Dari</div><div class="value">: ${trx.nama}</div></div>
-              <div class="row"><div class="label">Untuk Pembayaran</div><div class="value">: ${trx.transaksi}</div></div>
-              <div class="row"><div class="label">Periode</div><div class="value">: ${trx.periode}</div></div>
-              <div class="row"><div class="label">Keterangan</div><div class="value">: ${trx.keterangan || '-'}</div></div>
-              <div class="row"><div class="label">Tanggal</div><div class="value">: ${trx.tanggal}</div></div>
-              
-              <div class="amount">Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(trx.nominal)},-</div>
-            </div>
-
-            <div class="footer">
-              <div class="signature">
-                <p>Penyetor</p>
-                <div class="signature-box"></div>
-                <p>( ${trx.nama} )</p>
-              </div>
-              <div class="signature">
-                <p>Penerima / Bendahara</p>
-                <div class="signature-box"></div>
-                <p>( ..................... )</p>
-              </div>
-            </div>
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(() => { window.close(); }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    // Header
+    doc.setFontSize(20);
+    doc.text("KWITANSI PEMBAYARAN", 105, 20, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text("RUKUN WARGA 26 BERJUANG", 105, 30, { align: 'center' });
+    doc.line(10, 35, 200, 35);
+    
+    // Receipt No
+    doc.setFontSize(10);
+    doc.text(`No: ${trx.id}`, 180, 10);
+    
+    // Content
+    doc.setFontSize(12);
+    let y = 50;
+    const drawRow = (label: string, value: string) => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, 20, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`: ${value}`, 60, y);
+      y += 10;
+    };
+    
+    drawRow("Telah Terima Dari", trx.nama);
+    drawRow("Untuk Pembayaran", trx.transaksi);
+    drawRow("Periode", trx.periode);
+    drawRow("Keterangan", trx.keterangan || '-');
+    drawRow("Tanggal", trx.tanggal);
+    
+    // Amount
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.rect(20, y, 90, 15);
+    doc.text(`Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(trx.nominal)},-`, 25, y + 10);
+    
+    // Footer (Signatures)
+    y += 40;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text("Penyetor", 40, y);
+    doc.text("Penerima / Bendahara", 150, y, { align: 'center' });
+    
+    y += 30;
+    doc.text(`( ${trx.nama} )`, 40, y);
+    doc.text("( ..................... )", 150, y, { align: 'center' });
+    
+    doc.save(`Kwitansi_${trx.id}.pdf`);
   };
 
   const handleEditTransaction = (trx: any) => {
@@ -1638,9 +1819,12 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
     const nominalRaw = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
     const transaksi = formData.get('transaksi') as string;
     const nama = formData.get('nama') as string;
+    const alamat = formData.get('alamat') as string || "-";
     const keterangan = formData.get('keterangan') as string || "-";
     const status = formData.get('status') as string;
-    const periode = formData.get('periode') as string;
+    const periodeRaw = formData.get('periode') as string;
+    const periodeDate = new Date(periodeRaw);
+    const periode = periodeDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 
     // 1. Prepare Data
     const transactionId = editingTrx ? editingTrx.id : `INV-${dateObj.getFullYear().toString().slice(-2)}${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${String(iuranData.length + 1).padStart(3, '0')}`;
@@ -1650,6 +1834,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
       tanggal: editingTrx ? editingTrx.tanggal : formattedDateTime,
       transaksi: transaksi,
       nama: nama,
+      alamat: alamat,
       tipe: trxType === 'Masuk' ? 'Debit' : 'Kredit',
       periode: periode,
       nominal: nominalRaw,
@@ -1719,7 +1904,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
     const doc = new jsPDF();
     
     doc.setFontSize(16);
-    doc.text("LAPORAN CATATAN TRANSAKSI", 14, 15);
+    doc.text("LAPORAN CATATAN RW 26", 14, 15);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -1749,6 +1934,12 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
       headStyles: { fillColor: [59, 130, 246] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
     });
+
+    // Add footer
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(9);
+    doc.text("Demikian laporan ini dibuat untuk dapat dipergunakan sebagaimana mestinya.", 14, finalY);
+    doc.text("Diterbitkan oleh Bendahara.", 14, finalY + 7);
 
     doc.save(`Laporan_Transaksi_${new Date().getTime()}.pdf`);
   };
@@ -1824,12 +2015,12 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
                 </td>
                 <td className="px-6 py-3 text-center">
                   <div className="flex items-center justify-center gap-1.5">
-                    <button 
+                      <button 
                       onClick={() => handlePrintKwitansi(trx)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 border border-slate-100 rounded-lg transition-all shadow-sm active:scale-95"
-                      title="Cetak Kwitansi"
+                      className="p-2 text-red-500 hover:bg-red-50 border border-slate-100 rounded-lg transition-all shadow-sm active:scale-95"
+                      title="PDF"
                     >
-                      <Printer className="w-4 h-4" />
+                      <FileText className="w-4 h-4" />
                     </button>
                     {(userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'operator') && (
                       <>
@@ -1906,20 +2097,29 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
                   <select name="transaksi" defaultValue={editingTrx?.transaksi} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
                     {trxType === 'Masuk' ? (
                       <>
-                        <option value="Iuran Keamanan">Iuran Keamanan</option>
-                        <option value="Iuran Kebersihan">Iuran Kebersihan (Sampah)</option>
-                        <option value="Kas / Kas RW">Kas / Kas RW</option>
-                        <option value="Donasi / Sumbangan">Donasi / Sumbangan</option>
+                        <option value="Iuran Rutin Warga">Iuran Rutin Warga</option>
+                        <option value="Iuran Partisipasi Pembangunan">Iuran Partisipasi Pembangunan</option>
+                        <option value="Dana Kelurahan/Pemerintah">Dana Kelurahan/Pemerintah</option>
+                        <option value="Donasi & Bantuan Sosial">Donasi & Bantuan Sosial</option>
+                        <option value="Sponsorship & Donatur">Sponsorship & Donatur</option>
+                        <option value="Hasil Usaha RT/RW">Hasil Usaha RT/RW</option>
                         <option value="Lainnya">Lainnya...</option>
                       </>
                     ) : (
                       <>
-                        <option value="Biaya Kebersihan">Gaji / Honor Petugas</option>
-                        <option value="Biaya Listrik">Listrik & Air Pos</option>
-                        <option value="Perbaikan Inventaris">Perbaikan / Maintenance</option>
-                        <option value="Konsumsi Rapat">Konsumsi & Snack</option>
-                        <option value="Operasional Kantor">ATK & Administrasi</option>
-                        <option value="Dana Sosial">Bantuan Sosial</option>
+                        <option value="Insentif">Insentif</option>
+                        <option value="Pemeliharaan Lingkungan">Pemeliharaan Lingkungan</option>
+                        <option value="Dana Sosial">Dana Sosial</option>
+                        <option value="Kegiatan Warga">Kegiatan Warga</option>
+                        <option value="Akomodasi & Konsumsi">Akomodasi & Konsumsi</option>
+                        <option value="Gaji">Gaji</option>
+                        <option value="Upah">Upah</option>
+                        <option value="Perbaikan">Perbaikan</option>
+                        <option value="Pembelian">Pembelian</option>
+                        <option value="Pemasangan">Pemasangan</option>
+                        <option value="Pembongkaran">Pembongkaran</option>
+                        <option value="Bayar jasa">Bayar jasa</option>
+                        <option value="Pergantian">Pergantian</option>
                         <option value="Lain-lain">Lain-lain...</option>
                       </>
                     )}
@@ -1929,21 +2129,29 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">
                     {trxType === 'Masuk' ? 'Nama Penyetor' : 'Nama Penerima / Vendor'}
                   </label>
-                  <input name="nama" defaultValue={editingTrx?.nama} required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder={trxType === 'Masuk' ? 'Nama' : 'Toko / Nama Orang'} />
+                  <input 
+                    name="nama" 
+                    defaultValue={editingTrx?.nama} 
+                    required 
+                    type="text" 
+                    list="wargaListIuran" 
+                    onChange={(e) => {
+                      const warga = wargaData.find(w => w.nama === e.target.value);
+                      if (warga && warga.blok) {
+                        const alamatInput = document.getElementsByName('alamat')[0] as HTMLInputElement;
+                        if (alamatInput) alamatInput.value = warga.blok;
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" 
+                    placeholder={trxType === 'Masuk' ? 'Nama' : 'Toko / Nama Orang'} 
+                  />
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Periode Bulan</label>
-                  <select name="periode" required defaultValue={editingTrx?.periode || "Apr 2026"} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
-                    <option value="Jan 2026">Jan 2026</option>
-                    <option value="Feb 2026">Feb 2026</option>
-                    <option value="Mar 2026">Mar 2026</option>
-                    <option value="Apr 2026">Apr 2026</option>
-                    <option value="Mei 2026">Mei 2026</option>
-                    <option value="Jun 2026">Jun 2026</option>
-                  </select>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Tanggal</label>
+                  <input name="periode" required type="date" defaultValue={editingTrx?.periode ? new Date(editingTrx.periode).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Nominal (Rp)</label>
@@ -1957,6 +2165,11 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
                   <option value="Lunas">Lunas (Selesai)</option>
                   <option value="Pending">Pending (Cicilan/Menunggu)</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat (Opsional)</label>
+                <input name="alamat" defaultValue={editingTrx?.alamat} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder="Alamat penyetor / penerima" />
               </div>
 
               <div>
@@ -2025,6 +2238,12 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, userRole, set
           />
         )}
       </AnimatePresence>
+
+      <datalist id="wargaListIuran">
+        {wargaData.map((w, idx) => (
+          <option key={idx} value={w.nama} />
+        ))}
+      </datalist>
     </div>
   );
 }
@@ -2067,6 +2286,9 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
     setVal('statusKawin', warga.kawin);
     setVal('alamat', `${warga.blok}, RT ${warga.rt} / RW ${warga.rw}`);
     setVal('rt_rw', `${warga.rt} / ${warga.rw}`);
+    setVal('kelurahan', warga.kelurahan);
+    setVal('kecamatan', warga.kecamatan);
+    setVal('kota_kab', warga.kota_kab);
     setVal('kk', warga.kk);
     setVal('kewarganegaraan', warga.kewarganegaraan || 'WNI');
     
@@ -2111,28 +2333,29 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
     const html = `
       <html>
         <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Cetak Surat - ${surat.id}</title>
           <style>
-            body { font-family: 'Times New Roman', Times, serif; padding: 40px; line-height: 1.6; color: #000; }
+            body { font-family: 'Times New Roman', Times, serif; padding: 20px; line-height: 1.6; color: #000; }
             .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 30px; position: relative; }
-            .header h1 { font-size: 22px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
-            .header h2 { font-size: 18px; margin: 5px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+            .header h1 { font-size: 20px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+            .header h2 { font-size: 16px; margin: 5px 0; text-transform: uppercase; letter-spacing: 0.5px; }
             .header p { font-size: 12px; margin: 2px 0; font-style: italic; }
             .title-box { text-align: center; margin-bottom: 30px; }
             .title { font-size: 18px; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin-bottom: 5px; }
             .nomor { font-size: 14px; margin-bottom: 30px; }
-            .content { margin-top: 20px; text-align: justify; font-size: 15px; }
-            .details { margin: 20px 40px; border-collapse: collapse; width: calc(100% - 80px); font-size: 15px; }
+            .content { margin-top: 20px; text-align: justify; font-size: 14px; }
+            .details { margin: 20px 0; border-collapse: collapse; width: 100%; font-size: 14px; }
             .details td { padding: 4px 0; vertical-align: top; }
-            .details td:first-child { width: 200px; }
+            .details td:first-child { width: 180px; }
             .details td:nth-child(2) { width: 20px; text-align: center; }
             .footer { margin-top: 50px; display: flex; justify-content: flex-end; }
             .signature { text-align: center; min-width: 250px; }
             .signature-date { margin-bottom: 10px; }
-            .signature-space { height: 90px; }
+            .signature-space { height: 80px; }
             @media print {
-              body { padding: 0.5in; }
-              @page { margin: 1in; }
+              body { padding: 0; margin: 0; }
+              @page { margin: 15mm; }
             }
           </style>
         </head>
@@ -2233,11 +2456,11 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
           </div>
           
           <script>
-            window.onload = function() { 
-              setTimeout(function() {
-                window.print(); 
-                window.close(); 
-              }, 500);
+            setTimeout(function() {
+              window.print(); 
+            }, 250);
+            window.onafterprint = function() {
+              setTimeout(function() { window.close(); }, 500);
             }
           </script>
         </body>
@@ -2251,6 +2474,13 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
   const handleAddSurat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const nik = formData.get('nik') as string;
+    
+    if (nik && nik.length !== 16) {
+      alert("NIK harus terdiri dari tepat 16 digit angka.");
+      return;
+    }
+
     const dateObj = new Date();
     const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     
@@ -2439,7 +2669,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">NIK (16 Digit)</label>
-                    <input name="nik" required type="text" maxLength={16} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="NIK" />
+                    <input name="nik" required type="text" minLength={16} maxLength={16} pattern="\d{16}" title="NIK harus 16 digit angka" onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0,16); }} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="NIK" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">Tempat, Tgl Lahir</label>
@@ -2536,7 +2766,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor KK (Kartu Keluarga)</label>
-                  <input name="kk" required type="text" maxLength={16} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="16 digit Nomor KK" />
+                  <input name="kk" required type="text" minLength={16} maxLength={16} pattern="\d{16}" title="No KK harus 16 digit angka" onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0,16); }} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="16 digit Nomor KK" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 mb-1">Keperluan (Tujuan pembuatan surat)</label>
@@ -2580,7 +2810,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, setIsLoa
   );
 }
 
-function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, userRole: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -2635,6 +2865,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
       tipe: tipe,
       transaksi: formData.get('transaksi') as string,
       nama: formData.get('nama') as string,
+      alamat: formData.get('alamat') as string || "-",
       keterangan: formData.get('keterangan') as string,
       debit: tipe === 'Masuk' ? nominal : 0,
       kredit: tipe === 'Keluar' ? nominal : 0,
@@ -2653,6 +2884,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
           tanggal: formattedDateTime,
           transaksi: formData.get('transaksi') as string,
           nama: formData.get('nama') as string,
+          alamat: formData.get('alamat') as string || "-",
           periode: "Umum", // Default since it's from Kas view
           nominal: nominal,
           status: "Lunas",
@@ -2921,19 +3153,43 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Transaksi / Kategori</label>
                   <select name="transaksi" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
-                    <option value="Iuran Warga">Iuran Warga</option>
-                    <option value="Kas Lingkungan">Kas Lingkungan</option>
-                    <option value="Dana Bantuan">Dana Bantuan</option>
-                    <option value="Sumbangan Sosial">Sumbangan Sosial</option>
-                    <option value="Biaya Operasional">Biaya Operasional</option>
-                    <option value="Biaya Perbaikan">Biaya Perbaikan</option>
-                    <option value="Lainnya">Lainnya...</option>
+                    <optgroup label="Pemasukan">
+                      <option value="Iuran Rutin Warga">Iuran Rutin Warga</option>
+                      <option value="Iuran Partisipasi Pembangunan">Iuran Partisipasi Pembangunan</option>
+                      <option value="Dana Kelurahan/Pemerintah">Dana Kelurahan/Pemerintah</option>
+                      <option value="Donasi & Bantuan Sosial">Donasi & Bantuan Sosial</option>
+                      <option value="Sponsorship & Donatur">Sponsorship & Donatur</option>
+                      <option value="Hasil Usaha RT/RW">Hasil Usaha RT/RW</option>
+                    </optgroup>
+                    <optgroup label="Pengeluaran">
+                      <option value="Insentif">Insentif</option>
+                      <option value="Pemeliharaan Lingkungan">Pemeliharaan Lingkungan</option>
+                      <option value="Dana Sosial">Dana Sosial</option>
+                      <option value="Kegiatan Warga">Kegiatan Warga</option>
+                      <option value="Akomodasi & Konsumsi">Akomodasi & Konsumsi</option>
+                      <option value="Gaji">Gaji</option>
+                      <option value="Upah">Upah</option>
+                      <option value="Perbaikan">Perbaikan</option>
+                      <option value="Pembelian">Pembelian</option>
+                      <option value="Pemasangan">Pemasangan</option>
+                      <option value="Pembongkaran">Pembongkaran</option>
+                      <option value="Bayar jasa">Bayar jasa</option>
+                      <option value="Pergantian">Pergantian</option>
+                    </optgroup>
+                    <optgroup label="Lainnya">
+                      <option value="Lainnya">Lainnya...</option>
+                    </optgroup>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Pemohon / Penyetor</label>
-                  <input name="nama" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder="Cth: Kel. Bpk. Agus" />
+                  <input name="nama" type="text" list="wargaListKas" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder="Cth: Kel. Bpk. Agus" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat (Opsional)</label>
+                <input name="alamat" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium" placeholder="Alamat terkait transaksi" />
               </div>
 
               <div>
@@ -2992,11 +3248,193 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, userRole, setIs
           </div>
         </div>
       )}
+
+      <datalist id="wargaListKas">
+        {wargaData && wargaData.map((w, idx) => (
+          <option key={idx} value={w.nama} />
+        ))}
+      </datalist>
     </div>
   );
 }
 
 function PengaturanView() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateMsg, setGenerateMsg] = useState('');
+
+  const generateDummyData = async () => {
+    setIsGenerating(true);
+    setGenerateMsg('Mulai membuat data dummy...');
+    
+    try {
+      const batch = writeBatch(db);
+
+      // --- 1. DATA WARGA (20 Warga, 5 Kepala Keluarga) ---
+      const keluargaData = [
+        { kk: '3216061111111111', namaKK: 'Budi Santoso', istri: 'Siti Aminah', anak1: 'Budi Junior', anak2: 'Ayu Lestari', rt: '01', blok: 'Blok A No 1' },
+        { kk: '3216062222222222', namaKK: 'Ahmad Dahlan', istri: 'Chairunnisa', anak1: 'Raka Pratama', anak2: 'Riki Hermawan', rt: '02', blok: 'Blok B No 12' },
+        { kk: '3216063333333333', namaKK: 'Joko Widodo', istri: 'Iriana M', anak1: 'Gibran R', anak2: 'Kaesang P', rt: '03', blok: 'Blok C No 5' },
+        { kk: '3216064444444444', namaKK: 'Prabowo S', istri: 'Titiek S', anak1: 'Didit H', anak2: 'Bobby N', rt: '01', blok: 'Blok A No 8' },
+        { kk: '3216065555555555', namaKK: 'Susilo B Y', istri: 'Ani Y', anak1: 'Agus H', anak2: 'Ibas Y', rt: '04', blok: 'Blok D No 15' },
+      ];
+
+      let generatedWargas: any[] = [];
+      let wIdx = 1;
+
+      for (const kel of keluargaData) {
+        const familyMembers = [
+          { nama: kel.namaKK, posisi: 'Suami (Kepala Keluarga)', jk: 'Laki-Laki', ttl: `Jakarta, ${1970 + wIdx}-01-01` },
+          { nama: kel.istri, posisi: 'Istri', jk: 'Perempuan', ttl: `Jakarta, ${1973 + wIdx}-02-02` },
+          { nama: kel.anak1, posisi: 'Anak', jk: 'Laki-Laki', ttl: `Jakarta, ${1995 + wIdx}-03-03` },
+          { nama: kel.anak2, posisi: 'Anak', jk: wIdx % 2 === 0 ? 'Laki-Laki' : 'Perempuan', ttl: `Jakarta, ${1998 + wIdx}-04-04` }
+        ];
+
+        for (const member of familyMembers) {
+          const wId = `WARGA-${Date.now()}-${wIdx}`;
+          const newWarga = {
+            id: wId,
+            nik: `321606${Date.now().toString().slice(-6)}${wIdx.toString().padStart(4, '0')}`,
+            kk: kel.kk,
+            nama: member.nama,
+            tempatLahir: member.ttl.split(', ')[0],
+            tglLahir: member.ttl.split(', ')[1],
+            jk: member.jk,
+            posisi: member.posisi,
+            agama: 'Islam',
+            kawin: member.posisi === 'Anak' ? 'Belum Kawin' : 'Kawin',
+            kewarganegaraan: 'WNI',
+            profesi: member.posisi === 'Anak' ? 'Pelajar/Mahasiswa' : 'Karyawan Swasta',
+            rt: kel.rt,
+            rw: '26',
+            kelurahan: 'Kebalen',
+            kecamatan: 'Babelan',
+            kota_kab: 'Bekasi',
+            blok: kel.blok,
+            status: 'Warga Tetap',
+            hp: `0812${Date.now().toString().slice(-8)}`,
+            fotoText: '-',
+            fotoUrl: null
+          };
+          generatedWargas.push(newWarga);
+          batch.set(doc(db, 'warga', wId), newWarga);
+          wIdx++;
+        }
+      }
+
+      setGenerateMsg('Warga berhasil di-generate. Membuat transaksi & kas...');
+
+      // --- 2. DATA TRANSAKSI (IURAN & KAS) (50 Item) ---
+      for (let i = 1; i <= 50; i++) {
+        const RandomWarga = generatedWargas[Math.floor(Math.random() * generatedWargas.length)];
+        const isKeluar = i % 4 === 0; // 25% pengeluaran
+        
+        const dateObj = new Date();
+        dateObj.setDate(dateObj.getDate() - Math.floor(Math.random() * 90)); // random within last 90 days
+        const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        const formattedDateTime = formattedDate + ', ' + dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
+        
+        const kasId = `TRX-DUMMY-${Date.now()}-${i}`;
+        const iuranId = `INV-DUMMY-${Date.now()}-${i}`;
+        
+        let jenis = '';
+        let keterangan = '';
+        let nominal = 0;
+
+        if (isKeluar) {
+          const jenisPengeluaran = ['Pemeliharaan Lingkungan', 'Kegiatan Warga', 'Upah', 'Bayar jasa', 'Pemasangan'];
+          jenis = jenisPengeluaran[i % jenisPengeluaran.length];
+          keterangan = `Pembayaran ${jenis}`;
+          nominal = 150000 + (Math.floor(Math.random() * 5) * 50000);
+          
+          batch.set(doc(db, 'kas', kasId), {
+            id: kasId,
+            tanggal: formattedDate,
+            tipe: 'Keluar',
+            transaksi: jenis,
+            nama: i % 2 === 0 ? 'Toko Material' : 'Bpk. Tukang',
+            alamat: '-',
+            keterangan: keterangan,
+            debit: 0,
+            kredit: nominal,
+            strukUrl: ""
+          });
+
+        } else {
+          jenis = 'Iuran Rutin Warga';
+          keterangan = 'Iuran Bulanan';
+          nominal = 50000;
+          
+          // Set ke kas
+          batch.set(doc(db, 'kas', kasId), {
+            id: kasId,
+            tanggal: formattedDate,
+            tipe: 'Masuk',
+            transaksi: jenis,
+            nama: RandomWarga.nama,
+            alamat: RandomWarga.blok,
+            keterangan: keterangan,
+            debit: nominal,
+            kredit: 0,
+            strukUrl: ""
+          });
+
+          // Set ke iuran
+          batch.set(doc(db, 'iuran', iuranId), {
+            id: iuranId,
+            tanggal: formattedDateTime,
+            transaksi: jenis,
+            nama: RandomWarga.nama,
+            alamat: RandomWarga.blok,
+            tipe: 'Masuk',
+            periode: 'Mar 2026',
+            nominal: nominal,
+            status: 'Lunas',
+            keterangan: keterangan,
+            strukUrl: ""
+          });
+        }
+      }
+
+      setGenerateMsg('Transaksi berhasil di-generate. Membuat Surat Pengantar...');
+
+      // --- 3. DATA SURAT (50 Item) ---
+      const jenisSurat = ['Surat Pengantar KTP', 'Surat Keterangan Domisili', 'Surat Pengantar SKCK', 'Surat Keterangan Usaha (SKU)'];
+      for (let i = 1; i <= 50; i++) {
+        const RandomWarga = generatedWargas[Math.floor(Math.random() * generatedWargas.length)];
+        const jSurat = jenisSurat[i % jenisSurat.length];
+        
+        const dateObj = new Date();
+        dateObj.setDate(dateObj.getDate() - Math.floor(Math.random() * 30)); // random within last 30 days
+        const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        
+        const suratId = `SRT-DUMMY-${Date.now()}-${i}`;
+        
+        batch.set(doc(db, 'surat', suratId), {
+          id: suratId,
+          tanggal: formattedDate,
+          jenisSurat: jSurat,
+          pemohon: RandomWarga.nama,
+          status: i % 5 === 0 ? 'Tertunda' : (i % 7 === 0 ? 'Ditolak' : 'Disetujui'),
+          keterangan: 'Keperluan administrasi'
+        });
+      }
+
+      setGenerateMsg('Menulis semua data ke Database, mohon tunggu...');
+      await batch.commit();
+
+      setGenerateMsg('Selesai! 120 Data Dummy berhasil ditambahkan ke Database.');
+      setTimeout(() => {
+        setGenerateMsg('');
+      }, 5000);
+
+    } catch (error) {
+      console.error(error);
+      setGenerateMsg('Gagal membuat data dummy.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col">
@@ -3060,7 +3498,7 @@ function PengaturanView() {
           </button>
         </div>
       </div>
-      
+
       {/* Database Schema Map Info */}
       <div className="bg-slate-900 rounded-xl p-6 text-white shadow-lg flex flex-col">
         <h3 className="text-sm font-bold mb-4 flex items-center text-blue-400">
@@ -3092,6 +3530,26 @@ function PengaturanView() {
           </table>
         </div>
       </div>
+
+      {/* Tombol Generate Dummy Data (Hanya untuk Testing) */}
+      <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 flex flex-col items-center text-center">
+        <h3 className="text-sm font-bold text-orange-800 mb-2">Alat Uji Coba: Generate Data Dummy</h3>
+        <p className="text-xs text-orange-600 mb-4 max-w-lg">Gunakan tombol ini untuk menghasilkan 120 data secara otomatis (20 Warga, 5 KK, 50 Surat, 50 Transaksi) untuk menguji fitur aplikasi. Data akan ditambahkan ke database Anda yang aktif.</p>
+        
+        {generateMsg && (
+          <p className="text-xs font-bold text-blue-700 mb-3 bg-white px-3 py-1 rounded shadow-sm">{generateMsg}</p>
+        )}
+
+        <button 
+          onClick={generateDummyData} 
+          disabled={isGenerating}
+          className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-all shadow-md disabled:bg-orange-300 flex items-center gap-2"
+        >
+          {isGenerating ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> : <Database className="w-4 h-4" />}
+          {isGenerating ? 'Memproses...' : 'Generate 120 Data Dummy'}
+        </button>
+      </div>
+
     </div>
   );
 }
