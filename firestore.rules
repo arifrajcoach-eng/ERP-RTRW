@@ -23,11 +23,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && getUserData().role == 'Admin';
+      // Use data.get() to safely access fields with a default value to prevent rule crashes
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'Viewer') == 'Admin';
     }
 
     function isOperator() {
-      return isSignedIn() && (getUserData().role == 'Operator' || getUserData().role == 'Admin');
+      let role = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
+                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'Viewer') : 'Viewer';
+      return role == 'Operator' || role == 'Admin';
     }
 
     function isValidId(id) {

@@ -39,16 +39,31 @@
     },
     "Surat": {
       "title": "Surat",
-      "description": "Permohonan surat pengantar",
+      "description": "Permohonan surat pengantar dengan identitas lengkap",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "tanggal": { "type": "string" },
         "pemohon": { "type": "string" },
+        "nik": { "type": "string" },
+        "ttl": { "type": "string" },
+        "jk": { "type": "string" },
+        "agama": { "type": "string" },
+        "pekerjaan": { "type": "string" },
+        "statusKawin": { "type": "string" },
+        "alamat": { "type": "string" },
+        "rt_rw": { "type": "string" },
+        "kelurahan": { "type": "string" },
+        "kecamatan": { "type": "string" },
+        "kota_kab": { "type": "string" },
+        "kewarganegaraan": { "type": "string" },
+        "pendidikan": { "type": "string" },
+        "kk": { "type": "string" },
+        "keperluan": { "type": "string" },
         "jenis": { "type": "string" },
         "status": { "type": "string", "enum": ["Diajukan", "Selesai", "Ditolak"] }
       },
-      "required": ["id", "pemohon", "status"]
+      "required": ["id", "pemohon", "status", "nik", "jenis"]
     },
     "Iuran": {
       "title": "Iuran",
@@ -65,9 +80,24 @@
         "keterangan": { "type": "string" }
       },
       "required": ["id", "nama", "nominal", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profiles and roles",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "Operator", "Viewer"] }
+      },
+      "required": ["email", "role"]
     }
   },
   "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Koleksi profil pengguna dan peran"
+    },
     "/warga/{nik}": {
       "schema": "Warga",
       "description": "Koleksi data warga"
