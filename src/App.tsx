@@ -2709,25 +2709,25 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+          <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold tracking-wider">
             <tr>
-              <th className="px-6 py-3">ID Pengajuan</th>
-              <th className="px-6 py-3">Tanggal</th>
-              <th className="px-6 py-3">Pemohon</th>
-              <th className="px-6 py-3 text-xs tracking-tight">Jenis</th>
-              <th className="px-6 py-3 text-xs tracking-tight">Status</th>
-              <th className="px-6 py-3 text-right">Aksi</th>
+              <th className="px-6 py-4">ID Pengajuan</th>
+              <th className="px-6 py-4">Tanggal</th>
+              <th className="px-6 py-4 text-left">Pemohon</th>
+              <th className="px-6 py-4 text-left">Jenis</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {suratData.length > 0 ? suratData.map((surat) => (
-              <tr key={surat.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-3 text-slate-500 font-mono text-xs">{surat.id.substring(0, 10)}</td>
-                <td className="px-6 py-3 text-xs">{surat.tanggal}</td>
-                <td className="px-6 py-3 font-semibold text-slate-800">{surat.pemohon}</td>
-                <td className="px-6 py-3 text-[10px] font-medium text-slate-500 whitespace-nowrap">{surat.jenisSurat}</td>
-                <td className="px-6 py-3">
-                  <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${
+              <tr key={surat.id} className="hover:bg-slate-50/50 transition-colors">
+                <td className="px-6 py-4 text-slate-400 font-mono text-[11px]">{surat.id.substring(0, 10)}</td>
+                <td className="px-6 py-4 text-[11px] whitespace-nowrap">{surat.tanggal}</td>
+                <td className="px-6 py-4 text-[11px] font-bold text-slate-800">{surat.pemohon}</td>
+                <td className="px-6 py-4 text-[11px] font-medium text-slate-600 whitespace-nowrap">{surat.jenisSurat}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md border ${
                     surat.status === 'Selesai' ? 'border-green-200 bg-green-50 text-green-700' : 
                     surat.status === 'Ditolak' ? 'border-red-200 bg-red-50 text-red-700' :
                     'border-orange-200 bg-orange-50 text-orange-700'
@@ -2735,25 +2735,25 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                     {surat.status}
                   </span>
                 </td>
-                <td className="px-6 py-3 text-right flex justify-end gap-2">
+                <td className="px-6 py-4 text-right flex justify-end gap-2">
                   {userRole !== 'Viewer' && surat.status === 'Diajukan' && (
                     <>
-                      <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-bold text-green-700 hover:bg-green-100 transition-colors cursor-pointer bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1">
+                      <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-bold text-green-700 hover:bg-green-100 transition-colors cursor-pointer bg-green-50 px-3 py-1.5 rounded border border-green-200">
                         Setujui
                       </button>
-                      <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-bold text-red-700 hover:bg-red-100 transition-colors cursor-pointer bg-red-50 px-3 py-1.5 rounded border border-red-200 flex items-center gap-1">
+                      <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-bold text-red-700 hover:bg-red-100 transition-colors cursor-pointer bg-red-50 px-3 py-1.5 rounded border border-red-200">
                         Tolak
                       </button>
                     </>
                   )}
                   {userRole !== 'Viewer' && (
-                    <button onClick={() => handleEdit(surat)} className="text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer bg-blue-50 p-1.5 rounded border border-blue-200" title="Edit">
-                      <Edit className="w-3 h-3" />
+                    <button onClick={() => handleEdit(surat)} className="text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer bg-blue-50 p-2 rounded border border-blue-200" title="Edit">
+                      <Edit className="w-3.5 h-3.5" />
                     </button>
                   )}
                   {surat.status === 'Selesai' && (
-                    <button onClick={() => handleCetak(surat.id)} className="text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 p-1.5 rounded transition-colors cursor-pointer" title="Cetak Surat">
-                      <Printer className="w-3 h-3" />
+                    <button onClick={() => handleCetak(surat.id)} className="text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 p-2 rounded transition-colors cursor-pointer" title="Cetak Surat">
+                      <Printer className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </td>
