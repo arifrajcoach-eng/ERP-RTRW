@@ -46,10 +46,10 @@ const INITIAL_KAS_DATA = [
 ];
 
 const INITIAL_SURAT_DATA = [
-  { id: "SRT-1004", tanggal: "19 Apr 2026", pemohon: "Ibu Siti Aminah", jenis: "Surat Domisili", status: "Diajukan" },
-  { id: "SRT-1003", tanggal: "17 Apr 2026", pemohon: "Bpk. Ahmad Suhendar", jenis: "Pengantar Kelurahan", status: "Selesai" },
-  { id: "SRT-1002", tanggal: "16 Apr 2026", pemohon: "Sdr. Bayu Pratama", jenis: "Surat Keterangan Usaha", status: "Diajukan" },
-  { id: "SRT-1001", tanggal: "10 Apr 2026", pemohon: "Bpk. Joko Anas", jenis: "Surat Domisili", status: "Selesai" },
+  { id: "SRT-1004", tanggal: "19 Apr 2026", pemohon: "Ibu Siti Aminah", jenisSurat: "Surat Domisili", status: "Diajukan" },
+  { id: "SRT-1003", tanggal: "17 Apr 2026", pemohon: "Bpk. Ahmad Suhendar", jenisSurat: "Pengantar Kelurahan", status: "Selesai" },
+  { id: "SRT-1002", tanggal: "16 Apr 2026", pemohon: "Sdr. Bayu Pratama", jenisSurat: "Surat Keterangan Usaha", status: "Diajukan" },
+  { id: "SRT-1001", tanggal: "10 Apr 2026", pemohon: "Bpk. Joko Anas", jenisSurat: "Surat Domisili", status: "Selesai" },
 ];
 
 const INITIAL_IURAN_DATA = [
@@ -640,7 +640,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole, set
   // Merged Recent Activities
   const recentActivities = [
     ...kasData.map(k => ({ date: k.tanggal, title: k.transaksi, desc: `${k.nama}: ${k.keterangan}`, type: k.tipe === 'Masuk' ? 'in' : 'out', amount: k.debit || k.kredit })),
-    ...suratData.map(s => ({ date: s.tanggal, title: `Surat: ${s.jenis}`, desc: `Pemohon: ${s.pemohon}`, type: 'doc', status: s.status })),
+    ...suratData.map(s => ({ date: s.tanggal, title: `Surat: ${s.jenisSurat || s.jenis}`, desc: `Pemohon: ${s.pemohon}`, type: 'doc', status: s.status })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
 
   return (
@@ -2516,9 +2516,9 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
         <body>
           <div class="header">
             <h2>Pemerintah Kota Metropolitan</h2>
-            <h2>Kecamatan ${surat.kecamatan || 'Sukajaya'} - Kelurahan ${surat.kelurahan || 'Sukamaju'}</h2>
-            <h1>RUKUN TETANGGA (RT) ${surat.rt || '01'} / RUKUN WARGA (RW) ${surat.rw || '05'}</h1>
-            <p>Alamat: Jl. Merdeka No. 26, Kel. ${surat.kelurahan || 'Sukamaju'}, Kec. ${surat.kecamatan || 'Sukajaya'}, Kota Metropolitan (40123)</p>
+            <h2>Kecamatan Sukajaya - Kelurahan Sukamaju</h2>
+            <h1>RUKUN TETANGGA (RT) 01 / RUKUN WARGA (RW) 05</h1>
+            <p>Alamat: Jl. Merdeka No. 26, Kel. Sukamaju, Kec. Sukajaya, Kota Metropolitan (40123)</p>
           </div>
           
           <div class="title-box">
@@ -2597,13 +2597,13 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
               </tr>
             </table>
 
-            <p style="text-indent: 40px;">Berdasarkan pemantauan kami, nama tersebut di atas benar adalah warga yang berdomisili di wilayah kami (RT ${surat.rt || '-'} / RW ${surat.rw || '-'}) dan memiliki berkelakuan baik. Demikian surat keterangan ini kami buat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.</p>
+            <p style="text-indent: 40px;">Berdasarkan pemantauan kami, nama tersebut di atas benar adalah warga yang berdomisili di wilayah kami dan memiliki berkelakuan baik. Demikian surat keterangan ini kami buat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.</p>
           </div>
 
           <div class="footer">
             <div class="signature">
               <div class="signature-date">Metropolitan, ${surat.tanggal}</div>
-              <p><strong>Ketua RT ${surat.rt || '01'} / RW ${surat.rw || '05'}</strong></p>
+              <p><strong>Ketua RT 01 / RW 05</strong></p>
               <div class="signature-space"></div>
               <p><strong>( ..................................... )</strong></p>
             </div>
