@@ -99,8 +99,8 @@ service cloud.firestore {
 
     function isValidSurat(data) {
       return data.id is string && data.id.size() <= 100 &&
-             data.nik is string && data.nik.size() == 16 &&
-             data.status in ['Draft', 'Terkirim', 'Selesai', 'Ditolak'] &&
+             data.nik is string &&
+             data.status in ['Diajukan', 'Draft', 'Terkirim', 'Selesai', 'Ditolak'] &&
              data.tenantId is string && data.tenantId.size() <= 50;
     }
 

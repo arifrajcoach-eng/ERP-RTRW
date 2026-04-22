@@ -1020,7 +1020,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   // Form State for Adding/Editing
   const [formData, setFormData] = useState({
-    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -1103,7 +1103,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   const resetForm = () => {
     setFormData({
-      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
     });
   };
 
@@ -1495,6 +1495,19 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">Profesi</label>
                 <input required name="profesi" value={formData.profesi} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Pekerjaan saat ini" />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Pendidikan Terakhir</label>
+                <select required name="pendidikanTerakhir" value={formData.pendidikanTerakhir} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                  <option value="">Pilih Pendidikan Terakhir</option>
+                  <option value="SD">SD</option>
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
+                  <option value="S1">S1</option>
+                  <option value="S2">S2</option>
+                  <option value="S3">S3</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -2023,7 +2036,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
     const doc = new jsPDF();
     
     doc.setFontSize(16);
-    doc.text("LAPORAN CATATAN RW 26", 14, 15);
+    doc.text(`Laporan Transaksi RW 26 ${new Date().toLocaleDateString('id-ID')}`, 14, 15);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -2369,6 +2382,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
 
 function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
+  const [editingSurat, setEditingSurat] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
@@ -2404,7 +2418,8 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
     setVal('pekerjaan', warga.profesi);
     setVal('statusKawin', warga.kawin);
     setVal('alamat', `${warga.blok}, RT ${warga.rt} / RW ${warga.rw}`);
-    setVal('rt_rw', `${warga.rt} / ${warga.rw}`);
+    setVal('rt', warga.rt);
+    setVal('rw', warga.rw);
     setVal('kelurahan', warga.kelurahan);
     setVal('kecamatan', warga.kecamatan);
     setVal('kota_kab', warga.kota_kab);
@@ -2437,6 +2452,26 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
     } finally {
       setIsLoadingDB(false);
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus pengajuan surat ini?")) return;
+    setIsLoadingDB(true);
+    try {
+      await deleteDoc(doc(db, 'surat', id));
+      setSuratData((prev: any[]) => prev.filter(s => s.id !== id));
+      alert("Pengajuan surat berhasil dihapus.");
+    } catch (error: any) {
+      handleFirestoreError(error, 'delete', `/surat/${id}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleEdit = (surat: any) => {
+    setEditingSurat(surat);
+    setShowSuratForm(true);
+    // Note: Population of form will be handled via useEffect in the form component or a setup effect
   };
 
   const handleCetak = (id: string) => {
@@ -2593,12 +2628,6 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
   const handleAddSurat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const nik = formData.get('nik') as string;
-    
-    if (nik && nik.length !== 16) {
-      alert("NIK harus terdiri dari tepat 16 digit angka.");
-      return;
-    }
 
     const dateObj = new Date();
     const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -2606,38 +2635,46 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
     // Auto Id (SRT-100X)
     const newId = `SRT-${Date.now()}`;
     
-    const newSurat = {
+    const isEditing = !!editingSurat;
+    const suratId = isEditing ? editingSurat.id : `SRT-${Date.now()}`;
+    
+    const suratDataPayload = {
       tenantId: tenantId,
-      id: newId,
-      tanggal: formattedDate,
-      rt: (formData.get('rt_rw') as string)?.split('/')[0]?.trim() || '',
+      id: suratId,
+      tanggal: isEditing ? editingSurat.tanggal : formattedDate,
+      rt: formData.get('rt') as string || '',
+      rw: formData.get('rw') as string || '',
       pemohon: formData.get('pemohon') as string,
       nik: formData.get('nik') as string,
+      kk: formData.get('kk') as string,
       ttl: formData.get('ttl') as string,
+      umur: formData.get('umur') as string || '',
       jk: formData.get('jk') as string,
-      agama: formData.get('agama') as string,
+      kewarganegaraan: formData.get('kewarganegaraan') as string,
       pekerjaan: formData.get('pekerjaan') as string,
+      agama: formData.get('agama') as string,
       statusKawin: formData.get('statusKawin') as string,
       alamat: formData.get('alamat') as string,
-      rt_rw: formData.get('rt_rw') as string,
-      kelurahan: formData.get('kelurahan') as string,
-      kecamatan: formData.get('kecamatan') as string,
-      kota_kab: formData.get('kota_kab') as string,
-      kewarganegaraan: formData.get('kewarganegaraan') as string,
-      pendidikan: formData.get('pendidikan') as string,
-      kk: formData.get('kk') as string,
       keperluan: formData.get('keperluan') as string,
-      jenis: formData.get('jenis') as string,
-      status: "Diajukan"
+      jenisSurat: formData.get('jenisSurat') as string,
+      status: isEditing ? editingSurat.status : "Diajukan"
     };
 
     setIsLoadingDB(true);
     try {
-      await setDoc(doc(db, 'surat', newId), newSurat);
-      setSuratData([newSurat, ...suratData]);
+      await setDoc(doc(db, 'surat', suratId), suratDataPayload);
+      if (isEditing) {
+        setSuratData((prev: any[]) => prev.map(s => s.id === suratId ? suratDataPayload : s));
+        alert("Pengajuan surat berhasil diperbarui.");
+      } else {
+        setSuratData([suratDataPayload, ...suratData]);
+        alert("Pengajuan surat berhasil dikirim.");
+      }
       setShowSuratForm(false);
+      setEditingSurat(null);
+      formRef.current?.reset();
     } catch (error: any) {
-      handleFirestoreError(error, 'create', `/surat/${newId}`);
+      handleFirestoreError(error, isEditing ? 'update' : 'create', `/surat/${suratId}`);
     } finally {
       setIsLoadingDB(false);
     }
@@ -2688,7 +2725,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs">{surat.id.substring(0, 10)}</td>
                 <td className="px-6 py-3 text-xs">{surat.tanggal}</td>
                 <td className="px-6 py-3 font-semibold text-slate-800">{surat.pemohon}</td>
-                <td className="px-6 py-3 text-xs">{surat.jenis}</td>
+                <td className="px-6 py-3 text-xs">{surat.jenisSurat}</td>
                 <td className="px-6 py-3">
                   <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${
                     surat.status === 'Selesai' ? 'border-green-200 bg-green-50 text-green-700' : 
@@ -2708,6 +2745,11 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                         Tolak
                       </button>
                     </>
+                  )}
+                  {userRole !== 'Viewer' && (
+                    <button onClick={() => handleEdit(surat)} className="text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer bg-blue-50 p-1.5 rounded border border-blue-200" title="Edit">
+                      <Edit className="w-3 h-3" />
+                    </button>
                   )}
                   {surat.status !== 'Diajukan' && (
                     <button onClick={() => handleCetak(surat.id)} disabled={surat.status === 'Ditolak'} className={`text-[10px] font-bold flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${surat.status === 'Selesai' ? 'text-slate-700 bg-white border-slate-300 hover:bg-slate-50 cursor-pointer' : 'text-slate-400 bg-transparent border-transparent cursor-not-allowed hidden'}`}>
@@ -2737,77 +2779,85 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-600" />
-                Buat Surat Pengantar
+                {editingSurat ? "Edit Surat Pengantar" : "Buat Surat Pengantar"}
               </h3>
-              <button onClick={() => setShowSuratForm(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
+              <button onClick={() => {setShowSuratForm(false); setEditingSurat(null);}} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
             
-            <div className="p-4 bg-blue-50/50 border-b border-slate-100 flex flex-col gap-2 relative">
-               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                  <Search className="w-3 h-3" />
-                  Cari Data Warga (Auto-fill)
-               </label>
-               <input 
-                 type="text" 
-                 value={searchTerm}
-                 onChange={(e) => handleSearchWarga(e.target.value)}
-                 className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium" 
-                 placeholder="Ketik Nama atau NIK warga..." 
-               />
-               {searchResults.length > 0 && (
-                 <div className="absolute top-full left-4 right-4 bg-white border border-slate-200 shadow-xl rounded-b-xl z-20 overflow-hidden divide-y divide-slate-100 mt-[-1px]">
-                   {searchResults.map((w) => (
-                     <button
-                       key={w.id}
-                       type="button"
-                       onClick={() => autoFillForm(w)}
-                       className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between"
-                     >
-                       <div>
-                         <p className="text-sm font-bold text-slate-800">{w.nama}</p>
-                         <p className="text-[10px] text-slate-500 font-mono tracking-tighter">NIK: {w.nik} | KK: {w.kk}</p>
-                       </div>
-                       <ChevronRight className="w-4 h-4 text-slate-300" />
-                     </button>
-                   ))}
-                 </div>
-               )}
-            </div>
-
+            {showSuratForm && (
+              <script dangerouslySetInnerHTML={{ __html: `
+                (function() {
+                  const form = document.querySelector('form');
+                  if (!form) return;
+                  const editingSurat = ${JSON.stringify(editingSurat)};
+                  if (editingSurat) {
+                    Object.keys(editingSurat).forEach(key => {
+                      const el = form.elements.namedItem(key);
+                      if (el) el.value = editingSurat[key];
+                    });
+                  } else {
+                    form.reset();
+                  }
+                })();
+              `}} />
+            )}
             <form ref={formRef} onSubmit={handleAddSurat} className="p-5 overflow-y-auto space-y-5">
               {/* Seksi 1: Identitas Pribadi */}
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
                 <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5 mb-1">
                   <div className="w-1 h-3 bg-blue-600 rounded-full"></div>
-                  1. Identitas Pribadi
+                  Data Pemohon
                 </h4>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Nama Lengkap (Sesuai KTP)</label>
-                  <input name="pemohon" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Nama Lengkap" />
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Nama</label>
+                  <input name="pemohon" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Nama Lengkap" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">NIK (16 Digit)</label>
-                    <input name="nik" required type="text" minLength={16} maxLength={16} pattern="\d{16}" title="NIK harus 16 digit angka" onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0,16); }} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="NIK" />
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor NIK</label>
+                    <input name="nik" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="NIK" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Tempat, Tgl Lahir</label>
-                    <input name="ttl" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Kota, DD-MM-YYYY" />
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor KK</label>
+                    <input name="kk" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="Nomor KK" />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Tempat, Tgl Lahir</label>
+                        <input name="ttl" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Kota, DD-MM-YYYY" />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Umur</label>
+                        <input name="umur" type="number" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Umur" />
+                    </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Kelamin</label>
-                    <select name="jk" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
+                    <select name="jk" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
                       <option value="Laki-Laki">Laki-Laki</option>
                       <option value="Perempuan">Perempuan</option>
                     </select>
                   </div>
                   <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Warga Negara</label>
+                    <select name="kewarganegaraan" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
+                      <option value="WNI">WNI</option>
+                      <option value="WNA">WNA</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Pekerjaan</label>
+                    <input name="pekerjaan" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Pekerjaan" />
+                  </div>
+                  <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">Agama</label>
-                    <select name="agama" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
+                    <select name="agama" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
                       <option value="Islam">Islam</option>
                       <option value="Kristen">Kristen</option>
                       <option value="Katolik">Katolik</option>
@@ -2817,101 +2867,98 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Pekerjaan</label>
-                    <input name="pekerjaan" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Pekerjaan" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Status Perkawinan</label>
-                    <select name="statusKawin" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
+                <div>
+                   <label className="block text-[10px] font-bold text-slate-500 mb-1">Status Perkawinan</label>
+                    <select name="statusKawin" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
                       <option value="Belum Kawin">Belum Kawin</option>
                       <option value="Kawin">Kawin</option>
                       <option value="Cerai Hidup">Cerai Hidup</option>
                       <option value="Cerai Mati">Cerai Mati</option>
                     </select>
-                  </div>
                 </div>
               </div>
 
-              {/* Seksi 2: Alamat Domisili */}
+              {/* Seksi 2: Alamat */}
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
                 <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5 mb-1">
                   <div className="w-1 h-3 bg-blue-600 rounded-full"></div>
-                  2. Alamat Domisili
+                  Alamat
                 </h4>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Alamat Lengkap (Jalan/Blok/No. Rumah)</label>
-                  <input name="alamat" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Alamat Lengkap" />
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Alamat</label>
+                  <input name="alamat" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Alamat" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">RT / RW</label>
-                    <input name="rt_rw" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="001 / 005" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Kelurahan</label>
-                    <input name="kelurahan" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Kelurahan" />
-                  </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">RT</label>
+                      <select name="rt" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono">
+                        {Array.from({ length: 50 }, (_, i) => (i + 1).toString().padStart(2, '0')).map(val => (
+                          <option key={val} value={val}>{val}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">RW</label>
+                      <select name="rw" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono">
+                        {Array.from({ length: 50 }, (_, i) => (i + 1).toString().padStart(2, '0')).map(val => (
+                          <option key={val} value={val}>{val}</option>
+                        ))}
+                      </select>
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Kecamatan</label>
-                    <input name="kecamatan" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Kecamatan" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Kota / Kabupaten</label>
-                    <input name="kota_kab" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Kota / Kabupaten" />
-                  </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Keperluan</label>
+                  <select name="keperluan" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
+                    <option value="Surat Pengantar KTP">Surat Pengantar KTP</option>
+                    <option value="Surat Pengantar KK">Surat Pengantar KK</option>
+                    <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
+                    <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
+                    <option value="Surat Keterangan Usaha">Surat Keterangan Usaha</option>
+                    <option value="Surat Keterangan Tidak Mampu (SKTM)">Surat Keterangan Tidak Mampu (SKTM)</option>
+                    <option value="Surat Pengantar Pindah / Datang">Surat Pengantar Pindah / Datang</option>
+                    <option value="Surat Pengantar Nikah">Surat Pengantar Nikah</option>
+                    <option value="Surat Pengantar Kelahiran">Surat Pengantar Kelahiran</option>
+                    <option value="Surat Pengantar Kematian">Surat Pengantar Kematian</option>
+                    <option value="Surat Pengantar Beasiswa">Surat Pengantar Beasiswa</option>
+                    <option value="Surat Pengantar Bansos">Surat Pengantar Bansos</option>
+                    <option value="Surat Keterangan Belum Menikah">Surat Keterangan Belum Menikah</option>
+                    <option value="Surat Keterangan Ahli Waris">Surat Keterangan Ahli Waris</option>
+                    <option value="Surat Izin Keramaian">Surat Izin Keramaian</option>
+                    <option value="Surat Keterangan Kehilangan (pengantar ke polisi)">Surat Keterangan Kehilangan (pengantar ke polisi)</option>
+                    <option value="Surat Keterangan Penghasilan">Surat Keterangan Penghasilan</option>
+                    <option value="Surat Keterangan Janda/Duda">Surat Keterangan Janda/Duda</option>
+                    <option value="Surat Pengantar Kredit / Bank">Surat Pengantar Kredit / Bank</option>
+                    <option value="Surat Keterangan Tanah / Kepemilikan (non-sertifikat)">Surat Keterangan Tanah / Kepemilikan (non-sertifikat)</option>
+                    <option value="Surat Lainnya">Surat Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Surat</label>
+                  <select name="jenisSurat" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
+                    <option value="Surat Pengantar KTP">Surat Pengantar KTP</option>
+                    <option value="Surat Pengantar KK">Surat Pengantar KK</option>
+                    <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
+                    <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
+                    <option value="Surat Keterangan Usaha">Surat Keterangan Usaha</option>
+                    <option value="Surat Keterangan Tidak Mampu (SKTM)">Surat Keterangan Tidak Mampu (SKTM)</option>
+                    <option value="Surat Pengantar Pindah / Datang">Surat Pengantar Pindah / Datang</option>
+                    <option value="Surat Pengantar Nikah">Surat Pengantar Nikah</option>
+                    <option value="Surat Pengantar Kelahiran">Surat Pengantar Kelahiran</option>
+                    <option value="Surat Pengantar Kematian">Surat Pengantar Kematian</option>
+                    <option value="Surat Pengantar Beasiswa">Surat Pengantar Beasiswa</option>
+                    <option value="Surat Pengantar Bansos">Surat Pengantar Bansos</option>
+                    <option value="Surat Keterangan Belum Menikah">Surat Keterangan Belum Menikah</option>
+                    <option value="Surat Keterangan Ahli Waris">Surat Keterangan Ahli Waris</option>
+                    <option value="Surat Izin Keramaian">Surat Izin Keramaian</option>
+                    <option value="Surat Keterangan Kehilangan (pengantar ke polisi)">Surat Keterangan Kehilangan (pengantar ke polisi)</option>
+                    <option value="Surat Keterangan Penghasilan">Surat Keterangan Penghasilan</option>
+                    <option value="Surat Keterangan Janda/Duda">Surat Keterangan Janda/Duda</option>
+                    <option value="Surat Pengantar Kredit / Bank">Surat Pengantar Kredit / Bank</option>
+                    <option value="Surat Keterangan Tanah / Kepemilikan (non-sertifikat)">Surat Keterangan Tanah / Kepemilikan (non-sertifikat)</option>
+                    <option value="Surat Lainnya">Surat Lainnya</option>
+                  </select>
                 </div>
               </div>
-
-              {/* Seksi 3: Data Pendukung */}
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
-                <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                  <div className="w-1 h-3 bg-blue-600 rounded-full"></div>
-                  3. Data Pendukung
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Kewarganegaraan</label>
-                    <select name="kewarganegaraan" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all">
-                      <option value="WNI">WNI</option>
-                      <option value="WNA">WNA</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Pendidikan Terakhir</label>
-                    <input name="pendidikan" required type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="SMA / S1 / ..." />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor KK (Kartu Keluarga)</label>
-                  <input name="kk" required type="text" minLength={16} maxLength={16} pattern="\d{16}" title="No KK harus 16 digit angka" onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0,16); }} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="16 digit Nomor KK" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Keperluan (Tujuan pembuatan surat)</label>
-                  <textarea name="keperluan" required rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Cth: Mengurus perpanjangan KTP ..."></textarea>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Layanan Surat</label>
-                  <select name="jenis" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
-                  <option value="Domisili">Domisili</option>
-                  <option value="SKTM">SKTM</option>
-                  <option value="Pengantar KTP/KK">Pengantar KTP/KK</option>
-                  <option value="Pindah datang">Pindah datang</option>
-                  <option value="SKCK">SKCK</option>
-                  <option value="Usaha">Usaha</option>
-                  <option value="Bansos">Bansos</option>
-                  <option value="Beasiswa">Beasiswa</option>
-                  <option value="Izin keramaian">Izin keramaian</option>
-                  <option value="Kredit/Bank">Kredit/Bank</option>
-                  <option value="Surat Pengantar IMB/PBG">Surat Pengantar IMB/PBG</option>
-                  <option value="Surat Keterangan Beda Nama">Surat Keterangan Beda Nama</option>
-                  <option value="Surat Pengantar Ahli Waris">Surat Pengantar Ahli Waris</option>
-                </select>
-              </div>
-            </div>
 
               <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
                 <button type="button" onClick={() => setShowSuratForm(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
