@@ -109,7 +109,7 @@ export default function App() {
           if (userDoc.exists()) {
             let userData = userDoc.data() as any;
             // Force Super Admin status for the specific master email
-            if (user.email?.toLowerCase() === 'arifrajcoach@gmail.com') {
+            if (user.email === 'arifrajcoach@gmail.com') {
               userData.isSuperAdmin = true;
               userData.role = 'ADMIN';
             }
@@ -119,7 +119,7 @@ export default function App() {
             let role = 'RT';
             let name = user.email?.split('@')[0] || 'User';
             
-            const isMasterEmail = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
+            const isMasterEmail = user.email === 'arifrajcoach@gmail.com';
             
             // Set default tenantId to 'RW26_SMART' for the current user
             const tenantId = 'RW26_SMART';
@@ -218,7 +218,7 @@ export default function App() {
 
     setIsLoadingDB(true);
     let loadedSections = 0;
-    const totalSections = currentUser?.isSuperAdmin ? 6 : (currentUser?.role === 'Admin' ? 5 : 4);
+    const totalSections = currentUser?.isSuperAdmin ? 6 : (currentUser?.role === 'ADMIN' ? 5 : 4);
 
     const onDataLoaded = () => {
       loadedSections++;
@@ -599,7 +599,7 @@ export default function App() {
           {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
           {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
-          {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
           {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} settings={settings} userRole={currentUser.role} showNotification={showNotification} />}
         </div>
       </main>
@@ -4271,7 +4271,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
   );
 }
 
-function TenantsView({ tenantsData, setIsLoadingDB, handleFirestoreError }: { tenantsData: any[], setIsLoadingDB: any, handleFirestoreError: any }) {
+function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestoreError, showNotification }: { tenantsData: any[], isLoadingDB: boolean, setIsLoadingDB: any, handleFirestoreError: any, showNotification: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
 

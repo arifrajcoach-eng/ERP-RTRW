@@ -37,14 +37,14 @@ service cloud.firestore {
       let user = getUserData();
       return isSignedIn() && (
         isSuperAdmin() || 
-        (user != null && user.get('role', 'Viewer') == 'Admin')
+        (user != null && (user.get('role', 'Viewer') == 'ADMIN' || user.get('role', 'Viewer') == 'RW'))
       );
     }
 
     function isOperator() {
       let user = getUserData();
       let role = user != null ? user.get('role', 'Viewer') : 'Viewer';
-      return isSuperAdmin() || role == 'Admin' || role == 'Operator';
+      return isSuperAdmin() || role == 'ADMIN' || role == 'RW' || role == 'RT' || role == 'BENDAHARA' || role == 'SEKRETARIS';
     }
 
     function isValidId(id) {
@@ -92,6 +92,12 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
+    }
+
+    // --- Settings Collection ---
+    match /settings/{tId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
+      allow write: if isAdmin() && tId == getTenantId();
     }
 
     // --- Users Collection ---
