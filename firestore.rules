@@ -12,50 +12,39 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isEmailVerified() {
-      return isSignedIn();
-    }
-
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userPath) ? get(userPath).data : null;
     }
 
     function getTenantId() {
-      return getUserData().get('tenantId', 'RW26_SMART');
+      let user = getUserData();
+      return user != null ? user.get('tenantId', 'RW26_SMART') : 'RW26_SMART';
     }
 
     function isSameTenant(data) {
       return data.get('tenantId', 'RW26_SMART') == getTenantId();
     }
 
-    function getUnitMapping() {
-      return getUserData().get('unitMapping', []);
-    }
-
-    function isUnitMapped(data) {
-      let mapping = getUnitMapping();
-      // Admin has all access, Operator if mapping is empty (all) or if RT matches mapping
-      return isAdmin() || mapping.size() == 0 || (data.get('rt', '') in mapping);
-    }
-
-    function isNikMapped(nik) {
-      let mappedNik = getUserData().get('nikMapping', '');
-      return isAdmin() || isOperator() || (mappedNik != '' && mappedNik == nik);
-    }
-
     function isSuperAdmin() {
-      return isSignedIn() && (request.auth.token.email == 'arifrajcoach@gmail.com' || getUserData().get('isSuperAdmin', false) == true);
+      return isSignedIn() && (
+        request.auth.token.email == 'arifrajcoach@gmail.com' || 
+        (getUserData() != null && getUserData().get('isSuperAdmin', false) == true)
+      );
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             (getUserData().get('role', 'Viewer') == 'Admin' || isSuperAdmin());
+      let user = getUserData();
+      return isSignedIn() && (
+        isSuperAdmin() || 
+        (user != null && user.get('role', 'Viewer') == 'Admin')
+      );
     }
 
     function isOperator() {
-      let role = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
-                 getUserData().get('role', 'Viewer') : 'Viewer';
-      return role == 'Operator' || role == 'Admin' || isSuperAdmin();
+      let user = getUserData();
+      let role = user != null ? user.get('role', 'Viewer') : 'Viewer';
+      return isSuperAdmin() || role == 'Admin' || role == 'Operator';
     }
 
     function isValidId(id) {
@@ -70,103 +59,79 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // --- Validation Blueprints (Pillar 2) ---
+    // --- Validation Blueprints ---
     
-    function isValidUser(data) {
-      return data.email is string && data.email.size() <= 100 &&
-             data.role in ['Admin', 'Operator', 'Viewer'] &&
-             data.tenantId is string && data.tenantId.size() <= 50 &&
-             data.name is string && data.name.size() <= 100 &&
-             (!('isSuperAdmin' in data) || data.isSuperAdmin is bool) &&
-             (!('unitMapping' in data) || data.unitMapping is list) &&
-             (!('nikMapping' in data) || data.nikMapping is string);
-    }
-
     function isValidWarga(data) {
-      return data.nik is string && data.nik.size() == 16 &&
+      return data.nik is string && data.nik.size() >= 1 &&
              data.nama is string && data.nama.size() <= 100 &&
-             data.rt is string && data.rt.size() <= 10 &&
-             data.rw is string && data.rw.size() <= 10 &&
              data.tenantId is string && data.tenantId.size() <= 50;
     }
 
     function isValidKas(data) {
-      return data.id is string && data.id.size() <= 100 &&
-             data.jumlah is number &&
+      return (data.get('debit', 0) is number || data.get('kredit', 0) is number) &&
              data.tipe in ['Masuk', 'Keluar'] &&
-             data.tenantId is string && data.tenantId.size() <= 50;
+             data.tanggal is string &&
+             data.tenantId is string;
     }
 
     function isValidSurat(data) {
-      return data.id is string && data.id.size() <= 100 &&
-             data.nik is string &&
+      return data.id is string &&
+             data.pemohon is string &&
              data.status in ['Diajukan', 'Draft', 'Terkirim', 'Selesai', 'Ditolak'] &&
-             data.tenantId is string && data.tenantId.size() <= 50;
+             data.tenantId is string;
     }
 
     function isValidIuran(data) {
-      return data.id is string && data.id.size() <= 100 &&
-             data.nik is string && data.nik.size() == 16 &&
-             data.jumlah is number &&
-             data.tenantId is string && data.tenantId.size() <= 50;
-    }
-
-    function isValidTenant(data) {
-      return data.id is string && data.id.size() <= 50 &&
-             data.name is string && data.name.size() <= 100 &&
-             data.status in ['Active', 'Trial', 'Inactive'];
+      return data.nominal is number &&
+             data.status in ['Lunas', 'Pending'] &&
+             data.nama is string &&
+             data.tenantId is string;
     }
 
     // --- Tenants Collection ---
     match /tenants/{tenantId} {
       allow read: if isSignedIn();
-      allow write: if isSuperAdmin() && isValidTenant(incoming());
+      allow write: if isSuperAdmin();
     }
 
     // --- Users Collection ---
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isSuperAdmin());
-      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
-      allow update: if (isSignedIn() && request.auth.uid == userId && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'tenantId', 'isSuperAdmin']) && isValidUser(incoming())) || (isAdmin() && isValidUser(incoming())) || isSuperAdmin();
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (resource != null && request.auth.token.email == resource.data.get('email', '')));
+      allow create: if isSuperAdmin() || (isAdmin() && incoming().get('tenantId', '') == getTenantId());
+      allow update: if isSuperAdmin() || (isAdmin() && existing().get('tenantId', '') == getTenantId()) || (isSignedIn() && request.auth.uid == userId);
+      allow delete: if isSuperAdmin() || (isAdmin() && existing().get('tenantId', '') == getTenantId());
     }
 
     // --- Warga Collection ---
     match /warga/{nik} {
-      allow read: if isSignedIn() && (
-        isSuperAdmin() || 
-        (isSameTenant(existing()) && (
-          isAdmin() || 
-          (isOperator() && isUnitMapped(existing())) || 
-          isNikMapped(nik)
-        ))
-      );
-      allow create: if (isOperator() || isSuperAdmin()) && isValidId(nik) && isValidWarga(incoming()) && (isSuperAdmin() || (isSameTenant(incoming()) && isUnitMapped(incoming())));
-      allow update: if (isOperator() || isSuperAdmin()) && isValidId(nik) && isValidWarga(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming()) && isUnitMapped(existing()) && isUnitMapped(incoming())));
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
     }
 
     // --- Kas Collection ---
     match /kas/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (isOperator() || isAdmin())));
-      allow create: if (isOperator() || isSuperAdmin()) && isValidId(id) && isValidKas(incoming()) && (isSuperAdmin() || isSameTenant(incoming()));
-      allow update: if (isAdmin() || isSuperAdmin()) && isValidKas(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming())));
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidKas(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidKas(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
     }
 
     // --- Surat Collection ---
     match /surat/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (isOperator() || isNikMapped(existing().get('nik', '')))));
-      allow create: if isSignedIn() && isValidId(id) && isValidSurat(incoming()) && (isSuperAdmin() || isSameTenant(incoming()));
-      allow update: if (isOperator() || isSuperAdmin()) && isValidSurat(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming())));
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isSignedIn() && isValidId(id) && isValidSurat(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidSurat(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
     }
 
     // --- Iuran Collection ---
     match /iuran/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (isOperator() || isNikMapped(existing().get('nik', '')))));
-      allow create: if (isOperator() || isSuperAdmin()) && isValidId(id) && isValidIuran(incoming()) && (isSuperAdmin() || isSameTenant(incoming()));
-      allow update: if (isOperator() || isSuperAdmin()) && isValidIuran(incoming()) && (isSuperAdmin() || (isSameTenant(existing()) && isSameTenant(incoming())));
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidIuran(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidIuran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
     }
   }
 }

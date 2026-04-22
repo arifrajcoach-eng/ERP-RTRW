@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield } from 'lucide-react';
+import { Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -86,30 +86,66 @@ export default function App() {
         try {
           // Fetch additional user info/role from Firestore
           const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
+          let userDoc = await getDoc(userDocRef);
           
+          if (!userDoc.exists() && user.email) {
+            // Check for pre-registered doc using email
+            const preRegId = user.email.replace(/\./g, '_');
+            const preRegDoc = await getDoc(doc(db, 'users', preRegId));
+            if (preRegDoc.exists()) {
+              // Convert pre-reg doc to UID-based doc
+              const data = preRegDoc.data();
+              const newUserInfo = { ...data, uid: user.uid, isPreRegistered: false };
+              await setDoc(userDocRef, newUserInfo);
+              try {
+                await deleteDoc(preRegDoc.ref); // Clean up
+              } catch (e) {
+                console.warn("Could not delete pre-reg doc, possibly rules restriction. Continuing...");
+              }
+              userDoc = await getDoc(userDocRef);
+            }
+          }
+
           if (userDoc.exists()) {
-            setCurrentUser(userDoc.data() as any);
+            let userData = userDoc.data() as any;
+            // Force Super Admin status for the specific master email
+            if (user.email === 'arifrajcoach@gmail.com') {
+              userData.isSuperAdmin = true;
+              userData.role = 'ADMIN';
+            }
+            setCurrentUser(userData);
           } else {
             // If No Firestore doc yet, use default based on email (for easy migration)
-            let role = 'Viewer';
+            let role = 'RT';
             let name = user.email?.split('@')[0] || 'User';
             
-            const isAdminEmail = user.email === 'admin@rw26.com' || user.email === 'arifrajcoach@gmail.com';
-            const isOperatorEmail = user.email === 'operator@rw26.com';
+            const isMasterEmail = user.email === 'arifrajcoach@gmail.com';
             
             // Set default tenantId to 'RW26_SMART' for the current user
             const tenantId = 'RW26_SMART';
-            const isSuperAdmin = user.email === 'arifrajcoach@gmail.com';
+            const isSuperAdmin = isMasterEmail;
             
-            if (isAdminEmail) { role = 'Admin'; name = 'Bpk. Arif (Admin)'; }
-            else if (isOperatorEmail) { role = 'Operator'; name = 'Petugas RT'; }
-            else { role = 'Viewer'; name = user.email?.split('@')[0] || 'Warga'; }
+            if (isMasterEmail) { 
+              role = 'ADMIN'; 
+              name = 'Bpk. Arif (Super Admin)'; 
+            }
             
-            const newUser = { name, role, email: user.email, tenantId, isSuperAdmin };
+            const newUser = { 
+              id_user: user.uid,
+              name: name,
+              nama: name, 
+              username: user.email?.split('@')[0] || 'user',
+              role: role, 
+              email: user.email, 
+              tenantId, 
+              isSuperAdmin,
+              rt: "01",
+              status: "AKTIF",
+              created_at: new Date().toISOString()
+            };
             // Auto-create the doc BEFORE setting state to avoid race condition with rules
             await setDoc(userDocRef, newUser);
-            setCurrentUser(newUser);
+            setCurrentUser(newUser as any);
           }
         } catch (error: any) {
           console.error("Error fetching user profile:", error);
@@ -165,6 +201,12 @@ export default function App() {
 
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
 
   // --- FIREBASE SYNC (REAL-TIME) ---
   useEffect(() => {
@@ -191,15 +233,8 @@ export default function App() {
       
       const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
       
-      if (currentUser?.role === 'Operator') {
-        const mapping = currentUser.unitMapping || [];
-        if (mapping.length > 0) {
-          constraints.push(where('rt', 'in', mapping.slice(0, 10)));
-        }
-      } else if (currentUser?.role === 'Viewer') {
-        if (currentUser.nikMapping) {
-          constraints.push(where('nik', '==', currentUser.nikMapping));
-        }
+      if (currentUser?.role === 'RT') {
+        constraints.push(where('rt', '==', currentUser.rt || '01'));
       }
       
       return query(base, ...constraints);
@@ -218,7 +253,16 @@ export default function App() {
     );
 
     // 2. Kas Listener
-    const unsubKas = onSnapshot(query(collection(db, 'kas'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const getKasQuery = () => {
+      const base = collection(db, 'kas');
+      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
+      if (currentUser?.role === 'RT') {
+        constraints.push(where('rt', '==', currentUser.rt || '01'));
+      }
+      return query(base, ...constraints);
+    };
+
+    const unsubKas = onSnapshot(getKasQuery(), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         setKasData(data);
@@ -231,23 +275,13 @@ export default function App() {
     );
 
     // 3. Surat Listener
-    const getSuratQuery = () => {
-      const base = collection(db, 'surat');
-      if (currentUser?.isSuperAdmin) return query(base);
-      
-      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
-      
-      if (currentUser?.role === 'Viewer' && currentUser.nikMapping) {
-        constraints.push(where('nik', '==', currentUser.nikMapping));
-      }
-      
-      return query(base, ...constraints);
-    };
-
-    const unsubSurat = onSnapshot(getSuratQuery(), 
+    const unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
-        setSuratData(data);
+        const filtered = currentUser?.role === 'RT' 
+          ? data.filter((s: any) => s.rt === currentUser.rt)
+          : data;
+        setSuratData(filtered);
         onDataLoaded();
       },
       (err) => {
@@ -257,23 +291,13 @@ export default function App() {
     );
 
     // 4. Iuran Listener
-    const getIuranQuery = () => {
-      const base = collection(db, 'iuran');
-      if (currentUser?.isSuperAdmin) return query(base);
-      
-      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
-      
-      if (currentUser?.role === 'Viewer' && currentUser.nikMapping) {
-        constraints.push(where('nik', '==', currentUser.nikMapping));
-      }
-      
-      return query(base, ...constraints);
-    };
-
-    const unsubIuran = onSnapshot(getIuranQuery(), 
+    const unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
-        setIuranData(data);
+        const filtered = currentUser?.role === 'RT'
+          ? data.filter((i: any) => i.rt === currentUser.rt)
+          : data;
+        setIuranData(filtered);
         onDataLoaded();
       },
       (err) => {
@@ -282,9 +306,9 @@ export default function App() {
       }
     );
 
-    // 5. Users Listener (Admin Only)
+    // 5. Users Listener
     let unsubUsers = () => {};
-    if (currentUser?.role === 'Admin' || currentUser?.isSuperAdmin) {
+    if (currentUser?.role === 'ADMIN' || currentUser?.isSuperAdmin) {
       const usersQuery = currentUser.isSuperAdmin 
         ? query(collection(db, 'users'))
         : query(collection(db, 'users'), where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'));
@@ -300,6 +324,8 @@ export default function App() {
           onDataLoaded();
         }
       );
+    } else {
+      onDataLoaded();
     }
 
     // 6. Tenants Listener (Super Admin Only)
@@ -442,12 +468,14 @@ export default function App() {
             { id: 'super-admin', label: 'Super Admin', icon: Shield },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
           ].filter(item => {
-            if (currentUser?.role === 'Viewer' && item.id === 'pengaturan') return false;
-            if (currentUser?.role === 'Viewer' && item.id === 'users') return false;
-            if (currentUser?.role === 'Viewer' && item.id === 'super-admin') return false;
-            if (currentUser?.role === 'Operator' && item.id === 'pengaturan') return false;
-            if (currentUser?.role === 'Operator' && item.id === 'users') return false;
-            if (currentUser?.role === 'Operator' && item.id === 'super-admin') return false;
+            if (currentUser?.role === 'BENDAHARA') {
+              return ['dashboard', 'transaksi', 'kas'].includes(item.id);
+            }
+            if (currentUser?.role === 'RT') {
+              return ['dashboard', 'warga', 'transaksi', 'surat', 'kas'].includes(item.id);
+            }
+            if (item.id === 'users' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
+            if (item.id === 'pengaturan' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
             if (item.id === 'super-admin' && !currentUser?.isSuperAdmin) return false;
             return true;
           }).map((item) => (
@@ -514,15 +542,35 @@ export default function App() {
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} setActiveTab={setActiveTab} />}
-          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
-          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
-          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} />}
-          {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
+          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
           {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} />}
         </div>
       </main>
+
+      {/* Global Notifications */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className={`fixed bottom-10 left-1/2 z-50 px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 ${
+              notification.type === 'success' ? 'bg-green-600' : 
+              notification.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+            } text-white min-w-[300px] justify-center`}
+          >
+            {notification.type === 'success' && <CheckCircle className="w-5 h-5" />}
+            {notification.type === 'error' && <AlertCircle className="w-5 h-5" />}
+            {notification.type === 'info' && <Info className="w-5 h-5" />}
+            <span className="font-medium">{notification.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -640,7 +688,13 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, userRole, set
   // Merged Recent Activities
   const recentActivities = [
     ...kasData.map(k => ({ date: k.tanggal, title: k.transaksi, desc: `${k.nama}: ${k.keterangan}`, type: k.tipe === 'Masuk' ? 'in' : 'out', amount: k.debit || k.kredit })),
-    ...suratData.map(s => ({ date: s.tanggal, title: `Surat: ${s.jenisSurat || s.jenis}`, desc: `Pemohon: ${s.pemohon}`, type: 'doc', status: s.status })),
+    ...suratData.map(s => ({ 
+      date: s.tanggal, 
+      title: `Surat: ${s.jenisSurat || s.jenis || s.keperluan || 'Pengantar'}`, 
+      desc: `Pemohon: ${s.pemohon}`, 
+      type: 'doc', 
+      status: s.status 
+    })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
 
   return (
@@ -929,7 +983,7 @@ function ConfirmModal({
   );
 }
 
-function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { wargaData: any[], setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { wargaData: any[], setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
@@ -970,8 +1024,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
           processImportedData(results.data);
         },
         error: (error) => {
-          console.error("CSV Merge Error:", error);
-          alert("Gagal mengimpor data. Pastikan format CSV benar.");
+          console.error("CSV Merge Error (Warga):", error);
+          showNotification("Gagal mengimpor data warga. Pastikan format CSV benar.", 'error');
         }
       });
     }
@@ -1008,13 +1062,13 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
           await setDoc(doc(db, 'warga', item.nik), item);
         }
         setWargaData((prev: any) => [...prev, ...newData]);
-        alert(`Berhasil mengimpor ${newData.length} data warga.`);
+        showNotification(`Berhasil mengimpor ${newData.length} data warga.`, 'success');
       } catch (error: any) {
         console.error("Firebase Import Error:", error);
-        alert("Gagal sinkronisasi data ke Firebase: " + error.message);
+        showNotification("Gagal sinkronisasi data ke Firebase: " + error.message, 'error');
       }
     } else {
-      alert("Tidak ada data valid yang ditemukan.");
+      showNotification("Tidak ada data valid yang ditemukan.", 'info');
     }
   };
 
@@ -1040,7 +1094,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.nik && formData.nik.length !== 16) {
-      alert("NIK harus terdiri dari tepat 16 digit angka.");
+      showNotification("NIK harus terdiri dari tepat 16 digit angka.", 'error');
       return;
     }
     
@@ -1051,8 +1105,10 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       await setDoc(doc(db, 'warga', newWarga.nik), newWarga);
       setShowAddForm(false);
       resetForm();
+      showNotification("Data warga berhasil ditambahkan!", 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'create', `/warga/${newWarga.nik}`);
+      showNotification("Gagal menambahkan data warga.", 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -1062,7 +1118,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     e.preventDefault();
     
     if (formData.nik && formData.nik.length !== 16) {
-      alert("NIK harus terdiri dari tepat 16 digit angka.");
+      showNotification("NIK harus terdiri dari tepat 16 digit angka.", 'error');
       return;
     }
 
@@ -1072,8 +1128,10 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       setShowEditForm(false);
       setEditingWarga(null);
       resetForm();
+      showNotification("Perubahan data warga berhasil disimpan!", 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/warga/${editingWarga.nik}`);
+      showNotification("Gagal memperbarui data warga.", 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -1088,7 +1146,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       setWargaData((prev: any) => prev.filter((w: any) => w.nik !== wargaToDelete.nik));
       setWargaToDelete(null);
     } catch (error: any) {
-      alert("Gagal menghapus di Firebase: " + error.message);
+      handleFirestoreError(error, 'delete', `/warga/${wargaToDelete.nik}`);
+      showNotification("Gagal menghapus data warga.", 'error');
       setWargaToDelete(null);
     } finally {
       setIsDeletingWarga(false);
@@ -1628,7 +1687,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                           const url = await handleFileUpload(file, 'ktp');
                           setFormData(prev => ({ ...prev, ktpUrl: url }));
                         } catch (err) {
-                          alert("Gagal mengunggah foto KTP.");
+                          showNotification("Gagal mengunggah foto KTP.", 'error');
                         }
                       }
                     }} 
@@ -1770,7 +1829,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   );
 }
 
-function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { iuranData: any[], setIuranData: any, kasData: any[], setKasData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTrx, setEditingTrx] = useState<any>(null);
   const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
@@ -1798,7 +1857,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
       await deleteDoc(doc(db, 'iuran', trxToDelete.id));
       setIuranData((prev: any[]) => prev.filter(t => t.id !== trxToDelete.id));
       setTrxToDelete(null);
-      alert("Data berhasil dihapus dari sistem.");
+      showNotification("Data berhasil dihapus dari sistem.", 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'delete', `/iuran/${trxToDelete.id}`);
       setTrxToDelete(null);
@@ -1890,8 +1949,8 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
           processImportedIuranData(results.data);
         },
         error: (error) => {
-          console.error("CSV Merge Error:", error);
-          alert("Gagal mengimpor data. Pastikan format CSV benar.");
+          console.error("CSV Merge Error (Iuran):", error);
+          showNotification("Gagal mengimpor data transaksi. Pastikan format CSV benar.", 'error');
         }
       });
     }
@@ -1924,15 +1983,16 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
           await setDoc(doc(db, 'iuran', item.id), item);
         }
         setIuranData((prev: any) => [...newData, ...prev]);
-        alert(`Berhasil mengimpor ${newData.length} data transaksi.`);
+        showNotification(`Berhasil mengimpor ${newData.length} data transaksi.`, 'success');
       } catch (error: any) {
-        console.error("Firebase Import Error:", error);
+        console.error("Firebase Import Error (Iuran):", error);
         handleFirestoreError(error, 'create', '/iuran/import');
+        showNotification("Gagal sinkronisasi data iuran ke Firebase.", 'error');
       } finally {
         setIsLoadingDB(false);
       }
     } else {
-      alert("Tidak ada data valid yang ditemukan.");
+      showNotification("Tidak ada data transaksi valid yang ditemukan.", 'info');
     }
   };
 
@@ -1979,14 +2039,14 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
       if (editingTrx) {
         await updateDoc(doc(db, 'iuran', editingTrx.id), newPayment);
         setIuranData((prev: any[]) => prev.map(t => t.id === editingTrx.id ? newPayment : t));
-        alert("Data berhasil diperbarui.");
+        showNotification("Data berhasil diperbarui.", 'success');
       } else {
         await setDoc(doc(db, 'iuran', newPayment.id), newPayment);
         
         // Also record to Kas if NEW transaction
         const newKasEntry = {
           tenantId: tenantId,
-          id: `TRX-${String(kasData.length + 1).padStart(3, '0')}`,
+          id: `TRX-${Date.now()}`,
           tanggal: formattedDate,
           tipe: trxType,
           transaksi: transaksi,
@@ -2000,11 +2060,12 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
         
         setKasData([newKasEntry, ...kasData]);
         setIuranData([newPayment, ...iuranData]);
-        alert("Data berhasil dicatat.");
+        showNotification(`${trxType === 'Masuk' ? 'Pemasukan' : 'Pengeluaran'} berhasil dicatat.`, 'success');
       }
     } catch (error: any) {
       console.error("Firebase operation error:", error);
       handleFirestoreError(error, editingTrx ? 'update' : 'create', `/iuran/${editingTrx?.id || 'new'}`);
+      showNotification(`Gagal menyimpan data ${trxType}.`, 'error');
     } finally {
       setIsLoadingDB(false);
       setShowAddForm(false);
@@ -2102,7 +2163,10 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
               <button onClick={handleExportPDFIuran} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
                 <FileText className="w-3.5 h-3.5 text-red-500" /> <span className="sm:hidden lg:inline">PDF</span>
               </button>
-              <button onClick={() => setShowAddForm(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
+              <button 
+                onClick={() => { setTrxType('Masuk'); setShowAddForm(true); }}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+              >
                 <PlusCircle className="w-3.5 h-3.5" />
                 Catat
               </button>
@@ -2168,7 +2232,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
                             if (trx.id) {
                               setTrxToDelete(trx);
                             } else {
-                              alert("ID Transaksi tidak ditemukan, tidak bisa menghapus.");
+                              showNotification("ID Transaksi tidak ditemukan, tidak bisa menghapus.", 'error');
                             }
                           }}
                           className="p-2 text-red-600 hover:bg-red-50 border border-slate-100 rounded-lg transition-all shadow-sm active:scale-95 group"
@@ -2201,65 +2265,24 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
             </div>
             
             <form onSubmit={handleAddPayment} className="p-5 overflow-y-auto space-y-4">
-              {/* Tipe Transaksi Selector */}
-              <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
-                <button 
-                  type="button"
-                  disabled={!!editingTrx}
-                  onClick={() => setTrxType('Masuk')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Masuk' ? 'bg-green-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'} ${editingTrx ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Pemasukan
-                </button>
-                <button 
-                  type="button"
-                  disabled={!!editingTrx}
-                  onClick={() => setTrxType('Keluar')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Keluar' ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'} ${editingTrx ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Pengeluaran
-                </button>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                    {trxType === 'Masuk' ? 'Jenis Pemasukan' : 'Jenis Pengeluaran'}
+                    Jenis Transaksi
                   </label>
                   <select name="transaksi" defaultValue={editingTrx?.transaksi} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
-                    {trxType === 'Masuk' ? (
-                      <>
-                        <option value="Iuran Rutin Warga">Iuran Rutin Warga</option>
-                        <option value="Iuran Partisipasi Pembangunan">Iuran Partisipasi Pembangunan</option>
-                        <option value="Dana Kelurahan/Pemerintah">Dana Kelurahan/Pemerintah</option>
-                        <option value="Donasi & Bantuan Sosial">Donasi & Bantuan Sosial</option>
-                        <option value="Sponsorship & Donatur">Sponsorship & Donatur</option>
-                        <option value="Hasil Usaha RT/RW">Hasil Usaha RT/RW</option>
-                        <option value="Lainnya">Lainnya...</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="Insentif">Insentif</option>
-                        <option value="Pemeliharaan Lingkungan">Pemeliharaan Lingkungan</option>
-                        <option value="Dana Sosial">Dana Sosial</option>
-                        <option value="Kegiatan Warga">Kegiatan Warga</option>
-                        <option value="Akomodasi & Konsumsi">Akomodasi & Konsumsi</option>
-                        <option value="Gaji">Gaji</option>
-                        <option value="Upah">Upah</option>
-                        <option value="Perbaikan">Perbaikan</option>
-                        <option value="Pembelian">Pembelian</option>
-                        <option value="Pemasangan">Pemasangan</option>
-                        <option value="Pembongkaran">Pembongkaran</option>
-                        <option value="Bayar jasa">Bayar jasa</option>
-                        <option value="Pergantian">Pergantian</option>
-                        <option value="Lain-lain">Lain-lain...</option>
-                      </>
-                    )}
+                    <option value="Iuran Rutin Warga">Iuran Rutin Warga</option>
+                    <option value="Iuran Partisipasi Pembangunan">Iuran Partisipasi Pembangunan</option>
+                    <option value="Dana Kelurahan/Pemerintah">Dana Kelurahan/Pemerintah</option>
+                    <option value="Donasi & Bantuan Sosial">Donasi & Bantuan Sosial</option>
+                    <option value="Sponsorship & Donatur">Sponsorship & Donatur</option>
+                    <option value="Hasil Usaha RT/RW">Hasil Usaha RT/RW</option>
+                    <option value="Lainnya">Lainnya...</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                    {trxType === 'Masuk' ? 'Nama Penyetor' : 'Nama Penerima / Vendor'}
+                    Nama Penyetor
                   </label>
                   <input 
                     name="nama" 
@@ -2322,7 +2345,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
                           const url = await handleFileUpload(file, 'struk');
                           setStrukUrl(url);
                         } catch (err) {
-                          alert("Gagal mengunggah struk.");
+                          showNotification("Gagal mengunggah struk.", 'error');
                         }
                       }
                     }} 
@@ -2380,7 +2403,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
   );
 }
 
-function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any }) {
+function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, showNotification }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
   const [editingSurat, setEditingSurat] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -2435,8 +2458,10 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
     try {
       await updateDoc(doc(db, 'surat', id), { status: "Selesai", tenantId: tenantId });
       setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
+      showNotification("Pengajuan surat telah disetujui.", 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/surat/${id}`);
+      showNotification("Gagal menyetujui pengajuan surat.", 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -2447,8 +2472,10 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
     try {
       await updateDoc(doc(db, 'surat', id), { status: "Ditolak", tenantId: tenantId });
       setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
+      showNotification("Pengajuan surat telah ditolak.", 'info');
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/surat/${id}`);
+      showNotification("Gagal menolak pengajuan surat.", 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -2460,9 +2487,10 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
     try {
       await deleteDoc(doc(db, 'surat', id));
       setSuratData((prev: any[]) => prev.filter(s => s.id !== id));
-      alert("Pengajuan surat berhasil dihapus.");
+      showNotification("Pengajuan surat berhasil dihapus.", 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'delete', `/surat/${id}`);
+      showNotification("Gagal menghapus pengajuan surat.", 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -2667,16 +2695,17 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
       await setDoc(doc(db, 'surat', suratId), suratDataPayload);
       if (isEditing) {
         setSuratData((prev: any[]) => prev.map(s => s.id === suratId ? suratDataPayload : s));
-        alert("Pengajuan surat berhasil diperbarui.");
+        showNotification("Pengajuan surat berhasil diperbarui.", 'success');
       } else {
         setSuratData([suratDataPayload, ...suratData]);
-        alert("Pengajuan surat berhasil dikirim.");
+        showNotification("Pengajuan surat berhasil dikirim.", 'success');
       }
       setShowSuratForm(false);
       setEditingSurat(null);
       formRef.current?.reset();
     } catch (error: any) {
       handleFirestoreError(error, isEditing ? 'update' : 'create', `/surat/${suratId}`);
+      showNotification("Gagal menyimpan pengajuan surat.", 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -2966,11 +2995,12 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
   );
 }
 
-function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any }) {
+function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [strukUrl, setStrukUrl] = useState("");
+  const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
   
   // ... (reset states when form closes)
   useEffect(() => {
@@ -2996,8 +3026,10 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
       await deleteDoc(doc(db, 'kas', kasToDelete.id));
       setKasData((prev: any[]) => prev.filter(t => t.id !== kasToDelete.id));
       setKasToDelete(null);
+      showNotification("Catatan kas berhasil dihapus.", 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'delete', `/kas/${kasToDelete.id}`);
+      showNotification("Gagal menghapus catatan kas.", 'error');
       setKasToDelete(null);
     } finally {
       setIsDeletingKas(false);
@@ -3013,19 +3045,19 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
     
     const newId = `TRX-${Date.now()}`;
     const nominal = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
-    const tipe = formData.get('tipe') as string;
+    const transaksi = formData.get('transaksi') as string;
     
     const newTrx = {
       tenantId: tenantId,
       id: newId,
       tanggal: formattedDate,
-      tipe: tipe,
-      transaksi: formData.get('transaksi') as string,
+      tipe: trxType,
+      transaksi: transaksi,
       nama: formData.get('nama') as string,
       alamat: formData.get('alamat') as string || "-",
       keterangan: formData.get('keterangan') as string,
-      debit: tipe === 'Masuk' ? nominal : 0,
-      kredit: tipe === 'Keluar' ? nominal : 0,
+      debit: trxType === 'Masuk' ? nominal : 0,
+      kredit: trxType === 'Keluar' ? nominal : 0,
       strukUrl: strukUrl
     };
 
@@ -3034,7 +3066,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
       await setDoc(doc(db, 'kas', newId), newTrx);
 
       // Sync with IuranData if applicable
-      if (tipe === 'Masuk' && (formData.get('transaksi') === 'Iuran Warga')) {
+      if (trxType === 'Masuk' && (transaksi === 'Iuran Warga')) {
         const formattedDateTime = formattedDate + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
         const newIuran = {
           tenantId: tenantId,
@@ -3056,8 +3088,10 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
 
       setKasData([newTrx, ...kasData]);
       setShowMasukForm(false);
+      showNotification(`${trxType === 'Masuk' ? 'Pemasukan' : 'Pengeluaran'} berhasil disimpan.`, 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'create', `/kas/${newId}`);
+      showNotification(`Gagal menyimpan catatan ${trxType}.`, 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -3215,16 +3249,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
             Riwayat Transaksi
           </h3>
           <div className="flex gap-2">
-            {userRole !== 'Viewer' && (
-              <>
-                <button onClick={handleExportExcelKas} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                  <Download className="w-3.5 h-3.5 text-green-600" /> Excel
-                </button>
-                <button onClick={handleExportPDFKas} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                  <FileText className="w-3.5 h-3.5 text-red-500" /> PDF
-                </button>
-              </>
-            )}
+            {/* Action buttons removed as requested */}
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -3293,6 +3318,24 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
             </div>
             
             <form onSubmit={handleAddPemasukan} className="p-5 overflow-y-auto space-y-4">
+              {/* Tipe Transaksi Selector */}
+              <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                <button 
+                  type="button"
+                  onClick={() => setTrxType('Masuk')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Masuk' ? 'bg-green-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+                >
+                  Pemasukan
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setTrxType('Keluar')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Keluar' ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+                >
+                  Pengeluaran
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Tanggal</label>
@@ -3373,7 +3416,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
                           const url = await handleFileUpload(file, 'struk');
                           setStrukUrl(url);
                         } catch (err) {
-                          alert("Gagal mengunggah struk.");
+                          showNotification("Gagal mengunggah struk.", 'error');
                         }
                       }
                     }} 
@@ -3398,8 +3441,8 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
                 <button type="button" onClick={() => setShowMasukForm(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                   Batal
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                  Simpan Transaksi
+                <button type="submit" className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-all ${trxType === 'Masuk' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                  Simpan {trxType}
                 </button>
               </div>
             </form>
@@ -3852,30 +3895,56 @@ function LoginView() {
   );
 }
 
-function UsersView({ usersData, setIsLoadingDB, handleFirestoreError }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any }) {
+function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void }) {
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [showEditForm, setShowEditForm] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const handleUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const role = formData.get('role') as string;
-    const unitMappingRaw = formData.get('unitMapping') as string;
-    const nikMapping = formData.get('nikMapping') as string;
+    const id_user = editingUser ? editingUser.uid || editingUser.id_user : `USR-${Date.now()}`;
+    
+    const userData = {
+      id_user,
+      nama: formData.get('nama') as string,
+      name: formData.get('nama') as string, // Legacy compatibility
+      username: formData.get('username') as string,
+      password: formData.get('password') as string,
+      role: formData.get('role') as "ADMIN" | "RT" | "BENDAHARA",
+      rt: formData.get('rt') as string,
+      nik: formData.get('nik') as string,
+      status: formData.get('status') as "AKTIF" | "NONAKTIF",
+      tenantId,
+      created_at: editingUser?.created_at || new Date().toISOString()
+    };
 
-    const unitMapping = unitMappingRaw ? unitMappingRaw.split(',').map(s => s.trim()).filter(s => s !== '') : [];
+    if (!userData.username || !userData.role) {
+      showNotification("Username dan Role wajib diisi!", 'error');
+      return;
+    }
 
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'users', editingUser.uid), {
-        role,
-        unitMapping,
-        nikMapping
-      });
-      setShowEditForm(false);
+      await setDoc(doc(db, 'users', id_user), userData);
+      setShowForm(false);
       setEditingUser(null);
+      showNotification(`Data pengguna ${editingUser ? 'diperbarui' : 'ditambahkan'}!`, 'success');
     } catch (error: any) {
-      handleFirestoreError(error, 'update', `/users/${editingUser.uid}`);
+      handleFirestoreError(error, editingUser ? 'update' : 'create', `/users/${id_user}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleDeleteUser = async (user: any) => {
+    if (!window.confirm(`Hapus pengguna ${user.nama || user.name}?`)) return;
+
+    setIsLoadingDB(true);
+    try {
+      await deleteDoc(doc(db, 'users', user.uid || user.id_user));
+      showNotification("User berhasil dihapus.", 'success');
+    } catch (error: any) {
+      handleFirestoreError(error, 'delete', `/users/${user.uid || user.id_user}`);
     } finally {
       setIsLoadingDB(false);
     }
@@ -3884,56 +3953,84 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError }: { usersD
   return (
     <div className="space-y-6">
        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
-         <h3 className="text-sm font-bold text-slate-800 mb-6 flex items-center">
-           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-           Manajemen Pengguna & Pemetaan Unit
-         </h3>
+         <div className="flex justify-between items-center mb-6">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center">
+              <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+              Manajemen Pengguna & Pemetaan Unit
+            </h3>
+            <button 
+              onClick={() => { setEditingUser(null); setShowForm(true); }}
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Tambah User
+            </button>
+         </div>
          
          <div className="overflow-x-auto border border-slate-100 rounded-lg">
            <table className="w-full text-left border-collapse border-transparent">
              <thead>
                <tr className="bg-slate-50 border-b border-slate-100">
-                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pengguna</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Nama Pengguna</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Username</th>
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Peran</th>
-                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pemetaan Unit (RT)</th>
-                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pemetaan NIK</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">RT</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">NIK</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Aksi</th>
                </tr>
              </thead>
              <tbody className="divide-y divide-slate-50">
                {usersData.length === 0 && (
                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic text-xs">Belum ada data pengguna ditemukan.</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-400 italic text-xs">Belum ada data pengguna</td>
                  </tr>
                )}
                {usersData.map((user) => (
-                 <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
+                 <tr key={user.uid || user.id_user} className="hover:bg-slate-50/50 transition-colors">
                    <td className="px-4 py-3">
-                     <p className="text-xs font-bold text-slate-700">{user.name}</p>
-                     <p className="text-[10px] text-slate-400 font-medium">{user.email}</p>
+                     <p className="text-xs font-bold text-slate-700">{user.nama || user.name}</p>
+                   </td>
+                   <td className="px-4 py-3">
+                     <p className="text-[10px] text-slate-500 font-medium font-mono">{user.username || user.email?.split('@')[0]}</p>
                    </td>
                    <td className="px-4 py-3">
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${
-                        user.role === 'Admin' ? 'bg-red-50 text-red-600 border-red-100' :
-                        user.role === 'Operator' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                        'bg-blue-50 text-blue-600 border-blue-100'
-                      }`}>{user.role}</span>
+                        user.role === 'ADMIN' ? 'bg-red-50 text-red-600 border-red-100' :
+                        user.role === 'RT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        'bg-green-50 text-green-600 border-green-100'
+                      }`}>{user.role || 'GUEST'}</span>
+                   </td>
+                   <td className="px-4 py-3 text-center">
+                     <p className="text-[11px] text-slate-600 font-bold font-mono">{user.rt || '-'}</p>
                    </td>
                    <td className="px-4 py-3">
-                     <p className="text-[11px] text-slate-600 font-bold font-mono">
-                       {user.unitMapping?.length > 0 ? user.unitMapping.join(', ') : 'Semua RT'}
-                     </p>
+                     <p className="text-[11px] text-slate-600 font-bold font-mono">{user.nik || user.nikMapping || '-'}</p>
                    </td>
-                   <td className="px-4 py-3">
-                     <p className="text-[11px] text-slate-600 font-bold font-mono">{user.nikMapping || '-'}</p>
+                   <td className="px-4 py-3 text-center">
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                        user.status === 'AKTIF' || !user.status ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {user.status || 'AKTIF'}
+                      </span>
                    </td>
                    <td className="px-4 py-3 text-right">
-                     <button 
-                       onClick={() => { setEditingUser(user); setShowEditForm(true); }}
-                       className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
-                     >
-                       <Edit className="w-3.5 h-3.5" />
-                     </button>
+                     <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => { setEditingUser(user); setShowForm(true); }}
+                          className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
+                          title="Edit"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteUser(user)}
+                          className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
+                          title="Hapus"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                     </div>
                    </td>
                  </tr>
                ))}
@@ -3942,7 +4039,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError }: { usersD
          </div>
        </div>
 
-       {showEditForm && editingUser && (
+       {showForm && (
          <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
             <motion.div 
                initial={{ opacity: 0, scale: 0.95 }}
@@ -3952,49 +4049,60 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError }: { usersD
                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                   <div className="flex items-center gap-3">
                      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                        <User className="w-4 h-4" />
+                        {editingUser ? <Edit className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
                      </div>
-                     <h3 className="font-bold text-slate-800">Edit Akses & Pemetaan</h3>
+                     <h3 className="font-bold text-slate-800">{editingUser ? 'Edit User' : 'Tambah User baru'}</h3>
                   </div>
-                  <button onClick={() => setShowEditForm(false)} className="p-1.5 hover:text-red-500 rounded-lg bg-white border border-slate-200 transition-colors"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setShowForm(false)} className="p-1.5 hover:text-red-500 rounded-lg bg-white border border-slate-200 transition-colors"><X className="w-4 h-4" /></button>
                </div>
-               <form className="p-6 space-y-4" onSubmit={handleUpdateUser}>
-                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 mb-2">
-                     <p className="text-[11px] font-bold text-blue-700 mb-1">User Info</p>
-                     <p className="text-sm font-bold text-slate-800">{editingUser.name}</p>
-                     <p className="text-[10px] text-slate-500 font-mono italic">{editingUser.email}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Peran Sistem</label>
-                    <select name="role" defaultValue={editingUser.role} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-100 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold">
-                       <option value="Admin">Admin (Akses Penuh)</option>
-                       <option value="Operator">Operator (Petugas RT)</option>
-                       <option value="Viewer">Viewer (Warga)</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Pemetaan Unit (RT)</label>
-                    <input type="text" name="unitMapping" defaultValue={editingUser.unitMapping?.join(', ') || ''} placeholder="Pisahkan dengan koma, Cth: 01, 02, 03" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-100 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
-                    <div className="flex items-start gap-1.5 p-2 bg-amber-50 rounded-lg border border-amber-100">
-                       <AlertTriangle className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
-                       <p className="text-[9px] text-amber-700 leading-tight italic font-medium">Hanya berlaku untuk Operator. Membatasi pengolahan data hanya pada RT yang dipilih. Kosongkan untuk akses semua RT.</p>
+               <form className="p-6 space-y-4" onSubmit={handleSaveUser}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Nama Lengkap</label>
+                      <input type="text" name="nama" required defaultValue={editingUser?.nama || editingUser?.name || ''} placeholder="Contoh: Bpk. Budi Santoso" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Pemetaan NIK Warga</label>
-                    <input type="text" name="nikMapping" defaultValue={editingUser.nikMapping || ''} placeholder="Masukkan 16 digit NIK" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-100 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
-                    <div className="flex items-start gap-1.5 p-2 bg-blue-50 rounded-lg border border-blue-100">
-                       <Database className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" />
-                       <p className="text-[9px] text-blue-700 leading-tight italic font-medium">Hanya berlaku untuk Viewer. Membatasi akses melihat profil warga hanya untuk NIK ini.</p>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Username</label>
+                      <input type="text" name="username" required defaultValue={editingUser?.username || ''} placeholder="user123" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Password</label>
+                      <input type="password" name="password" required={!editingUser} defaultValue={editingUser?.password || ''} placeholder="******" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Peran (Role)</label>
+                      <select name="role" defaultValue={editingUser?.role || 'RT'} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
+                         <option value="ADMIN">ADMIN</option>
+                         <option value="RT">RT</option>
+                         <option value="BENDAHARA">BENDAHARA</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Nomor RT</label>
+                      <input type="text" name="rt" defaultValue={editingUser?.rt || ''} placeholder="Contoh: 01" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">NIK (Optional)</label>
+                      <input type="text" name="nik" defaultValue={editingUser?.nik || editingUser?.nikMapping || ''} placeholder="16 Digit NIK" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Status</label>
+                      <select name="status" defaultValue={editingUser?.status || 'AKTIF'} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
+                         <option value="AKTIF">AKTIF</option>
+                         <option value="NONAKTIF">NONAKTIF</option>
+                      </select>
                     </div>
                   </div>
 
                   <div className="pt-4 flex gap-3">
-                    <button type="button" onClick={() => setShowEditForm(false)} className="flex-1 py-2.5 text-slate-500 font-black uppercase text-[10px] tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Batal</button>
-                    <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">Simpan Perubahan</button>
+                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 text-slate-500 font-black uppercase text-[10px] tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+                    <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">Simpan Pengguna</button>
                   </div>
                </form>
             </motion.div>
