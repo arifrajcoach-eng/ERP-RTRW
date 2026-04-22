@@ -2490,44 +2490,51 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Cetak Surat - ${surat.id}</title>
           <style>
-            body { font-family: 'Times New Roman', Times, serif; padding: 20px; line-height: 1.6; color: #000; }
-            .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 30px; position: relative; }
-            .header h1 { font-size: 20px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
-            .header h2 { font-size: 16px; margin: 5px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-            .header p { font-size: 12px; margin: 2px 0; font-style: italic; }
-            .title-box { text-align: center; margin-bottom: 30px; }
-            .title { font-size: 18px; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin-bottom: 5px; }
-            .nomor { font-size: 14px; margin-bottom: 30px; }
+            body { font-family: 'Times New Roman', Times, serif; padding: 40px; line-height: 1.5; color: #000; }
+            .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h2 { font-size: 18px; margin: 0; text-transform: uppercase; font-weight: bold; }
+            .header h3 { font-size: 16px; margin: 5px 0; text-transform: uppercase; font-weight: bold; }
+            .header h1 { font-size: 22px; margin: 5px 0; text-transform: uppercase; font-weight: bold; }
+            .header p { font-size: 12px; margin: 2px 0; }
+            
+            .title-box { text-align: center; margin-top: 30px; margin-bottom: 30px; }
+            .title { font-size: 18px; font-weight: bold; text-decoration: underline; text-transform: uppercase; }
+            .nomor { font-size: 14px; margin-top: 5px; }
+            
             .content { margin-top: 20px; text-align: justify; font-size: 14px; }
             .details { margin: 20px 0; border-collapse: collapse; width: 100%; font-size: 14px; }
             .details td { padding: 4px 0; vertical-align: top; }
-            .details td:first-child { width: 180px; }
+            .details td:first-child { width: 220px; }
             .details td:nth-child(2) { width: 20px; text-align: center; }
-            .footer { margin-top: 50px; display: flex; justify-content: flex-end; }
-            .signature { text-align: center; min-width: 250px; }
-            .signature-date { margin-bottom: 10px; }
+            
+            .footer { margin-top: 50px; font-size: 14px; position: relative; }
+            .place-date { margin-bottom: 30px; text-align: right; margin-right: 50px; }
+            .signature-wrapper { display: flex; justify-content: space-between; align-items: flex-start; }
+            .signature-block { text-align: center; width: 200px; }
             .signature-space { height: 80px; }
+            .center-block { margin: 50px auto 0 auto; text-align: center; width: 200px; }
+            
             @media print {
               body { padding: 0; margin: 0; }
-              @page { margin: 15mm; }
+              @page { margin: 20mm; }
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h2>Pemerintah Kota Metropolitan</h2>
-            <h2>Kecamatan Sukajaya - Kelurahan Sukamaju</h2>
-            <h1>RUKUN TETANGGA (RT) 01 / RUKUN WARGA (RW) 05</h1>
-            <p>Alamat: Jl. Merdeka No. 26, Kel. Sukamaju, Kec. Sukajaya, Kota Metropolitan (40123)</p>
+            <h2>PEMERINTAH KABUPATEN BEKASI</h2>
+            <h3>KECAMATAN BABELAN - KELURAHAN KEBALEN</h3>
+            <h1>RUKUN TETANGGA (RT) ${surat.rt} / RUKUN WARGA (RW) ${surat.rw}</h1>
+            <p>RT ${surat.rt} / RW ${surat.rw}, KELURAHAN KEBALEN, Kecamatan Babelan, Bekasi - 17610</p>
           </div>
           
           <div class="title-box">
-            <div class="title">${surat.jenisSurat || 'Surat Pengantar'}</div>
-            <div class="nomor">Nomor: ${surat.id.substring(0, 10)} / RT.01 / ${new Date().getFullYear()}</div>
+            <div class="title">SURAT PENGANTAR</div>
+            <div class="nomor">Nomor: ${surat.id.substring(0, 10)} / RT.${surat.rt} / ${new Date().getFullYear()}</div>
           </div>
 
           <div class="content">
-            <p>Yang bertanda tangan di bawah ini selaku Ketua RT 01 / RW 05, Kelurahan Sukamaju, menerangkan dengan sebenarnya bahwa:</p>
+            <p>Yang bertanda tangan di bawah ini pengurus RT ${surat.rt} / RW ${surat.rw} Kelurahan Kebalen Kecamatan Babelan Kabupaten Bekasi, dengan ini menerangkan bahwa:</p>
             
             <table class="details">
               <tr>
@@ -2536,17 +2543,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                 <td><strong>${surat.pemohon}</strong></td>
               </tr>
               <tr>
-                <td>NIK</td>
-                <td>:</td>
-                <td>${surat.nik || '-'}</td>
-              </tr>
-              <tr>
-                <td>No. KK</td>
-                <td>:</td>
-                <td>${surat.kk || '-'}</td>
-              </tr>
-              <tr>
-                <td>Tempat, Tgl Lahir</td>
+                <td>Tempat/Tanggal Lahir</td>
                 <td>:</td>
                 <td>${surat.ttl || '-'}</td>
               </tr>
@@ -2561,49 +2558,39 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                 <td>${surat.agama || '-'}</td>
               </tr>
               <tr>
-                <td>Pekerjaan</td>
-                <td>:</td>
-                <td>${surat.pekerjaan || '-'}</td>
-              </tr>
-              <tr>
-                <td>Status Perkawinan</td>
-                <td>:</td>
-                <td>${surat.statusKawin || '-'}</td>
-              </tr>
-              <tr>
-                <td>Alamat KTP</td>
+                <td>Alamat</td>
                 <td>:</td>
                 <td>${surat.alamat || '-'}</td>
               </tr>
               <tr>
-                <td>Domisili (RT/RW)</td>
-                <td>:</td>
-                <td>RT ${surat.rt || '-'} / RW ${surat.rw || '05'}</td>
-              </tr>
-              <tr>
-                <td>Kelurahan</td>
-                <td>:</td>
-                <td>Sukamaju</td>
-              </tr>
-              <tr>
-                <td>Kecamatan</td>
-                <td>:</td>
-                <td>Sukajaya</td>
-              </tr>
-              <tr>
-                <td>Keperluan</td>
-                <td>:</td>
-                <td>${surat.keperluan || '-'}</td>
+                <td style="padding-top: 20px;">Keperluan</td>
+                <td style="padding-top: 20px;">:</td>
+                <td style="padding-top: 20px;"><strong>${surat.keperluan || '-'}</strong></td>
               </tr>
             </table>
 
-            <p style="text-indent: 40px;">Berdasarkan pemantauan kami, nama tersebut di atas benar adalah warga yang berdomisili di wilayah kami dan memiliki berkelakuan baik. Demikian surat keterangan ini kami buat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.</p>
+            <p style="text-indent: 45px; margin-top: 30px;">Demikian agar segenap pihak yang berwenang dapat maklum, dan dapat memberikan bantuan sesuai dengan keperluannya.</p>
           </div>
 
           <div class="footer">
-            <div class="signature">
-              <div class="signature-date">Metropolitan, ${surat.tanggal}</div>
-              <p><strong>Ketua RT 01 / RW 05</strong></p>
+            <div class="place-date">Bekasi, ${surat.tanggal}</div>
+            
+            <div class="signature-wrapper">
+              <div class="signature-block">
+                <p>Pemohon</p>
+                <div class="signature-space"></div>
+                <p><strong>( ${surat.pemohon} )</strong></p>
+              </div>
+              <div class="signature-block">
+                <p>Ketua RT ${surat.rt}</p>
+                <div class="signature-space"></div>
+                <p><strong>( ..................................... )</strong></p>
+              </div>
+            </div>
+
+            <div class="center-block">
+              <p>Mengetahui,</p>
+              <p>Ketua RW ${surat.rw}</p>
               <div class="signature-space"></div>
               <p><strong>( ..................................... )</strong></p>
             </div>
@@ -2612,7 +2599,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
           <script>
             setTimeout(function() {
               window.print(); 
-            }, 250);
+            }, 300);
             window.onafterprint = function() {
               setTimeout(function() { window.close(); }, 500);
             }
