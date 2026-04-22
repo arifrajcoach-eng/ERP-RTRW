@@ -2656,7 +2656,6 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
       statusKawin: formData.get('statusKawin') as string,
       alamat: formData.get('alamat') as string,
       keperluan: formData.get('keperluan') as string,
-      jenisSurat: formData.get('jenisSurat') as string,
       status: isEditing ? editingSurat.status : "Diajukan"
     };
 
@@ -2714,7 +2713,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
               <th className="px-6 py-3">ID Pengajuan</th>
               <th className="px-6 py-3">Tanggal</th>
               <th className="px-6 py-3">Pemohon</th>
-              <th className="px-6 py-3">Jenis Surat</th>
+              <th className="px-6 py-3">Keperluan</th>
               <th className="px-6 py-3">Status</th>
               <th className="px-6 py-3 text-right">Aksi</th>
             </tr>
@@ -2725,7 +2724,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs">{surat.id.substring(0, 10)}</td>
                 <td className="px-6 py-3 text-xs">{surat.tanggal}</td>
                 <td className="px-6 py-3 font-semibold text-slate-800">{surat.pemohon}</td>
-                <td className="px-6 py-3 text-xs">{surat.jenisSurat}</td>
+                <td className="px-6 py-3 text-xs">{surat.keperluan}</td>
                 <td className="px-6 py-3">
                   <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${
                     surat.status === 'Selesai' ? 'border-green-200 bg-green-50 text-green-700' : 
@@ -2909,32 +2908,6 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 mb-1">Keperluan</label>
                   <select name="keperluan" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
-                    <option value="Surat Pengantar KTP">Surat Pengantar KTP</option>
-                    <option value="Surat Pengantar KK">Surat Pengantar KK</option>
-                    <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
-                    <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
-                    <option value="Surat Keterangan Usaha">Surat Keterangan Usaha</option>
-                    <option value="Surat Keterangan Tidak Mampu (SKTM)">Surat Keterangan Tidak Mampu (SKTM)</option>
-                    <option value="Surat Pengantar Pindah / Datang">Surat Pengantar Pindah / Datang</option>
-                    <option value="Surat Pengantar Nikah">Surat Pengantar Nikah</option>
-                    <option value="Surat Pengantar Kelahiran">Surat Pengantar Kelahiran</option>
-                    <option value="Surat Pengantar Kematian">Surat Pengantar Kematian</option>
-                    <option value="Surat Pengantar Beasiswa">Surat Pengantar Beasiswa</option>
-                    <option value="Surat Pengantar Bansos">Surat Pengantar Bansos</option>
-                    <option value="Surat Keterangan Belum Menikah">Surat Keterangan Belum Menikah</option>
-                    <option value="Surat Keterangan Ahli Waris">Surat Keterangan Ahli Waris</option>
-                    <option value="Surat Izin Keramaian">Surat Izin Keramaian</option>
-                    <option value="Surat Keterangan Kehilangan (pengantar ke polisi)">Surat Keterangan Kehilangan (pengantar ke polisi)</option>
-                    <option value="Surat Keterangan Penghasilan">Surat Keterangan Penghasilan</option>
-                    <option value="Surat Keterangan Janda/Duda">Surat Keterangan Janda/Duda</option>
-                    <option value="Surat Pengantar Kredit / Bank">Surat Pengantar Kredit / Bank</option>
-                    <option value="Surat Keterangan Tanah / Kepemilikan (non-sertifikat)">Surat Keterangan Tanah / Kepemilikan (non-sertifikat)</option>
-                    <option value="Surat Lainnya">Surat Lainnya</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Surat</label>
-                  <select name="jenisSurat" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
                     <option value="Surat Pengantar KTP">Surat Pengantar KTP</option>
                     <option value="Surat Pengantar KK">Surat Pengantar KK</option>
                     <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
