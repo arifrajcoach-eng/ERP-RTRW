@@ -109,7 +109,7 @@ export default function App() {
           if (userDoc.exists()) {
             let userData = userDoc.data() as any;
             // Force Super Admin status for the specific master email
-            if (user.email === 'arifrajcoach@gmail.com') {
+            if (user.email?.toLowerCase() === 'arifrajcoach@gmail.com') {
               userData.isSuperAdmin = true;
               userData.role = 'ADMIN';
             }
@@ -119,7 +119,7 @@ export default function App() {
             let role = 'RT';
             let name = user.email?.split('@')[0] || 'User';
             
-            const isMasterEmail = user.email === 'arifrajcoach@gmail.com';
+            const isMasterEmail = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
             
             // Set default tenantId to 'RW26_SMART' for the current user
             const tenantId = 'RW26_SMART';
@@ -198,6 +198,7 @@ export default function App() {
 
   const [usersData, setUsersData] = useState<any[]>([]);
   const [tenantsData, setTenantsData] = useState<any[]>([]);
+  const [settings, setSettings] = useState<Record<string, any>>({});
 
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -225,6 +226,13 @@ export default function App() {
         setIsLoadingDB(false);
       }
     };
+
+    // 0. Settings Listener
+    const unsubSettings = onSnapshot(doc(db, 'settings', currentUser?.tenantId || 'RW26_SMART'), (snap) => {
+      if (snap.exists()) {
+        setSettings(snap.data());
+      }
+    });
 
     // 1. Warga Listener
     const getWargaQuery = () => {
@@ -351,8 +359,52 @@ export default function App() {
       unsubIuran();
       unsubUsers();
       unsubTenants();
+      unsubSettings();
     };
   }, [currentUser]);
+
+  // --- CENTRAL CONFIG HELPERS ---
+  const getSetting = (key: string) => {
+    return settings[key] || "";
+  };
+
+  const kirimWhatsApp = (nomor: string, nama: string) => {
+    const token = getSetting("TOKEN_WA");
+    let pesan = getSetting("TEMPLATE_WA");
+    const status = getSetting("STATUS_WA");
+
+    if (status !== "Aktif") return;
+
+    pesan = pesan.replace("{nama}", nama);
+
+    // Simulasi kirim API
+    console.log("Kirim WhatsApp ke:", nomor, "Pesan:", pesan);
+    // Di sini bisa ditambahkan fetch() ke API WhatsApp Gateway
+  };
+
+  // Automaasi WhatsApp (Tanggal 5)
+  useEffect(() => {
+    const checkAutomasiWA = () => {
+      const today = new Date();
+      const statusWA = getSetting("STATUS_WA");
+      
+      if (today.getDate() === 5 && statusWA === "Aktif") {
+        // Cari warga yang memiliki iuran pending/belum bayar bulan ini
+        const currentMonth = today.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+        
+        wargaData.forEach((w: any) => {
+          const isLunas = iuranData.some((i: any) => i.nama === w.nama && i.periode.includes(currentMonth) && i.status === 'Lunas');
+          if (!isLunas && w.hp) {
+            kirimWhatsApp(w.hp, w.nama);
+          }
+        });
+      }
+    };
+
+    if (wargaData.length > 0 && Object.keys(settings).length > 0) {
+      checkAutomasiWA();
+    }
+  }, [wargaData, settings, iuranData]);
 
   // Centralized Error Handler for Firestore
   const handleFirestoreError = (err: any, op: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write', path: string) => {
@@ -544,11 +596,11 @@ export default function App() {
           {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} userRole={currentUser.role} setActiveTab={setActiveTab} />}
           {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
-          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
+          {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} />}
-          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} />}
+          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} settings={settings} userRole={currentUser.role} showNotification={showNotification} />}
         </div>
       </main>
 
@@ -2403,7 +2455,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
   );
 }
 
-function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, showNotification }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentUser, getSetting, tenantId, setIsLoadingDB, handleFirestoreError, showNotification }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
   const [editingSurat, setEditingSurat] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -2545,17 +2597,17 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
           <div class="header">
             <h2>Pemerintah Kota Metropolitan</h2>
             <h2>Kecamatan Sukajaya - Kelurahan Sukamaju</h2>
-            <h1>RUKUN TETANGGA (RT) 01 / RUKUN WARGA (RW) 05</h1>
-            <p>Alamat: Jl. Merdeka No. 26, Kel. Sukamaju, Kec. Sukajaya, Kota Metropolitan (40123)</p>
+            <h1>RT ${surat.rt_user || currentUser.rt} / RW 26 - ${getSetting("NAMA_RT") || 'SMART RW'}</h1>
+            <p>Alamat: Sekretariat RW 26, Kel. Sukamaju, Kec. Sukajaya</p>
           </div>
           
           <div class="title-box">
             <div class="title">${surat.jenisSurat || 'Surat Pengantar'}</div>
-            <div class="nomor">Nomor: ${surat.id.substring(0, 10)} / RT.01 / ${new Date().getFullYear()}</div>
+            <div class="nomor">Nomor: ${surat.nomor_surat || surat.id.substring(0, 5)} / RT.${surat.rt_user || currentUser.rt} / ${new Date().getFullYear()}</div>
           </div>
 
           <div class="content">
-            <p>Yang bertanda tangan di bawah ini selaku Ketua RT 01 / RW 05, Kelurahan Sukamaju, menerangkan dengan sebenarnya bahwa:</p>
+            <p>Yang bertanda tangan di bawah ini selaku Ketua RT ${surat.rt_user || currentUser.rt} / RW 26, Kelurahan Sukamaju, menerangkan dengan sebenarnya bahwa:</p>
             
             <table class="details">
               <tr>
@@ -2630,10 +2682,10 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
 
           <div class="footer">
             <div class="signature">
-              <div class="signature-date">Metropolitan, ${surat.tanggal}</div>
-              <p><strong>Ketua RT 01 / RW 05</strong></p>
+              <div class="signature-date">Bekasi, ${new Date(surat.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+              <p><strong>Ketua RT ${surat.rt_user || currentUser.rt} / RW 26</strong></p>
               <div class="signature-space"></div>
-              <p><strong>( ..................................... )</strong></p>
+              <p><strong>( ${surat.ketua || getSetting("NAMA_KETUA") || '.....................................'} )</strong></p>
             </div>
           </div>
           
@@ -2666,10 +2718,16 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
     const isEditing = !!editingSurat;
     const suratId = isEditing ? editingSurat.id : `SRT-${Date.now()}`;
     
+    const newNomorSurat = `${suratData.length + 1}`.padStart(3, '0');
+
     const suratDataPayload = {
       tenantId: tenantId,
       id: suratId,
       tanggal: isEditing ? editingSurat.tanggal : formattedDate,
+      rt_user: currentUser.rt || "01",
+      nama_rt: getSetting("NAMA_RT"),
+      ketua: getSetting("NAMA_KETUA"),
+      nomor_surat: newNomorSurat,
       pemohon: formData.get('pemohon') as string,
       nik: formData.get('nik') as string,
       kk: formData.get('kk') as string,
@@ -2995,7 +3053,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
   );
 }
 
-function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, currentUser, getSetting, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -3044,7 +3102,14 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
     const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     
     const newId = `TRX-${Date.now()}`;
-    const nominal = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
+    let nominal = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
+    
+    // Auto nominal from settings if zero
+    if (nominal === 0 && trxType === 'Masuk') {
+      const defaultNominal = parseInt(getSetting("NOMINAL_IURAN").replace(/\D/g, '') || "0");
+      if (defaultNominal) nominal = defaultNominal;
+    }
+    
     const transaksi = formData.get('transaksi') as string;
     
     const newTrx = {
@@ -3459,9 +3524,35 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
   );
 }
 
-function PengaturanView({ tenantId }: { tenantId: string }) {
+function PengaturanView({ tenantId, settings, userRole, showNotification }: { tenantId: string, settings: any, userRole: string, showNotification: any }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveSettings = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (userRole !== 'ADMIN') {
+      showNotification("Hanya Admin yang dapat mengubah pengaturan.", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    const formData = new FormData(e.currentTarget);
+    const newSettings: Record<string, string> = {};
+    formData.forEach((value, key) => {
+      newSettings[key] = value as string;
+    });
+
+    try {
+      await setDoc(doc(db, 'settings', tenantId), newSettings, { merge: true });
+      showNotification("Pengaturan berhasil disimpan.", "success");
+    } catch (error) {
+      console.error(error);
+      showNotification("Gagal menyimpan pengaturan.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const generateDummyData = async () => {
     setIsGenerating(true);
@@ -3645,6 +3736,66 @@ function PengaturanView({ tenantId }: { tenantId: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Pengaturan Utama */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+          <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center">
+            <Settings className="w-4 h-4 mr-2 text-blue-600" />
+            Pengaturan Sistem
+          </h3>
+          {userRole === 'ADMIN' && (
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">Mode Editor</span>
+          )}
+        </div>
+        
+        <form onSubmit={handleSaveSettings} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Informasi RT</h4>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama RT (Label)</label>
+              <input name="NAMA_RT" defaultValue={settings.NAMA_RT} placeholder="Contoh: RT 01 Merdeka" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama Ketua RT</label>
+              <input name="NAMA_KETUA" defaultValue={settings.NAMA_KETUA} placeholder="Contoh: Bpk. H. Ahmad" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nominal Iuran Rutin (Rp)</label>
+              <input name="NOMINAL_IURAN" defaultValue={settings.NOMINAL_IURAN} type="number" placeholder="50000" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold text-green-600" />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Konfigurasi WhatsApp</h4>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Status Integrasi</label>
+              <select name="STATUS_WA" defaultValue={settings.STATUS_WA || "Nonaktif"} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold">
+                <option value="Aktif">Aktif</option>
+                <option value="Nonaktif">Nonaktif</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Token API / WA Gateway</label>
+              <input name="TOKEN_WA" defaultValue={settings.TOKEN_WA} type="password" placeholder="••••••••••••" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-mono" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Template Pesan ({'{nama}'} otomatis)</label>
+              <textarea name="TEMPLATE_WA" defaultValue={settings.TEMPLATE_WA} rows={3} placeholder="Halo {nama}, iuran bulan ini belum lunas..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
+            </div>
+          </div>
+
+          <div className="md:col-span-2 pt-4 border-t border-slate-50 flex justify-end">
+            <button 
+              type="submit" 
+              disabled={isSaving || userRole !== 'ADMIN'}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
+            >
+              {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+            </button>
+          </div>
+        </form>
+      </div>
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col">
         <h3 className="text-sm font-bold text-slate-800 mb-6 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
@@ -3898,6 +4049,7 @@ function LoginView() {
 function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void }) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -3910,7 +4062,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
       name: formData.get('nama') as string, // Legacy compatibility
       username: formData.get('username') as string,
       password: formData.get('password') as string,
-      role: formData.get('role') as "ADMIN" | "RT" | "BENDAHARA",
+      role: formData.get('role') as "ADMIN" | "RW" | "RT" | "BENDAHARA" | "SEKRETARIS",
       rt: formData.get('rt') as string,
       nik: formData.get('nik') as string,
       status: formData.get('status') as "AKTIF" | "NONAKTIF",
@@ -3996,8 +4148,8 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                    </td>
                    <td className="px-4 py-3">
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${
-                        user.role === 'ADMIN' ? 'bg-red-50 text-red-600 border-red-100' :
-                        user.role === 'RT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        user.role === 'ADMIN' || user.role === 'RW' ? 'bg-red-50 text-red-600 border-red-100' :
+                        user.role === 'RT' || user.role === 'SEKRETARIS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                         'bg-green-50 text-green-600 border-green-100'
                       }`}>{user.role || 'GUEST'}</span>
                    </td>
@@ -4069,15 +4221,22 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
 
                     <div>
                       <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Password</label>
-                      <input type="password" name="password" required={!editingUser} defaultValue={editingUser?.password || ''} placeholder="******" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" />
+                      <div className="relative">
+                        <input type={showPassword ? "text" : "password"} name="password" required={!editingUser} defaultValue={editingUser?.password || ''} placeholder="******" className="w-full px-3 py-2 pr-10 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Peran (Role)</label>
                       <select name="role" defaultValue={editingUser?.role || 'RT'} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
                          <option value="ADMIN">ADMIN</option>
+                         <option value="RW">RW</option>
                          <option value="RT">RT</option>
                          <option value="BENDAHARA">BENDAHARA</option>
+                         <option value="SEKRETARIS">SEKRETARIS</option>
                       </select>
                     </div>
 
@@ -4119,22 +4278,79 @@ function TenantsView({ tenantsData, setIsLoadingDB, handleFirestoreError }: { te
   const handleSaveTenant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const tenantId = formData.get('id') as string;
+    const name = formData.get('name') as string;
+    const email = formData.get('adminEmail') as string;
+    const password = formData.get('adminPassword') as string;
+    const phone = formData.get('adminPhone') as string;
+    const paket = formData.get('status') as string;
+    const rtCount = parseInt(formData.get('rtCount') as string || "1");
+
+    if (!editingTenant && (!password || password.length < 6)) {
+      showNotification("Password admin minimal 6 karakter.", "error");
+      return;
+    }
+
+    // Limit calculation based on package
+    let maxWarga = 50;
+    if (paket === 'Active') maxWarga = 200; // Basic
+    if (paket === 'Pro') maxWarga = 1000;
+
     const tenant = {
-      id: formData.get('id') as string,
-      name: formData.get('name') as string,
+      id: tenantId,
+      name: name,
       address: formData.get('address') as string,
-      adminEmail: formData.get('adminEmail') as string,
-      status: formData.get('status') as string,
+      adminEmail: email,
+      status: paket,
+      maxWarga,
+      rtTarget: rtCount,
       createdAt: editingTenant ? editingTenant.createdAt : new Date().toISOString()
     };
 
     setIsLoadingDB(true);
     try {
-      await setDoc(doc(db, 'tenants', tenant.id), tenant);
+      const batch = writeBatch(db);
+
+      // 1. Setup Tenant Doc
+      batch.set(doc(db, 'tenants', tenant.id), tenant);
+
+      // 2. Auto Setup Admin User (Only on creation)
+      if (!editingTenant) {
+        const userId = `ADM-${Date.now()}`;
+        batch.set(doc(db, 'users', userId), {
+          id_user: userId,
+          nama: `Admin ${name}`,
+          name: `Admin ${name}`,
+          username: email.split('@')[0],
+          email: email,
+          password: password, // In production, this should be handled by Firebase Auth create
+          role: 'ADMIN',
+          tenantId: tenantId,
+          rt: "01",
+          status: "AKTIF",
+          hp: phone,
+          created_at: new Date().toISOString()
+        });
+
+        // 3. Auto Setup Default Settings
+        batch.set(doc(db, 'settings', tenantId), {
+          NAMA_RT: name,
+          NAMA_KETUA: "-",
+          NOMINAL_IURAN: "50000",
+          STATUS_WA: "Nonaktif",
+          TEMPLATE_WA: "Halo {nama}, ini pengingat iuran Anda dari pengurus RW/RT. Mohon untuk segera melakukan pembayaran. Terima kasih.",
+          TOKEN_WA: ""
+        });
+      }
+
+      await batch.commit();
+      
+      showNotification(`Tenant ${name} berhasil ${editingTenant ? 'diperbarui' : 'didaftarkan'}!`, "success");
       setShowAddForm(false);
       setEditingTenant(null);
     } catch (error: any) {
       handleFirestoreError(error, 'write', `/tenants/${tenant.id}`);
+      showNotification("Gagal menyimpan data tenant.", "error");
     } finally {
       setIsLoadingDB(false);
     }
@@ -4240,34 +4456,75 @@ function TenantsView({ tenantsData, setIsLoadingDB, handleFirestoreError }: { te
                   <h3 className="text-lg font-bold text-slate-800">{editingTenant ? 'Edit Tenant' : 'Daftarkan Tenant Baru'}</h3>
                   <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
                </div>
-               <form className="p-8 grid grid-cols-2 gap-5" onSubmit={handleSaveTenant}>
+               <form className="p-8 grid grid-cols-2 gap-5 overflow-y-auto max-h-[80vh]" onSubmit={handleSaveTenant}>
                   <div className="col-span-2">
-                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">ID Klien (Unique)</label>
-                    <input name="id" defaultValue={editingTenant?.id} readOnly={!!editingTenant} required placeholder="Contoh: RT01_WARGA" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold text-blue-600" />
+                    <div className="flex items-center gap-2 mb-2">
+                       <Database className="w-4 h-4 text-blue-600" />
+                       <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest block">Identitas Klien</label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">ID Klien (Unique ID)</label>
+                        <input name="id" defaultValue={editingTenant?.id} readOnly={!!editingTenant} required placeholder="Contoh: RT01_WARGA" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold text-blue-600" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama Organisasi</label>
+                        <input name="name" defaultValue={editingTenant?.name} required placeholder="Contoh: RT 01 / RW 26" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="col-span-2">
-                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Nama Organisasi/RT</label>
-                    <input name="name" defaultValue={editingTenant?.name} required placeholder="Contoh: RT 01 / RW 25 Kedaton" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700" />
-                  </div>
+
+                  {!editingTenant && (
+                    <div className="col-span-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-4">
+                      <div className="flex items-center gap-2">
+                         <Shield className="w-4 h-4 text-blue-600" />
+                         <label className="text-[11px] font-black uppercase text-blue-600 tracking-widest block">Setup Admin Utama</label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <input name="adminEmail" required type="email" placeholder="Email Admin" className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm" />
+                        </div>
+                        <div>
+                          <input name="adminPassword" required type="password" placeholder="Password Admin (Min 6 Karakter)" className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm" />
+                        </div>
+                        <div className="col-span-2">
+                          <input name="adminPhone" required placeholder="No. HP Admin" className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {editingTenant && (
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Email Admin RW/RT</label>
+                      <input name="adminEmail" defaultValue={editingTenant?.adminEmail} type="email" placeholder="admin@rt01.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-medium text-slate-700" />
+                    </div>
+                  )}
+
                   <div className="col-span-1">
-                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Status Berlangganan</label>
-                    <select name="status" defaultValue={editingTenant?.status || 'Trial'} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700">
-                       <option value="Active">Active (Berlangganan)</option>
-                       <option value="Trial">Trial (Uji Coba)</option>
-                       <option value="Inactive">Inactive (Non-aktif)</option>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Paket Sistem</label>
+                    <select name="status" defaultValue={editingTenant?.status || 'Trial'} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700">
+                       <option value="Trial">Trial (Max 50 Warga)</option>
+                       <option value="Active">Basic (Max 200 Warga)</option>
+                       <option value="Pro">Professional (Max 1000 Warga)</option>
                     </select>
                   </div>
+
                   <div className="col-span-1">
-                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Email Admin RW/RT</label>
-                    <input name="adminEmail" defaultValue={editingTenant?.adminEmail} type="email" placeholder="admin@rt01.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-medium text-slate-700" />
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Target Jumlah RT</label>
+                    <input name="rtCount" type="number" defaultValue={editingTenant?.rtTarget || 5} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" />
                   </div>
+
                   <div className="col-span-2">
-                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Alamat / Keterangan Lokasi</label>
-                    <textarea name="address" defaultValue={editingTenant?.address} rows={2} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-medium text-slate-700" />
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Alamat / Keterangan Lokasi</label>
+                    <textarea name="address" defaultValue={editingTenant?.address} rows={2} placeholder="Alamat lengkap organisasi..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
                   </div>
-                  <div className="col-span-2 flex gap-4 mt-4">
-                     <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-4 text-slate-500 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-slate-50 transition-all border border-slate-200">Batal</button>
-                     <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-bold uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">Simpan Data Tenant</button>
+
+                  <div className="col-span-2 flex gap-4 mt-2">
+                     <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50 transition-all border border-slate-200">Batal</button>
+                     <button type="submit" disabled={isLoadingDB} className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300">
+                        {isLoadingDB ? 'Memproses...' : (editingTenant ? 'Simpan Perubahan' : 'Daftarkan & Setup Tenant')}
+                     </button>
                   </div>
                </form>
             </motion.div>
