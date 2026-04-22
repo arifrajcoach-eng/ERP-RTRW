@@ -2522,7 +2522,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
           </div>
           
           <div class="title-box">
-            <div class="title">${surat.jenis}</div>
+            <div class="title">${surat.jenisSurat || 'Surat Pengantar'}</div>
             <div class="nomor">Nomor: ${surat.id.substring(0, 10)} / RT.01 / ${new Date().getFullYear()}</div>
           </div>
 
@@ -2578,17 +2578,17 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
               <tr>
                 <td>Domisili (RT/RW)</td>
                 <td>:</td>
-                <td>RT ${surat.rt_rw?.split('/')[0] || '-'} / RW ${surat.rt_rw?.split('/')[1] || '-'}</td>
+                <td>RT ${surat.rt || '-'} / RW ${surat.rw || '05'}</td>
               </tr>
               <tr>
                 <td>Kelurahan</td>
                 <td>:</td>
-                <td>${surat.kelurahan || '-'}</td>
+                <td>Sukamaju</td>
               </tr>
               <tr>
                 <td>Kecamatan</td>
                 <td>:</td>
-                <td>${surat.kecamatan || '-'}</td>
+                <td>Sukajaya</td>
               </tr>
               <tr>
                 <td>Keperluan</td>
@@ -2656,6 +2656,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
       statusKawin: formData.get('statusKawin') as string,
       alamat: formData.get('alamat') as string,
       keperluan: formData.get('keperluan') as string,
+      jenisSurat: formData.get('jenisSurat') as string,
       status: isEditing ? editingSurat.status : "Diajukan"
     };
 
@@ -2713,8 +2714,8 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
               <th className="px-6 py-3">ID Pengajuan</th>
               <th className="px-6 py-3">Tanggal</th>
               <th className="px-6 py-3">Pemohon</th>
-              <th className="px-6 py-3">Keperluan</th>
-              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3 text-xs tracking-tight">Jenis</th>
+              <th className="px-6 py-3 text-xs tracking-tight">Status</th>
               <th className="px-6 py-3 text-right">Aksi</th>
             </tr>
           </thead>
@@ -2724,7 +2725,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs">{surat.id.substring(0, 10)}</td>
                 <td className="px-6 py-3 text-xs">{surat.tanggal}</td>
                 <td className="px-6 py-3 font-semibold text-slate-800">{surat.pemohon}</td>
-                <td className="px-6 py-3 text-xs">{surat.keperluan}</td>
+                <td className="px-6 py-3 text-[10px] font-medium text-slate-500 whitespace-nowrap">{surat.jenisSurat}</td>
                 <td className="px-6 py-3">
                   <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${
                     surat.status === 'Selesai' ? 'border-green-200 bg-green-50 text-green-700' : 
@@ -2750,9 +2751,9 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                       <Edit className="w-3 h-3" />
                     </button>
                   )}
-                  {surat.status !== 'Diajukan' && (
-                    <button onClick={() => handleCetak(surat.id)} disabled={surat.status === 'Ditolak'} className={`text-[10px] font-bold flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${surat.status === 'Selesai' ? 'text-slate-700 bg-white border-slate-300 hover:bg-slate-50 cursor-pointer' : 'text-slate-400 bg-transparent border-transparent cursor-not-allowed hidden'}`}>
-                      Cetak Surat
+                  {surat.status === 'Selesai' && (
+                    <button onClick={() => handleCetak(surat.id)} className="text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 p-1.5 rounded transition-colors cursor-pointer" title="Cetak Surat">
+                      <Printer className="w-3 h-3" />
                     </button>
                   )}
                 </td>
@@ -2906,8 +2907,8 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                     </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Keperluan</label>
-                  <select name="keperluan" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Surat</label>
+                  <select name="jenisSurat" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
                     <option value="Surat Pengantar KTP">Surat Pengantar KTP</option>
                     <option value="Surat Pengantar KK">Surat Pengantar KK</option>
                     <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
@@ -2930,6 +2931,10 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                     <option value="Surat Keterangan Tanah / Kepemilikan (non-sertifikat)">Surat Keterangan Tanah / Kepemilikan (non-sertifikat)</option>
                     <option value="Surat Lainnya">Surat Lainnya</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Keperluan</label>
+                  <textarea name="keperluan" rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Tuliskan keperluan surat di sini..."></textarea>
                 </div>
               </div>
 
