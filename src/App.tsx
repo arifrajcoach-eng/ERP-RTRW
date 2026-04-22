@@ -427,7 +427,7 @@ export default function App() {
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Multi-Tenant Aktif</p>
           </div>
           <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-[9px] text-blue-600 font-bold uppercase tracking-tight">ID Penyewa:</p>
+            <p className="text-[9px] text-blue-600 font-bold uppercase tracking-tight">ID Klien:</p>
             <p className="text-[10px] text-slate-700 font-mono font-bold truncate">{currentUser.tenantId || 'RW26_SMART'}</p>
           </div>
         </div>
@@ -2896,18 +2896,16 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, tenantId
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Layanan Surat</label>
                   <select name="jenis" required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
-                  <option value="Surat Pengantar KTP (Baru/Hilang/Rusak)">Surat Pengantar KTP (Baru/Hilang/Rusak)</option>
-                  <option value="Surat Pengantar Kartu Keluarga (KK)">Surat Pengantar Kartu Keluarga (KK)</option>
-                  <option value="Surat Pengantar Pindah/Datang Domisili">Surat Pengantar Pindah/Datang Domisili</option>
-                  <option value="Surat Pengantar Akta Kelahiran">Surat Pengantar Akta Kelahiran</option>
-                  <option value="Surat Pengantar Akta Kematian">Surat Pengantar Akta Kematian</option>
-                  <option value="Surat Keterangan Tidak Mampu (SKTM)">Surat Keterangan Tidak Mampu (SKTM)</option>
-                  <option value="Surat Keterangan Domisili Usaha (SKDU)">Surat Keterangan Domisili Usaha (SKDU)</option>
-                  <option value="Surat Keterangan Domisili Perorangan">Surat Keterangan Domisili Perorangan</option>
-                  <option value="Surat Pengantar Menikah (N1-N4)">Surat Pengantar Menikah (N1-N4)</option>
-                  <option value="Surat Pengantar Laporan Kehilangan (Polisi)">Surat Pengantar Laporan Kehilangan (Polisi)</option>
-                  <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
-                  <option value="Surat Izin Keramaian/Hajatan">Surat Izin Keramaian/Hajatan</option>
+                  <option value="Domisili">Domisili</option>
+                  <option value="SKTM">SKTM</option>
+                  <option value="Pengantar KTP/KK">Pengantar KTP/KK</option>
+                  <option value="Pindah datang">Pindah datang</option>
+                  <option value="SKCK">SKCK</option>
+                  <option value="Usaha">Usaha</option>
+                  <option value="Bansos">Bansos</option>
+                  <option value="Beasiswa">Beasiswa</option>
+                  <option value="Izin keramaian">Izin keramaian</option>
+                  <option value="Kredit/Bank">Kredit/Bank</option>
                   <option value="Surat Pengantar IMB/PBG">Surat Pengantar IMB/PBG</option>
                   <option value="Surat Keterangan Beda Nama">Surat Keterangan Beda Nama</option>
                   <option value="Surat Pengantar Ahli Waris">Surat Pengantar Ahli Waris</option>
@@ -3691,21 +3689,25 @@ function LoginView() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, quickEmail?: string, quickPass?: string) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
+      const targetEmail = quickEmail || email;
+      const targetPass = quickPass || password;
+
       // Logic for easy demo: if user types "admin" and not an email, append a domain
-      let finalEmail = email;
-      if (!email.includes('@')) {
-        finalEmail = `${email}@rw26.com`;
+      let finalEmail = targetEmail;
+      if (!targetEmail.includes('@')) {
+        finalEmail = `${targetEmail}@rw26.com`;
       }
       
-      await signInWithEmailAndPassword(auth, finalEmail, password);
+      await signInWithEmailAndPassword(auth, finalEmail, targetPass);
     } catch (err: any) {
       console.error("Login Error:", err);
+      // ... same error logic
       let msg = `Gagal masuk (${err.code}). Periksa kembali email dan password Anda.`;
       
       if (err.code === 'auth/user-not-found') {
@@ -3713,7 +3715,7 @@ function LoginView() {
       } else if (err.code === 'auth/wrong-password') {
         msg = 'PASSWORD SALAH: Password tidak sesuai.';
       } else if (err.code === 'auth/invalid-credential') {
-        msg = 'KREDENSIAL TIDAK VALID: Email atau password salah. Jika Anda baru saja menambah user di Console, pastikan Password-nya sama persis.';
+        msg = 'KREDENSIAL TIDAK VALID: Email atau password salah.';
       } else if (err.code === 'auth/invalid-email') {
         msg = 'FORMAT EMAIL SALAH: Masukkan format email yang benar.';
       } else if (err.code === 'auth/operation-not-allowed') {
@@ -3790,17 +3792,17 @@ function LoginView() {
               >
                 {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
               </button>
-            </form>
-            <div className="mt-6 text-center">
-              <a 
-                href="https://console.firebase.google.com/project/gen-lang-client-0332165962/authentication/users" 
-                target="_blank" 
-                rel="noreferrer"
-                className="text-[10px] text-blue-500 hover:underline font-bold"
-              >
-                Lupa Password atau Belum Daftar? Klik di sini untuk ke Firebase Console
-              </a>
-            </div>
+             </form>
+             
+             <div className="mt-8 pt-6 border-t border-slate-100">
+               <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Demo Quick Login</p>
+               <div className="grid grid-cols-1 gap-2">
+                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'arifrajcoach@gmail.com', '4R1f080162')} className="w-full bg-slate-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-slate-800">SUPER ADMIN</button>
+                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'admin@rw26.com', 'admin123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">ADMIN</button>
+                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'operator@rw26.com', 'operator123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">OPERATOR</button>
+                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'warga@rw26.com', 'warga123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">VIEWER</button>
+               </div>
+             </div>
           </div>
           <div className="p-6 bg-slate-50 border-t border-slate-100 italic">
             <p className="text-center text-[10px] text-slate-400">
@@ -4095,7 +4097,7 @@ function TenantsView({ tenantsData, setIsLoadingDB, handleFirestoreError }: { te
                </div>
                <form className="p-8 grid grid-cols-2 gap-5" onSubmit={handleSaveTenant}>
                   <div className="col-span-2">
-                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">ID Penyewa (Unique)</label>
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">ID Klien (Unique)</label>
                     <input name="id" defaultValue={editingTenant?.id} readOnly={!!editingTenant} required placeholder="Contoh: RT01_WARGA" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold text-blue-600" />
                   </div>
                   <div className="col-span-2">
