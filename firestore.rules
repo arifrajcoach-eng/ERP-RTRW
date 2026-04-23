@@ -88,6 +88,33 @@ service cloud.firestore {
              data.tenantId is string;
     }
 
+    function isValidInventaris(data) {
+      return data.nama_barang is string &&
+             data.kategori is string &&
+             data.lokasi is string &&
+             data.stok is number &&
+             data.tenantId is string;
+    }
+
+    function isValidInventarisLog(data) {
+      return data.itemId is string &&
+             data.aktivitas is string &&
+             data.tanggal is string &&
+             data.tenantId is string;
+    }
+
+    function isValidKategori(data) {
+      return data.nama_kategori is string && data.tenantId is string;
+    }
+
+    function isValidLokasi(data) {
+      return data.nama_lokasi is string && data.tenantId is string;
+    }
+
+    function isValidSupplier(data) {
+      return data.nama is string && data.tenantId is string;
+    }
+
     // --- Tenants Collection ---
     match /tenants/{tenantId} {
       allow read: if isSignedIn();
@@ -137,6 +164,43 @@ service cloud.firestore {
       allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
       allow create: if isOperator() && isValidId(id) && isValidIuran(incoming()) && isSameTenant(incoming());
       allow update: if isOperator() && isValidIuran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // --- Inventaris Collection ---
+    match /inventaris/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidInventaris(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidInventaris(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // --- Inventaris Logs Collection ---
+    match /inventaris_logs/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidInventarisLog(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidInventarisLog(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /inventaris_kategori/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidKategori(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidKategori(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /inventaris_lokasi/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidLokasi(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidLokasi(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /inventaris_supplier/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidSupplier(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidSupplier(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
       allow delete: if isAdmin();
     }
   }
