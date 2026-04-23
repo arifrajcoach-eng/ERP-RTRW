@@ -187,6 +187,9 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_WARGA_DATA;
   });
 
+  const linkedWarga = currentUser?.nikMapping ? wargaData.find((w: any) => w.nik === currentUser.nikMapping) : null;
+  const userPhoto = (currentUser as any)?.photoUrl || linkedWarga?.foto || linkedWarga?.ktpUrl || null;
+
   const [kasData, setKasData] = useState(() => {
     const saved = localStorage.getItem('rw26_kasData');
     return saved ? JSON.parse(saved) : INITIAL_KAS_DATA;
@@ -274,9 +277,16 @@ export default function App() {
 
       // Fallback or Append Address if NIK is linked
       const linkedWarga = (currentUser as any).nikMapping ? wargaData.find(w => w.nik === (currentUser as any).nikMapping) : null;
+      let addressStr = "";
+      let userPhone = "";
+      let userEmail = currentUser.email || "";
+      let userPhoto = "";
+
       if (linkedWarga) {
-        const addressStr = `Blok: ${linkedWarga.blok || '-'}, RT: ${linkedWarga.rt || '-'}/RW: ${linkedWarga.rw || '-'}`;
-        userLocation = userLocation === "Lokasi Tidak Diketahui" ? addressStr : `${addressStr} (${userLocation})`;
+        addressStr = `Alamat: Blok ${linkedWarga.blok || '-'}, RT ${linkedWarga.rt || '-'}/RW ${linkedWarga.rw || '-'}`;
+        userPhone = (linkedWarga as any).hp || "";
+        userPhoto = (linkedWarga as any).foto || "";
+        if ((linkedWarga as any).email) userEmail = (linkedWarga as any).email;
       }
 
       const sosData = {
@@ -285,6 +295,10 @@ export default function App() {
         userId: auth.currentUser?.uid || 'anonymous',
         userName: currentUser.name,
         userLocation: userLocation,
+        userAddress: addressStr,
+        userPhone: userPhone,
+        userEmail: userEmail,
+        userPhoto: userPhoto,
         latitude: lat,
         longitude: lng,
         timestamp: new Date().toISOString(),
@@ -810,8 +824,12 @@ export default function App() {
                  <p className="text-sm font-bold leading-none text-slate-800">{currentUser.name}</p>
                  <span className="text-[10px] uppercase font-bold text-blue-600 mt-1 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block">{currentUser.role}</span>
                </div>
-               <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-100 border border-blue-400">
-                 {currentUser.name.charAt(0)}
+               <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-100 border border-blue-400 overflow-hidden">
+                 {userPhoto ? (
+                   <img src={userPhoto} alt={currentUser.name} className="w-full h-full object-cover" />
+                 ) : (
+                   currentUser.name.charAt(0)
+                 )}
                </div>
                <button 
                 onClick={handleLogout}
@@ -889,12 +907,15 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* PANIC BUTTON (SOS) - BOTTOM RIGHT */}
+      {/* PANIC BUTTON (SOS) - BOTTOM RIGHT (NOW DRAGGABLE) */}
       {currentUser && (
-        <button 
+        <motion.button 
+          drag
+          dragMomentum={false}
+          whileDrag={{ scale: 1.1, cursor: 'grabbing' }}
           onClick={handleTriggerSOS}
           disabled={isSOSTriggering}
-          className="fixed bottom-6 right-6 z-[60] w-16 h-16 bg-red-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-red-300 hover:bg-red-700 transition-all active:scale-90 group ring-4 ring-white animate-bounce-slow"
+          className="fixed bottom-6 right-6 z-[60] w-16 h-16 bg-red-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-red-300 hover:bg-red-700 transition-colors active:scale-90 group ring-4 ring-white cursor-grab touch-none"
           title="TOMBOL DARURAT (SOS)"
         >
           {isSOSTriggering ? (
@@ -902,7 +923,7 @@ export default function App() {
           ) : (
             <Siren className="w-8 h-8 group-hover:animate-pulse" />
           )}
-        </button>
+        </motion.button>
       )}
 
       {/* SOS CONFIRMATION MODAL */}
@@ -946,12 +967,14 @@ export default function App() {
 
 function SOSOverlay({ emergency, onResolve, canResolve }: any) {
   useEffect(() => {
-    // Vibration
+    // Vibration: Urgent pattern
     if (navigator.vibrate) {
-      navigator.vibrate([200, 100, 200, 100, 200, 100, 200, 100, 200, 100, 200, 100, 200, 100, 200, 100, 200, 100, 200]);
+      // Repeat long pulses for urgency
+      const pattern = Array(24).fill([500, 200]).flat();
+      navigator.vibrate(pattern);
     }
 
-    // Audio - Simple Siren using Web Audio API
+    // Audio - Police Siren (Yelp/Wail style)
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     
     let count = 0;
@@ -959,12 +982,15 @@ function SOSOverlay({ emergency, onResolve, canResolve }: any) {
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
 
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.5);
-      oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 1.0);
+      // Police Yelp Style: Fast frequency sweep
+      oscillator.type = 'triangle'; // Richer sound than sine
+      oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
+      oscillator.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.25);
+      oscillator.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 0.5);
+      oscillator.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.75);
+      oscillator.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 1.0);
       
-      gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.0);
 
       oscillator.connect(gainNode);
@@ -976,7 +1002,7 @@ function SOSOverlay({ emergency, onResolve, canResolve }: any) {
     playSiren();
     const interval = setInterval(() => {
       count++;
-      if (count < 5) {
+      if (count < 12) { // Loop 12 times as requested
         playSiren();
       } else {
         clearInterval(interval);
@@ -1019,12 +1045,33 @@ function SOSOverlay({ emergency, onResolve, canResolve }: any) {
          <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 sm:p-8 rounded-3xl w-full mb-8 shadow-2xl">
             <div className="flex flex-col gap-4 text-left">
                <div className="flex items-center gap-4 border-b border-white/10 pb-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                    <User className="w-6 h-6" />
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden">
+                    {emergency.userPhoto ? (
+                      <img src={emergency.userPhoto} alt="Reporter" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-6 h-6" />
+                    )}
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Nama Pelapor</p>
-                    <p className="text-xl sm:text-2xl font-black">{emergency.userName}</p>
+                    <p className="text-xl sm:text-2xl font-black leading-tight">{emergency.userName}</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {emergency.userPhone && (
+                        <a 
+                          href={`https://wa.me/${emergency.userPhone.replace(/\D/g, '')}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 bg-green-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-500/50 hover:bg-green-500/50 transition-colors"
+                        >
+                          WhatsApp: {emergency.userPhone}
+                        </a>
+                      )}
+                      {emergency.userEmail && (
+                        <p className="text-[10px] font-bold opacity-70 bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
+                          {emergency.userEmail}
+                        </p>
+                      )}
+                    </div>
                   </div>
                </div>
                
@@ -1032,9 +1079,25 @@ function SOSOverlay({ emergency, onResolve, canResolve }: any) {
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
                     <MapPin className="w-6 h-6" />
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-1 overflow-hidden">
                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Lokasi Kejadian</p>
-                    <p className="text-lg font-bold">{emergency.userLocation}</p>
+                    {(emergency.latitude && emergency.longitude) ? (
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${emergency.latitude},${emergency.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-bold truncate underline hover:text-white/80 transition-colors"
+                      >
+                        {emergency.userLocation} ↗
+                      </a>
+                    ) : (
+                      <p className="text-sm font-bold truncate">{emergency.userLocation}</p>
+                    )}
+                    {emergency.userAddress && (
+                      <p className="text-sm font-black bg-white/20 px-2 py-1 rounded inline-block w-fit uppercase tracking-tight">
+                        {emergency.userAddress}
+                      </p>
+                    )}
                   </div>
                </div>
 
@@ -1854,6 +1917,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       blok: row['Alamat'] || row['alamat'] || row['blok'] || "",
       status: row['Status Warga'] || row['status'] || "Warga Tetap",
       hp: row['No. HP'] || row['hp'] || "",
+      email: row['Email'] || row['email'] || "",
+      foto: row['Foto Profil'] || row['foto'] || "",
       posisi: row['Posisi dalam Keluarga'] || row['posisi'] || "",
       profesi: row['Profesi'] || row['profesi'] || "",
       jk: row['Jenis Kelamin'] || row['jk'] || "Laki-Laki",
@@ -1883,7 +1948,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   // Form State for Adding/Editing
   const [formData, setFormData] = useState({
-    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -1971,7 +2036,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   const resetForm = () => {
     setFormData({
-      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
     });
   };
 
@@ -2252,13 +2317,13 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
               return (
               <tr key={idx} className={`${isVisible ? '' : 'hidden print:table-row'} hover:bg-slate-50 transition-colors print:break-inside-avoid`}>
                 <td className="px-6 py-3 print:px-2">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
-                    {warga.ktpUrl ? (
-                      <a href={warga.ktpUrl} target="_blank" rel="noopener noreferrer">
-                        <img src={warga.ktpUrl} alt="KTP" className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" />
-                      </a>
+                  <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+                    {warga.foto ? (
+                      <img src={warga.foto} alt={warga.nama} className="w-full h-full object-cover" />
+                    ) : warga.ktpUrl ? (
+                      <img src={warga.ktpUrl} alt="KTP" className="w-full h-full object-cover opacity-50" />
                     ) : (
-                      <User className="w-4 h-4 text-slate-400" />
+                      <User className="w-5 h-5 text-slate-400" />
                     )}
                   </div>
                 </td>
@@ -2290,7 +2355,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
-                      {userRole === 'Admin' && (
+                      {(userRole === 'ADMIN' || userRole === 'RT' || userRole === 'Admin') && (
                         <button 
                           onClick={() => setWargaToDelete(warga)}
                           className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors" title="Hapus"
@@ -2463,9 +2528,14 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                   <input required name="hp" value={formData.hp} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="08..." />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat (Jalur/Blok)</label>
-                  <input required name="blok" value={formData.blok} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="A/01" />
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Email</label>
+                  <input name="email" value={formData.email} onChange={handleInputChange} type="email" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" placeholder="nama@email.com" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Alamat (Jalur/Blok)</label>
+                <input required name="blok" value={formData.blok} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="A/01" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -2484,37 +2554,58 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                 <input required name="kota_kab" value={formData.kota_kab} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Kota Metropolitan" />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">Foto KTP (Opsional)</label>
-                <div className="flex flex-col gap-2">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try {
-                          const url = await handleFileUpload(file, 'ktp');
-                          setFormData(prev => ({ ...prev, ktpUrl: url }));
-                        } catch (err) {
-                          showNotification("Gagal mengunggah foto KTP.", 'error');
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Foto Profil (Opsional)</label>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const url = await handleFileUpload(file, 'profil_warga');
+                            setFormData(prev => ({ ...prev, foto: url }));
+                          } catch (err) {
+                            showNotification("Gagal mengunggah foto profil.", 'error');
+                          }
                         }
-                      }
-                    }} 
-                    className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                  />
-                  {(formData as any).ktpUrl && (
-                    <div className="mt-2 relative w-20 h-20 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden group">
-                      <img src={(formData as any).ktpUrl} alt="KTP" className="w-full h-full object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={() => setFormData(prev => ({ ...prev, ktpUrl: "" }))}
-                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                      >
-                        <Trash2 className="w-4 h-4 text-white" />
-                      </button>
-                    </div>
-                  )}
+                      }} 
+                      className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer w-full"
+                    />
+                    {formData.foto && (
+                      <div className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden shrink-0">
+                        <img src={formData.foto} className="w-full h-full object-cover" alt="Preview" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Foto KTP (Opsional)</label>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const url = await handleFileUpload(file, 'ktp');
+                            setFormData(prev => ({ ...prev, ktpUrl: url }));
+                          } catch (err) {
+                            showNotification("Gagal mengunggah foto KTP.", 'error');
+                          }
+                        }
+                      }} 
+                      className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer w-full"
+                    />
+                    {(formData as any).ktpUrl && (
+                      <div className="w-8 h-8 rounded border border-slate-200 overflow-hidden shrink-0">
+                        <img src={(formData as any).ktpUrl} className="w-full h-full object-cover opacity-50" alt="Preview KTP" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2551,15 +2642,17 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
               </div>
               <div className="p-6 overflow-y-auto space-y-6">
                 <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-                    {viewWarga.ktpUrl ? (
-                      <img src={viewWarga.ktpUrl} alt="Foto" className="w-full h-full object-cover" />
+                  <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-white shadow-md overflow-hidden shrink-0 flex items-center justify-center">
+                    {viewWarga.foto ? (
+                      <img src={viewWarga.foto} alt={viewWarga.nama} className="w-full h-full object-cover" />
+                    ) : viewWarga.ktpUrl ? (
+                      <img src={viewWarga.ktpUrl} alt="KTP" className="w-full h-full object-cover opacity-50" />
                     ) : (
-                      <User className="w-8 h-8 text-slate-400" />
+                      <User className="w-10 h-10 text-slate-300" />
                     )}
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-slate-900">{viewWarga.nama}</h2>
+                    <h2 className="text-xl font-black text-slate-900 leading-tight">{viewWarga.nama}</h2>
                     <p className="text-sm text-slate-500 font-medium">{viewWarga.nik}</p>
                     <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${viewWarga.status === 'Warga Tetap' ? 'border-green-200 bg-green-50 text-green-700' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
                       {viewWarga.status}
@@ -2575,6 +2668,10 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                   <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">No. HP (WA)</p>
                     <p className="font-medium text-slate-800">{viewWarga.hp || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Email</p>
+                    <p className="font-medium text-slate-800">{viewWarga.email || '-'}</p>
                   </div>
                   
                   <div>

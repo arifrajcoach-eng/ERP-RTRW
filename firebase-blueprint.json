@@ -17,6 +17,8 @@
         "kota_kab": { "type": "string" },
         "status": { "type": "string" },
         "hp": { "type": "string" },
+        "email": { "type": "string", "description": "Alamat Email Warga" },
+        "foto": { "type": "string", "description": "URL Foto Profil Warga" },
         "posisi": { "type": "string" },
         "profesi": { "type": "string" },
         "jk": { "type": "string" },
