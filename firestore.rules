@@ -115,6 +115,42 @@ service cloud.firestore {
       return data.nama is string && data.tenantId is string;
     }
 
+    function isValidBalita(data) {
+      return data.nama is string && data.tglLahir is string && data.jk in ['Laki-Laki', 'Perempuan'] && data.orangTuaId is string && data.tenantId is string;
+    }
+
+    function isValidIbuHamil(data) {
+      return data.nama is string && data.nik is string && data.tenantId is string;
+    }
+
+    function isValidPosyanduKegiatan(data) {
+      return data.tanggal is string && data.lokasi is string && data.tenantId is string;
+    }
+
+    function isValidPemeriksaan(data) {
+      return data.balitaId is string && data.tanggal is string && (data.beratBadan is number || data.tinggiBadan is number) && data.tenantId is string;
+    }
+
+    function isValidImunisasi(data) {
+      return data.balitaId is string && data.jenisImunisasi is string && data.tanggal is string && data.tenantId is string;
+    }
+
+    function isValidSampahKategori(data) {
+      return data.nama is string && data.satuan in ['kg', 'liter', 'pcs'] && data.hargaBeli is number && data.tenantId is string;
+    }
+
+    function isValidSampahSetoran(data) {
+      return data.nasabahId is string && data.kategoriId is string && data.berat is number && data.total is number && data.tanggal is string && data.tenantId is string;
+    }
+
+    function isValidSampahTarik(data) {
+      return data.nasabahId is string && data.nominal is number && data.tanggal is string && data.tenantId is string;
+    }
+
+    function isValidEmergency(data) {
+      return data.userName is string && data.status in ['ACTIVE', 'RESOLVED'] && data.tenantId is string;
+    }
+
     // --- Tenants Collection ---
     match /tenants/{tenantId} {
       allow read: if isSignedIn();
@@ -201,6 +237,71 @@ service cloud.firestore {
       allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
       allow create: if isOperator() && isValidId(id) && isValidSupplier(incoming()) && isSameTenant(incoming());
       allow update: if isOperator() && isValidSupplier(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // --- Posyandu Collections ---
+    match /balita/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidBalita(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidBalita(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /ibu_hamil/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidIbuHamil(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidIbuHamil(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /posyandu_kegiatan/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidPosyanduKegiatan(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidPosyanduKegiatan(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /pemeriksaan_balita/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidPemeriksaan(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidPemeriksaan(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /imunisasi/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidImunisasi(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidImunisasi(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /sampah_kategori/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidSampahKategori(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidSampahKategori(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /sampah_setoran/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidSampahSetoran(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidSampahSetoran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /sampah_tarik_saldo/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isValidId(id) && isValidSampahTarik(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isValidId(id) && isValidSampahTarik(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // --- Emergency Collections ---
+    match /emergencies/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isSignedIn() && isValidId(id) && isValidEmergency(incoming()) && isSameTenant(incoming());
+      allow update: if (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid)) && isValidEmergency(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
       allow delete: if isAdmin();
     }
   }

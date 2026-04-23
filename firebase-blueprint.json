@@ -112,6 +112,155 @@
       },
       "required": ["email", "role", "tenantId"]
     },
+    "Balita": {
+      "title": "Balita",
+      "description": "Data anak balita untuk pemantauan Posyandu",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "tglLahir": { "type": "string", "format": "date" },
+        "jk": { "type": "string", "enum": ["Laki-Laki", "Perempuan"] },
+        "orangTuaId": { "type": "string", "description": "NIK Orang Tua (relasi ke Warga)" },
+        "namaOrangTua": { "type": "string" },
+        "alamat": { "type": "string" },
+        "rt": { "type": "string" },
+        "rw": { "type": "string" },
+        "statusStunting": { "type": "string", "enum": ["Normal", "Risiko Stunting", "Stunting"] }
+      },
+      "required": ["id", "nama", "tglLahir", "jk", "orangTuaId", "tenantId"]
+    },
+    "IbuHamil": {
+      "title": "Ibu Hamil",
+      "description": "Data ibu hamil di lingkungan",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nik": { "type": "string" },
+        "nama": { "type": "string" },
+        "tglHPL": { "type": "string", "format": "date" },
+        "usiaKehamilan": { "type": "number", "description": "Minggu" },
+        "riwayatKesehatan": { "type": "string" },
+        "rt": { "type": "string" },
+        "rw": { "type": "string" }
+      },
+      "required": ["id", "nama", "nik", "tenantId"]
+    },
+    "PosyanduKegiatan": {
+      "title": "Kegiatan Posyandu",
+      "description": "Jadwal dan catatan kegiatan posyandu bulanan",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "tanggal": { "type": "string", "format": "date" },
+        "lokasi": { "type": "string" },
+        "kaderId": { "type": "string" },
+        "keterangan": { "type": "string" }
+      },
+      "required": ["id", "tanggal", "lokasi", "tenantId"]
+    },
+    "PemeriksaanBalita": {
+      "title": "Pemeriksaan Balita",
+      "description": "Catatan hasil pemeriksaan rutin balita",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "balitaId": { "type": "string" },
+        "kegiatanId": { "type": "string" },
+        "tanggal": { "type": "string", "format": "date" },
+        "beratBadan": { "type": "number", "description": "kg" },
+        "tinggiBadan": { "type": "number", "description": "cm" },
+        "lingkarKepala": { "type": "number", "description": "cm" },
+        "statusGizi": { "type": "string" },
+        "catatan": { "type": "string" }
+      },
+      "required": ["id", "balitaId", "tanggal", "tenantId"]
+    },
+    "Imunisasi": {
+      "title": "Imunisasi",
+      "description": "Catatan imunisasi balita",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "balitaId": { "type": "string" },
+        "jenisImunisasi": { "type": "string" },
+        "tanggal": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Selesai", "Terjadwal"] }
+      },
+      "required": ["id", "balitaId", "jenisImunisasi", "tanggal", "tenantId"]
+    },
+    "SampahKategori": {
+      "title": "Kategori Sampah",
+      "description": "Jenis sampah yang dapat ditabung (Plastik, Kertas, Logam, dll)",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "satuan": { "type": "string", "enum": ["kg", "liter", "pcs"] },
+        "hargaBeli": { "type": "number", "description": "Harga beli dari warga" }
+      },
+      "required": ["id", "nama", "satuan", "hargaBeli", "tenantId"]
+    },
+    "SampahSetoran": {
+      "title": "Setoran Sampah",
+      "description": "Transaksi warga menabung sampah",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nasabahId": { "type": "string", "description": "NIK Warga" },
+        "namaNasabah": { "type": "string" },
+        "kategoriId": { "type": "string" },
+        "namaKategori": { "type": "string" },
+        "berat": { "type": "number" },
+        "harga": { "type": "number" },
+        "total": { "type": "number" },
+        "tanggal": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Menunggu", "Selesai"] },
+        "keterangan": { "type": "string" }
+      },
+      "required": ["id", "nasabahId", "kategoriId", "berat", "total", "tanggal", "tenantId"]
+    },
+    "SampahTarikSaldo": {
+      "title": "Tarik Saldo Sampah",
+      "description": "Transaksi warga menarik uang hasil tabungan sampah",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nasabahId": { "type": "string" },
+        "namaNasabah": { "type": "string" },
+        "nominal": { "type": "number" },
+        "tanggal": { "type": "string", "format": "date" },
+        "keterangan": { "type": "string" }
+      },
+      "required": ["id", "nasabahId", "nominal", "tanggal", "tenantId"]
+    },
+    "Emergency": {
+      "title": "Sinyal Darurat (SOS)",
+      "description": "Sinyal darurat aktif dari warga untuk bantuan segera",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userLocation": { "type": "string", "description": "Blok/Unit atau Koordinat" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ACTIVE", "RESOLVED"] },
+        "resolvedBy": { "type": "string" },
+        "resolvedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userName", "status", "tenantId"]
+    },
     "Tenant": {
       "title": "Tenant",
       "description": "Tenant (RT/RW) configuration and subscription info",
@@ -151,6 +300,42 @@
     "/iuran/{id}": {
       "schema": "Iuran",
       "description": "Koleksi catatan iuran"
+    },
+    "/balita/{id}": {
+      "schema": "Balita",
+      "description": "Koleksi data balita"
+    },
+    "/ibu_hamil/{id}": {
+      "schema": "IbuHamil",
+      "description": "Koleksi data ibu hamil"
+    },
+    "/posyandu_kegiatan/{id}": {
+      "schema": "PosyanduKegiatan",
+      "description": "Koleksi kegiatan posyandu"
+    },
+    "/pemeriksaan_balita/{id}": {
+      "schema": "PemeriksaanBalita",
+      "description": "Koleksi hasil pemeriksaan balita"
+    },
+    "/imunisasi/{id}": {
+      "schema": "Imunisasi",
+      "description": "Koleksi riwayat imunisasi"
+    },
+    "/sampah_kategori/{id}": {
+      "schema": "SampahKategori",
+      "description": "Data kategori sampah"
+    },
+    "/sampah_setoran/{id}": {
+      "schema": "SampahSetoran",
+      "description": "Transaksi setoran sampah"
+    },
+    "/sampah_tarik_saldo/{id}": {
+      "schema": "SampahTarikSaldo",
+      "description": "Transaksi tarik saldo sampah"
+    },
+    "/emergencies/{id}": {
+      "schema": "Emergency",
+      "description": "Koleksi sinyal darurat aktif"
     }
   }
 }
