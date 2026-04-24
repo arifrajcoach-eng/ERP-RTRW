@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -5454,18 +5454,19 @@ function PosyanduView({
   imunisasiData, setImunisasiData,
   wargaData, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification 
 }: any) {
-  const [activeSubTab, setActiveSubTab] = useState('dashboard');
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'balita' | 'ibuhamil' | 'kegiatan' | 'timeline' | 'ibuhamil_detail'>('dashboard');
   const [showBalitaForm, setShowBalitaForm] = useState(false);
   const [showIbuHamilForm, setShowIbuHamilForm] = useState(false);
   const [showKegiatanForm, setShowKegiatanForm] = useState(false);
   const [showPemeriksaanForm, setShowPemeriksaanForm] = useState(false);
   const [showImunisasiForm, setShowImunisasiForm] = useState(false);
   const [selectedBalita, setSelectedBalita] = useState<any>(null);
+  const [selectedIbuHamil, setSelectedIbuHamil] = useState<any>(null);
   const [selectedKegiatan, setSelectedKegiatan] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const exportPosyanduReport = () => {
+  const exportPosyanduPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text('LAPORAN BULANAN POSYANDU', 14, 22);
@@ -5492,6 +5493,60 @@ function PosyanduView({
 
     doc.save(`Laporan_Posyandu_${new Date().toISOString().split('T')[0]}.pdf`);
     showNotification("Laporan PDF berhasil diunduh!");
+  };
+
+  const exportKegiatanPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('JADWAL & AGENDA POSYANDU', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 30);
+    
+    const tableData = posyanduKegiatanData.map((k: any) => [
+      formatTgl(k.tanggal),
+      k.lokasi,
+      k.keterangan || '-',
+      k.kaderId?.split('@')[0] || '-'
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Tanggal', 'Lokasi', 'Keterangan', 'Petugas']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Jadwal_Posyandu_${new Date().toISOString().split('T')[0]}.pdf`);
+    showNotification("Jadwal PDF berhasil diunduh!");
+  };
+
+  const exportKegiatanExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(posyanduKegiatanData.map((k: any) => ({
+      'Tanggal': formatTgl(k.tanggal),
+      'Lokasi': k.lokasi,
+      'Keterangan': k.keterangan || '-',
+      'Petugas': k.kaderId?.split('@')[0] || '-'
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Jadwal Posyandu");
+    XLSX.writeFile(wb, `Jadwal_Posyandu_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showNotification("Jadwal Excel berhasil diunduh!");
+  };
+
+  const exportPosyanduExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(balitaData.map((b: any) => ({
+      'Nama Balita': b.nama,
+      'Jenis Kelamin': b.jk,
+      'Usia (Bulan)': calculateAgeMonths(b.tglLahir),
+      'Nama Orang Tua': b.namaOrangTua,
+      'Status Gizi': b.statusStunting,
+      'NIK': b.nik
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data Balita");
+    XLSX.writeFile(wb, `Laporan_Posyandu_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showNotification("Laporan Excel berhasil diunduh!");
   };
 
   const formatTgl = (tgl: string) => {
@@ -5686,6 +5741,94 @@ function PosyanduView({
     risikoStunting: balitaData.filter((b: any) => b.statusStunting === 'Risiko Stunting').length
   };
 
+  const exportIbuHamilExcel = () => {
+    const data = ibuHamilData.map(mil => ({
+      'Nama': mil.nama,
+      'NIK': mil.nik,
+      'Usia Hamil (Minggu)': mil.usiaKehamilan,
+      'HPL': mil.tglHPL,
+      'Riwayat Kesehatan': mil.riwayatKesehatan || '-'
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Monitor Ibu Hamil");
+    XLSX.writeFile(wb, `Data_Ibu_Hamil_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showNotification("Data Excel berhasil diunduh!");
+  };
+
+  const exportIbuHamilPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('MONITOR IBU HAMIL', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Tenant: ${tenantId}`, 14, 30);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    
+    const tableData = ibuHamilData.map((mil: any) => [
+      mil.nama,
+      mil.nik,
+      mil.usiaKehamilan + " Minggu",
+      formatTgl(mil.tglHPL),
+      mil.riwayatKesehatan || '-'
+    ]);
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Nama', 'NIK', 'Usia Hamil', 'HPL', 'Kesehatan']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [219, 39, 119], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Monitor_Ibu_Hamil_${new Date().toISOString().split('T')[0]}.pdf`);
+    showNotification("Laporan PDF berhasil diunduh!");
+  };
+
+  const exportBalitaExcel = () => {
+    const data = balitaData.map(b => ({
+      'Nama Balita': b.nama,
+      'NIK': b.nik || '-',
+      'Jenis Kelamin': b.jk,
+      'Tgl Lahir': b.tglLahir,
+      'Usia (Bulan)': calculateAgeMonths(b.tglLahir),
+      'Orang Tua': b.namaOrangTua,
+      'Alamat': `Blok ${b.alamat} / RT ${b.rt}`,
+      'Status Gizi': b.statusStunting || 'Normal'
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data Balita");
+    XLSX.writeFile(wb, `Data_Balita_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showNotification("Data Excel Balita berhasil diunduh!");
+  };
+
+  const exportBalitaPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('DATA BALITA POSYANDU', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Tenant: ${tenantId}`, 14, 30);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    
+    const tableData = balitaData.map((b: any) => [
+      b.nama,
+      calculateAgeMonths(b.tglLahir) + " Bulan",
+      b.namaOrangTua,
+      b.statusStunting || 'Normal'
+    ]);
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Nama Balita', 'Usia', 'Orang Tua', 'Status Gizi']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [219, 39, 119], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Data_Balita_${new Date().toISOString().split('T')[0]}.pdf`);
+    showNotification("Laporan PDF Balita berhasil diunduh!");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Sub-Tabs */}
@@ -5739,13 +5882,22 @@ function PosyanduView({
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Risiko Stunting</p>
               <div className="flex items-center justify-between">
                 <p className="text-2xl font-black text-orange-700">{stats.risikoStunting}</p>
-                <button 
-                  onClick={() => exportPosyanduReport()}
-                  className="p-2 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
-                  title="Cetak Laporan Bulanan"
-                >
-                  <Printer className="w-5 h-5" />
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => exportPosyanduPDF()}
+                    className="p-2 bg-slate-50 text-red-400 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                    title="Export PDF Laporan"
+                  >
+                    <FileText className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => exportPosyanduExcel()}
+                    className="p-2 bg-slate-50 text-emerald-400 hover:text-emerald-600 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
+                    title="Export Excel Laporan"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -5802,15 +5954,33 @@ function PosyanduView({
       {activeSubTab === 'balita' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Cari balita..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Cari balita..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={exportBalitaPDF}
+                  className="p-1.5 bg-white border border-slate-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                  title="Export PDF"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={exportBalitaExcel}
+                  className="p-1.5 bg-white border border-slate-200 text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                  title="Export Excel"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <button 
               onClick={() => { setEditingItem(null); setShowBalitaForm(true); }}
@@ -5860,8 +6030,14 @@ function PosyanduView({
                       <td className="px-6 py-4 text-right">
                          <div className="flex justify-end gap-2">
                            <button 
+                             onClick={() => { /* Navigate to health book */ showNotification("Buku Kesehatan Balita dibuka (Demo)") }}
+                             className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors border border-transparent hover:border-pink-100" title="Buku Kesehatan"
+                           >
+                              <BookOpen className="w-4 h-4" />
+                           </button>
+                           <button 
                              onClick={() => { setSelectedBalita(balita); setActiveSubTab('timeline'); }}
-                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" title="Buku Kesehatan"
+                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" title="Timeline"
                            >
                               <History className="w-4 h-4" />
                            </button>
@@ -6022,10 +6198,130 @@ function PosyanduView({
         </div>
       )}
 
+      {activeSubTab === 'ibuhamil_detail' && selectedIbuHamil && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-2xl font-black border-4 border-white shadow-sm">
+                  {selectedIbuHamil.nama.charAt(0)}
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-800">{selectedIbuHamil.nama}</h2>
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-tight">
+                    NIK: {selectedIbuHamil.nik} • {selectedIbuHamil.usiaKehamilan} Minggu
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-black">HPL (Perkiraan): {formatTgl(selectedIbuHamil.tglHPL)}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setActiveSubTab('ibuhamil')}
+                className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
+               <div className="md:col-span-2 space-y-4">
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4">
+                    <BookOpen className="w-4 h-4 text-pink-600" />
+                    Buku Kesehatan & Catatan Medis
+                  </h3>
+                  
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Riwayat Kesehatan</p>
+                    <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                      {selectedIbuHamil.riwayatKesehatan || "Belum ada riwayat kesehatan khusus yang tercatat."}
+                    </p>
+                  </div>
+
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mt-8 mb-4">
+                    <History className="w-4 h-4 text-blue-600" />
+                    Timeline Pemeriksaan Rutin
+                  </h3>
+                  
+                  <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                    <div className="relative">
+                      <div className="absolute -left-7 top-1 w-3 h-3 rounded-full border-2 border-white ring-4 ring-pink-50 bg-pink-500"></div>
+                      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatTgl(selectedIbuHamil.tglHPL ? new Date(new Date(selectedIbuHamil.tglHPL).getTime() - 40*7*24*60*60*1000).toISOString() : new Date().toISOString())}</p>
+                        <p className="text-sm font-black text-slate-800 mt-1">Registrasi Awal & Pembukaan Buku KIA</p>
+                        <p className="text-xs text-slate-500 mt-1">Data ibu hamil telah diverifikasi dan masuk dalam sistem monitoring Posyandu.</p>
+                      </div>
+                    </div>
+                    {selectedIbuHamil.usiaKehamilan > 12 && (
+                       <div className="relative">
+                         <div className="absolute -left-7 top-1 w-3 h-3 rounded-full border-2 border-white ring-4 ring-blue-50 bg-blue-500"></div>
+                         <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checkup Rutin</p>
+                           <p className="text-sm font-black text-slate-800 mt-1">Pemeriksaan Trimester II</p>
+                           <p className="text-xs text-slate-500 mt-1">Kondisi janin dan ibu terpantau stabil.</p>
+                         </div>
+                       </div>
+                    )}
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <div className="bg-pink-600 p-6 rounded-2xl text-white shadow-xl shadow-pink-100">
+                    <HeartPulse className="w-8 h-8 mb-4 opacity-50" />
+                    <h4 className="text-lg font-black leading-tight mb-1">Status Kehamilan</h4>
+                    <p className="text-xs font-bold text-pink-200 uppercase tracking-widest opacity-80 mb-4">Trimester {selectedIbuHamil.usiaKehamilan <= 12 ? 'I' : selectedIbuHamil.usiaKehamilan <= 24 ? 'II' : 'III'}</p>
+                    
+                    <div className="w-full bg-pink-400/30 h-2 rounded-full mb-2">
+                       <div className="bg-white h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min((selectedIbuHamil.usiaKehamilan / 42) * 100, 100)}%` }}></div>
+                    </div>
+                    <div className="flex justify-between text-[10px] font-black uppercase">
+                       <span>{selectedIbuHamil.usiaKehamilan} Minggu</span>
+                       <span>42 Minggu</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 p-6 rounded-2xl shadow-xl shadow-slate-200 text-white">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Panduan Kesehatan KIA</p>
+                    <ul className="space-y-3">
+                      {[
+                        "Konsumsi tablet tambah darah (TTD)",
+                        "Cuci tangan pakai sabun (CTPS)",
+                        "Istirahat cukup 8 jam per malam",
+                        "Lakukan senam hamil ringan rutin"
+                      ].map((tip, i) => (
+                        <li key={i} className="flex gap-2 items-start text-xs font-medium text-slate-300">
+                          <CheckCircle className="w-3.5 h-3.5 text-pink-500 shrink-0 mt-0.5" />
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeSubTab === 'ibuhamil' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Monitor Ibu Hamil</h3>
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Monitor Ibu Hamil</h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={exportIbuHamilPDF}
+                  className="p-1.5 bg-white border border-slate-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                  title="Export PDF"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={exportIbuHamilExcel}
+                  className="p-1.5 bg-white border border-slate-200 text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                  title="Export Excel"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
             <button 
               onClick={() => { setEditingItem(null); setShowIbuHamilForm(true); }}
               className="px-4 py-2 bg-pink-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-pink-100 hover:bg-pink-700 transition-all flex items-center gap-2"
@@ -6061,12 +6357,26 @@ function PosyanduView({
                     <td className="px-6 py-4">
                        <p className="text-xs text-slate-500 max-w-[200px] truncate">{mil.riwayatKesehatan || '-'}</p>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                         <button onClick={() => { setEditingItem(mil); setShowIbuHamilForm(true); }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100"><Edit className="w-3.5 h-3.5" /></button>
-                         <button onClick={() => deleteItem('ibu_hamil', mil.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100"><Trash2 className="w-3.5 h-3.5" /></button>
-                       </div>
-                    </td>
+                     <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-1.5 group-hover:opacity-100 transition-all">
+                          <button 
+                            onClick={() => { setSelectedIbuHamil(mil); setActiveSubTab('ibuhamil_detail'); }} 
+                            className="p-1.5 text-pink-600 bg-pink-50 rounded-lg hover:bg-pink-100 border border-pink-100 transition-colors" 
+                            title="Buku Kesehatan"
+                          >
+                            <BookOpen className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => { setSelectedIbuHamil(mil); setActiveSubTab('ibuhamil_detail'); }} 
+                            className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-colors" 
+                            title="Timeline & Riwayat"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => { setEditingItem(mil); setShowIbuHamilForm(true); }} className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-100 transition-colors" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => deleteItem('ibu_hamil', mil.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100 transition-colors" title="Hapus"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                     </td>
                   </tr>
                 ))}
               </tbody>
@@ -6078,7 +6388,17 @@ function PosyanduView({
       {activeSubTab === 'kegiatan' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Jadwal & Agenda Posyandu</h3>
+             <div className="flex items-center gap-3">
+               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Jadwal & Agenda Posyandu</h3>
+               <div className="flex gap-2">
+                 <button onClick={exportKegiatanPDF} className="p-1.5 bg-white border border-slate-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors" title="Export PDF">
+                   <FileText className="w-4 h-4" />
+                 </button>
+                 <button onClick={exportKegiatanExcel} className="p-1.5 bg-white border border-slate-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="Export Excel">
+                   <FileSpreadsheet className="w-4 h-4" />
+                 </button>
+               </div>
+             </div>
              <button 
                onClick={() => { setEditingItem(null); setShowKegiatanForm(true); }}
                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-2"
@@ -6330,12 +6650,67 @@ function BankSampahView({
   handleFirestoreError, 
   showNotification 
 }: any) {
-  const [activeSubTab, setActiveSubTab] = useState('dashboard');
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'setoran' | 'tarik' | 'nasabah' | 'kategori' | 'nasabah_detail'>('dashboard');
   const [showKategoriForm, setShowKategoriForm] = useState(false);
   const [showSetoranForm, setShowSetoranForm] = useState(false);
   const [showTarikForm, setShowTarikForm] = useState(false);
+  const [showNasabahForm, setShowNasabahForm] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [selectedNasabahId, setSelectedNasabahId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmConfig, setConfirmConfig] = useState<{title: string, message: string, onConfirm: () => Promise<void>} | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        let successCount = 0;
+        for (const row of (data as any[])) {
+          // Expecting columns matching common pattern: NIK, Nama, Total/Nominal, Tanggal
+          const nik = row.NIK || row.nik;
+          const total = parseFloat(row.Total || row.total || row.Setoran || row.setoran || 0);
+          
+          if (nik && total > 0) {
+            const id = `STR-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            await setDoc(doc(db, 'sampah_setoran', id), {
+              tenantId,
+              id,
+              nasabahId: String(nik),
+              namaKategori: row.Kategori || row.kategori || 'Impor Masal',
+              berat: parseFloat(row.Berat || row.berat || 0),
+              total: total,
+              tanggal: row.Tanggal || row.tanggal || new Date().toISOString().split('T')[0],
+              petugas: currentUser?.email?.split('@')[0] || 'Admin'
+            });
+            successCount++;
+          }
+        }
+        
+        if (successCount > 0) {
+          showNotification(`Berhasil mengimpor ${successCount} data transaksi!`, 'success');
+        } else {
+          showNotification("Tidak ada data valid yang ditemukan untuk diimpor.", 'info');
+        }
+        // Reset input
+        e.target.value = '';
+      } catch (error) {
+        console.error(error);
+        showNotification("Gagal memproses file Excel. Pastikan format benar.", 'error');
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   const canEdit = currentUser?.role !== 'Viewer';
 
@@ -6357,7 +6732,9 @@ function BankSampahView({
       saldo: setoran - tarikan,
       totalSetoran: setoran
     };
-  }).filter((n: any) => n.totalSetoran > 0 || n.saldo > 0);
+  }).filter((n: any) => n.totalSetoran > 0 || n.saldo > 0 || n.isNasabah === true);
+
+  const selectedNasabah = selectedNasabahId ? nasabahSummary.find((n: any) => n.nik === selectedNasabahId) : null;
 
   const handleSaveKategori = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -6420,7 +6797,7 @@ function BankSampahView({
   const handleSaveTarik = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const nasabahId = formData.get('nasabahId') as string;
+    const nasabahId = editingItem?.nasabahId || (formData.get('nasabahId') as string);
     const nasabah = wargaData.find((w: any) => w.nik === nasabahId);
     const nominal = parseFloat(formData.get('nominal') as string);
 
@@ -6435,8 +6812,13 @@ function BankSampahView({
     };
 
     try {
-      await setDoc(doc(db, 'sampah_tarik_saldo', data.id), data);
-      showNotification(`Penarikan Rp${nominal.toLocaleString()} berhasil dicatat`);
+      if (editingItem) {
+        await updateDoc(doc(db, 'sampah_tarik_saldo', editingItem.id), data);
+        showNotification(`Penarikan berhasil diperbarui`);
+      } else {
+        await setDoc(doc(db, 'sampah_tarik_saldo', data.id), data);
+        showNotification(`Penarikan Rp${nominal.toLocaleString()} berhasil dicatat`);
+      }
       setShowTarikForm(false);
       setEditingItem(null);
     } catch (err) {
@@ -6444,14 +6826,263 @@ function BankSampahView({
     }
   };
 
-  const deleteItem = async (collectionName: string, id: string) => {
-    if (!window.confirm('Yakin ingin menghapus data ini?')) return;
+  const handleSaveNasabah = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const inik = formData.get('nik') as string;
+    const inama = formData.get('nama') as string;
+    const irt = formData.get('rt') as string;
+    const irw = formData.get('rw') as string;
+    
+    if (!inik || !inama) return;
+
     try {
-      await deleteDoc(doc(db, collectionName, id));
-      showNotification('Data berhasil dihapus');
+      if (editingItem) {
+        await updateDoc(doc(db, 'warga', editingItem.nik), {
+          nama: inama,
+          rt: irt,
+          rw: irw,
+          isNasabah: true
+        });
+        showNotification("Data nasabah (warga) berhasil diperbarui");
+      } else {
+        const newWarga = {
+          tenantId,
+          nik: inik,
+          nama: inama,
+          rt: irt,
+          rw: irw,
+          blok: '',
+          kelurahan: '',
+          kecamatan: '',
+          kota_kab: '',
+          status: 'Warga Tetap',
+          hp: '',
+          email: '',
+          foto: '',
+          ktpUrl: '',
+          posisi: '',
+          profesi: '',
+          pendidikanTerakhir: '',
+          jk: 'Laki-Laki',
+          tglLahir: '',
+          tempatLahir: '',
+          kawin: 'Belum Kawin',
+          kewarganegaraan: 'WNI',
+          isNasabah: true
+        };
+        await setDoc(doc(db, 'warga', inik), newWarga);
+        showNotification("Nasabah (Warga) baru berhasil ditambahkan!");
+      }
+      setShowNasabahForm(false);
+      setEditingItem(null);
     } catch (err) {
-      handleFirestoreError(err, 'delete', collectionName);
+      handleFirestoreError(err, editingItem ? 'update' : 'create', 'warga');
     }
+  };
+
+  const deleteItemsByNasabah = async (nik: string) => {
+    setConfirmConfig({
+      title: 'Hapus Semua Riwayat Transaksi',
+      message: `Yakin ingin menghapus SEMUA riwayat transaksi (Setoran & Penarikan) untuk nasabah dengan NIK ${nik}? Tindakan ini tidak dapat dibatalkan.`,
+      onConfirm: async () => {
+        try {
+          const setoranToDelete = sampahSetoranData.filter((s: any) => s.nasabahId === nik);
+          const tarikToDelete = sampahTarikSaldoData.filter((t: any) => t.nasabahId === nik);
+          
+          for (const s of setoranToDelete) {
+            await deleteDoc(doc(db, 'sampah_setoran', s.id));
+          }
+          for (const t of tarikToDelete) {
+            await deleteDoc(doc(db, 'sampah_tarik_saldo', t.id));
+          }
+          
+          showNotification(`Semua riwayat transaksi nasabah berhasil dihapus.`);
+        } catch (err) {
+          handleFirestoreError(err, 'delete', 'bank_sampah_mass');
+        }
+        setConfirmConfig(null);
+      }
+    });
+  };
+
+  const deleteItem = async (collectionName: string, id: string) => {
+    setConfirmConfig({
+      title: 'Hapus Data',
+      message: 'Apakah Anda yakin ingin menghapus data ini? Data yang dihapus tidak dapat dikembalikan.',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, collectionName, id));
+          showNotification('Data berhasil dihapus');
+        } catch (err) {
+          handleFirestoreError(err, 'delete', collectionName);
+        }
+        setConfirmConfig(null);
+      }
+    });
+  };
+
+  const exportAllSetoranExcel = () => {
+    const data = sampahSetoranData.map(s => ({
+      'Nasabah': s.namaNasabah,
+      'Kategori': s.namaKategori,
+      'Berat (kg)': s.berat,
+      'Harga': s.harga,
+      'Total': s.total,
+      'Tanggal': s.tanggal,
+      'Keterangan': s.keterangan || '-'
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Setoran Bank Sampah");
+    XLSX.writeFile(wb, `Setoran_Sampah_All_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showNotification("Eksport Excel Berhasil!");
+  };
+
+  const exportAllSetoranPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('LAPORAN SETORAN BANK SAMPAH', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Tenant: ${tenantId}`, 14, 30);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    
+    const tableData = sampahSetoranData.map((s: any) => [
+      s.namaNasabah,
+      s.namaKategori,
+      s.berat + " kg",
+      "Rp " + s.total.toLocaleString(),
+      s.tanggal
+    ]);
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Nasabah', 'Kategori', 'Berat', 'Total', 'Tanggal']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Laporan_Setoran_Sampah_${new Date().toISOString().split('T')[0]}.pdf`);
+    showNotification("Eksport PDF Berhasil!");
+  };
+
+  const exportBukuTabunganPDF = (nasabah: any) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('BUKU TABUNGAN BANK SAMPAH', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.text(`Nama Nasabah: ${nasabah.nama}`, 14, 32);
+    doc.text(`NIK: ${nasabah.nik}`, 14, 38);
+    doc.text(`Blok/RT: ${nasabah.blok} / ${nasabah.rt}`, 14, 44);
+    
+    const transactions = [
+      ...sampahSetoranData.filter((s: any) => s.nasabahId === nasabah.nik).map(s => ({ ...s, type: 'Setoran', amount: s.total })),
+      ...sampahTarikSaldoData.filter((t: any) => t.nasabahId === nasabah.nik).map(t => ({ ...t, type: 'Penarikan', amount: -t.nominal }))
+    ].sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
+
+    let currentSaldo = 0;
+    const tableData = transactions.map((t: any) => {
+      currentSaldo += t.amount;
+      return [
+        t.tanggal,
+        t.type,
+        t.type === 'Setoran' ? t.namaKategori : '-',
+        t.type === 'Setoran' ? t.berat + " kg" : '-',
+        t.amount > 0 ? "Rp " + t.amount.toLocaleString() : "-",
+        t.amount < 0 ? "Rp " + Math.abs(t.amount).toLocaleString() : "-",
+        "Rp " + currentSaldo.toLocaleString()
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 55,
+      head: [['Tanggal', 'Jenis', 'Item', 'Berat', 'Masuk', 'Keluar', 'Saldo']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Buku_Tabungan_${nasabah.nama}_${new Date().toISOString().split('T')[0]}.pdf`);
+    showNotification(`Buku Tabungan ${nasabah.nama} berhasil diunduh!`);
+  };
+
+  const exportBukuTabunganExcel = (nasabah: any) => {
+    const transactions = [
+      ...sampahSetoranData.filter((s: any) => s.nasabahId === nasabah.nik).map(s => ({ ...s, type: 'Setoran', amount: s.total })),
+      ...sampahTarikSaldoData.filter((t: any) => t.nasabahId === nasabah.nik).map(t => ({ ...t, type: 'Penarikan', amount: -t.nominal }))
+    ].sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
+
+    let currentSaldo = 0;
+    const data = transactions.map((t: any) => {
+      currentSaldo += t.amount;
+      return {
+        'Tanggal': t.tanggal,
+        'Jenis': t.type,
+        'Item': t.type === 'Setoran' ? t.namaKategori : '-',
+        'Berat': t.type === 'Setoran' ? t.berat : 0,
+        'Masuk': t.amount > 0 ? t.amount : 0,
+        'Keluar': t.amount < 0 ? Math.abs(t.amount) : 0,
+        'Saldo': currentSaldo
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Buku Tabungan");
+    XLSX.writeFile(wb, `Tabungan_${nasabah.nama}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showNotification("Eksport Excel Tabungan Berhasil!");
+  };
+
+  const exportNasabahSummaryExcel = () => {
+    const data = nasabahSummary.map(n => {
+      const totalDitarik = sampahTarikSaldoData.filter((t: any) => t.nasabahId === n.nik).reduce((acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0), 0);
+      return {
+        'Nama Nasabah': n.nama,
+        'NIK': n.nik,
+        'Total Tabungan': n.totalSetoran,
+        'Telah Ditarik': totalDitarik,
+        'Saldo Saat Ini': n.saldo,
+        'Alamat': `Blok ${n.blok} / RT ${n.rt}`
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ringkasan Nasabah");
+    XLSX.writeFile(wb, `Ringkasan_Nasabah_Sampah_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showNotification("Eksport Ringkasan Nasabah Excel Berhasil!");
+  };
+
+  const exportNasabahSummaryPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('RINGKASAN SALDO NASABAH BANK SAMPAH', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Tenant: ${tenantId}`, 14, 30);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    
+    const tableData = nasabahSummary.map((n: any) => {
+      const totalDitarik = sampahTarikSaldoData.filter((t: any) => t.nasabahId === n.nik).reduce((acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0), 0);
+      return [
+        n.nama,
+        n.nik,
+        "Rp " + n.totalSetoran.toLocaleString(),
+        "Rp " + totalDitarik.toLocaleString(),
+        "Rp " + n.saldo.toLocaleString()
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Nama Nasabah', 'NIK', 'Total Tabungan', 'Tarik Saldo', 'Saldo Sisa']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Ringkasan_Nasabah_Sampah_${new Date().toISOString().split('T')[0]}.pdf`);
+    showNotification("Eksport Ringkasan Nasabah PDF Berhasil!");
   };
 
   return (
@@ -6589,14 +7220,16 @@ function BankSampahView({
       {activeSubTab === 'setoran' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
            <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Cari setoran..." 
-                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 ring-emerald-500/20"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Cari setoran..." 
+                    className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 ring-emerald-500/20"
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
               </div>
               {canEdit && (
                 <button 
@@ -6631,11 +7264,33 @@ function BankSampahView({
                       <td className="px-6 py-4 text-right font-black text-emerald-600">Rp {item.total.toLocaleString()}</td>
                       <td className="px-6 py-4 text-slate-500 text-xs">{item.tanggal}</td>
                       <td className="px-6 py-4">
-                        {canEdit && (
-                          <button onClick={() => deleteItem('sampah_setoran', item.id)} className="text-red-400 hover:text-red-600 transition-colors">
-                            <Trash2 className="w-4 h-4" />
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => {
+                              const n = nasabahSummary.find((nas: any) => nas.nik === item.nasabahId);
+                              if (n) {
+                                setSelectedNasabahId(n.nik);
+                                setActiveSubTab('nasabah_detail');
+                              } else {
+                                showNotification("Data nasabah tidak ditemukan", "error");
+                              }
+                            }} 
+                            className="text-slate-400 hover:text-slate-600 transition-colors" 
+                            title="Lihat Detail Nasabah"
+                          >
+                            <Eye className="w-4 h-4" />
                           </button>
-                        )}
+                          {canEdit && (
+                            <>
+                              <button onClick={() => { setEditingItem(item); setShowSetoranForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" title="Edit">
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => deleteItem('sampah_setoran', item.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Hapus Transaksi">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -6686,11 +7341,33 @@ function BankSampahView({
                       <td className="px-6 py-4 text-slate-500 text-xs">{item.tanggal}</td>
                       <td className="px-6 py-4 text-slate-400 text-xs italic">{item.keterangan || '-'}</td>
                       <td className="px-6 py-4">
-                        {canEdit && (
-                          <button onClick={() => deleteItem('sampah_tarik_saldo', item.id)} className="text-red-400 hover:text-red-600 transition-colors">
-                            <Trash2 className="w-4 h-4" />
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => {
+                              const n = nasabahSummary.find((nas: any) => nas.nik === item.nasabahId);
+                              if (n) {
+                                setSelectedNasabahId(n.nik);
+                                setActiveSubTab('nasabah_detail');
+                              } else {
+                                showNotification("Data nasabah tidak ditemukan", "error");
+                              }
+                            }} 
+                            className="text-slate-400 hover:text-slate-600 transition-colors" 
+                            title="Lihat Detail Nasabah"
+                          >
+                            <Eye className="w-4 h-4" />
                           </button>
-                        )}
+                          {canEdit && (
+                            <div className="flex gap-2">
+                              <button onClick={() => { setEditingItem(item); setShowTarikForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" title="Edit">
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => deleteItem('sampah_tarik_saldo', item.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Hapus Penarikan">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -6700,10 +7377,138 @@ function BankSampahView({
         </div>
       )}
 
+      {activeSubTab === 'nasabah_detail' && selectedNasabah && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xl font-black border-4 border-white shadow-sm uppercase">
+                  {selectedNasabah.nama.charAt(0)}
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-800">{selectedNasabah.nama}</h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nasabah ID: {selectedNasabah.nik}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => exportBukuTabunganPDF(selectedNasabah)}
+                  className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-red-100 border border-red-100 transition-all"
+                >
+                  <FileText className="w-4 h-4" /> PDF
+                </button>
+                <button 
+                  onClick={() => setActiveSubTab('nasabah')}
+                  className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-6 border-t border-slate-100">
+               <div className="md:col-span-1 space-y-4">
+                  <div className="p-4 bg-emerald-600 rounded-2xl text-white shadow-xl shadow-emerald-100">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Saldo Saat Ini</p>
+                    <p className="text-2xl font-black">Rp {selectedNasabah.saldo.toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Statistik Nasabah</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">Total Setoran</span>
+                        <span className="font-bold text-emerald-600">Rp {selectedNasabah.totalSetoran.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">Total Tarik</span>
+                        <span className="font-bold text-red-600">Rp {(selectedNasabah.totalSetoran - selectedNasabah.saldo).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+               </div>
+
+               <div className="md:col-span-3">
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <History className="w-4 h-4 text-emerald-600" />
+                    Riwayat Transaksi
+                  </h3>
+                  <div className="space-y-3">
+                    {[
+                      ...sampahSetoranData.filter((s: any) => s.nasabahId === selectedNasabah.nik).map(s => ({ ...s, type: 'setoran' })),
+                      ...sampahTarikSaldoData.filter((t: any) => t.nasabahId === selectedNasabah.nik).map(t => ({ ...t, type: 'tarik' }))
+                    ].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()).map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:shadow-md transition-all shadow-sm">
+                         <div className="flex items-center gap-4">
+                            <div className={`p-2 rounded-lg ${item.type === 'setoran' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                               {item.type === 'setoran' ? <TrendingUp className="w-4 h-4" /> : <HandCoins className="w-4 h-4" />}
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold text-slate-800">{item.type === 'setoran' ? `Setoran: ${item.namaKategori}` : 'Penarikan Saldo'}</p>
+                               <p className="text-[10px] text-slate-400 font-medium">{item.tanggal}</p>
+                            </div>
+                         </div>
+                         <p className={`text-sm font-black ${item.type === 'setoran' ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {item.type === 'setoran' ? '+' : '-'} Rp {(item.total || item.nominal || 0).toLocaleString()}
+                         </p>
+                      </div>
+                    ))}
+                    {selectedNasabah.totalSetoran === 0 && (
+                      <p className="text-sm text-slate-400 text-center py-8 italic font-medium">Belum ada transaksi.</p>
+                    )}
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeSubTab === 'nasabah' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-           <div className="p-6 border-b border-slate-100">
-             <h3 className="font-bold text-slate-800">Daftar Nasabah & Saldo</h3>
+           <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <h3 className="font-bold text-slate-800">Daftar Nasabah & Saldo</h3>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                   <input 
+                     type="text" 
+                     placeholder="Cari nasabah..." 
+                     className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 ring-emerald-500/20"
+                     onChange={(e) => setSearchQuery(e.target.value)}
+                   />
+                </div>
+                <div className="flex gap-2">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleImportExcel}
+                  />
+                  {canEdit && (
+                    <button 
+                      onClick={() => { setEditingItem(null); setShowNasabahForm(true); }} 
+                      className="p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center gap-2" 
+                      title="Tambah Nasabah Baru"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      Nasabah
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-all active:scale-95" 
+                    title="Impor Database (Excel/CSV)"
+                  >
+                    <Upload className="w-4 h-4" />
+                  </button>
+                  <button onClick={exportNasabahSummaryPDF} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Export PDF Semua Nasabah">
+                    <FileText className="w-4 h-4" />
+                  </button>
+                  <button onClick={exportNasabahSummaryExcel} className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100" title="Export Excel Semua Nasabah">
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
            </div>
            <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -6714,13 +7519,14 @@ function BankSampahView({
                     <th className="px-6 py-3 text-right">Total Tabungan</th>
                     <th className="px-6 py-3 text-right">Telah Ditarik</th>
                     <th className="px-6 py-3 text-right">Saldo Saat Ini</th>
+                    <th className="px-6 py-3 text-right whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {nasabahSummary.map((n: any) => {
+                <tbody className="divide-y divide-slate-100 font-medium whitespace-nowrap">
+                  {nasabahSummary.filter((n: any) => n.nama?.toLowerCase().includes(searchQuery.toLowerCase()) || n.nik?.includes(searchQuery)).map((n: any) => {
                     const totalDitarik = sampahTarikSaldoData.filter((t: any) => t.nasabahId === n.nik).reduce((acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0), 0);
                     return (
-                      <tr key={n.nik} className="hover:bg-slate-50">
+                      <tr key={n.nik} className="hover:bg-slate-50 group">
                         <td className="px-6 py-4 font-bold text-slate-700">{n.nama}</td>
                         <td className="px-6 py-4 text-slate-400 text-xs">{n.nik}</td>
                         <td className="px-6 py-4 text-right font-bold text-emerald-600">Rp {n.totalSetoran.toLocaleString()}</td>
@@ -6730,6 +7536,31 @@ function BankSampahView({
                             Rp {n.saldo.toLocaleString()}
                           </span>
                         </td>
+                       <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-1.5 transition-all">
+                              <button 
+                                onClick={() => { setSelectedNasabahId(n.nik); setActiveSubTab('nasabah_detail'); }} 
+                                className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-200" 
+                                title="Lihat/Mata"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => { setEditingItem(n); setShowNasabahForm(true); }} 
+                                className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" 
+                                title="Edit Nasabah"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => deleteItemsByNasabah(n.nik)} 
+                                className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" 
+                                title="Hapus Semua Riwayat"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                         </td>
                       </tr>
                     );
                   })}
@@ -6759,8 +7590,8 @@ function BankSampahView({
                   </div>
                   {canEdit && (
                     <div className="flex gap-2">
-                       <button onClick={() => { setEditingItem(kat); setShowKategoriForm(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"><Edit className="w-4 h-4" /></button>
-                       <button onClick={() => deleteItem('sampah_kategori', kat.id)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                       <button onClick={() => { setEditingItem(kat); setShowKategoriForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" title="Edit"><Edit className="w-4 h-4" /></button>
+                       <button onClick={() => deleteItem('sampah_kategori', kat.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
@@ -6864,39 +7695,108 @@ function BankSampahView({
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
-                <span className="flex items-center gap-2"><HandCoins className="w-4 h-4 text-blue-600" /> Tarik Saldo Nasabah</span>
-                <button onClick={() => setShowTarikForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+                <span className="flex items-center gap-2"><HandCoins className="w-4 h-4 text-blue-600" /> {editingItem ? 'Edit Tarik Saldo' : 'Tarik Saldo Nasabah'}</span>
+                <button onClick={() => { setShowTarikForm(false); setEditingItem(null); }} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
              </div>
              <form className="p-6 space-y-4" onSubmit={handleSaveTarik}>
                 <div>
                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Pilih Nasabah (Aktif)</label>
-                   <select name="nasabahId" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500">
+                   <select name="nasabahId" required defaultValue={editingItem?.nasabahId} disabled={!!editingItem} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500 disabled:opacity-50">
                       <option value="">-- Pilih Nasabah --</option>
-                      {nasabahSummary.filter((n:any) => n.saldo > 0).map((n: any) => (
+                      {nasabahSummary.filter((n:any) => n.saldo > 0 || (editingItem && editingItem.nasabahId === n.nik)).map((n: any) => (
                         <option key={n.nik} value={n.nik}>{n.nama} (Saldo: Rp {n.saldo.toLocaleString()})</option>
                       ))}
                    </select>
                 </div>
                 <div>
                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Nominal yang Ditarik (Rp)</label>
-                   <input type="number" name="nominal" required placeholder="Cth: 50000" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500" />
+                   <input type="number" name="nominal" required defaultValue={editingItem?.nominal} placeholder="Cth: 50000" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Tanggal</label>
-                   <input type="date" name="tanggal" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500" />
+                   <input type="date" name="tanggal" required defaultValue={editingItem?.tanggal || new Date().toISOString().split('T')[0]} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Keterangan</label>
-                   <textarea name="keterangan" rows={2} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500" placeholder="Contoh: Keperluan harian..."></textarea>
+                   <textarea name="keterangan" rows={2} defaultValue={editingItem?.keterangan} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500" placeholder="Contoh: Keperluan harian..."></textarea>
                 </div>
                 <div className="pt-4 flex gap-3">
-                   <button type="button" onClick={() => setShowTarikForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
-                   <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transform active:scale-95 transition-all">Konfirmasi Tarik</button>
+                   <button type="button" onClick={() => { setShowTarikForm(false); setEditingItem(null); }} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+                   <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transform active:scale-95 transition-all">{editingItem ? 'Simpan Perubahan' : 'Konfirmasi Tarik'}</button>
                 </div>
              </form>
           </motion.div>
         </div>
       )}
+
+      {showNasabahForm && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
+             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
+                <span className="flex items-center gap-2"><User className="w-4 h-4 text-emerald-600" /> {editingItem ? 'Edit Data Nasabah (Warga)' : 'Tambah Nasabah (Warga)'}</span>
+                <button onClick={() => setShowNasabahForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+             </div>
+             <form className="p-6 space-y-4" onSubmit={handleSaveNasabah}>
+                <div className="bg-blue-50 text-blue-800 text-xs p-3 rounded-lg border border-blue-100 mb-4 flex items-start gap-2">
+                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                   <p>Data nasabah ini terhubung dengan data Warga. {editingItem ? 'Mengedit' : 'Menambahkan'} nama di sini akan ikut {editingItem ? 'mengubah' : 'menambahkan'} data warga tersebut.</p>
+                </div>
+                <div>
+                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">NIK {editingItem ? '(Hanya Baca)' : ''}</label>
+                   <input type="text" name="nik" required defaultValue={editingItem?.nik} readOnly={!!editingItem} placeholder="Masukkan 16 digit NIK..." minLength={16} maxLength={16} className={`w-full px-4 py-2.5 ${editingItem ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-slate-50 focus:bg-white'} border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-emerald-500`} />
+                </div>
+                <div>
+                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Nama Lengkap</label>
+                   <input type="text" name="nama" required defaultValue={editingItem?.nama} list="wargaListNasabah" onChange={(e) => {
+                     const selectedName = e.target.value;
+                     const warga = wargaData.find((w: any) => w.nama === selectedName);
+                     if (warga) {
+                       const form = e.target.closest('form');
+                       if (form) {
+                         if (!editingItem) (form.elements.namedItem('nik') as HTMLInputElement).value = warga.nik;
+                         (form.elements.namedItem('rt') as HTMLInputElement).value = warga.rt || '01';
+                         (form.elements.namedItem('rw') as HTMLInputElement).value = warga.rw || '05';
+                       }
+                     }
+                   }} placeholder="Masukkan Nama Lengkap" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500" />
+                   <datalist id="wargaListNasabah">
+                     {wargaData.map((w: any) => (
+                       <option key={w.nik} value={w.nama} />
+                     ))}
+                   </datalist>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">RT</label>
+                     <input type="text" name="rt" required defaultValue={editingItem?.rt || '01'} placeholder="01" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500" />
+                  </div>
+                  <div className="flex-1">
+                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">RW</label>
+                     <input type="text" name="rw" required defaultValue={editingItem?.rw || '05'} placeholder="05" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500" />
+                  </div>
+                </div>
+                
+                <div className="pt-4 flex gap-3">
+                   <button type="button" onClick={() => setShowNasabahForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+                   <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all">{editingItem ? 'Simpan Perubahan' : 'Tambah Nasabah'}</button>
+                </div>
+             </form>
+          </motion.div>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {confirmConfig && (
+          <ConfirmModal 
+            isOpen={true}
+            title={confirmConfig.title}
+            message={confirmConfig.message}
+            onConfirm={confirmConfig.onConfirm}
+            onCancel={() => setConfirmConfig(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
