@@ -5465,6 +5465,119 @@ function PosyanduView({
   const [selectedKegiatan, setSelectedKegiatan] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRefIbuHamil = useRef<HTMLInputElement>(null);
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        let successCount = 0;
+        setIsLoadingDB(true);
+        for (const row of (data as any[])) {
+          const nik = row['NIK'] || row['nik'] || row['Nik'] || row['NIK Anak'];
+          const nama = row['Nama'] || row['nama'] || row['Nama Anak'];
+          
+          if (nik && nama) {
+            const id = `BAL-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            const newBalita = {
+              tenantId,
+              id,
+              nik: String(nik),
+              nama,
+              tglLahir: row['Tgl Lahir'] || row['Tanggal Lahir'] || row['tgl_lahir'] || new Date().toISOString().split('T')[0],
+              jenisKelamin: row['Jenis Kelamin'] || row['L/P'] || row['jenis_kelamin'] || 'L',
+              namaIbu: row['Nama Ibu'] || row['nama_ibu'] || '',
+              namaAyah: row['Nama Ayah'] || row['nama_ayah'] || '',
+              rt: row['RT'] || row['rt'] || '01',
+              rw: row['RW'] || row['rw'] || '01',
+              bbLahir: parseFloat(row['BB Lahir'] || row['bb_lahir'] || '0'),
+              pbLahir: parseFloat(row['PB Lahir'] || row['pb_lahir'] || '0')
+            };
+            
+            await setDoc(doc(db, 'posyandu_balita', id), newBalita);
+            successCount++;
+          }
+        }
+        
+        setIsLoadingDB(false);
+        if (successCount > 0) {
+          showNotification(`${successCount} data balita berhasil diimpor!`);
+        } else {
+          showNotification("Format excel mungkin tidak sesuai. Pastikan ada kolom NIK dan Nama.", "error");
+        }
+      } catch (error) {
+        setIsLoadingDB(false);
+        console.error("Import error:", error);
+        showNotification("Gagal membaca file Excel", "error");
+      }
+    };
+    reader.readAsBinaryString(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleImportIbuHamilExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        let successCount = 0;
+        setIsLoadingDB(true);
+        for (const row of (data as any[])) {
+          const nik = row['NIK'] || row['nik'] || row['NIK Ibu'];
+          const nama = row['Nama'] || row['nama'] || row['Nama Ibu Hamil'];
+          
+          if (nik && nama) {
+            const id = `HML-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            const newIbuHamil = {
+              tenantId,
+              id,
+              nik: String(nik),
+              nama,
+              tglHPL: row['Tgl HPL'] || row['HPL'] || row['tgl_hpl'] || new Date().toISOString().split('T')[0],
+              usiaKehamilan: parseFloat(row['Usia Hamil'] || row['Usia Kehamilan'] || row['usia_kehamilan'] || '0'),
+              riwayatKesehatan: row['Riwayat Kesehatan'] || row['Kesehatan'] || '',
+              rt: row['RT'] || row['rt'] || '01',
+              rw: row['RW'] || row['rw'] || '01',
+            };
+            
+            await setDoc(doc(db, 'ibu_hamil', id), newIbuHamil);
+            successCount++;
+          }
+        }
+        
+        setIsLoadingDB(false);
+        if (successCount > 0) {
+          showNotification(`${successCount} data ibu hamil berhasil diimpor!`);
+        } else {
+          showNotification("Format excel mungkin tidak sesuai. Pastikan ada kolom NIK dan Nama.", "error");
+        }
+      } catch (error) {
+        setIsLoadingDB(false);
+        console.error("Import error:", error);
+        showNotification("Gagal membaca file Excel", "error");
+      }
+    };
+    reader.readAsBinaryString(file);
+    if (fileInputRefIbuHamil.current) fileInputRefIbuHamil.current.value = '';
+  };
 
   const exportPosyanduPDF = () => {
     const doc = new jsPDF();
@@ -5966,6 +6079,20 @@ function PosyanduView({
                 />
               </div>
               <div className="flex gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleImportExcel}
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="p-1.5 bg-white border border-slate-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" 
+                  title="Impor Database (Excel/CSV)"
+                >
+                  <Upload className="w-4 h-4" />
+                </button>
                 <button 
                   onClick={exportBalitaPDF}
                   className="p-1.5 bg-white border border-slate-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
@@ -6304,8 +6431,31 @@ function PosyanduView({
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Monitor Ibu Hamil</h3>
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Cari ibu hamil..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
+                />
+              </div>
               <div className="flex gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRefIbuHamil} 
+                  className="hidden" 
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleImportIbuHamilExcel}
+                />
+                <button 
+                  onClick={() => fileInputRefIbuHamil.current?.click()} 
+                  className="p-1.5 bg-white border border-slate-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" 
+                  title="Impor Database (Excel/CSV)"
+                >
+                  <Upload className="w-4 h-4" />
+                </button>
                 <button 
                   onClick={exportIbuHamilPDF}
                   className="p-1.5 bg-white border border-slate-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
@@ -6342,7 +6492,7 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {ibuHamilData.map(mil => (
+                {ibuHamilData.filter((mil: any) => mil.nama.toLowerCase().includes(searchQuery.toLowerCase())).map((mil: any) => (
                   <tr key={mil.id} className="hover:bg-slate-50 transition-all group">
                     <td className="px-6 py-4">
                        <p className="text-sm font-bold text-slate-800">{mil.nama}</p>
