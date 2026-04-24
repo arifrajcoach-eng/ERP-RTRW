@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { db, storage } from '../firebase';
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Settings, Save, Upload, FileText, PlusCircle, CheckCircle } from 'lucide-react';
 
 export default function KopTemplateManagementView({ currentUser, settings, showNotification, handleFirestoreError }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
@@ -68,7 +68,7 @@ function TemplateSuratFisik({ formData, logoUrl }: { formData: any, logoUrl: str
         <div className="mt-12 flex justify-between">
             <div className="text-center">
                 <p>Mengetahui,</p>
-                <p>Ketua RW {formData.rw || '....'} Kelurahan {formData.kelurahan || '....'}</p>
+                <p>Ketua RW {formData.rw || '....'}</p>
                 <div className="h-20" />
                 <p className="underline font-bold">{formData.nama_ketua_rw || '...................................'}</p>
             </div>
@@ -78,7 +78,7 @@ function TemplateSuratFisik({ formData, logoUrl }: { formData: any, logoUrl: str
                     const prefix = kab.toUpperCase().includes('KABUPATEN') || kab.toUpperCase().includes('KOTA') ? '' : 'Kabupaten ';
                     return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
                   })()}, ......................... 202...</p>
-                <p>Ketua RT {formData.rt || '....'} Kelurahan {formData.kelurahan || '....'}</p>
+                <p>Ketua RT {formData.rt || '....'}</p>
                 <div className="h-20" />
                 <p className="underline font-bold">{formData.nama_ketua_rt || '...................................'}</p>
             </div>
@@ -276,37 +276,29 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     }
 
     setUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(0); // Optional: You can remove this or use a simulated progress if uploadBytes doesn't supply it.
     try {
       // 2. Upload to Firebase
-      const storagePath = `branding/${tenantId}/logo_utama.png`;
+      const storagePath = `branding/${tenantId}/logo_${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        }, 
-        (error) => {
-          console.error("Upload error:", error);
-          showNotification("Gagal mengunggah logo.", 'error');
-          setUploading(false);
-        }, 
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          // 3. Update Firestore
-          await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: downloadURL }, { merge: true });
-          setLogoUrl(downloadURL);
-          showNotification("Logo berhasil diunggah", 'success');
-          setUploading(false);
-          setUploadProgress(0);
-        }
-      );
-    } catch (error) {
-      console.error("Error initiating upload:", error);
-      showNotification("Gagal memulai unggahan.", 'error');
+      
+      // Try using uploadBytes which returns a Promise directly
+      const snapshot = await uploadBytes(storageRef, file);
+      setUploadProgress(100);
+      
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      // 3. Update Firestore
+      await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: downloadURL }, { merge: true });
+      setLogoUrl(downloadURL);
+      showNotification("Logo berhasil diunggah", 'success');
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      showNotification(`Gagal mengunggah logo: ${error.message || 'Error tidak diketahui'}`, 'error');
+    } finally {
       setUploading(false);
+      setUploadProgress(0);
+      e.target.value = ''; // Reset input
     }
   };
 

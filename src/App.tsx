@@ -3666,7 +3666,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
             <div class="mt-12 flex justify-between">
                 <div class="text-center">
                     <p>Mengetahui,</p>
-                    <p>Ketua RW ${surat.rw || kopSettings.rw || '....'} Kelurahan ${kopSettings.kelurahan || '....'}</p>
+                    <p>Ketua RW ${surat.rw || kopSettings.rw || '....'}</p>
                     <div class="h-20"></div>
                     <p class="font-bold">( <u>${surat.ketua_rw_nama || kopSettings.nama_ketua_rw || '...................................'}</u> )</p>
                 </div>
@@ -3676,7 +3676,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                         const prefix = kab.toUpperCase().includes('KABUPATEN') || kab.toUpperCase().includes('KOTA') ? '' : 'Kabupaten ';
                         return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
                       })()}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                    <p>${surat.jabatan_ttd || 'Ketua RT'} ${surat.rt || kopSettings.rt || '....'} Kelurahan ${kopSettings.kelurahan || '....'}</p>
+                    <p>${surat.jabatan_ttd || 'Ketua RT'} ${surat.rt || kopSettings.rt || '....'}</p>
                     <div class="h-20"></div>
                     <p class="font-bold">( <u>${surat.ketua || kopSettings.nama_ketua_rt || '...................................'}</u> )</p>
                 </div>
