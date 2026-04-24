@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -1637,6 +1637,15 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
             <Vote className="w-5 h-5 text-indigo-600" />
           </div>
           <span className="text-xs font-bold text-slate-700">E-Pemilu</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('toko')}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all flex flex-col items-center justify-center gap-2 group"
+        >
+          <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Store className="w-5 h-5 text-orange-600" />
+          </div>
+          <span className="text-xs font-bold text-slate-700">E-Toko</span>
         </button>
       </div>
 
