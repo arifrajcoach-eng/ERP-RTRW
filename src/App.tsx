@@ -17,6 +17,7 @@ import {
 } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, storage } from './firebase';
+import KopTemplateManagementView from './components/KopTemplateManagementView';
 
 // --- INITIAL DUMMY DATA ---
 const INITIAL_WARGA_DATA = [
@@ -229,6 +230,7 @@ export default function App() {
   const [usersData, setUsersData] = useState<any[]>([]);
   const [tenantsData, setTenantsData] = useState<any[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
+  const [kopSettings, setKopSettings] = useState<Record<string, any>>({});
 
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -353,9 +355,16 @@ export default function App() {
       }
     });
 
+    // 0.5 Kop Settings Listener
+    const unsubKopSettings = onSnapshot(doc(db, 'tenant_settings', currentUser?.tenantId || 'RW26_SMART'), (snap) => {
+      if (snap.exists()) {
+        setKopSettings(snap.data());
+      }
+    });
+
     // 1. Warga Listener
     const getWargaQuery = () => {
-      const base = collection(db, 'warga');
+      const base = collection(db, 'data_warga');
       if (currentUser?.isSuperAdmin) return query(base);
       
       const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
@@ -538,7 +547,7 @@ export default function App() {
 
     // 5. Users Listener
     let unsubUsers = () => {};
-    if (currentUser?.role === 'ADMIN' || currentUser?.isSuperAdmin) {
+    if (currentUser?.role === 'ADMIN' || currentUser?.isSuperAdmin || currentUser?.role === 'RW' || currentUser?.role === 'RT') {
       const usersQuery = currentUser.isSuperAdmin 
         ? query(collection(db, 'users'))
         : query(collection(db, 'users'), where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'));
@@ -596,6 +605,7 @@ export default function App() {
       unsubUsers();
       unsubTenants();
       unsubSettings();
+      unsubKopSettings();
     };
   }, [currentUser]);
 
@@ -760,9 +770,10 @@ export default function App() {
             { id: 'posyandu', label: 'Posyandu', icon: Baby },
             { id: 'bank-sampah', label: 'Bank Sampah', icon: Recycle },
             { id: 'etoko', label: 'E-Toko', icon: ShoppingBag },
-            { id: 'voting', label: 'E-Voting', icon: Vote },
+            { id: 'voting', label: 'E-Pemilu', icon: Vote },
             { id: 'inventaris', label: 'Inventaris Barang', icon: Package },
             { id: 'surat', label: 'Surat Pengantar', icon: FileText },
+            { id: 'kop-template', label: 'KOP & Template', icon: FileSpreadsheet },
             { id: 'kas', label: 'Laporan Kas', icon: BookOpen },
             { id: 'users', label: 'Manajemen User', icon: User },
             { id: 'super-admin', label: 'Super Admin', icon: Shield },
@@ -772,7 +783,7 @@ export default function App() {
               return ['dashboard', 'transaksi', 'kas', 'bank-sampah'].includes(item.id);
             }
             if (currentUser?.role === 'RT') {
-              return ['dashboard', 'warga', 'transaksi', 'posyandu', 'bank-sampah', 'inventaris', 'surat', 'kas'].includes(item.id);
+              return ['dashboard', 'warga', 'transaksi', 'posyandu', 'bank-sampah', 'inventaris', 'surat', 'kop-template', 'kas'].includes(item.id);
             }
             if (item.id === 'users' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
             if (item.id === 'pengaturan' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
@@ -877,13 +888,14 @@ export default function App() {
              userRole={currentUser.role} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'} 
              setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} 
           />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
+          {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
           {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} settings={settings} userRole={currentUser.role} showNotification={showNotification} />}
           {activeTab === 'voting' && <EVotingView userRole={currentUser.role} />}
-          {activeTab === 'etoko' && <ETokoView />}
+          {activeTab === 'etoko' && <ETokoView userRole={currentUser.role} />}
         </div>
       </main>
 
@@ -1135,26 +1147,43 @@ function SOSOverlay({ emergency, onResolve, canResolve }: any) {
   );
 }
 
-function ETokoView() {
-  const products = [
+function ETokoView({ userRole }: { userRole: string }) {
+  const [view, setView] = useState<'buyer' | 'seller'>('buyer');
+  const [products, setProducts] = useState([
     { id: 1, name: 'Beras Premium', price: 65000, stock: 20 },
     { id: 2, name: 'Minyak Goreng', price: 18000, stock: 50 },
     { id: 3, name: 'Gula Pasir', price: 16000, stock: 30 },
-  ];
+  ]);
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">E-Toko RW 26</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {products.map(product => (
-          <div key={product.id} className="bg-white p-4 rounded-xl shadow border">
-            <h3 className="font-bold">{product.name}</h3>
-            <p className="text-sm text-slate-500">Harga: Rp {product.price.toLocaleString()}</p>
-            <p className="text-sm text-slate-500">Stok: {product.stock}</p>
-            <button className="mt-2 w-full bg-blue-600 text-white rounded-lg py-2">Beli</button>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">E-Toko RW 26</h2>
+        {userRole === 'ADMIN' && (
+          <div className="bg-slate-100 p-1 rounded-lg">
+            <button onClick={() => setView('buyer')} className={`px-4 py-2 rounded-lg ${view === 'buyer' ? 'bg-white shadow' : ''}`}>Pembeli</button>
+            <button onClick={() => setView('seller')} className={`px-4 py-2 rounded-lg ${view === 'seller' ? 'bg-white shadow' : ''}`}>Penjual</button>
           </div>
-        ))}
+        )}
       </div>
+      
+      {view === 'buyer' ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {products.map(product => (
+            <div key={product.id} className="bg-white p-4 rounded-xl shadow border">
+              <h3 className="font-bold">{product.name}</h3>
+              <p className="text-sm text-slate-500">Harga: Rp {product.price.toLocaleString()}</p>
+              <p className="text-sm text-slate-500">Stok: {product.stock}</p>
+              <button className="mt-2 w-full bg-blue-600 text-white rounded-lg py-2">Beli</button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white p-6 rounded-xl shadow border">
+            <h3 className="font-bold mb-4">Manajemen Produk (Penjual)</h3>
+            <p className="text-slate-500">Fitur penambahan/pengeditan produk akan hadir di sini.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1228,7 +1257,7 @@ function EVotingView({ userRole }: { userRole: string }) {
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-black mb-6 text-slate-800 tracking-tighter">E-Voting RW 26</h2>
+        <h2 className="text-3xl font-black mb-6 text-slate-800 tracking-tighter">E-Pemilu RW 26</h2>
         
         {/* Aturan Main Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 relative">
@@ -1607,7 +1636,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
           <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Vote className="w-5 h-5 text-indigo-600" />
           </div>
-          <span className="text-xs font-bold text-slate-700">E-Voting</span>
+          <span className="text-xs font-bold text-slate-700">E-Pemilu</span>
         </button>
       </div>
 
@@ -1933,7 +1962,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       try {
         // In Firestore, we set documents by their ID (NIK)
         for (const item of newData) {
-          await setDoc(doc(db, 'warga', item.nik), item);
+          await setDoc(doc(db, 'data_warga', item.nik), item);
         }
         setWargaData((prev: any) => [...prev, ...newData]);
         showNotification(`Berhasil mengimpor ${newData.length} data warga.`, 'success');
@@ -1976,12 +2005,12 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     
     setIsLoadingDB(true);
     try {
-      await setDoc(doc(db, 'warga', newWarga.nik), newWarga);
+      await setDoc(doc(db, 'data_warga', newWarga.nik), newWarga);
       setShowAddForm(false);
       resetForm();
       showNotification("Data warga berhasil ditambahkan!", 'success');
     } catch (error: any) {
-      handleFirestoreError(error, 'create', `/warga/${newWarga.nik}`);
+      handleFirestoreError(error, 'create', `/data_warga/${newWarga.nik}`);
       showNotification("Gagal menambahkan data warga.", 'error');
     } finally {
       setIsLoadingDB(false);
@@ -1998,13 +2027,13 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'warga', editingWarga.nik), { ...formData, tenantId: tenantId });
+      await updateDoc(doc(db, 'data_warga', editingWarga.nik), { ...formData, tenantId: tenantId });
       setShowEditForm(false);
       setEditingWarga(null);
       resetForm();
       showNotification("Perubahan data warga berhasil disimpan!", 'success');
     } catch (error: any) {
-      handleFirestoreError(error, 'update', `/warga/${editingWarga.nik}`);
+      handleFirestoreError(error, 'update', `/data_warga/${editingWarga.nik}`);
       showNotification("Gagal memperbarui data warga.", 'error');
     } finally {
       setIsLoadingDB(false);
@@ -2016,7 +2045,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     
     setIsDeletingWarga(true);
     try {
-      await deleteDoc(doc(db, 'warga', wargaToDelete.nik));
+      await deleteDoc(doc(db, 'data_warga', wargaToDelete.nik));
       setWargaData((prev: any) => prev.filter((w: any) => w.nik !== wargaToDelete.nik));
       setWargaToDelete(null);
     } catch (error: any) {
@@ -2201,7 +2230,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:justify-between lg:items-center bg-white print:hidden gap-4">
         <h3 className="text-sm font-bold text-slate-800 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-          Daftar Warga
+          Data Warga
         </h3>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {/* Kolom Pencarian */}
@@ -3367,19 +3396,46 @@ function IuranView(f_params) {
   );
 }
 
-function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentUser, getSetting, tenantId, setIsLoadingDB, handleFirestoreError, showNotification }: { suratData: any[], setSuratData: any, wargaData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], userRole, currentUser, getSetting, kopSettings, tenantId, setIsLoadingDB, handleFirestoreError, showNotification }: { suratData: any[], setSuratData: any, wargaData?: any[], usersData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, kopSettings: any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showSuratForm, setShowSuratForm] = useState(false);
   const [editingSurat, setEditingSurat] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
 
+  const toRoman = (num: number) => {
+    const map: any = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+    let roman = '';
+    for (let i in map) {
+      while (num >= map[i]) {
+        roman += i;
+        num -= map[i];
+      }
+    }
+    return roman;
+  };
+
+  const getAutoNomorSurat = (rt: string, rw: string) => {
+    const year = new Date().getFullYear();
+    const month = toRoman(new Date().getMonth() + 1);
+    const lastCount = suratData.length + 1;
+    const num = `${lastCount}`.padStart(3, '0');
+    return `${num}/RT.${rt}/RW.${rw}/${month}/${year}`;
+  };
+
+  const getPejabat = (rt: string, rw: string) => {
+    // Mencari Ketua RT dan Ketua RW dari usersData
+    const kRT = usersData.find(u => u.role === 'RT' && u.rt === rt)?.nama || "";
+    const kRW = usersData.find(u => u.role === 'RW')?.nama || "";
+    return { ketuaRT: kRT, ketuaRW: kRW };
+  };
+
   const handleSearchWarga = (term: string) => {
     setSearchTerm(term);
-    if (term.length > 2) {
+    if (term.length > 1) {
       const results = wargaData.filter(w => 
-        w.nama.toLowerCase().includes(term.toLowerCase()) || 
-        w.nik.includes(term)
+        w.nama?.toLowerCase().includes(term.toLowerCase()) || 
+        w.nik?.includes(term)
       ).slice(0, 5);
       setSearchResults(results);
     } else {
@@ -3397,6 +3453,9 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentU
       if (el) el.value = val || "";
     };
 
+    const { ketuaRT, ketuaRW } = getPejabat(warga.rt || "", warga.rw || "");
+    const nomorOtomatis = getAutoNomorSurat(warga.rt || "000", warga.rw || "000");
+
     setVal('pemohon', warga.nama);
     setVal('nik', warga.nik);
     setVal('ttl', `${warga.tempatLahir}, ${warga.tglLahir}`);
@@ -3412,6 +3471,9 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentU
     setVal('kota_kab', warga.kota_kab);
     setVal('kk', warga.kk);
     setVal('kewarganegaraan', warga.kewarganegaraan || 'WNI');
+    setVal('nomor_surat', nomorOtomatis);
+    setVal('ketua', ketuaRT);
+    setVal('ketua_rw_nama', ketuaRW); // Temporary field to pass RW name
     
     setSearchTerm("");
     setSearchResults([]);
@@ -3480,134 +3542,160 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentU
       <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Cetak Surat - ${surat.id}</title>
+          <title>Cetak Surat - ${surat.nomor_surat || surat.id}</title>
           <style>
-            body { font-family: 'Times New Roman', Times, serif; padding: 20px; line-height: 1.6; color: #000; }
-            .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 30px; position: relative; }
-            .header h1 { font-size: 20px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
-            .header h2 { font-size: 16px; margin: 5px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-            .header p { font-size: 12px; margin: 2px 0; font-style: italic; }
-            .title-box { text-align: center; margin-bottom: 30px; }
-            .title { font-size: 18px; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin-bottom: 5px; }
-            .nomor { font-size: 14px; margin-bottom: 30px; }
-            .content { margin-top: 20px; text-align: justify; font-size: 14px; }
-            .details { margin: 20px 0; border-collapse: collapse; width: 100%; font-size: 14px; }
-            .details td { padding: 4px 0; vertical-align: top; }
+            @page {
+              size: A4;
+              margin: 20mm;
+            }
+            body { 
+              font-family: 'Times New Roman', Times, serif; 
+              padding: 0; 
+              margin: 0; 
+              line-height: 1.5; 
+              color: #000;
+              background: #fff;
+            }
+            .page {
+              width: 210mm;
+              height: 297mm;
+              margin: 0 auto;
+              background: white;
+            }
+            .header { 
+              display: flex; 
+              align-items: center; 
+              border-bottom: 5px double #000; 
+              padding-bottom: 10px; 
+              margin-bottom: 20px;
+            }
+            .header-info {
+              text-align: center;
+              flex-grow: 1;
+              padding-right: 80px; /* Adjust for logo balance */
+            }
+            .header h1 { font-size: 16pt; margin: 0; text-transform: uppercase; }
+            .header h2 { font-size: 13pt; margin: 2px 0; text-transform: uppercase; }
+            .header h3 { font-size: 11pt; margin: 2px 0; text-transform: uppercase; }
+            .header p { font-size: 10pt; margin: 2px 0; }
+            
+            .title-box { text-align: center; margin: 20px 0; }
+            .title { font-size: 14pt; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin: 0; }
+            .nomor { font-size: 11pt; margin-top: 5px; }
+
+            .content { font-size: 11pt; padding: 0 10px; }
+            .content p { text-align: justify; margin: 10px 0; text-indent: 40px; }
+            .content .intro { text-indent: 0; }
+
+            .details { width: 100%; margin: 15px 0; border-collapse: collapse; }
+            .details td { padding: 3px 0; vertical-align: top; }
             .details td:first-child { width: 180px; }
             .details td:nth-child(2) { width: 20px; text-align: center; }
-            .footer { margin-top: 50px; display: flex; justify-content: flex-end; }
-            .signature { text-align: center; min-width: 250px; }
-            .signature-date { margin-bottom: 10px; }
-            .signature-space { height: 80px; }
+            .details strong { font-weight: bold; }
+
+            .footer { margin-top: 40px; }
+            .signatures { display: flex; justify-content: space-between; padding: 0 20px; }
+            .signature-box { text-align: center; min-width: 200px; }
+            .signature-box p { margin: 2px 0; font-size: 11pt; }
+            .spacer { height: 70px; }
+            
+            .archive-area { 
+              margin-top: 50px; 
+              border-top: 1px solid #000; 
+              padding-top: 10px; 
+              font-size: 9pt; 
+            }
+            .archive-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+            .checkbox-group { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
+            .checkbox { width: 12px; height: 12px; border: 1px solid #000; }
+
             @media print {
-              body { padding: 0; margin: 0; }
-              @page { margin: 15mm; }
+              body, .page { width: auto; height: auto; margin: 0; padding: 0; }
+              .page { box-shadow: none; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h2>Pemerintah Kota Metropolitan</h2>
-            <h2>Kecamatan Sukajaya - Kelurahan Sukamaju</h2>
-            <h1>RT ${surat.rt_user || currentUser.rt} / RW 26 - ${getSetting("NAMA_RT") || 'SMART RW'}</h1>
-            <p>Alamat: Sekretariat RW 26, Kel. Sukamaju, Kec. Sukajaya</p>
-          </div>
-          
-          <div class="title-box">
-            <div class="title">${surat.jenisSurat || 'Surat Pengantar'}</div>
-            <div class="nomor">Nomor: ${surat.nomor_surat || surat.id.substring(0, 5)} / RT.${surat.rt_user || currentUser.rt} / ${new Date().getFullYear()}</div>
-          </div>
-
-          <div class="content">
-            <p>Yang bertanda tangan di bawah ini selaku Ketua RT ${surat.rt_user || currentUser.rt} / RW 26, Kelurahan Sukamaju, menerangkan dengan sebenarnya bahwa:</p>
-            
-            <table class="details">
-              <tr>
-                <td>Nama Lengkap</td>
-                <td>:</td>
-                <td><strong>${surat.pemohon}</strong></td>
-              </tr>
-              <tr>
-                <td>NIK</td>
-                <td>:</td>
-                <td>${surat.nik || '-'}</td>
-              </tr>
-              <tr>
-                <td>No. KK</td>
-                <td>:</td>
-                <td>${surat.kk || '-'}</td>
-              </tr>
-              <tr>
-                <td>Tempat, Tgl Lahir</td>
-                <td>:</td>
-                <td>${surat.ttl || '-'}</td>
-              </tr>
-              <tr>
-                <td>Jenis Kelamin</td>
-                <td>:</td>
-                <td>${surat.jk || '-'}</td>
-              </tr>
-              <tr>
-                <td>Agama</td>
-                <td>:</td>
-                <td>${surat.agama || '-'}</td>
-              </tr>
-              <tr>
-                <td>Pekerjaan</td>
-                <td>:</td>
-                <td>${surat.pekerjaan || '-'}</td>
-              </tr>
-              <tr>
-                <td>Status Perkawinan</td>
-                <td>:</td>
-                <td>${surat.statusKawin || '-'}</td>
-              </tr>
-              <tr>
-                <td>Alamat KTP</td>
-                <td>:</td>
-                <td>${surat.alamat || '-'}</td>
-              </tr>
-              <tr>
-                <td>Domisili (RT/RW)</td>
-                <td>:</td>
-                <td>RT ${surat.rt || '-'} / RW ${surat.rw || '05'}</td>
-              </tr>
-              <tr>
-                <td>Kelurahan</td>
-                <td>:</td>
-                <td>${surat.kelurahan || 'Sukamaju'}</td>
-              </tr>
-              <tr>
-                <td>Kecamatan</td>
-                <td>:</td>
-                <td>${surat.kecamatan || 'Sukajaya'}</td>
-              </tr>
-              <tr>
-                <td>Keperluan</td>
-                <td>:</td>
-                <td>${surat.keperluan || '-'}</td>
-              </tr>
-            </table>
-
-            <p style="text-indent: 40px;">Berdasarkan pemantauan kami, nama tersebut di atas benar adalah warga yang berdomisili di wilayah kami dan memiliki berkelakuan baik. Demikian surat keterangan ini kami buat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.</p>
-          </div>
-
-          <div class="footer">
-            <div class="signature">
-              <div class="signature-date">Bekasi, ${new Date(surat.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-              <p><strong>Ketua RT ${surat.rt_user || currentUser.rt} / RW 26</strong></p>
-              <div class="signature-space"></div>
-              <p><strong>( ${surat.ketua || getSetting("NAMA_KETUA") || '.....................................'} )</strong></p>
+          <div class="page">
+            <div class="header">
+              ${kopSettings.logo_url ? `<img src="${kopSettings.logo_url}" crossorigin="anonymous" style="width: 80px; height: 80px; margin-right: 15px; object-fit: contain; display: block;" />` : '<div style="width: 80px;"></div>'}
+              <div class="header-info">
+                <h1>${kopSettings.nama_rt || 'RUKUN TETANGGA / RUKUN WARGA'}</h1>
+                <h2>KELURAHAN ${kopSettings.kelurahan?.toUpperCase() || '...........'} - KECAMATAN ${kopSettings.kecamatan?.toUpperCase() || '...........'}</h2>
+                <h3>${kopSettings.kabupaten?.toUpperCase() || 'KABUPATEN BEKASI'}</h3>
+                <p>Sekretariat: ${kopSettings.alamat || '................................................'} | Telp: ${kopSettings.telepon || '...'} | Email: ${kopSettings.email || '...'}</p>
+              </div>
             </div>
+            
+            <div class="title-box">
+              <p class="title"><u>SURAT PENGANTAR</u></p>
+              <p class="nomor">Nomor: ${surat.nomor_surat || '.../RT.../RW.../.../...'}</p>
+            </div>
+
+            <div class="content">
+              <p class="intro">Yang bertanda tangan di bawah ini menerangkan bahwa:</p>
+              
+              <table class="details">
+                <tr><td>Nama Lengkap</td><td>:</td><td><strong>${surat.pemohon}</strong></td></tr>
+                <tr><td>NIK</td><td>:</td><td>${surat.nik || '-'}</td></tr>
+                <tr><td>No. KK</td><td>:</td><td>${surat.kk || '-'}</td></tr>
+                <tr><td>Tempat, Tgl Lahir</td><td>:</td><td>${surat.ttl || '-'}</td></tr>
+                <tr><td>Jenis Kelamin</td><td>:</td><td>${surat.jk || '-'}</td></tr>
+                <tr><td>Agama</td><td>:</td><td>${surat.agama || '-'}</td></tr>
+                <tr><td>Pekerjaan</td><td>:</td><td>${surat.pekerjaan || '-'}</td></tr>
+                <tr><td>Status Perkawinan</td><td>:</td><td>${surat.statusKawin || '-'}</td></tr>
+                <tr><td>Alamat</td><td>:</td><td>${surat.alamat || '-'}</td></tr>
+                <tr><td>Keperluan</td><td>:</td><td>${surat.keperluan || '-'}</td></tr>
+              </table>
+
+              <p>Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.</p>
+            </div>
+
+            <div class="footer">
+              <div class="signatures">
+                <div class="signature-box">
+                  <p>Mengetahui,</p>
+                  <p>Ketua RW ${surat.rw || kopSettings.rw || '....'}</p>
+                  <div class="spacer"></div>
+                  <p><strong>( ${surat.ketua_rw_nama || kopSettings.nama_ketua_rw || '...................................'} )</strong></p>
+                </div>
+                <div class="signature-box">
+                  <p>${kopSettings.kabupaten || 'Bekasi'}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  <p>Ketua RT ${surat.rt || kopSettings.rt || '....'}</p>
+                  <div class="spacer"></div>
+                  <p><strong>( ${surat.ketua || kopSettings.nama_ketua_rt || '...................................'} )</strong></p>
+                </div>
+              </div>
+            </div>
+
           </div>
-          
           <script>
-            setTimeout(function() {
-              window.print(); 
-            }, 250);
-            window.onafterprint = function() {
-              setTimeout(function() { window.close(); }, 500);
+            function checkImages() {
+              const images = document.getElementsByTagName('img');
+              let loadedCount = 0;
+              if (images.length === 0) {
+                window.print();
+                return;
+              }
+              for (let i = 0; i < images.length; i++) {
+                if (images[i].complete) {
+                  loadedCount++;
+                } else {
+                  images[i].addEventListener('load', () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) window.print();
+                  });
+                  images[i].addEventListener('error', () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) window.print();
+                  });
+                }
+              }
+              if (loadedCount === images.length) {
+                window.print();
+              }
             }
+            window.onload = checkImages;
           </script>
         </body>
       </html>
@@ -3630,16 +3718,22 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentU
     const isEditing = !!editingSurat;
     const suratId = isEditing ? editingSurat.id : `SRT-${Date.now()}`;
     
-    const newNomorSurat = `${suratData.length + 1}`.padStart(3, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    const nAuto = (suratData.length + 1).toString().padStart(3, '0');
+    const newNomorSurat = `${nAuto}/RT.${formData.get('rt') || '00'}/RW.${formData.get('rw') || '00'}/${mm}/${yyyy}`;
+
+    const { ketuaRT, ketuaRW } = getPejabat(formData.get('rt') as string || "", formData.get('rw') as string || "");
 
     const suratDataPayload = {
       tenantId: tenantId,
       id: suratId,
       tanggal: isEditing ? editingSurat.tanggal : formattedDate,
-      rt_user: currentUser.rt || "01",
-      nama_rt: getSetting("NAMA_RT"),
-      ketua: getSetting("NAMA_KETUA"),
-      nomor_surat: newNomorSurat,
+      rt_user: formData.get('rt') as string || "01",
+      nama_rt: kopSettings.nama_rt || "Rukun Tetangga",
+      ketua: formData.get('ketua') as string || ketuaRT,
+      ketua_rw_nama: formData.get('ketua_rw_nama') as string || ketuaRW,
+      nomor_surat: formData.get('nomor_surat') as string || newNomorSurat,
       pemohon: formData.get('pemohon') as string,
       nik: formData.get('nik') as string,
       kk: formData.get('kk') as string,
@@ -3812,7 +3906,35 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentU
                   Data Pemohon
                 </h4>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Nama</label>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Cari Nama Pemohon</label>
+                  <input 
+                    type="text" 
+                    value={searchTerm}
+                    onChange={(e) => handleSearchWarga(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" 
+                    placeholder="Ketik nama atau NIK warga..." 
+                  />
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                      {searchResults.map((w: any) => (
+                        <button
+                          key={w.nik}
+                          type="button"
+                          onClick={() => {
+                            autoFillForm(w);
+                            setSearchTerm("");
+                            setSearchResults([]);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm border-b last:border-b-0"
+                        >
+                          {w.nama} - {w.nik}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Nama Lengkap</label>
                   <input name="pemohon" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Nama Lengkap" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -3917,31 +4039,33 @@ function SuratView({ suratData, setSuratData, wargaData = [], userRole, currentU
                       </select>
                     </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Surat</label>
-                  <select name="jenisSurat" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
-                    <option value="Surat Pengantar KTP">Surat Pengantar KTP</option>
-                    <option value="Surat Pengantar KK">Surat Pengantar KK</option>
-                    <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
-                    <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
-                    <option value="Surat Keterangan Usaha">Surat Keterangan Usaha</option>
-                    <option value="Surat Keterangan Tidak Mampu (SKTM)">Surat Keterangan Tidak Mampu (SKTM)</option>
-                    <option value="Surat Pengantar Pindah / Datang">Surat Pengantar Pindah / Datang</option>
-                    <option value="Surat Pengantar Nikah">Surat Pengantar Nikah</option>
-                    <option value="Surat Pengantar Kelahiran">Surat Pengantar Kelahiran</option>
-                    <option value="Surat Pengantar Kematian">Surat Pengantar Kematian</option>
-                    <option value="Surat Pengantar Beasiswa">Surat Pengantar Beasiswa</option>
-                    <option value="Surat Pengantar Bansos">Surat Pengantar Bansos</option>
-                    <option value="Surat Keterangan Belum Menikah">Surat Keterangan Belum Menikah</option>
-                    <option value="Surat Keterangan Ahli Waris">Surat Keterangan Ahli Waris</option>
-                    <option value="Surat Izin Keramaian">Surat Izin Keramaian</option>
-                    <option value="Surat Keterangan Kehilangan (pengantar ke polisi)">Surat Keterangan Kehilangan (pengantar ke polisi)</option>
-                    <option value="Surat Keterangan Penghasilan">Surat Keterangan Penghasilan</option>
-                    <option value="Surat Keterangan Janda/Duda">Surat Keterangan Janda/Duda</option>
-                    <option value="Surat Pengantar Kredit / Bank">Surat Pengantar Kredit / Bank</option>
-                    <option value="Surat Keterangan Tanah / Kepemilikan (non-sertifikat)">Surat Keterangan Tanah / Kepemilikan (non-sertifikat)</option>
-                    <option value="Surat Lainnya">Surat Lainnya</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor Surat</label>
+                    <input name="nomor_surat" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="Otomatis..." />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Surat</label>
+                    <select name="jenisSurat" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
+                      <option value="SURAT PENGANTAR">SURAT PENGANTAR</option>
+                      <option value="SURAT KETERANGAN DOMISILI">SURAT KETERANGAN DOMISILI</option>
+                      <option value="SURAT PENGANTAR SKCK">SURAT PENGANTAR SKCK</option>
+                      <option value="SURAT KETERANGAN USAHA">SURAT KETERANGAN USAHA</option>
+                      <option value="SURAT KETERANGAN TIDAK MAMPU (SKTM)">SURAT KETERANGAN TIDAK MAMPU (SKTM)</option>
+                      <option value="LAINNYA">LAINNYA...</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Ketua RT (Nama TTD)</label>
+                    <input name="ketua" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" placeholder="Nama Ketua RT" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Ketua RW (Nama TTD)</label>
+                    <input name="ketua_rw_nama" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" placeholder="Nama Ketua RW" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 mb-1">Keperluan</label>
@@ -4521,7 +4645,7 @@ function PengaturanView({ tenantId, settings, userRole, showNotification }: { te
             fotoUrl: null
           };
           generatedWargas.push(newWarga);
-          batch.set(doc(db, 'warga', wId), newWarga);
+          batch.set(doc(db, 'data_warga', wId), newWarga);
           wIdx++;
         }
       }
@@ -5662,6 +5786,76 @@ function PosyanduView({
     showNotification("Laporan Excel berhasil diunduh!");
   };
 
+  const exportBalitaKardPDF = (balita: any) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('KARTU KESEHATAN ANAK (BALITA)', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.text(`Nama Anak: ${balita.nama}`, 14, 32);
+    doc.text(`NIK: ${balita.nik || '-'}`, 14, 38);
+    doc.text(`Jenis Kelamin: ${balita.jk}`, 14, 44);
+    doc.text(`Tanggal Lahir: ${formatTgl(balita.tglLahir)}`, 14, 50);
+    doc.text(`Nama Ibu: ${balita.namaIbu || balita.namaOrangTua || '-'}`, 14, 56);
+    doc.text(`Status Gizi: ${balita.statusStunting || 'Normal'}`, 14, 62);
+
+    const history = [
+      ...pemeriksaanBalitaData.filter((p: any) => p.balitaId === balita.id).map((p: any) => [
+        formatTgl(p.tanggal),
+        'Pemeriksaan',
+        `BB: ${p.beratBadan}kg, TB: ${p.tinggiBadan}cm`,
+        p.pemeriksa || '-'
+      ]),
+      ...imunisasiData.filter((i: any) => i.balitaId === balita.id).map((i: any) => [
+        formatTgl(i.tanggal),
+        'Imunisasi',
+        i.jenisImunisasi,
+        'Posyandu'
+      ])
+    ].sort((a: any, b: any) => b[0].localeCompare(a[0]));
+
+    autoTable(doc, {
+      startY: 70,
+      head: [['Tanggal', 'Tipe', 'Keterangan', 'Petugas']],
+      body: history,
+      theme: 'grid',
+      headStyles: { fillColor: [236, 72, 153], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Kartu_Kesehatan_${balita.nama}.pdf`);
+    showNotification("Kartu Kesehatan berhasil diunduh!");
+  };
+
+  const exportIbuHamilKardPDF = (mil: any) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('KARTU KESEHATAN IBU HAMIL', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.text(`Nama Ibu: ${mil.nama}`, 14, 32);
+    doc.text(`NIK: ${mil.nik}`, 14, 38);
+    doc.text(`Usia Kehamilan: ${mil.usiaKehamilan} Minggu`, 14, 44);
+    doc.text(`Estimasi HPL: ${formatTgl(mil.tglHPL)}`, 14, 50);
+    doc.text(`Catatan: ${mil.riwayatKesehatan || '-'}`, 14, 56);
+
+    autoTable(doc, {
+      startY: 65,
+      head: [['Keterangan', 'Detail']],
+      body: [
+        ['Nama Ibu', mil.nama],
+        ['NIK', mil.nik],
+        ['Usia Hamil', `${mil.usiaKehamilan} Minggu`],
+        ['Estimasi HPL', formatTgl(mil.tglHPL)],
+        ['Lokasi', `RT ${mil.rt} / RW ${mil.rw}`]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [219, 39, 119], textColor: [255, 255, 255] }
+    });
+
+    doc.save(`Kesehatan_IbuHamil_${mil.nama}.pdf`);
+    showNotification("Kartu Kesehatan berhasil diunduh!");
+  };
+
   const formatTgl = (tgl: string) => {
     if (!tgl) return "-";
     try {
@@ -5958,7 +6152,7 @@ function PosyanduView({
         <div className="flex gap-1 bg-slate-50 p-1 rounded-xl">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'balita', label: 'Data Balita', icon: Users },
+            { id: 'balita', label: 'Balita', icon: Users },
             { id: 'ibuhamil', label: 'Ibu Hamil', icon: HeartPulse },
             { id: 'kegiatan', label: 'Kegiatan', icon: Calendar },
           ].map(tab => (
@@ -5995,22 +6189,6 @@ function PosyanduView({
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Risiko Stunting</p>
               <div className="flex items-center justify-between">
                 <p className="text-2xl font-black text-orange-700">{stats.risikoStunting}</p>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => exportPosyanduPDF()}
-                    className="p-2 bg-slate-50 text-red-400 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                    title="Export PDF Laporan"
-                  >
-                    <FileText className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={() => exportPosyanduExcel()}
-                    className="p-2 bg-slate-50 text-emerald-400 hover:text-emerald-600 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
-                    title="Export Excel Laporan"
-                  >
-                    <FileSpreadsheet className="w-5 h-5" />
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -6114,7 +6292,7 @@ function PosyanduView({
               className="px-4 py-2 bg-pink-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-pink-100 hover:bg-pink-700 flex items-center gap-2 transition-all active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
-              Tambah Balita
+              Daftar Balita
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -6157,16 +6335,10 @@ function PosyanduView({
                       <td className="px-6 py-4 text-right">
                          <div className="flex justify-end gap-2">
                            <button 
-                             onClick={() => { /* Navigate to health book */ showNotification("Buku Kesehatan Balita dibuka (Demo)") }}
-                             className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors border border-transparent hover:border-pink-100" title="Buku Kesehatan"
+                             onClick={() => exportBalitaKardPDF(balita)}
+                             className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors border border-transparent hover:border-pink-100" title="Download Kartu Kesehatan (PDF)"
                            >
-                              <BookOpen className="w-4 h-4" />
-                           </button>
-                           <button 
-                             onClick={() => { setSelectedBalita(balita); setActiveSubTab('timeline'); }}
-                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" title="Timeline"
-                           >
-                              <History className="w-4 h-4" />
+                              <FileText className="w-4 h-4" />
                            </button>
                            <button 
                              onClick={() => { setEditingItem(balita); setShowBalitaForm(true); }}
@@ -6206,18 +6378,11 @@ function PosyanduView({
               </div>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => setShowPemeriksaanForm(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-2"
+                  onClick={() => exportBalitaKardPDF(selectedBalita)}
+                  className="p-2 text-pink-600 hover:text-pink-700 bg-pink-50 rounded-xl transition-all"
+                  title="Download Kartu Kesehatan (PDF)"
                 >
-                  <Scale className="w-3.5 h-3.5" />
-                  Catat Timbang
-                </button>
-                <button 
-                  onClick={() => setShowImunisasiForm(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition-all flex items-center gap-2"
-                >
-                  <HeartPulse className="w-3.5 h-3.5" />
-                  Imunisasi
+                  <FileText className="w-5 h-5" />
                 </button>
                 <button 
                   onClick={() => setActiveSubTab('balita')}
@@ -6228,95 +6393,53 @@ function PosyanduView({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
-               {/* Timeline Kesehatan */}
-               <div className="md:col-span-2 space-y-4">
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4">
-                    <History className="w-4 h-4 text-pink-600" />
-                    Timeline Riwayat Kesehatan
-                  </h3>
-                  
-                  <div className="relative pl-6 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                    {[
-                      ...pemeriksaanBalitaData.filter(p => p.balitaId === selectedBalita.id).map(p => ({ ...p, type: 'pemeriksaan' })),
-                      ...imunisasiData.filter(i => i.balitaId === selectedBalita.id).map(i => ({ ...i, type: 'imunisasi' }))
-                    ].sort((a: any, b: any) => b.tanggal.localeCompare(a.tanggal)).map((item: any, idx) => (
-                      <div key={idx} className="relative">
-                        <div className={`absolute -left-7 top-1 w-3 h-3 rounded-full border-2 border-white ring-4 ring-transparent ${item.type === 'pemeriksaan' ? 'bg-blue-500 ring-blue-50' : 'bg-green-500 ring-green-50'}`}></div>
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 hover:shadow-md transition-all">
-                          <div className="flex justify-between items-center mb-2">
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatTgl(item.tanggal)}</p>
-                             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${item.type === 'pemeriksaan' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                               {item.type}
-                             </span>
-                          </div>
-                          {item.type === 'pemeriksaan' ? (
-                            <div className="space-y-2">
-                               <div className="flex items-center gap-4">
-                                 <div>
-                                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Berat Badan</p>
-                                   <p className="text-lg font-black text-slate-800">{item.beratBadan} <span className="text-[10px] font-normal text-slate-500">kg</span></p>
-                                 </div>
-                                 <div className="w-px h-8 bg-slate-200"></div>
-                                 <div>
-                                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Tinggi Badan</p>
-                                   <p className="text-lg font-black text-slate-800">{item.tinggiBadan} <span className="text-[10px] font-normal text-slate-500">cm</span></p>
-                                 </div>
-                               </div>
-                               <div className="p-2 bg-white rounded-lg border border-slate-100 flex items-center justify-between">
-                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Status Gizi:</span>
-                                  <span className="text-[10px] font-black text-blue-600">{item.statusGizi}</span>
-                               </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-3">
-                               <HeartPulse className="w-5 h-5 text-green-600" />
-                               <div>
-                                 <p className="text-sm font-black text-slate-800">{item.jenisImunisasi}</p>
-                                 <p className="text-[10px] text-green-600 uppercase font-black tracking-widest">{item.status}</p>
-                               </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {pemeriksaanBalitaData.filter(p => p.balitaId === selectedBalita.id).length === 0 && 
-                     imunisasiData.filter(i => i.balitaId === selectedBalita.id).length === 0 && (
-                      <div className="text-center py-12 text-slate-400 italic">Belum ada riwayat kesehatan tercatat.</div>
-                    )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+               <div className="bg-gradient-to-br from-pink-500 to-rose-600 p-8 rounded-3xl text-white shadow-xl shadow-pink-100 space-y-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                  <div className="relative z-10 flex flex-col items-center text-center">
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border border-white/30">
+                      <FileText className="w-10 h-10 text-white" />
+                    </div>
+                    <h3 className="text-xl font-black mb-2 uppercase tracking-widest">Digital Health Card</h3>
+                    <p className="text-sm text-pink-100 font-medium max-w-xs mb-8">Kartu kesehatan digital ini berisi informasi lengkap pertumbuhan dan riwayat imunisasi anak.</p>
+                    <button 
+                      onClick={() => exportBalitaKardPDF(selectedBalita)} 
+                      className="w-full py-4 bg-white text-pink-600 rounded-2xl font-black hover:bg-pink-50 transition-all shadow-lg uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95"
+                    >
+                      <Download className="w-5 h-5" /> Generate PDF
+                    </button>
                   </div>
                </div>
 
-               {/* Growth Chart */}
-               <div className="space-y-6">
-                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4">Grafik Pertumbuhan</h3>
-                    <div className="h-[200px]">
-                       <ResponsiveContainer width="100%" height="100%">
-                         <AreaChart data={pemeriksaanBalitaData.filter(p => p.balitaId === selectedBalita.id).sort((a,b) => a.tanggal.localeCompare(b.tanggal))}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                            <XAxis dataKey="tanggal" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
-                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
-                            <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '10px' }} />
-                            <Area type="monotone" dataKey="beratBadan" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} name="Berat (kg)" />
-                         </AreaChart>
-                       </ResponsiveContainer>
+               <div className="space-y-4">
+                  <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                      <Scale className="w-3 h-3" /> Quick Actions
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button 
+                        onClick={() => setShowPemeriksaanForm(true)}
+                        className="flex-1 py-4 bg-blue-50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all flex flex-col items-center justify-center gap-2 border border-blue-100"
+                      >
+                        <Scale className="w-6 h-6" />
+                        Update BB/TB
+                      </button>
+                      <button 
+                        onClick={() => setShowImunisasiForm(true)}
+                        className="flex-1 py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all flex flex-col items-center justify-center gap-2 border border-emerald-100"
+                      >
+                        <HeartPulse className="w-6 h-6" />
+                        Register Imunisasi
+                      </button>
                     </div>
                   </div>
-
-                  <div className="bg-slate-900 p-6 rounded-2xl shadow-xl shadow-slate-200 text-white">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ringkasan Imunisasi</p>
-                    <div className="space-y-3">
-                      {['BCG', 'Hepatitis B', 'Polio', 'DPT-HB-HiB', 'PCV', 'Rotavirus', 'MR/Campak'].map(imu => {
-                        const isDone = imunisasiData.some(i => i.balitaId === selectedBalita.id && i.jenisImunisasi.includes(imu));
-                        return (
-                          <div key={imu} className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-300">{imu}</span>
-                            {isDone ? <CheckCircle className="w-4 h-4 text-green-500" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-700"></div>}
-                          </div>
-                        );
-                      })}
+                  <div className="p-6 bg-slate-900 rounded-3xl text-white flex items-center justify-between shadow-xl shadow-slate-200">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Gizi Saat Ini</p>
+                      <p className="text-2xl font-black">{selectedBalita.statusStunting || 'Normal'}</p>
+                    </div>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedBalita.statusStunting === 'Risiko Stunting' ? 'bg-orange-500' : selectedBalita.statusStunting === 'Stunting' ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                      <CheckCircle className="w-6 h-6" />
                     </div>
                   </div>
                </div>
@@ -6341,85 +6464,63 @@ function PosyanduView({
                   <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-black">HPL (Perkiraan): {formatTgl(selectedIbuHamil.tglHPL)}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setActiveSubTab('ibuhamil')}
-                className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex gap-2">
+                 <button 
+                  onClick={() => exportIbuHamilKardPDF(selectedIbuHamil)}
+                  className="p-2 text-blue-600 hover:text-blue-700 bg-blue-50 rounded-xl transition-all"
+                  title="Cetak Kartu Kesehatan Hamil (PDF)"
+                >
+                  <FileText className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setActiveSubTab('ibuhamil')}
+                  className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
-               <div className="md:col-span-2 space-y-4">
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4">
-                    <BookOpen className="w-4 h-4 text-pink-600" />
-                    Buku Kesehatan & Catatan Medis
-                  </h3>
-                  
-                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Riwayat Kesehatan</p>
-                    <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                      {selectedIbuHamil.riwayatKesehatan || "Belum ada riwayat kesehatan khusus yang tercatat."}
-                    </p>
-                  </div>
-
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mt-8 mb-4">
-                    <History className="w-4 h-4 text-blue-600" />
-                    Timeline Pemeriksaan Rutin
-                  </h3>
-                  
-                  <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                    <div className="relative">
-                      <div className="absolute -left-7 top-1 w-3 h-3 rounded-full border-2 border-white ring-4 ring-pink-50 bg-pink-500"></div>
-                      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatTgl(selectedIbuHamil.tglHPL ? new Date(new Date(selectedIbuHamil.tglHPL).getTime() - 40*7*24*60*60*1000).toISOString() : new Date().toISOString())}</p>
-                        <p className="text-sm font-black text-slate-800 mt-1">Registrasi Awal & Pembukaan Buku KIA</p>
-                        <p className="text-xs text-slate-500 mt-1">Data ibu hamil telah diverifikasi dan masuk dalam sistem monitoring Posyandu.</p>
-                      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+               <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-xl shadow-blue-100 space-y-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                  <div className="relative z-10 flex flex-col items-center text-center">
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border border-white/30">
+                      <HeartPulse className="w-10 h-10 text-white" />
                     </div>
-                    {selectedIbuHamil.usiaKehamilan > 12 && (
-                       <div className="relative">
-                         <div className="absolute -left-7 top-1 w-3 h-3 rounded-full border-2 border-white ring-4 ring-blue-50 bg-blue-500"></div>
-                         <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checkup Rutin</p>
-                           <p className="text-sm font-black text-slate-800 mt-1">Pemeriksaan Trimester II</p>
-                           <p className="text-xs text-slate-500 mt-1">Kondisi janin dan ibu terpantau stabil.</p>
-                         </div>
-                       </div>
-                    )}
+                    <h3 className="text-xl font-black mb-2 uppercase tracking-widest">Pregnancy Health Card</h3>
+                    <p className="text-sm text-blue-100 font-medium max-w-xs mb-8">Dokumen ringkasan kesehatan ibu hamil dan perkiraan kelahiran (HPL) siap untuk dicetak.</p>
+                    <button 
+                      onClick={() => exportIbuHamilKardPDF(selectedIbuHamil)} 
+                      className="w-full py-4 bg-white text-blue-600 rounded-2xl font-black hover:bg-blue-50 transition-all shadow-lg uppercase text-xs tracking-widest flex items-center justify-center gap-3 active:scale-95"
+                    >
+                      <Download className="w-5 h-5" /> Download Digital Card
+                    </button>
                   </div>
                </div>
 
                <div className="space-y-4">
-                  <div className="bg-pink-600 p-6 rounded-2xl text-white shadow-xl shadow-pink-100">
-                    <HeartPulse className="w-8 h-8 mb-4 opacity-50" />
-                    <h4 className="text-lg font-black leading-tight mb-1">Status Kehamilan</h4>
-                    <p className="text-xs font-bold text-pink-200 uppercase tracking-widest opacity-80 mb-4">Trimester {selectedIbuHamil.usiaKehamilan <= 12 ? 'I' : selectedIbuHamil.usiaKehamilan <= 24 ? 'II' : 'III'}</p>
-                    
-                    <div className="w-full bg-pink-400/30 h-2 rounded-full mb-2">
-                       <div className="bg-white h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min((selectedIbuHamil.usiaKehamilan / 42) * 100, 100)}%` }}></div>
+                  <div className="bg-pink-600 p-8 rounded-3xl text-white shadow-xl shadow-pink-100 relative overflow-hidden">
+                    <div className="absolute -right-4 -bottom-4 opacity-20">
+                      <HeartPulse className="w-24 h-24" />
                     </div>
-                    <div className="flex justify-between text-[10px] font-black uppercase">
-                       <span>{selectedIbuHamil.usiaKehamilan} Minggu</span>
-                       <span>42 Minggu</span>
+                    <h4 className="text-lg font-black leading-tight mb-1">Status Kehamilan</h4>
+                    <p className="text-xs font-bold text-pink-200 uppercase tracking-widest opacity-80 mb-6">Trimester {selectedIbuHamil.usiaKehamilan <= 12 ? 'I' : selectedIbuHamil.usiaKehamilan <= 24 ? 'II' : 'III'}</p>
+                    
+                    <div className="w-full bg-pink-400/30 h-3 rounded-full mb-3">
+                       <div className="bg-white h-full rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-1000" style={{ width: `${Math.min((selectedIbuHamil.usiaKehamilan / 42) * 100, 100)}%` }}></div>
+                    </div>
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
+                       <span className="bg-white/20 px-2 py-0.5 rounded">{selectedIbuHamil.usiaKehamilan} Minggu</span>
+                       <span className="opacity-60">Target: 42 Minggu</span>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 p-6 rounded-2xl shadow-xl shadow-slate-200 text-white">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Panduan Kesehatan KIA</p>
-                    <ul className="space-y-3">
-                      {[
-                        "Konsumsi tablet tambah darah (TTD)",
-                        "Cuci tangan pakai sabun (CTPS)",
-                        "Istirahat cukup 8 jam per malam",
-                        "Lakukan senam hamil ringan rutin"
-                      ].map((tip, i) => (
-                        <li key={i} className="flex gap-2 items-start text-xs font-medium text-slate-300">
-                          <CheckCircle className="w-3.5 h-3.5 text-pink-500 shrink-0 mt-0.5" />
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200 text-white">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Catatan Riwayat</p>
+                    <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-xs text-slate-300 font-medium leading-relaxed italic">
+                      "{selectedIbuHamil.riwayatKesehatan || 'Belum ada catatan medis khusus.'}"
+                    </div>
                   </div>
                </div>
             </div>
@@ -6477,7 +6578,7 @@ function PosyanduView({
               className="px-4 py-2 bg-pink-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-pink-100 hover:bg-pink-700 transition-all flex items-center gap-2"
             >
               <PlusCircle className="w-4 h-4" />
-              Register Ibu Hamil
+              Daftar Ibu Hamil
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -6510,18 +6611,11 @@ function PosyanduView({
                      <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1.5 group-hover:opacity-100 transition-all">
                           <button 
-                            onClick={() => { setSelectedIbuHamil(mil); setActiveSubTab('ibuhamil_detail'); }} 
+                            onClick={() => exportIbuHamilKardPDF(mil)} 
                             className="p-1.5 text-pink-600 bg-pink-50 rounded-lg hover:bg-pink-100 border border-pink-100 transition-colors" 
-                            title="Buku Kesehatan"
+                            title="Download Kartu Kesehatan (PDF)"
                           >
-                            <BookOpen className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={() => { setSelectedIbuHamil(mil); setActiveSubTab('ibuhamil_detail'); }} 
-                            className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-colors" 
-                            title="Timeline & Riwayat"
-                          >
-                            <History className="w-3.5 h-3.5" />
+                            <FileText className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => { setEditingItem(mil); setShowIbuHamilForm(true); }} className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-100 transition-colors" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
                           <button onClick={() => deleteItem('ibu_hamil', mil.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100 transition-colors" title="Hapus"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -7021,13 +7115,13 @@ function BankSampahView({
           kewarganegaraan: 'WNI',
           isNasabah: true
         };
-        await setDoc(doc(db, 'warga', inik), newWarga);
+        await setDoc(doc(db, 'data_warga', inik), newWarga);
         showNotification("Nasabah (Warga) baru berhasil ditambahkan!");
       }
       setShowNasabahForm(false);
       setEditingItem(null);
     } catch (err) {
-      handleFirestoreError(err, editingItem ? 'update' : 'create', 'warga');
+      handleFirestoreError(err, editingItem ? 'update' : 'create', 'data_warga');
     }
   };
 

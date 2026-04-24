@@ -276,12 +276,57 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "name", "status"]
+    },
+    "Branding": {
+      "title": "Branding",
+      "description": "Branding settings per RT/RW (Multi-tenant)",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nama_rt": { "type": "string" },
+        "alamat": { "type": "string" },
+        "wilayah": { "type": "string" },
+        "telepon": { "type": "string" },
+        "logo_url": { "type": "string" },
+        "warna_primary": { "type": "string" },
+        "warna_secondary": { "type": "string" },
+        "ttd_url": { "type": "string" },
+        "stempel_url": { "type": "string" },
+        "nama_ketua": { "type": "string" },
+        "kelurahan": { "type": "string" },
+        "kecamatan": { "type": "string" },
+        "kabupaten": { "type": "string" }
+      },
+      "required": ["id", "tenantId"]
+    },
+    "Template": {
+      "title": "Template",
+      "description": "Document templates per RT/RW (Multi-tenant)",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["surat_pengantar", "kwitansi", "laporan_keuangan"] },
+        "template_html": { "type": "string" },
+        "is_default": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "tenantId", "type", "template_html"]
     }
   },
   "firestore": {
     "/tenants/{tenantId}": {
       "schema": "Tenant",
       "description": "Koleksi data penyewa (RT/RW)"
+    },
+    "/branding/{tenantId}": {
+      "schema": "Branding",
+      "description": "Pengaturan branding per tenant"
+    },
+    "/templates/{id}": {
+      "schema": "Template",
+      "description": "Template dokumen per tenant"
     },
     "/users/{userId}": {
       "schema": "User",

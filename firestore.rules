@@ -165,41 +165,45 @@ service cloud.firestore {
 
     // --- Users Collection ---
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (resource != null && request.auth.token.email == resource.data.get('email', '')));
-      allow create: if isSuperAdmin() || (isAdmin() && incoming().get('tenantId', '') == getTenantId());
+      allow read: if isSignedIn() && (isSuperAdmin() || request.auth.uid == userId || isSameTenant(existing()));
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || 
+        (request.auth.uid == userId && incoming().get('role', 'RT') == 'RT') || 
+        (isAdmin() && incoming().get('tenantId', '') == getTenantId())
+      );
       allow update: if isSuperAdmin() || (isAdmin() && existing().get('tenantId', '') == getTenantId()) || (isSignedIn() && request.auth.uid == userId);
       allow delete: if isSuperAdmin() || (isAdmin() && existing().get('tenantId', '') == getTenantId());
     }
 
-    // --- Warga Collection ---
-    match /warga/{nik} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+    // --- Data Warga Collection ---
+    match /data_warga/{nik} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      allow create: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
+      allow update: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
       allow delete: if isAdmin();
     }
 
     // --- Kas Collection ---
     match /kas/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidKas(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidKas(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      allow create: if isOperator() && isValidId(id) && isValidKas(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
+      allow update: if isOperator() && isValidKas(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
       allow delete: if isAdmin();
     }
 
     // --- Surat Collection ---
     match /surat/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isSignedIn() && isValidId(id) && isValidSurat(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidSurat(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      allow create: if isSignedIn() && isValidId(id) && isValidSurat(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
+      allow update: if isOperator() && isValidSurat(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
       allow delete: if isAdmin();
     }
 
     // --- Iuran Collection ---
     match /iuran/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidIuran(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidIuran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      allow create: if isOperator() && isValidId(id) && isValidIuran(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
+      allow update: if isOperator() && isValidIuran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
       allow delete: if isAdmin();
     }
 
@@ -302,6 +306,24 @@ service cloud.firestore {
       allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
       allow create: if isSignedIn() && isValidId(id) && isValidEmergency(incoming()) && isSameTenant(incoming());
       allow update: if (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid)) && isValidEmergency(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // --- Branding and Template Collections ---
+    match /tenant_settings/{tId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
+      allow write: if isAdmin() && tId == getTenantId();
+    }
+
+    match /kop_settings/{tId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
+      allow write: if isAdmin() && tId == getTenantId();
+    }
+
+    match /templates/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isAdmin() && isValidId(id) && isSameTenant(incoming());
+      allow update: if isAdmin() && isSameTenant(existing()) && isSameTenant(incoming());
       allow delete: if isAdmin();
     }
   }
