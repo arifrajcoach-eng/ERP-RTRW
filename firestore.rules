@@ -12,14 +12,23 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function getUserData() {
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userPath) ? get(userPath).data : null;
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(path) ? get(path).data : null;
+    }
+
+    function getRole() {
+      let data = getUserData();
+      return data != null ? data.get('role', 'Viewer') : 'Viewer';
     }
 
     function getTenantId() {
-      let user = getUserData();
-      return user != null ? user.get('tenantId', 'RW26_SMART') : 'RW26_SMART';
+      let data = getUserData();
+      return data != null ? data.get('tenantId', 'RW26_SMART') : 'RW26_SMART';
     }
 
     function isSameTenant(data) {
@@ -27,24 +36,26 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
+      let data = getUserData();
       return isSignedIn() && (
         request.auth.token.email == 'arifrajcoach@gmail.com' || 
-        (getUserData() != null && getUserData().get('isSuperAdmin', false) == true)
+        (data != null && data.get('isSuperAdmin', false) == true)
       );
     }
 
     function isAdmin() {
-      let user = getUserData();
-      return isSignedIn() && (
-        isSuperAdmin() || 
-        (user != null && (user.get('role', 'Viewer') == 'ADMIN' || user.get('role', 'Viewer') == 'RW'))
-      );
+      let role = getRole();
+      return isSignedIn() && (isSuperAdmin() || role == 'ADMIN' || role == 'RW');
     }
 
     function isOperator() {
-      let user = getUserData();
-      let role = user != null ? user.get('role', 'Viewer') : 'Viewer';
-      return isSuperAdmin() || role == 'ADMIN' || role == 'RW' || role == 'RT' || role == 'BENDAHARA' || role == 'SEKRETARIS';
+      let role = getRole();
+      return isSignedIn() && (isSuperAdmin() || role == 'ADMIN' || role == 'RW' || role == 'RT' || role == 'BENDAHARA' || role == 'SEKRETARIS');
+    }
+
+    function isWargaOfRT(rt) {
+      let data = getUserData();
+      return data != null && data.get('rt', '') == rt;
     }
 
     function isValidId(id) {
@@ -127,6 +138,10 @@ service cloud.firestore {
       return data.tanggal is string && data.lokasi is string && data.tenantId is string;
     }
 
+    function isValidVerifikasi(data) {
+      return data.nik is string && data.nama is string && data.tenantId is string && data.status in ["Belum Diverifikasi", "Menunggu Persetujuan", "Disetujui", "Ditolak"];
+    }
+
     function isValidPemeriksaan(data) {
       return data.balitaId is string && data.tanggal is string && (data.beratBadan is number || data.tinggiBadan is number) && data.tenantId is string;
     }
@@ -153,19 +168,22 @@ service cloud.firestore {
 
     // --- Tenants Collection ---
     match /tenants/{tenantId} {
-      allow read: if isSignedIn();
+      allow list: if isSignedIn() && isSuperAdmin();
+      allow get: if isSignedIn();
       allow write: if isSuperAdmin();
     }
 
     // --- Settings Collection ---
     match /settings/{tId} {
-      allow read: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
-      allow write: if isAdmin() && tId == getTenantId();
+      allow get: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
+      allow write: if isSignedIn() && (isSuperAdmin() || (isAdmin() && tId == getTenantId()));
     }
 
     // --- Users Collection ---
     match /users/{userId} {
-      allow read: if isSignedIn() && (isSuperAdmin() || request.auth.uid == userId || isSameTenant(existing()));
+      allow list: if isSignedIn() && (isSuperAdmin() || (resource.data.tenantId == getTenantId() && isAdmin()));
+      allow get: if isSignedIn() && (isSuperAdmin() || request.auth.uid == userId || isSameTenant(existing()));
+      
       allow create: if isSignedIn() && (
         isSuperAdmin() || 
         (request.auth.uid == userId && incoming().get('role', 'RT') == 'RT') || 
@@ -177,154 +195,194 @@ service cloud.firestore {
 
     // --- Data Warga Collection ---
     match /data_warga/{nik} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
-      allow create: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
-      allow update: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
+      allow list: if isSignedIn() && (isSuperAdmin() || (resource.data.tenantId == getTenantId() && (getRole() != 'RT' || resource.data.rt == getUserData().get('rt', ''))));
+      allow get: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getRole() != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      
+      allow create: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || incoming().rt == getUserData().get('rt', ''));
+      allow update: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || (existing().rt == getUserData().get('rt', '') && incoming().rt == getUserData().get('rt', '')));
+      allow delete: if isAdmin();
+    }
+
+    // --- Verifikasi Warga Collection ---
+    match /verifikasi_warga/{id} {
+      // List should filter by tenantId OR be Super Admin
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()) || request.auth.uid == existing().get('userId', ''));
+      
+      allow create: if isSignedIn() && isValidId(id) && isValidVerifikasi(incoming()) && isSameTenant(incoming()) && incoming().userId == request.auth.uid;
+      
+      allow update: if isSignedIn() && isSameTenant(existing()) && (
+        (isOperator() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'catatan', 'updatedAt'])) || 
+        (request.auth.uid == existing().get('userId', '') && incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'nik', 'ktpUrl', 'kkUrl', 'updatedAt']))
+      );
       allow delete: if isAdmin();
     }
 
     // --- Kas Collection ---
     match /kas/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
-      allow create: if isOperator() && isValidId(id) && isValidKas(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
-      allow update: if isOperator() && isValidKas(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || (resource.data.tenantId == getTenantId() && (getRole() != 'RT' || resource.data.rt == getUserData().get('rt', ''))));
+      allow get: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getRole() != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidKas(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || incoming().rt == getUserData().get('rt', ''));
+      allow update: if isOperator() && isEmailVerified() && isValidKas(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || (existing().rt == getUserData().get('rt', '') && incoming().rt == getUserData().get('rt', '')));
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     // --- Surat Collection ---
     match /surat/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
-      allow create: if isSignedIn() && isValidId(id) && isValidSurat(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
-      allow update: if isOperator() && isValidSurat(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || (resource.data.tenantId == getTenantId() && (getRole() != 'RT' || resource.data.rt == getUserData().get('rt', ''))));
+      allow get: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getRole() != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      
+      allow create: if isSignedIn() && isValidId(id) && isValidSurat(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || incoming().rt == getUserData().get('rt', ''));
+      allow update: if isOperator() && isEmailVerified() && isValidSurat(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || (existing().rt == getUserData().get('rt', '') && incoming().rt == getUserData().get('rt', '')));
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     // --- Iuran Collection ---
     match /iuran/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getUserData().get('role', '') != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
-      allow create: if isOperator() && isValidId(id) && isValidIuran(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || incoming().get('rt', '') == getUserData().get('rt', ''));
-      allow update: if isOperator() && isValidIuran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getUserData().get('role', '') != 'RT' || (existing().get('rt', '') == getUserData().get('rt', '') && incoming().get('rt', '') == getUserData().get('rt', '')));
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || (resource.data.tenantId == getTenantId() && (getRole() != 'RT' || resource.data.rt == getUserData().get('rt', ''))));
+      allow get: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getRole() != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
+      
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidIuran(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || incoming().rt == getUserData().get('rt', ''));
+      allow update: if isOperator() && isEmailVerified() && isValidIuran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || (existing().rt == getUserData().get('rt', '') && incoming().rt == getUserData().get('rt', '')));
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     // --- Inventaris Collection ---
     match /inventaris/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidInventaris(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidInventaris(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidInventaris(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidInventaris(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     // --- Inventaris Logs Collection ---
     match /inventaris_logs/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidInventarisLog(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidInventarisLog(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidInventarisLog(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidInventarisLog(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /inventaris_kategori/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidKategori(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidKategori(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidKategori(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidKategori(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /inventaris_lokasi/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidLokasi(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidLokasi(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidLokasi(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidLokasi(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /inventaris_supplier/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidSupplier(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidSupplier(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidSupplier(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidSupplier(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     // --- Posyandu Collections ---
     match /balita/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidBalita(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidBalita(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidBalita(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidBalita(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /ibu_hamil/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidIbuHamil(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidIbuHamil(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidIbuHamil(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidIbuHamil(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /posyandu_kegiatan/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidPosyanduKegiatan(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidPosyanduKegiatan(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidPosyanduKegiatan(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidPosyanduKegiatan(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /pemeriksaan_balita/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidPemeriksaan(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidPemeriksaan(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidPemeriksaan(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidPemeriksaan(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /imunisasi/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidImunisasi(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidImunisasi(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidImunisasi(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidImunisasi(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /sampah_kategori/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidSampahKategori(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidSampahKategori(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidSampahKategori(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidSampahKategori(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /sampah_setoran/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidSampahSetoran(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidSampahSetoran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidSampahSetoran(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidSampahSetoran(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     match /sampah_tarik_saldo/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isOperator() && isValidId(id) && isValidSampahTarik(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isValidId(id) && isValidSampahTarik(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidSampahTarik(incoming()) && isSameTenant(incoming());
+      allow update: if isOperator() && isEmailVerified() && isValidId(id) && isValidSampahTarik(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     // --- Emergency Collections ---
     match /emergencies/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
       allow create: if isSignedIn() && isValidId(id) && isValidEmergency(incoming()) && isSameTenant(incoming());
       allow update: if (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid)) && isValidEmergency(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && isEmailVerified();
     }
 
     // --- Branding and Template Collections ---
     match /tenant_settings/{tId} {
-      allow read: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
-      allow write: if isAdmin() && tId == getTenantId();
+      allow get: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
+      allow write: if isSignedIn() && (isSuperAdmin() || (isAdmin() && tId == getTenantId()));
     }
 
     match /kop_settings/{tId} {
-      allow read: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
-      allow write: if isAdmin() && tId == getTenantId();
+      allow get: if isSignedIn() && (isSuperAdmin() || tId == getTenantId());
+      allow write: if isSignedIn() && (isSuperAdmin() || (isAdmin() && tId == getTenantId()));
     }
 
     match /templates/{id} {
-      allow read: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
-      allow create: if isAdmin() && isValidId(id) && isSameTenant(incoming());
-      allow update: if isAdmin() && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin();
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
+      allow create: if isSignedIn() && (isSuperAdmin() || (isAdmin() && isValidId(id) && isSameTenant(incoming())));
+      allow update: if isSignedIn() && (isSuperAdmin() || (isAdmin() && isSameTenant(existing()) && isSameTenant(incoming())));
+      allow delete: if isSuperAdmin() || isAdmin();
     }
   }
 }

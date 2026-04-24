@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -12,6 +12,7 @@ import {
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
   signOut,
+  signInAnonymously,
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
@@ -175,7 +176,11 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      if (wargaAuth) {
+        setWargaAuth(null);
+      } else {
+        await signOut(auth);
+      }
       setActiveTab('dashboard');
     } catch (err) {
       console.error("Logout error:", err);
@@ -225,6 +230,7 @@ export default function App() {
   const [sampahSetoranData, setSampahSetoranData] = useState<any[]>([]);
   const [sampahTarikSaldoData, setSampahTarikSaldoData] = useState<any[]>([]);
   const [emergenciesData, setEmergenciesData] = useState<any[]>([]);
+  const [verifikasiWargaData, setVerifikasiWargaData] = useState<any[]>([]);
   const [isSOSTriggering, setIsSOSTriggering] = useState(false);
 
   const [usersData, setUsersData] = useState<any[]>([]);
@@ -244,6 +250,7 @@ export default function App() {
   };
 
   const [isSOSConfirmOpen, setIsSOSConfirmOpen] = useState(false);
+  const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
 
   const handleTriggerSOS = async () => {
     if (!currentUser) return;
@@ -332,14 +339,16 @@ export default function App() {
 
   // --- FIREBASE SYNC (REAL-TIME) ---
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser && !wargaAuth) {
       setIsLoadingDB(false);
       return;
     }
 
+    const tId = currentUser?.tenantId || wargaAuth?.tenantId || 'RW26_SMART';
+
     setIsLoadingDB(true);
     let loadedSections = 0;
-    const totalSections = currentUser?.isSuperAdmin ? 16 : (currentUser?.role === 'ADMIN' ? 15 : 14);
+    const totalSections = currentUser?.isSuperAdmin ? 16 : (currentUser?.role === 'ADMIN' ? 15 : (currentUser ? 14 : 5));
 
     const onDataLoaded = () => {
       loadedSections++;
@@ -349,14 +358,14 @@ export default function App() {
     };
 
     // 0. Settings Listener
-    const unsubSettings = onSnapshot(doc(db, 'settings', currentUser?.tenantId || 'RW26_SMART'), (snap) => {
+    const unsubSettings = onSnapshot(doc(db, 'settings', tId), (snap) => {
       if (snap.exists()) {
         setSettings(snap.data());
       }
     });
 
     // 0.5 Kop Settings Listener
-    const unsubKopSettings = onSnapshot(doc(db, 'tenant_settings', currentUser?.tenantId || 'RW26_SMART'), (snap) => {
+    const unsubKopSettings = onSnapshot(doc(db, 'tenant_settings', tId), (snap) => {
       if (snap.exists()) {
         setKopSettings(snap.data());
       }
@@ -367,7 +376,7 @@ export default function App() {
       const base = collection(db, 'data_warga');
       if (currentUser?.isSuperAdmin) return query(base);
       
-      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
+      const constraints = [where('tenantId', '==', tId)];
       
       if (currentUser?.role === 'RT') {
         constraints.push(where('rt', '==', currentUser.rt || '01'));
@@ -391,7 +400,7 @@ export default function App() {
     // 2. Kas Listener
     const getKasQuery = () => {
       const base = collection(db, 'kas');
-      const constraints = [where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')];
+      const constraints = [where('tenantId', '==', tId)];
       if (currentUser?.role === 'RT') {
         constraints.push(where('rt', '==', currentUser.rt || '01'));
       }
@@ -411,7 +420,7 @@ export default function App() {
     );
 
     // 3. Surat Listener
-    const unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId)), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         const filtered = currentUser?.role === 'RT' 
@@ -427,7 +436,7 @@ export default function App() {
     );
 
     // 4. Iuran Listener
-    const unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', tId)), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         const filtered = currentUser?.role === 'RT'
@@ -443,7 +452,7 @@ export default function App() {
     );
 
     // 4.5 Inventaris Listener
-    const unsubInventaris = onSnapshot(query(collection(db, 'inventaris'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubInventaris = onSnapshot(query(collection(db, 'inventaris'), where('tenantId', '==', tId)), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         setInventarisData(data);
@@ -456,7 +465,7 @@ export default function App() {
     );
 
     // 4.6 Inventaris Logs Listener
-    const unsubInventarisLogs = onSnapshot(query(collection(db, 'inventaris_logs'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubInventarisLogs = onSnapshot(query(collection(db, 'inventaris_logs'), where('tenantId', '==', tId)), 
       (snap) => {
         const data = snap.docs.map(doc => ({ ...doc.data() }));
         setInventarisLogs(data);
@@ -467,46 +476,46 @@ export default function App() {
     );
 
     // 4.7 Inventaris Kategori/Lokasi/Supplier
-    const unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', '==', tId)), 
       (snap) => setInventarisKategori(snap.docs.map(doc => ({ ...doc.data() })))
     );
-    const unsubInventarisLokasi = onSnapshot(query(collection(db, 'inventaris_lokasi'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubInventarisLokasi = onSnapshot(query(collection(db, 'inventaris_lokasi'), where('tenantId', '==', tId)), 
       (snap) => setInventarisLokasi(snap.docs.map(doc => ({ ...doc.data() })))
     );
-    const unsubInventarisSupplier = onSnapshot(query(collection(db, 'inventaris_supplier'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubInventarisSupplier = onSnapshot(query(collection(db, 'inventaris_supplier'), where('tenantId', '==', tId)), 
       (snap) => setInventarisSupplier(snap.docs.map(doc => ({ ...doc.data() })))
     );
 
     // 4.8 Posyandu Listeners
-    const unsubBalita = onSnapshot(query(collection(db, 'balita'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubBalita = onSnapshot(query(collection(db, 'balita'), where('tenantId', '==', tId)), 
       (snap) => {
         setBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'balita'); onDataLoaded(); }
     );
-    const unsubIbuHamil = onSnapshot(query(collection(db, 'ibu_hamil'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubIbuHamil = onSnapshot(query(collection(db, 'ibu_hamil'), where('tenantId', '==', tId)), 
       (snap) => {
         setIbuHamilData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'ibu_hamil'); onDataLoaded(); }
     );
-    const unsubPosyanduKegiatan = onSnapshot(query(collection(db, 'posyandu_kegiatan'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubPosyanduKegiatan = onSnapshot(query(collection(db, 'posyandu_kegiatan'), where('tenantId', '==', tId)), 
       (snap) => {
         setPosyanduKegiatanData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'posyandu_kegiatan'); onDataLoaded(); }
     );
-    const unsubPemeriksaanBalita = onSnapshot(query(collection(db, 'pemeriksaan_balita'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubPemeriksaanBalita = onSnapshot(query(collection(db, 'pemeriksaan_balita'), where('tenantId', '==', tId)), 
       (snap) => {
         setPemeriksaanBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'pemeriksaan_balita'); onDataLoaded(); }
     );
-    const unsubImunisasi = onSnapshot(query(collection(db, 'imunisasi'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubImunisasi = onSnapshot(query(collection(db, 'imunisasi'), where('tenantId', '==', tId)), 
       (snap) => {
         setImunisasiData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
@@ -515,21 +524,21 @@ export default function App() {
     );
 
     // 4.9 Bank Sampah Listeners
-    const unsubSampahKategori = onSnapshot(query(collection(db, 'sampah_kategori'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubSampahKategori = onSnapshot(query(collection(db, 'sampah_kategori'), where('tenantId', '==', tId)), 
       (snap) => {
         setSampahKategoriData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'sampah_kategori'); onDataLoaded(); }
     );
-    const unsubSampahSetoran = onSnapshot(query(collection(db, 'sampah_setoran'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubSampahSetoran = onSnapshot(query(collection(db, 'sampah_setoran'), where('tenantId', '==', tId)), 
       (snap) => {
         setSampahSetoranData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'sampah_setoran'); onDataLoaded(); }
     );
-    const unsubSampahTarikSaldo = onSnapshot(query(collection(db, 'sampah_tarik_saldo'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubSampahTarikSaldo = onSnapshot(query(collection(db, 'sampah_tarik_saldo'), where('tenantId', '==', tId)), 
       (snap) => {
         setSampahTarikSaldoData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
@@ -537,12 +546,23 @@ export default function App() {
       (err) => { handleFirestoreError(err, 'list', 'sampah_tarik_saldo'); onDataLoaded(); }
     );
 
-    const unsubEmergencies = onSnapshot(query(collection(db, 'emergencies'), where('tenantId', '==', currentUser?.tenantId || 'RW26_SMART')), 
+    const unsubEmergencies = onSnapshot(query(collection(db, 'emergencies'), where('tenantId', '==', tId)), 
       (snap) => {
         setEmergenciesData(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'emergencies'); onDataLoaded(); }
+    );
+
+    const unsubVerifikasi = onSnapshot(query(collection(db, 'verifikasi_warga'), where('tenantId', '==', tId)), 
+      (snap) => {
+        setVerifikasiWargaData(snap.docs.map(doc => ({ ...doc.data() })));
+        if (!currentUser && wargaAuth) onDataLoaded(); // Only count this for warga loading
+      },
+      (err) => { 
+        handleFirestoreError(err, 'list', 'verifikasi_warga'); 
+        if (!currentUser && wargaAuth) onDataLoaded();
+      }
     );
 
     // 5. Users Listener
@@ -706,8 +726,23 @@ export default function App() {
     );
   }
 
-  if (!currentUser) {
-    return <LoginView />;
+  if (!currentUser && !wargaAuth) {
+    return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} />;
+  }
+
+  if (!currentUser && wargaAuth) {
+    return (
+      <WargaProfileView 
+        wargaData={wargaAuth} 
+        verifikasiData={verifikasiWargaData} 
+        setWargaAuth={setWargaAuth} 
+        tenantId={wargaAuth.tenantId || 'RW26_SMART'} 
+        setIsLoadingDB={setIsLoadingDB} 
+        handleFileUpload={handleFileUpload} 
+        showNotification={showNotification} 
+        handleFirestoreError={handleFirestoreError} 
+      />
+    );
   }
 
   return (
@@ -766,6 +801,7 @@ export default function App() {
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
+            { id: 'verifikasi', label: 'Verifikasi Mandiri', icon: ShieldCheck },
             { id: 'transaksi', label: 'Transaksi', icon: CreditCard },
             { id: 'posyandu', label: 'Posyandu', icon: Baby },
             { id: 'bank-sampah', label: 'Bank Sampah', icon: Recycle },
@@ -857,6 +893,7 @@ export default function App() {
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} emergenciesData={emergenciesData} handleTriggerSOS={handleTriggerSOS} userRole={currentUser.role} setActiveTab={setActiveTab} posyanduKegiatanData={posyanduKegiatanData} inventarisData={inventarisData} sampahSetoranData={sampahSetoranData} />}
           {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'verifikasi' && <VerifikasiAdminView verifikasiData={verifikasiWargaData} wargaData={wargaData} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} showNotification={showNotification} handleFirestoreError={handleFirestoreError} currentUser={currentUser} />}
           {activeTab === 'transaksi' && <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           { activeTab === 'posyandu' && (
             <PosyanduView 
@@ -889,11 +926,11 @@ export default function App() {
              setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} 
           />}
           {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
-          {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
-          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} settings={settings} userRole={currentUser.role} showNotification={showNotification} />}
+          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'voting' && <EVotingView userRole={currentUser.role} />}
           {activeTab === 'etoko' && <ETokoView userRole={currentUser.role} />}
         </div>
@@ -1647,6 +1684,15 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
           </div>
           <span className="text-xs font-bold text-slate-700">E-Toko</span>
         </button>
+        <button 
+          onClick={() => setActiveTab('verifikasi')}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col items-center justify-center gap-2 group"
+        >
+          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <ShieldCheck className="w-5 h-5 text-blue-600" />
+          </div>
+          <span className="text-xs font-bold text-slate-700">Verifikasi</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2117,10 +2163,10 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     // Fiter Pencarian
     const searchLower = searchQuery.toLowerCase();
     const matchSearch = searchQuery === "" || 
-      w.nama.toLowerCase().includes(searchLower) ||
-      w.nik.includes(searchQuery) ||
-      w.kk.includes(searchQuery) ||
-      w.hp.includes(searchQuery);
+      w.nama?.toLowerCase().includes(searchLower) ||
+      w.nik?.includes(searchQuery) ||
+      w.kk?.includes(searchQuery) ||
+      w.hp?.includes(searchQuery);
 
     return matchRT && matchRW && matchUmur && matchSearch;
   });
@@ -3552,156 +3598,129 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Cetak Surat - ${surat.nomor_surat || surat.id}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
           <style>
-            @page {
-              size: A4;
-              margin: 20mm;
-            }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
             body { 
               font-family: 'Times New Roman', Times, serif; 
-              padding: 0; 
-              margin: 0; 
-              line-height: 1.5; 
-              color: #000;
               background: #fff;
+              margin: 0; 
+              padding: 0; 
             }
-            .page {
+            .print-container {
               width: 210mm;
-              height: 297mm;
               margin: 0 auto;
               background: white;
+              padding: 15mm;
+              font-size: 0.875rem;
             }
-            .header { 
-              display: flex; 
-              align-items: center; 
-              border-bottom: 5px double #000; 
-              padding-bottom: 10px; 
-              margin-bottom: 20px;
-            }
-            .header-info {
-              text-align: center;
-              flex-grow: 1;
-              padding-right: 80px; /* Adjust for logo balance */
-            }
-            .header h1 { font-size: 16pt; margin: 0; text-transform: uppercase; }
-            .header h2 { font-size: 13pt; margin: 2px 0; text-transform: uppercase; }
-            .header h3 { font-size: 11pt; margin: 2px 0; text-transform: uppercase; }
-            .header p { font-size: 10pt; margin: 2px 0; }
-            
-            .title-box { text-align: center; margin: 20px 0; }
-            .title { font-size: 14pt; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin: 0; }
-            .nomor { font-size: 11pt; margin-top: 5px; }
-
-            .content { font-size: 11pt; padding: 0 10px; }
-            .content p { text-align: justify; margin: 10px 0; text-indent: 40px; }
-            .content .intro { text-indent: 0; }
-
-            .details { width: 100%; margin: 15px 0; border-collapse: collapse; }
-            .details td { padding: 3px 0; vertical-align: top; }
-            .details td:first-child { width: 180px; }
-            .details td:nth-child(2) { width: 20px; text-align: center; }
-            .details strong { font-weight: bold; }
-
-            .footer { margin-top: 40px; }
-            .signatures { display: flex; justify-content: space-between; padding: 0 20px; }
-            .signature-box { text-align: center; min-width: 200px; }
-            .signature-box p { margin: 2px 0; font-size: 11pt; }
-            .spacer { height: 70px; }
-            
-            .archive-area { 
-              margin-top: 50px; 
-              border-top: 1px solid #000; 
-              padding-top: 10px; 
-              font-size: 9pt; 
-            }
-            .archive-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-            .checkbox-group { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
-            .checkbox { width: 12px; height: 12px; border: 1px solid #000; }
-
             @media print {
-              body, .page { width: auto; height: auto; margin: 0; padding: 0; }
-              .page { box-shadow: none; }
+              @page { margin: 1.5cm; }
+              body { background: white; }
+              .print-container { padding: 0; margin: 0; width: 100%; box-shadow: none; }
             }
+            .details td { padding: 2px 0; vertical-align: top; }
           </style>
         </head>
         <body>
-          <div class="page">
-            <div class="header">
-              ${kopSettings.logo_url ? `<img src="${kopSettings.logo_url}" crossorigin="anonymous" style="width: 80px; height: 80px; margin-right: 15px; object-fit: contain; display: block;" />` : '<div style="width: 80px;"></div>'}
-              <div class="header-info">
-                <h1>${kopSettings.nama_rt || 'RUKUN TETANGGA / RUKUN WARGA'}</h1>
-                <h2>KELURAHAN ${kopSettings.kelurahan?.toUpperCase() || '...........'} - KECAMATAN ${kopSettings.kecamatan?.toUpperCase() || '...........'}</h2>
-                <h3>${kopSettings.kabupaten?.toUpperCase() || 'KABUPATEN BEKASI'}</h3>
-                <p>Sekretariat: ${kopSettings.alamat || '................................................'} | Telp: ${kopSettings.telepon || '...'} | Email: ${kopSettings.email || '...'}</p>
-              </div>
+          <div class="print-container">
+            <!-- Kop Surat -->
+            <div class="flex items-center gap-4 relative">
+                 ${surat.show_logo === 'yes' && kopSettings.logo_url ? `<img src="${kopSettings.logo_url}" crossorigin="anonymous" alt="Logo" class="w-20 h-20 object-contain" />` : '<div class="w-20"></div>'}
+                 <div class="flex-1 text-center">
+                     <h2 class="text-lg font-bold uppercase">${kopSettings.nama_rt || `RUKUN TETANGGA ${kopSettings.rt || '...'} / RUKUN WARGA ${kopSettings.rw || '...'}`}</h2>
+                     <p class="text-sm">KELURAHAN ${kopSettings.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kopSettings.kecamatan?.toUpperCase() || '...'}</p>
+                     <p class="text-sm font-bold">${(kopSettings.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KABUPATEN') || (kopSettings.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}${(kopSettings.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase()}</p>
+                     <p class="text-[10px]">Sekretariat : ${kopSettings.alamat || '...'} | Email: ${kopSettings.email || '...'} | Instagram: ${kopSettings.instagram || '...'}</p>
+                 </div>
+                 <!-- Spacer to balance the logo -->
+                 <div class="w-20"></div>
+            </div>
+            <div class="border-b-4 border-black mt-2"></div>
+            <div class="border-b-2 border-black mt-0.5"></div>
+            
+            <!-- Surat -->
+            <div class="text-center mt-6">
+                <h3 class="text-lg font-bold underline">SURAT PENGANTAR</h3>
+                <p>Nomor : ${surat.nomor_surat || '...... / RT .... / RW .... / Tahun 202...'}</p>
             </div>
             
-            <div class="title-box">
-              <p class="title"><u>SURAT PENGANTAR</u></p>
-              <p class="nomor">Nomor: ${surat.nomor_surat || '.../RT.../RW.../.../...'}</p>
-            </div>
-
-            <div class="content">
-              <p class="intro">Yang bertanda tangan di bawah ini menerangkan bahwa:</p>
-              
-              <table class="details">
-                <tr><td>Nama Lengkap</td><td>:</td><td><strong>${surat.pemohon}</strong></td></tr>
-                <tr><td>NIK</td><td>:</td><td>${surat.nik || '-'}</td></tr>
-                <tr><td>No. KK</td><td>:</td><td>${surat.kk || '-'}</td></tr>
-                <tr><td>Tempat, Tgl Lahir</td><td>:</td><td>${surat.ttl || '-'}</td></tr>
-                <tr><td>Jenis Kelamin</td><td>:</td><td>${surat.jk || '-'}</td></tr>
-                <tr><td>Agama</td><td>:</td><td>${surat.agama || '-'}</td></tr>
-                <tr><td>Pekerjaan</td><td>:</td><td>${surat.pekerjaan || '-'}</td></tr>
-                <tr><td>Status Perkawinan</td><td>:</td><td>${surat.statusKawin || '-'}</td></tr>
-                <tr><td>Alamat</td><td>:</td><td>${surat.alamat || '-'}</td></tr>
-                <tr><td>Keperluan</td><td>:</td><td>${surat.keperluan || '-'}</td></tr>
-              </table>
-
-              <p>Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.</p>
-            </div>
-
-            <div class="footer">
-              <div class="signatures">
-                <div class="signature-box">
-                  <p>Mengetahui,</p>
-                  <p>Ketua RW ${surat.rw || kopSettings.rw || '....'}</p>
-                  <div class="spacer"></div>
-                  <p><strong>( ${surat.ketua_rw_nama || kopSettings.nama_ketua_rw || '...................................'} )</strong></p>
+            <div class="mt-6">
+                <p class="mb-4">Yang bertanda tangan di bawah ini Ketua RT ${surat.rt || kopSettings.rt || '...'} / RW ${surat.rw || kopSettings.rw || '...'} Kelurahan ${kopSettings.kelurahan || '...'} Kecamatan ${kopSettings.kecamatan || '...'} ${(kopSettings.kabupaten?.toUpperCase().includes('KABUPATEN') || kopSettings.kabupaten?.toUpperCase().includes('KOTA')) ? '' : 'Kabupaten '}${kopSettings.kabupaten || settings.kabupaten || '...'}</p>
+                <p class="mb-4">Dengan ini menerangkan bahwa :</p>
+                <div class="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
+                   <div>Nama</div><div>:</div><div><strong>${surat.pemohon}</strong></div>
+                   <div>Tempat Tgl, Lahir</div><div>:</div><div>${surat.ttl || '-'}</div>
+                   <div>Jenis Kelamin</div><div>:</div><div>${surat.jk || '-'}</div>
+                   <div>Pekerjaan</div><div>:</div><div>${surat.pekerjaan || '-'}</div>
+                   <div>Kewarganegaraan</div><div>:</div><div>WNI</div>
+                   <div>No. KTP/NIK</div><div>:</div><div>${surat.nik || '-'}</div>
+                   <div>Status Perkawinan</div><div>:</div><div>${surat.statusKawin || '-'}</div>
+                   <div>Alamat</div><div>:</div><div>${surat.alamat || '-'}</div>
+                   <div>Maksud / Keperluan</div><div>:</div><div>${surat.keperluan || '-'}</div>
                 </div>
-                <div class="signature-box">
-                  <p>${kopSettings.kabupaten || 'Bekasi'}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  <p>Ketua RT ${surat.rt || kopSettings.rt || '....'}</p>
-                  <div class="spacer"></div>
-                  <p><strong>( ${surat.ketua || kopSettings.nama_ketua_rt || '...................................'} )</strong></p>
-                </div>
-              </div>
+                <p class="mt-6">Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
             </div>
 
+            <!-- Tanda Tangan -->
+            <div class="mt-12 flex justify-between">
+                <div class="text-center">
+                    <p>Mengetahui,</p>
+                    <p>Ketua RW ${surat.rw || kopSettings.rw || '....'} Kelurahan ${kopSettings.kelurahan || '....'}</p>
+                    <div class="h-20"></div>
+                    <p class="font-bold">( <u>${surat.ketua_rw_nama || kopSettings.nama_ketua_rw || '...................................'}</u> )</p>
+                </div>
+                <div class="text-center">
+                    <p>${(() => {
+                        const kab = kopSettings.kabupaten || settings.kabupaten || 'Bekasi';
+                        const prefix = kab.toUpperCase().includes('KABUPATEN') || kab.toUpperCase().includes('KOTA') ? '' : 'Kabupaten ';
+                        return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                      })()}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <p>${surat.jabatan_ttd || 'Ketua RT'} ${surat.rt || kopSettings.rt || '....'} Kelurahan ${kopSettings.kelurahan || '....'}</p>
+                    <div class="h-20"></div>
+                    <p class="font-bold">( <u>${surat.ketua || kopSettings.nama_ketua_rt || '...................................'}</u> )</p>
+                </div>
+            </div>
+
+            <!-- Footer Arsip-->
+            <div class="mt-12 border-t border-black pt-2 text-[10px] text-gray-500">
+                 <div class="flex justify-between">
+                    <div>TL. Berkas / Surat No : ......</div>
+                    <div>Hal : ......</div>
+                    <div>Tgl : ......</div>
+                 </div>
+                 <div class="mt-2 flex gap-4">
+                    <div class="flex items-center gap-1"><div class="w-3 h-3 border border-black"></div> Berkas Sesuai</div>
+                    <div class="flex items-center gap-1"><div class="w-3 h-3 border border-black"></div> Berkas ke Kecamatan</div>
+                    <div class="flex items-center gap-1">Paraf Arsiparis <div class="w-20 h-4 border border-black"></div></div>
+                 </div>
+            </div>
           </div>
           <script>
             function checkImages() {
               const images = document.getElementsByTagName('img');
               let loadedCount = 0;
               if (images.length === 0) {
-                window.print();
+                setTimeout(() => window.print(), 500);
                 return;
               }
               for (let i = 0; i < images.length; i++) {
                 if (images[i].complete) {
                   loadedCount++;
+                  if (loadedCount === images.length) setTimeout(() => window.print(), 500);
                 } else {
                   images[i].addEventListener('load', () => {
                     loadedCount++;
-                    if (loadedCount === images.length) window.print();
+                    if (loadedCount === images.length) setTimeout(() => window.print(), 500);
                   });
                   images[i].addEventListener('error', () => {
                     loadedCount++;
-                    if (loadedCount === images.length) window.print();
+                    if (loadedCount === images.length) setTimeout(() => window.print(), 500);
                   });
                 }
               }
               if (loadedCount === images.length) {
-                window.print();
+                setTimeout(() => window.print(), 500);
               }
             }
             window.onload = checkImages;
@@ -3742,6 +3761,8 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
       nama_rt: kopSettings.nama_rt || "Rukun Tetangga",
       ketua: formData.get('ketua') as string || ketuaRT,
       ketua_rw_nama: formData.get('ketua_rw_nama') as string || ketuaRW,
+      jabatan_ttd: formData.get('jabatan_ttd') as string || "Ketua RT",
+      show_logo: formData.get('show_logo') as string || "yes",
       nomor_surat: formData.get('nomor_surat') as string || newNomorSurat,
       pemohon: formData.get('pemohon') as string,
       nik: formData.get('nik') as string,
@@ -4072,8 +4093,21 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                     <input name="ketua" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" placeholder="Nama Ketua RT" />
                   </div>
                   <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Jabatan TTD (Label)</label>
+                    <input name="jabatan_ttd" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" placeholder="Contoh: Ketua RT" defaultValue="Ketua RT" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">Ketua RW (Nama TTD)</label>
                     <input name="ketua_rw_nama" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" placeholder="Nama Ketua RW" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Halaman Cetak (Logo)</label>
+                    <select name="show_logo" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
+                       <option value="yes">Tampilkan Logo</option>
+                       <option value="no">Sembunyikan Logo</option>
+                    </select>
                   </div>
                 </div>
                 <div>
@@ -4569,7 +4603,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
   );
 }
 
-function PengaturanView({ tenantId, settings, userRole, showNotification }: { tenantId: string, settings: any, userRole: string, showNotification: any }) {
+function PengaturanView({ tenantId, settings, userRole, handleFileUpload, showNotification }: { tenantId: string, settings: any, userRole: string, handleFileUpload: any, showNotification: any }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -4795,18 +4829,66 @@ function PengaturanView({ tenantId, settings, userRole, showNotification }: { te
         
         <form onSubmit={handleSaveSettings} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Informasi RT</h4>
+            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Informasi RT & Kop Surat</h4>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama RT (Label)</label>
-              <input name="NAMA_RT" defaultValue={settings.NAMA_RT} placeholder="Contoh: RT 01 Merdeka" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama Instansi / RT (Kop)</label>
+              <input name="nama_rt" defaultValue={settings.nama_rt} placeholder="Contoh: PENGURUS RUKUN TETANGGA 04" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">RT</label>
+                <input name="rt" defaultValue={settings.rt} placeholder="04" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">RW</label>
+                <input name="rw" defaultValue={settings.rw} placeholder="09" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+              </div>
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama Ketua RT</label>
-              <input name="NAMA_KETUA" defaultValue={settings.NAMA_KETUA} placeholder="Contoh: Bpk. H. Ahmad" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kelurahan</label>
+              <input name="kelurahan" defaultValue={settings.kelurahan} placeholder="Kebalen" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nominal Iuran Rutin (Rp)</label>
-              <input name="NOMINAL_IURAN" defaultValue={settings.NOMINAL_IURAN} type="number" placeholder="50000" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold text-green-600" />
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kecamatan</label>
+              <input name="kecamatan" defaultValue={settings.kecamatan} placeholder="Babelan" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kabupaten/Kota</label>
+              <input name="kabupaten" defaultValue={settings.kabupaten} placeholder="KABUPATEN BEKASI" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Alamat Sekretariat</label>
+              <textarea name="alamat" defaultValue={settings.alamat} rows={2} placeholder="Jl. Merdeka No. 123..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo RT/RW (Ganti Image)</label>
+              <div className="flex gap-3 items-center">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const url = await handleFileUpload(file, 'logo_rt_rw');
+                        const input = document.getElementById('logo_url_input') as HTMLInputElement;
+                        if (input) {
+                          input.value = url;
+                          showNotification("Logo berhasil diupload. Klik 'Simpan Pengaturan' untuk menerapkan.", "info");
+                        }
+                      } catch (err) {
+                        showNotification("Gagal upload logo", "error");
+                      }
+                    }
+                  }}
+                  className="flex-1 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer" 
+                />
+                <input name="logo_url" id="logo_url_input" type="hidden" defaultValue={settings.logo_url} />
+                <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                  {settings.logo_url ? <img src={settings.logo_url} className="w-full h-full object-contain" /> : <Image className="w-5 h-5 text-slate-400" />}
+                </div>
+              </div>
+              <p className="text-[9px] text-slate-400 mt-1 italic">*Maksimal 2MB. Logo akan tampil di kop surat pengantar.</p>
             </div>
           </div>
 
@@ -4958,12 +5040,634 @@ function PengaturanView({ tenantId, settings, userRole, showNotification }: { te
   );
 }
 
-function LoginView() {
+function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoadingDB, showNotification, handleFirestoreError, currentUser }: { verifikasiData: any[], wargaData: any[], tenantId: string, setIsLoadingDB: any, showNotification: any, handleFirestoreError: any, currentUser: any }) {
+  const [filter, setFilter] = useState<'All' | 'Menunggu Persetujuan' | 'Disetujui' | 'Ditolak'>('Menunggu Persetujuan');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [catatan, setCatatan] = useState('');
+
+  const filteredData = verifikasiData.filter(v => {
+    const matchFilter = filter === 'All' || v.status === filter;
+    const matchSearch = String(v.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) || String(v.nik || '').includes(searchQuery);
+    return matchFilter && matchSearch;
+  });
+
+  const handleApprove = async (item: any) => {
+    setIsLoadingDB(true);
+    try {
+      const batch = writeBatch(db);
+      
+      // 1. Update status in verifikasi_warga
+      const vRef = doc(db, 'verifikasi_warga', item.id);
+      batch.update(vRef, {
+        status: 'Disetujui',
+        approvedAt: new Date().toISOString(),
+        approvedBy: currentUser.name,
+        catatan: 'Disetujui oleh admin'
+      });
+
+      // 2. Update main warga record
+      // Find matching warga by NIK
+      const wargaRef = doc(db, 'data_warga', item.nik);
+      const wargaSnap = await getDoc(wargaRef);
+
+      const updatedData = {
+        kk: item.kk,
+        blok: item.blok,
+        hp: item.hp,
+        profesi: item.pekerjaan || item.profesi,
+        pendidikan: item.pendidikan || "",
+        statusKawin: item.statusKawin || "",
+        foto: item.ktpUrl || wargaSnap.data()?.foto || ""
+      };
+
+      if (wargaSnap.exists()) {
+        batch.update(wargaRef, updatedData);
+      } else {
+        // Handle case if warga doesn't exist in master?
+        // Fallback: create if it's a new verification but NIK was validated during login?
+        // For simplicity, we assume they exist since Warga Login checks wargaData.
+        batch.set(wargaRef, { ...item, status: 'Aktif', role: 'Warga' }, { merge: true });
+      }
+
+      await batch.commit();
+      showNotification(`Data ${item.nama} telah disetujui dan diperbarui.`, "success");
+      setSelectedItem(null);
+    } catch (err) {
+      handleFirestoreError(err, 'update', 'verifikasi_warga/data_warga');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleReject = async (item: any) => {
+    if (!catatan) {
+      alert("Silakan berikan catatan alasan penolakan.");
+      return;
+    }
+    setIsLoadingDB(true);
+    try {
+      await updateDoc(doc(db, 'verifikasi_warga', item.id), {
+        status: 'Ditolak',
+        catatan,
+        approvedAt: new Date().toISOString(),
+        approvedBy: currentUser.name
+      });
+      showNotification(`Pengajuan ${item.nama} ditolak.`, "info");
+      setSelectedItem(null);
+      setCatatan('');
+    } catch (err) {
+      handleFirestoreError(err, 'update', 'verifikasi_warga');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const statusColors: Record<string, string> = {
+    'Menunggu Persetujuan': 'bg-yellow-100 text-yellow-700',
+    'Disetujui': 'bg-green-100 text-green-700',
+    'Ditolak': 'bg-red-100 text-red-700'
+  };
+
+  return (
+    <div className="p-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+            <ShieldCheck className="w-8 h-8 text-blue-600" />
+            Verifikasi Data Mandiri
+          </h1>
+          <p className="text-sm text-slate-500 font-medium">Kelola pengajuan perbaikan data dari warga secara mandiri.</p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${filter === f ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-100 overflow-hidden">
+        <div className="p-4 border-b border-slate-50 flex items-center gap-3">
+          <Search className="w-5 h-5 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Cari NIK atau Nama..." 
+            className="flex-1 bg-transparent border-none focus:outline-none text-sm font-bold text-slate-600"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <th className="px-6 py-4">Warga</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Diajukan</th>
+                <th className="px-6 py-4">Terakhir Oleh</th>
+                <th className="px-6 py-4 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredData.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-bold">Tidak ada pengajuan data.</td>
+                </tr>
+              )}
+              {filteredData.map((item: any) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
+                        {item.ktpUrl ? <img src={item.ktpUrl} alt="KTP" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-slate-400" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">{item.nama}</p>
+                        <p className="text-[10px] font-medium text-slate-400">NIK: {item.nik}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${statusColors[item.status]}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-bold text-slate-500 text-xs text-slate-400">
+                    {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-slate-500 text-xs">
+                    {item.approvedBy || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => setSelectedItem(item)}
+                      className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {selectedItem && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setSelectedItem(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Detail Verifikasi: {selectedItem.nama}</h2>
+                <button onClick={() => setSelectedItem(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+
+              <div className="p-8 overflow-y-auto flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-bold">
+                  {/* Left Column: Form Changes */}
+                  <div className="space-y-6">
+                    <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest border-b border-blue-50 pb-2">Perubahan Data</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">KK Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.kk}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Alamat / Blok Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.blok}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">HP Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.hp}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Pekerjaan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.profesi}</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <label className="text-[10px] text-slate-400 uppercase mb-2 block font-black">Catatan Verifikasi</label>
+                      <textarea 
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-blue-500 h-24"
+                        placeholder="Berikan alasan jika menolak..."
+                        value={catatan}
+                        onChange={(e) => setCatatan(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button 
+                        onClick={() => handleApprove(selectedItem)}
+                        disabled={selectedItem.status === 'Disetujui'}
+                        className="flex-1 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50"
+                      >
+                        Setujui Data
+                      </button>
+                      <button 
+                        onClick={() => handleReject(selectedItem)}
+                        disabled={selectedItem.status === 'Ditolak' || selectedItem.status === 'Disetujui'}
+                        className="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl border border-red-100 hover:bg-red-100 disabled:opacity-50"
+                      >
+                        Tolak
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Files */}
+                  <div className="space-y-6">
+                    <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest border-b border-blue-50 pb-2">Dokumen Pendukung</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase mb-2">Foto KTP / Profil</p>
+                        <div className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-56 flex items-center justify-center">
+                          {selectedItem.ktpUrl ? (
+                            <img src={selectedItem.ktpUrl} alt="KTP" className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="text-center">
+                              <ShieldAlert className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                              <p className="text-[9px] text-slate-400 italic font-black">Tidak Ada File</p>
+                            </div>
+                          )}
+                          {selectedItem.ktpUrl && (
+                            <a href={selectedItem.ktpUrl} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Eye className="text-white w-8 h-8" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase mb-2">Kartu Keluarga (KK)</p>
+                        <div className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-56 flex items-center justify-center">
+                          {selectedItem.kkUrl ? (
+                            <img src={selectedItem.kkUrl} alt="KK" className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="text-center">
+                              <ShieldAlert className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                              <p className="text-[9px] text-slate-400 italic font-black">Tidak Ada File</p>
+                            </div>
+                          )}
+                          {selectedItem.kkUrl && (
+                            <a href={selectedItem.kkUrl} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Eye className="text-white w-8 h-8" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function WargaProfileView({ wargaData, verifikasiData, setWargaAuth, tenantId, setIsLoadingDB, handleFileUpload, showNotification, handleFirestoreError }: { wargaData: any, verifikasiData: any[], setWargaAuth: any, tenantId: string, setIsLoadingDB: any, handleFileUpload: any, showNotification: any, handleFirestoreError: any }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<any>(wargaData);
+  const [files, setFiles] = useState<{ktp?: File, kk?: File}>({});
+  const [uploading, setUploading] = useState(false);
+
+  // Get active submission
+  const activeSubmission = verifikasiData.find(v => v.nik === wargaData.nik);
+
+  const handleSubmitPerbaikan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoadingDB(true);
+    setUploading(true);
+
+    try {
+      let ktpUrl = activeSubmission?.ktpUrl || wargaData.foto || "";
+      let kkUrl = activeSubmission?.kkUrl || "";
+
+      if (files.ktp) {
+        ktpUrl = await handleFileUpload(files.ktp, 'ktp');
+      }
+      if (files.kk) {
+        kkUrl = await handleFileUpload(files.kk, 'kk');
+      }
+
+      const id = activeSubmission?.id || `VRF-${Date.now()}`;
+      const submission = {
+        ...formData,
+        id,
+        tenantId,
+        ktpUrl,
+        kkUrl,
+        status: 'Menunggu Persetujuan',
+        submittedAt: new Date().toISOString(),
+        catatan: ''
+      };
+
+      await setDoc(doc(db, 'verifikasi_warga', id), submission);
+      showNotification("Pengajuan perbaikan data berhasil dikirim. Menunggu verifikasi admin.", "success");
+      setIsEditing(false);
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'verifikasi_warga');
+    } finally {
+      setIsLoadingDB(false);
+      setUploading(false);
+    }
+  };
+
+  const handleDataSudahBenar = async () => {
+    setIsLoadingDB(true);
+    try {
+      const id = activeSubmission?.id || `VRF-${Date.now()}`;
+      const submission = {
+        ...wargaData,
+        id,
+        tenantId,
+        status: 'Disetujui',
+        submittedAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        approvedBy: 'Sistem (Konfirmasi Mandiri)',
+        catatan: 'Dikonfirmasi benar oleh warga'
+      };
+      await setDoc(doc(db, 'verifikasi_warga', id), submission);
+      showNotification("Terima kasih! Data Anda telah diverifikasi sukses.", "success");
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'verifikasi_warga');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const statusColors: Record<string, string> = {
+    'Belum Diverifikasi': 'bg-slate-100 text-slate-600',
+    'Menunggu Persetujuan': 'bg-yellow-100 text-yellow-700',
+    'Disetujui': 'bg-green-100 text-green-700',
+    'Ditolak': 'bg-red-100 text-red-700'
+  };
+
+  const currentStatus = activeSubmission?.status || 'Belum Diverifikasi';
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 pb-20">
+      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100 mt-4">
+        {/* Header */}
+        <div className="bg-blue-600 p-8 text-white relative">
+          <button 
+            onClick={() => setWargaAuth(null)}
+            className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 overflow-hidden shadow-lg">
+              {wargaData.foto ? (
+                <img src={wargaData.foto} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-10 h-10 text-white" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight">{wargaData.nama}</h1>
+              <p className="text-blue-100 font-medium opacity-80 uppercase text-[10px] tracking-widest mt-1">NIK: {wargaData.nik}</p>
+              <div className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${statusColors[currentStatus] || 'bg-slate-100 text-slate-600'}`}>
+                {currentStatus === 'Disetujui' && <CheckCircle className="w-3 h-3" />}
+                {currentStatus === 'Menunggu Persetujuan' && <Activity className="w-3 h-3" />}
+                {currentStatus === 'Ditolak' && <AlertCircle className="w-3 h-3" />}
+                {currentStatus}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {activeSubmission?.catatan && activeSubmission.status === 'Ditolak' && (
+          <div className="p-4 bg-red-50 border-b border-red-100 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-red-800 uppercase tracking-widest mb-1">Catatan Admin:</p>
+              <p className="text-sm text-red-700 font-medium">{activeSubmission.catatan}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="p-8">
+          {!isEditing ? (
+            <div className="space-y-8">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor KK</p>
+                  <p className="text-sm font-bold text-slate-700">{wargaData.kk || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor HP</p>
+                  <p className="text-sm font-bold text-slate-700">{wargaData.hp || '-'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Alamat sesuai KTP</p>
+                  <p className="text-sm font-bold text-slate-700">{wargaData.blok ? `Blok ${wargaData.blok}, ` : ''}RT {wargaData.rt}/RW {wargaData.rw}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pekerjaan</p>
+                  <p className="text-sm font-bold text-slate-700">{wargaData.profesi || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Pernikahan</p>
+                  <p className="text-sm font-bold text-slate-700">{wargaData.statusKawin || wargaData.posisi || '-'}</p>
+                </div>
+              </div>
+
+              {/* Anggota Keluarga Section */}
+              <div className="pt-6 border-t border-slate-100">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  Anggota Keluarga (Satu KK)
+                </h3>
+                <div className="space-y-2">
+                  {wargaData.kk ? (
+                    wargaData.listWargaInKK?.length > 0 ? (
+                      wargaData.listWargaInKK.map((m: any) => (
+                        <div key={m.nik} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                          <div>
+                            <p className="text-xs font-bold text-slate-700">{m.nama}</p>
+                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{m.posisi} • {m.nik}</p>
+                          </div>
+                          <div className="text-[9px] font-black px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-500 uppercase">
+                            Warga
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">Data anggota keluarga tidak ditemukan.</p>
+                    )
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">Nomor KK belum tersedia.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+                <button 
+                  onClick={handleDataSudahBenar}
+                  disabled={currentStatus === 'Disetujui' || currentStatus === 'Menunggu Persetujuan'}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Data Sudah Benar
+                </button>
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  disabled={currentStatus === 'Menunggu Persetujuan'}
+                  className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-3.5 px-6 rounded-2xl transition-all border border-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Edit className="w-5 h-5" />
+                  Ajukan Perbaikan
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmitPerbaikan} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-2">
+                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nomor KK</label>
+                   <input 
+                    type="text" 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                    value={formData.kk}
+                    onChange={(e) => setFormData({...formData, kk: e.target.value})}
+                   />
+                </div>
+                <div className="col-span-2">
+                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Alamat (Blok/Unit)</label>
+                   <input 
+                    type="text" 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                    value={formData.blok}
+                    onChange={(e) => setFormData({...formData, blok: e.target.value})}
+                   />
+                </div>
+                <div>
+                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nomor HP/WA</label>
+                   <input 
+                    type="text" 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                    value={formData.hp}
+                    onChange={(e) => setFormData({...formData, hp: e.target.value})}
+                   />
+                </div>
+                <div>
+                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Pekerjaan</label>
+                   <input 
+                    type="text" 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                    value={formData.profesi}
+                    onChange={(e) => setFormData({...formData, profesi: e.target.value})}
+                   />
+                </div>
+                <div className="col-span-2">
+                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Upload Foto KTP (Jika ada perubahan)</label>
+                   <div className="mt-2 flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                          <p className="text-xs text-slate-500">{files.ktp ? files.ktp.name : 'Pilih File atau Tarik ke sini'}</p>
+                        </div>
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setFiles({...files, ktp: e.target.files?.[0]})} title="KTP" />
+                      </label>
+                   </div>
+                </div>
+                <div className="col-span-2">
+                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Upload Foto Kartu Keluarga</label>
+                   <div className="mt-2 flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                          <p className="text-xs text-slate-500">{files.kk ? files.kk.name : 'Pilih File atau Tarik ke sini'}</p>
+                        </div>
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setFiles({...files, kk: e.target.files?.[0]})} title="KK" />
+                      </label>
+                   </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 py-3.5 border border-slate-200 rounded-2xl font-bold text-slate-600"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="submit"
+                  disabled={uploading}
+                  className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-100 disabled:opacity-50"
+                >
+                  {uploading ? 'Mengunggah...' : 'Simpan & Ajukan'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+      
+      <div className="mt-6 text-center">
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ERP RW 26 - Sistem Layanan Mandiri Warga</p>
+      </div>
+    </div>
+  );
+}
+
+function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: any[] }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginMode, setLoginMode] = useState<'admin' | 'warga'>('admin');
+  const [nik, setNik] = useState('');
+  const [kodeKeluarga, setKodeKeluarga] = useState('');
+
+  const handleWargaLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    // Search in wargaData
+    const found = wargaData.find(w => w.nik === nik && w.kk === kodeKeluarga);
+    if (found) {
+      // Sign in anonymously to Firestore to satisfy "isSignedIn()" rules
+      signInAnonymously(auth).catch(err => console.error("Anonymous signin failed:", err));
+      
+      // Find other family members
+      const familyMembers = wargaData.filter(w => w.kk === kodeKeluarga);
+      const wargaAuthData = { ...found, listWargaInKK: familyMembers };
+      
+      setTimeout(() => {
+        setWargaAuth(wargaAuthData);
+        setIsLoading(false);
+      }, 800);
+    } else {
+      setTimeout(() => {
+        setError('NIK atau Kode Keluarga tidak cocok. Silakan hubungi RT/RW jika ada kesalahan data.');
+        setIsLoading(false);
+      }, 500);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent, quickEmail?: string, quickPass?: string) => {
     e.preventDefault();
@@ -5017,68 +5721,133 @@ function LoginView() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
+          <div className="flex border-b border-slate-100">
+            <button 
+              onClick={() => setLoginMode('admin')}
+              className={`flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-all ${loginMode === 'admin' ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600 bg-slate-50'}`}
+            >
+              Manajemen (Admin)
+            </button>
+            <button 
+              onClick={() => setLoginMode('warga')}
+              className={`flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-all ${loginMode === 'warga' ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600 bg-slate-50'}`}
+            >
+              Warga Mandiri
+            </button>
+          </div>
           <div className="p-8">
-            <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary text-slate-900">Silakan Masuk</h2>
+            <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary text-slate-900">
+              {loginMode === 'admin' ? 'Masuk ke Sistem ERP' : 'Verifikasi Data Warga'}
+            </h2>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
             )}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                  <input
-                    type="text"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                    placeholder="Contoh: admin@rw26.com atau admin"
-                  />
+
+            {loginMode === 'admin' ? (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <input
+                      type="text"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                      placeholder="Contoh: admin@rw26.com atau admin"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                    placeholder="Masukkan password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                      placeholder="Masukkan password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
-              >
-                {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
-              </button>
-             </form>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleWargaLogin} className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Nomor Induk Kependudukan (NIK)</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <input
+                      type="text"
+                      required
+                      maxLength={16}
+                      value={nik}
+                      onChange={(e) => setNik(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                      placeholder="16 Digit NIK Anda"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Kode Keluarga (No. KK / HP)</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <input
+                      type="password"
+                      required
+                      value={kodeKeluarga}
+                      onChange={(e) => setKodeKeluarga(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                      placeholder="Masukkan Nomor KK Anda"
+                    />
+                  </div>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-xl">
+                  <p className="text-[10px] text-blue-700 font-medium leading-relaxed italic">
+                    * Gunakan NIK dan No. KK untuk masuk. Fitur ini memungkinkan Anda memverifikasi data diri secara mandiri tanpa harus ke kantor RT.
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-lg shadow-slate-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Verifikasi Data Saya'}
+                </button>
+              </form>
+            )}
              
-             <div className="mt-8 pt-6 border-t border-slate-100">
-               <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Demo Quick Login</p>
+             {loginMode === 'admin' && (
+               <div className="mt-8 pt-6 border-t border-slate-100">
+                 <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Demo Quick Login</p>
                <div className="grid grid-cols-1 gap-2">
                  <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'arifrajcoach@gmail.com', '4R1f080162')} className="w-full bg-slate-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-slate-800">SUPER ADMIN</button>
                  <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'admin@rw26.com', 'admin123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">ADMIN</button>
                  <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'operator@rw26.com', 'operator123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">OPERATOR</button>
                  <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'warga@rw26.com', 'warga123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">VIEWER</button>
-               </div>
-             </div>
+                 </div>
+              </div>
+            )}
           </div>
           <div className="p-6 bg-slate-50 border-t border-slate-100 italic">
             <p className="text-center text-[10px] text-slate-400">
@@ -5937,19 +6706,19 @@ function PosyanduView({
     const formData = new FormData(e.currentTarget);
     const id = editingItem?.id || `MIL-${Date.now()}`;
     
-    const nik = formData.get('nik') as string;
-    const warga = wargaData.find((w: any) => w.nik === nik);
+    const nikInput = formData.get('nik') as string;
+    const warga = wargaData.find((w: any) => w.nik === nikInput || w.nama === nikInput);
 
     const data = {
       id,
       tenantId,
-      nik,
-      nama: warga?.nama || formData.get('nama'),
+      nik: warga?.nik || nikInput || "-",
+      nama: warga?.nama || nikInput || "-",
       tglHPL: formData.get('tglHPL'),
       usiaKehamilan: parseInt(formData.get('usiaKehamilan') as string || "0"),
       riwayatKesehatan: formData.get('riwayatKesehatan'),
-      rt: warga?.rt || formData.get('rt'),
-      rw: warga?.rw || formData.get('rw')
+      rt: warga?.rt || formData.get('rt') || "-",
+      rw: warga?.rw || formData.get('rw') || "-"
     };
 
     setIsLoadingDB(true);
@@ -6316,7 +7085,7 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {balitaData.filter(b => b.nama.toLowerCase().includes(searchQuery.toLowerCase())).map(balita => {
+                {balitaData.filter(b => (b.nama || '').toLowerCase().includes(searchQuery.toLowerCase())).map(balita => {
                   const age = calculateAgeMonths(balita.tglLahir);
                   return (
                     <tr key={balita.id} className="hover:bg-slate-50 transition-colors group">
@@ -6343,6 +7112,12 @@ function PosyanduView({
                       </td>
                       <td className="px-6 py-4 text-right">
                          <div className="flex justify-end gap-2">
+                           <button 
+                             onClick={() => { setSelectedBalita(balita); setActiveSubTab('timeline'); }}
+                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" title="Lihat Detail (Timeline)"
+                           >
+                              <Eye className="w-4 h-4" />
+                           </button>
                            <button 
                              onClick={() => exportBalitaKardPDF(balita)}
                              className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors border border-transparent hover:border-pink-100" title="Download Kartu Kesehatan (PDF)"
@@ -6602,7 +7377,7 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {ibuHamilData.filter((mil: any) => mil.nama.toLowerCase().includes(searchQuery.toLowerCase())).map((mil: any) => (
+                {ibuHamilData.filter((mil: any) => (mil.nama || '').toLowerCase().includes(searchQuery.toLowerCase())).map((mil: any) => (
                   <tr key={mil.id} className="hover:bg-slate-50 transition-all group">
                     <td className="px-6 py-4">
                        <p className="text-sm font-bold text-slate-800">{mil.nama}</p>
@@ -6619,6 +7394,13 @@ function PosyanduView({
                     </td>
                      <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1.5 group-hover:opacity-100 transition-all">
+                          <button 
+                            onClick={() => { setSelectedIbuHamil(mil); setActiveSubTab('ibuhamil_detail'); }}
+                            className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-colors" 
+                            title="Lihat Detail"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
                           <button 
                             onClick={() => exportIbuHamilKardPDF(mil)} 
                             className="p-1.5 text-pink-600 bg-pink-50 rounded-lg hover:bg-pink-100 border border-pink-100 transition-colors" 
@@ -7508,7 +8290,7 @@ function BankSampahView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium whitespace-nowrap">
-                  {sampahSetoranData.filter((s: any) => s.namaNasabah.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any) => (
+                  {sampahSetoranData.filter((s: any) => s.namaNasabah?.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any) => (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 font-bold text-slate-700">{item.namaNasabah}</td>
                       <td className="px-6 py-4">{item.namaKategori}</td>
@@ -7587,7 +8369,7 @@ function BankSampahView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {sampahTarikSaldoData.filter((t: any) => t.namaNasabah.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any) => (
+                  {sampahTarikSaldoData.filter((t: any) => t.namaNasabah?.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any) => (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 font-bold text-slate-700">{item.namaNasabah}</td>
                       <td className="px-6 py-4 text-right font-black text-blue-600">Rp {item.nominal.toLocaleString()}</td>
@@ -8102,21 +8884,21 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
     try {
       // Auto-save Kategori & Lokasi ke Master Data jika belum ada
       if (itemData.kategori) {
-        const kExists = inventarisKategori.find(k => k.nama_kategori.toLowerCase() === itemData.kategori.toLowerCase());
+        const kExists = inventarisKategori.find(k => k.nama_kategori?.toLowerCase() === itemData.kategori?.toLowerCase());
         if (!kExists) {
           const kId = `KAT-${Date.now()}`;
           await setDoc(doc(db, 'inventaris_kategori', kId), { id: kId, nama_kategori: itemData.kategori, tenantId });
         }
       }
       if (itemData.lokasi) {
-        const lExists = inventarisLokasi.find(l => l.nama_lokasi.toLowerCase() === itemData.lokasi.toLowerCase());
+        const lExists = inventarisLokasi.find(l => l.nama_lokasi?.toLowerCase() === itemData.lokasi?.toLowerCase());
         if (!lExists) {
           const lId = `LOK-${Date.now()}`;
           await setDoc(doc(db, 'inventaris_lokasi', lId), { id: lId, nama_lokasi: itemData.lokasi, tenantId });
         }
       }
       if (itemData.supplier) {
-        const sExists = inventarisSupplier.find(s => s.nama.toLowerCase() === itemData.supplier.toLowerCase());
+        const sExists = inventarisSupplier.find(s => s.nama?.toLowerCase() === itemData.supplier?.toLowerCase());
         if (!sExists) {
           const sId = `SUP-${Date.now()}`;
           await setDoc(doc(db, 'inventaris_supplier', sId), { 
@@ -8204,14 +8986,14 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
          setInventarisData((prev: any) => prev.map((item: any) => item.id === selectedItem.id ? { ...item, ...itemUpdate } : item));
       }
       if (logData.supplier && txType === 'Barang Masuk') {
-        const sExists = inventarisSupplier.find((s:any) => s.nama.toLowerCase() === logData.supplier.toLowerCase());
+        const sExists = inventarisSupplier.find((s:any) => s.nama?.toLowerCase() === logData.supplier?.toLowerCase());
         if (!sExists) {
           const sId = `SUP-${Date.now()}`;
           await setDoc(doc(db, 'inventaris_supplier', sId), { id: sId, nama: logData.supplier, kontak: '', alamat: '', tenantId });
         }
       }
       if (logData.ke_lokasi && txType === 'Mutasi Barang') {
-        const lExists = inventarisLokasi.find((l:any) => l.nama_lokasi.toLowerCase() === logData.ke_lokasi.toLowerCase());
+        const lExists = inventarisLokasi.find((l:any) => l.nama_lokasi?.toLowerCase() === logData.ke_lokasi?.toLowerCase());
         if (!lExists) {
           const lId = `LOK-${Date.now()}`;
           await setDoc(doc(db, 'inventaris_lokasi', lId), { id: lId, nama_lokasi: logData.ke_lokasi, tenantId });

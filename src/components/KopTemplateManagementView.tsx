@@ -6,7 +6,7 @@ import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'fireb
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Settings, Save, Upload, FileText, PlusCircle, CheckCircle } from 'lucide-react';
 
-export default function KopTemplateManagementView({ currentUser, showNotification, handleFirestoreError }: { currentUser: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
+export default function KopTemplateManagementView({ currentUser, settings, showNotification, handleFirestoreError }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
   const [activeSub, setActiveSub] = useState('branding');
   
   return (
@@ -17,7 +17,7 @@ export default function KopTemplateManagementView({ currentUser, showNotificatio
         <button onClick={() => setActiveSub('template')} className={`px-4 py-2 rounded-lg ${activeSub === 'template' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Template</button>
       </div>
 
-      {activeSub === 'branding' && <BrandingForm currentUser={currentUser} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
+      {activeSub === 'branding' && <BrandingForm currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
       {activeSub === 'template' && <TemplateList currentUser={currentUser} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
     </div>
   );
@@ -32,7 +32,7 @@ function TemplateSuratFisik({ formData, logoUrl }: { formData: any, logoUrl: str
              <div className="flex-1 text-center">
                  <h2 className="text-lg font-bold uppercase">{formData.nama_rt || `RUKUN TETANGGA ${formData.rt || '...'} / RUKUN WARGA ${formData.rw || '...'}`}</h2>
                  <p className="text-sm">KELURAHAN {formData.kelurahan?.toUpperCase() || '...'} - KECAMATAN {formData.kecamatan?.toUpperCase() || '...'}</p>
-                 <p className="text-sm font-bold">KABUPATEN {formData.kabupaten?.toUpperCase() || 'BEKASI'}</p>
+                 <p className="text-sm font-bold">{formData.kabupaten?.toUpperCase().includes('KABUPATEN') || formData.kabupaten?.toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}{formData.kabupaten?.toUpperCase() || 'BEKASI'}</p>
                  <p className="text-[10px]">Sekretariat : {formData.alamat || '...'} | Email: {formData.email || '...'} | Instagram: {formData.instagram || '...'}</p>
              </div>
              {/* Spacer to balance the logo */}
@@ -48,7 +48,7 @@ function TemplateSuratFisik({ formData, logoUrl }: { formData: any, logoUrl: str
         </div>
         
         <div className="mt-6">
-            <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {formData.rt || '...'} / RW {formData.rw || '...'} Kelurahan {formData.kelurahan || '...'} Kecamatan {formData.kecamatan || '...'} Kabupaten {formData.kabupaten || '...'}</p>
+            <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {formData.rt || '...'} / RW {formData.rw || '...'} Kelurahan {formData.kelurahan || '...'} Kecamatan {formData.kecamatan || '...'} {(formData.kabupaten?.toUpperCase().includes('KABUPATEN') || formData.kabupaten?.toUpperCase().includes('KOTA')) ? '' : 'Kabupaten '}{formData.kabupaten || '...'}</p>
             <p className="mb-4">Dengan ini menerangkan bahwa :</p>
             <div className="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
                <div>Nama</div><div>:</div><div>...........................................................................</div>
@@ -73,7 +73,11 @@ function TemplateSuratFisik({ formData, logoUrl }: { formData: any, logoUrl: str
                 <p className="underline font-bold">{formData.nama_ketua_rw || '...................................'}</p>
             </div>
             <div className="text-center">
-                <p>{formData.kabupaten || 'Bekasi'}, ......................... 202...</p>
+                <p>{(() => {
+                    const kab = formData.kabupaten || 'Bekasi';
+                    const prefix = kab.toUpperCase().includes('KABUPATEN') || kab.toUpperCase().includes('KOTA') ? '' : 'Kabupaten ';
+                    return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                  })()}, ......................... 202...</p>
                 <p>Ketua RT {formData.rt || '....'} Kelurahan {formData.kelurahan || '....'}</p>
                 <div className="h-20" />
                 <p className="underline font-bold">{formData.nama_ketua_rt || '...................................'}</p>
@@ -97,20 +101,20 @@ function TemplateSuratFisik({ formData, logoUrl }: { formData: any, logoUrl: str
   );
 }
 
-function BrandingForm({ currentUser, showNotification, handleFirestoreError }: { currentUser: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
+function BrandingForm({ currentUser, settings, showNotification, handleFirestoreError }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
   const [formData, setFormData] = useState({
-    nama_rt: '',
-    rt: '',
-    rw: '',
-    nama_ketua_rt: '',
-    nama_ketua_rw: '',
-    alamat: '',
-    telepon: '',
-    email: '',
-    instagram: '',
-    kelurahan: '',
-    kecamatan: '',
-    kabupaten: ''
+    nama_rt: settings?.nama_rt || '',
+    rt: settings?.rt || '',
+    rw: settings?.rw || '',
+    nama_ketua_rt: settings?.nama_ketua_rt || '',
+    nama_ketua_rw: settings?.nama_ketua_rw || '',
+    alamat: settings?.alamat || '',
+    telepon: settings?.telepon || '',
+    email: settings?.email || '',
+    instagram: settings?.instagram || '',
+    kelurahan: settings?.kelurahan || '',
+    kecamatan: settings?.kecamatan || '',
+    kabupaten: settings?.kabupaten || ''
   });
   const [logoUrl, setLogoUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -134,6 +138,7 @@ function BrandingForm({ currentUser, showNotification, handleFirestoreError }: {
       <html>
         <head>
           <title>Uji Coba Cetak Branding - ${formData.nama_rt || 'SmartRW'}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
             body { 

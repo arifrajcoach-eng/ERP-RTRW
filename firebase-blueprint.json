@@ -313,6 +313,32 @@
         "created_at": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "tenantId", "type", "template_html"]
+    },
+    "VerifikasiWarga": {
+      "title": "Verifikasi Warga",
+      "description": "Permohonan verifikasi atau perbaikan data mandiri oleh warga",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nik": { "type": "string" },
+        "nama": { "type": "string" },
+        "kk": { "type": "string" },
+        "alamat": { "type": "string" },
+        "hp": { "type": "string" },
+        "pekerjaan": { "type": "string" },
+        "pendidikan": { "type": "string" },
+        "statusKawin": { "type": "string" },
+        "anggotaKeluarga": { "type": "string" },
+        "ktpUrl": { "type": "string" },
+        "kkUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["Belum Diverifikasi", "Menunggu Persetujuan", "Disetujui", "Ditolak"] },
+        "catatan": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "approvedBy": { "type": "string" }
+      },
+      "required": ["id", "nik", "nama", "tenantId", "status"]
     }
   },
   "firestore": {
@@ -335,6 +361,10 @@
     "/warga/{nik}": {
       "schema": "Warga",
       "description": "Koleksi data warga"
+    },
+    "/verifikasi_warga/{id}": {
+      "schema": "VerifikasiWarga",
+      "description": "Koleksi permohonan verifikasi data warga mandiri"
     },
     "/kas/{id}": {
       "schema": "Kas",
