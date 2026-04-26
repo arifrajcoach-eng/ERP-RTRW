@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -264,9 +264,19 @@ export default function App() {
           if (userDoc.exists()) {
             let userData = userDoc.data() as any;
             // Force Super Admin status for the specific master email
-            if (user.email === 'arifrajcoach@gmail.com') {
-              userData.isSuperAdmin = true;
-              userData.role = 'ADMIN';
+            const isMasterEmail = user.email === 'arifrajcoach@gmail.com';
+            if (isMasterEmail) {
+              if (!userData.isSuperAdmin || userData.role !== 'ADMIN') {
+                userData.isSuperAdmin = true;
+                userData.role = 'ADMIN';
+                userData.name = 'Bpk. Arif (Super Admin)';
+                // Persistent update to database
+                await updateDoc(userDocRef, { 
+                  isSuperAdmin: true, 
+                  role: 'ADMIN',
+                  name: userData.name 
+                });
+              }
             }
             setCurrentUser(userData);
           } else if (user.isAnonymous) {
@@ -1008,7 +1018,7 @@ export default function App() {
             { id: 'bank-sampah', label: 'Bank Sampah', icon: Recycle },
             { id: 'etoko', label: 'E-Toko', icon: ShoppingBag },
             { id: 'voting', label: 'E-Pemilu', icon: Vote },
-            { id: 'inventaris', label: 'Inventaris Barang', icon: Package },
+            { id: 'inventaris', label: 'Aset & Inventaris', icon: Package },
             { id: 'surat', label: 'Surat Pengantar', icon: FileText },
             { id: 'kop-template', label: 'KOP & Template', icon: FileSpreadsheet },
             { id: 'kas', label: 'Laporan Kas', icon: BookOpen },
@@ -1125,6 +1135,7 @@ export default function App() {
              inventarisKategori={inventarisKategori} inventarisLokasi={inventarisLokasi} inventarisSupplier={inventarisSupplier}
              userRole={currentUser.role} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'} 
              setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} 
+             handleFileUpload={handleFileUpload}
           />}
           {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} />}
           {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
@@ -1651,15 +1662,6 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
   const totalDewasa = ages.filter(age => age >= 19 && age <= 59).length;
   const totalLansia = ages.filter(age => age >= 60).length;
 
-  const religionStats = {
-    islam: wargaData.filter(w => (w.agama || '').toLowerCase() === 'islam').length,
-    kristen: wargaData.filter(w => (w.agama || '').toLowerCase() === 'kristen').length,
-    katolik: wargaData.filter(w => (w.agama || '').toLowerCase() === 'katolik').length,
-    hindu: wargaData.filter(w => (w.agama || '').toLowerCase() === 'hindu').length,
-    budha: wargaData.filter(w => (w.agama || '').toLowerCase() === 'budha').length,
-    konghucu: wargaData.filter(w => (w.agama || '').toLowerCase() === 'konghucu').length,
-  };
-
   // Merged Recent Activities
   const recentActivities = [
     ...kasData.map(k => ({
@@ -1989,25 +1991,6 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Lansia (60+)</p>
               <p className="text-xl font-black text-emerald-600">{totalLansia}</p>
-            </div>
-          </div>
-
-          <div className="mt-8 border-t border-slate-100 pt-6">
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Distribusi Agama</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { label: 'Islam', count: religionStats.islam, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { label: 'Kristen', count: religionStats.kristen, color: 'text-blue-600', bg: 'bg-blue-50' },
-                { label: 'Katolik', count: religionStats.katolik, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                { label: 'Hindu', count: religionStats.hindu, color: 'text-orange-600', bg: 'bg-orange-50' },
-                { label: 'Budha', count: religionStats.budha, color: 'text-amber-600', bg: 'bg-amber-50' },
-                { label: 'Konghucu', count: religionStats.konghucu, color: 'text-red-600', bg: 'bg-red-50' },
-              ].map((stat, i) => (
-                <div key={i} className={`${stat.bg} p-3 rounded-xl border border-white/50 flex flex-col items-center justify-center text-center shadow-sm`}>
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-1">{stat.label}</p>
-                  <p className={`text-xl font-black ${stat.color}`}>{stat.count}</p>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -6550,6 +6533,8 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
       const userData = {
         email: user.email,
         role: isArif ? 'ADMIN' : 'Viewer',
+        isSuperAdmin: isArif,
+        name: isArif ? 'Bpk. Arif (Super Admin)' : (user.displayName || 'User'),
         tenantId: 'RW26_SMART', // De-facto tenant
         createdAt: userDoc.exists() ? userDoc.data()?.createdAt || new Date().toISOString() : new Date().toISOString()
       };
@@ -9717,7 +9702,7 @@ function BankSampahView({
   );
 }
 
-function InventarisView({ inventarisData, setInventarisData, inventarisLogs, setInventarisLogs, inventarisKategori, inventarisLokasi, inventarisSupplier, userRole, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification }: any) {
+function InventarisView({ inventarisData, setInventarisData, inventarisLogs, setInventarisLogs, inventarisKategori, inventarisLokasi, inventarisSupplier, userRole, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification, handleFileUpload }: any) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showLogForm, setShowLogForm] = useState(false);
   const [showLogHistory, setShowLogHistory] = useState(false);
@@ -9730,6 +9715,8 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
   const [txJumlah, setTxJumlah] = useState(1);
   const [txHarga, setTxHarga] = useState(0);
   const [txStokFisik, setTxStokFisik] = useState(0);
+  const [uploadPct, setUploadPct] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const canEdit = userRole === 'ADMIN' || userRole === 'RW' || userRole === 'RT' || userRole === 'BENDAHARA' || userRole === 'SEKRETARIS';
 
@@ -9745,24 +9732,34 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
 
     const formData = new FormData(e.currentTarget);
     const itemId = editingItem ? editingItem.id : `INV-BRG-${Date.now()}`;
-    
-    const itemData = {
-      id: itemId,
-      nama_barang: formData.get('nama_barang') as string,
-      kategori: formData.get('kategori') as string,
-      satuan: formData.get('satuan') as string,
-      merk: formData.get('merk') as string,
-      spesifikasi: formData.get('spesifikasi') as string,
-      stok: parseInt(formData.get('stok') as string) || 0,
-      minimum_stok: parseInt(formData.get('minimum_stok') as string) || 0,
-      status: formData.get('status') as string,
-      lokasi: formData.get('lokasi') as string,
-      supplier: formData.get('supplier') as string,
-      tenantId
-    };
+    const fotoFile = (e.currentTarget.elements.namedItem('foto_aset') as HTMLInputElement)?.files?.[0];
 
     setIsLoadingDB(true);
+    setUploading(true);
+    
     try {
+      let fotoUrl = editingItem?.foto_url || '';
+      if (fotoFile && handleFileUpload) {
+        fotoUrl = await handleFileUpload(fotoFile, 'inventaris', (pct) => setUploadPct(pct));
+      }
+
+      const itemData = {
+        id: itemId,
+        nama_barang: formData.get('nama_barang') as string,
+        kategori: formData.get('kategori') as string,
+        satuan: formData.get('satuan') as string,
+        merk: formData.get('merk') as string,
+        spesifikasi: formData.get('spesifikasi') as string,
+        stok: parseInt(formData.get('stok') as string) || 0,
+        minimum_stok: parseInt(formData.get('minimum_stok') as string) || 0,
+        status: formData.get('status') as string,
+        lokasi: formData.get('lokasi') as string,
+        supplier: formData.get('supplier') as string,
+        tanggal_perolehan: formData.get('tanggal_perolehan') as string,
+        harga_perolehan: parseInt(formData.get('harga_perolehan') as string) || 0,
+        foto_url: fotoUrl,
+        tenantId
+      };
       // Auto-save Kategori & Lokasi ke Master Data jika belum ada
       if (itemData.kategori) {
         const kExists = inventarisKategori.find(k => k.nama_kategori?.toLowerCase() === itemData.kategori?.toLowerCase());
@@ -9807,6 +9804,8 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
       handleFirestoreError(error, editingItem ? 'update' : 'create', 'inventaris');
     } finally {
       setIsLoadingDB(false);
+      setUploading(false);
+      setUploadPct(0);
     }
   };
 
@@ -9917,7 +9916,7 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
         <div>
           <h2 className="text-xl font-bold text-slate-800 flex items-center">
              <span className="bg-blue-600 w-1.5 h-6 rounded-full mr-2"></span>
-             Inventaris Barang
+             Aset & Inventaris
           </h2>
           <p className="text-sm text-slate-500 mt-1 max-w-lg">Kelola dan pantau aset yang dimiliki oleh organisasi, perbarui kondisi, serta catat lokasi penyimpanannya di satu tempat.</p>
         </div>
@@ -9936,7 +9935,7 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
                className="flex-shrink-0 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95"
              >
                <PlusCircle className="w-4 h-4" />
-               Tambah Barang
+               Tambah Aset Baru
              </button>
            )}
         </div>
@@ -9947,10 +9946,11 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Barang & Spesifikasi</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Aset / Barang</th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Stok</th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Kategori & Lokasi</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Perolehan</th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap text-right">Aksi</th>
               </tr>
             </thead>
@@ -9961,8 +9961,19 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
                 filteredData.map((item: any) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="text-xs font-bold text-slate-800 tracking-tight">{item.nama_barang}</p>
-                      <p className="text-[10px] text-slate-500 font-medium mt-0.5">Merk: {item.merk || '-'} - {item.spesifikasi || '-'}</p>
+                      <div className="flex items-center gap-3">
+                        {item.foto_url ? (
+                          <img src={item.foto_url} alt={item.nama_barang} className="w-10 h-10 rounded-lg object-cover border border-slate-200" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                             <Package className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 tracking-tight">{item.nama_barang}</p>
+                          <p className="text-[10px] text-slate-500 font-medium mt-0.5">Merk: {item.merk || '-'}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center gap-1">
@@ -9984,7 +9995,10 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
                     <td className="px-4 py-3">
                       <p className="text-[11px] font-bold text-slate-700">{item.kategori || '-'}</p>
                       <p className="text-[10px] text-slate-500 mt-0.5">{item.lokasi || '-'}</p>
-                      {item.supplier && <p className="text-[9px] text-slate-400 mt-0.5">Supplier: {item.supplier}</p>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-[10px] font-bold text-slate-700">{item.tanggal_perolehan ? new Date(item.tanggal_perolehan).toLocaleDateString('id-ID') : '-'}</p>
+                      <p className="text-[10px] text-emerald-600 font-mono font-bold mt-0.5">Rp {(item.harga_perolehan || 0).toLocaleString('id-ID')}</p>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
@@ -10039,8 +10053,40 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
              <form onSubmit={handleSaveItem} className="p-6 space-y-4">
                <div className="grid grid-cols-2 gap-4">
                  <div className="col-span-2">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Nama Barang <span className="text-red-500">*</span></label>
+                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Foto Aset</label>
+                   <div className="flex items-center gap-4">
+                     <div className="w-20 h-20 rounded-xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
+                       {editingItem?.foto_url ? (
+                         <img src={editingItem.foto_url} alt="Preview" className="w-full h-full object-cover" />
+                       ) : (
+                         <Camera className="w-8 h-8 text-slate-300" />
+                       )}
+                     </div>
+                     <div className="flex-1">
+                        <input type="file" name="foto_aset" accept="image/*" className="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+                        <p className="text-[9px] text-slate-400 mt-2 font-medium">Format JPG/PNG, Max 2MB. Foto baru akan menggantikan yang lama.</p>
+                     </div>
+                   </div>
+                   {uploading && (
+                      <div className="mt-3">
+                         <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${uploadPct}%` }}></div>
+                         </div>
+                         <p className="text-[9px] font-black text-blue-600 text-right mt-1">Mengunggah: {uploadPct}%</p>
+                      </div>
+                   )}
+                 </div>
+                 <div className="col-span-2">
+                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Nama Aset / Barang <span className="text-red-500">*</span></label>
                    <input type="text" name="nama_barang" required defaultValue={editingItem?.nama_barang} placeholder="Contoh: Tenda 3x4" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-blue-500 outline-none font-bold" />
+                 </div>
+                 <div className="col-span-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Tgl Perolehan</label>
+                    <input type="date" name="tanggal_perolehan" defaultValue={editingItem?.tanggal_perolehan} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-blue-500 outline-none font-mono font-medium" />
+                 </div>
+                 <div className="col-span-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Harga Perolehan</label>
+                    <input type="number" name="harga_perolehan" defaultValue={editingItem?.harga_perolehan || 0} placeholder="Rp" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-blue-500 outline-none font-mono font-bold" />
                  </div>
                  <div className="col-span-2 md:col-span-1">
                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Kategori <span className="text-red-500">*</span></label>
@@ -10095,7 +10141,7 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
                
                <div className="pt-4 flex gap-3">
                  <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-slate-50 transition-all">Batal</button>
-                 <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95">Simpan Barang</button>
+                 <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95">Simpan Aset</button>
                </div>
              </form>
           </div>
