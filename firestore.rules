@@ -51,13 +51,6 @@ service cloud.firestore {
       return isSignedIn() && (isSuperAdmin() || role == 'ADMIN' || role == 'RW' || role == 'RT' || role == 'BENDAHARA' || role == 'SEKRETARIS');
     }
 
-    function isAnonymous() {
-      return isSignedIn() && (
-        request.auth.token.firebase.sign_in_provider == 'anonymous' ||
-        !exists(/databases/$(database)/documents/users/$(request.auth.uid))
-      );
-    }
-
     function isWargaOfRT(rt) {
       let data = getUserData();
       return data != null && data.get('rt', '') == rt;
@@ -148,14 +141,9 @@ service cloud.firestore {
     }
 
     function isValidVerifikasi(data) {
-      return (data.nik is string || data.nik is number) && 
-             data.nama is string && 
-             data.tenantId is string && 
-             data.status in ["Belum Diverifikasi", "Menunggu Persetujuan", "Disetujui", "Ditolak"];
-    }
-
-    function isOwnerOfVerifikasi(data) {
-      return isSignedIn() && data.get('userId', '') == request.auth.uid;
+      return data.nik is string && data.nama is string && data.tenantId is string && 
+             data.status in ["Belum Diverifikasi", "Menunggu Persetujuan", "Disetujui", "Ditolak"] &&
+             (!('agama' in data) || data.agama is string);
     }
 
     function isValidPemeriksaan(data) {
@@ -221,31 +209,19 @@ service cloud.firestore {
 
     // --- Verifikasi Warga Collection ---
     match /verifikasi_warga/{id} {
+      // List should filter by tenantId OR be Super Admin
       allow list: if isSignedIn() && (
         isSuperAdmin() || 
-        (isOperator() && resource.data.tenantId == getTenantId()) ||
-        isOwnerOfVerifikasi(resource.data)
+        (resource.data.tenantId == getTenantId() && isOperator()) ||
+        (resource.data.userId == request.auth.uid)
       );
-      allow get: if isSignedIn() && (
-        isSuperAdmin() || 
-        (isSameTenant(existing()) && isOperator()) || 
-        isOwnerOfVerifikasi(existing())
-      );
+      allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()) || request.auth.uid == existing().get('userId', ''));
       
-      allow create: if isSignedIn() && isValidId(id) && isValidVerifikasi(incoming()) && 
-                    incoming().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(id) && isValidVerifikasi(incoming()) && isSameTenant(incoming()) && incoming().userId == request.auth.uid;
       
-      allow update: if isSignedIn() && isValidVerifikasi(incoming()) && (
-        (isOperator() && isSameTenant(existing()) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'catatan', 'updatedAt'])) || 
-        (
-          isOwnerOfVerifikasi(existing()) && 
-          incoming().diff(existing()).affectedKeys().hasOnly([
-            'id', 'tenantId', 'userId', 'nik', 'nama', 'kk', 'rt', 'rw', 
-            'agama', 'jk', 'tempatLahir', 'tglLahir', 'alamat', 'profesi', 
-            'pendidikanTerakhir', 'kawin', 'posisi', 'kewarganegaraan', 
-            'ktpUrl', 'kkUrl', 'status', 'submittedAt', 'catatan'
-          ])
-        )
+      allow update: if isSignedIn() && isSameTenant(existing()) && (
+        (isOperator() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'catatan', 'updatedAt'])) || 
+        (request.auth.uid == existing().get('userId', '') && incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'nik', 'ktpUrl', 'kkUrl', 'updatedAt', 'agama', 'tempatLahir', 'tglLahir', 'jk', 'kk', 'alamat', 'rt', 'rw', 'profesi', 'pendidikanTerakhir', 'kawin', 'posisi', 'kewarganegaraan']))
       );
       allow delete: if isAdmin();
     }
