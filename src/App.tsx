@@ -2303,6 +2303,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       pendidikanTerakhir: (row['Pendidikan Terakhir'] || row['pendidikanTerakhir'] || "").toString(),
       kawin: (row['Status Kawin'] || row['kawin'] || "").toString(),
       kewarganegaraan: (row['Kewarganegaraan'] || row['kewarganegaraan'] || "").toString(),
+      agama: (row['Agama'] || row['agama'] || "Islam").toString(),
       rt: (row['RT'] || row['rt'] || "01").toString(),
       rw: (row['RW'] || row['rw'] || "05").toString(),
       blok: (row['Alamat/Blok'] || row['alamat'] || row['blok'] || "").toString(),
