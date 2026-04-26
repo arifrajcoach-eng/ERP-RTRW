@@ -51,6 +51,10 @@ service cloud.firestore {
       return isSignedIn() && (isSuperAdmin() || role == 'ADMIN' || role == 'RW' || role == 'RT' || role == 'BENDAHARA' || role == 'SEKRETARIS');
     }
 
+    function isAnonymous() {
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
     function isWargaOfRT(rt) {
       let data = getUserData();
       return data != null && data.get('rt', '') == rt;
@@ -217,9 +221,9 @@ service cloud.firestore {
       );
       allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()) || request.auth.uid == existing().get('userId', ''));
       
-      allow create: if isSignedIn() && isValidId(id) && isValidVerifikasi(incoming()) && isSameTenant(incoming()) && incoming().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(id) && isValidVerifikasi(incoming()) && (isSameTenant(incoming()) || isAnonymous()) && incoming().userId == request.auth.uid;
       
-      allow update: if isSignedIn() && isSameTenant(existing()) && (
+      allow update: if isSignedIn() && (isSameTenant(existing()) || isAnonymous()) && (
         (isOperator() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'catatan', 'updatedAt'])) || 
         (request.auth.uid == existing().get('userId', '') && incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'nik', 'ktpUrl', 'kkUrl', 'updatedAt', 'agama', 'tempatLahir', 'tglLahir', 'jk', 'kk', 'alamat', 'rt', 'rw', 'profesi', 'pendidikanTerakhir', 'kawin', 'posisi', 'kewarganegaraan']))
       );

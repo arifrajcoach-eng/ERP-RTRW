@@ -5962,6 +5962,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         ...formData,
         id,
         tenantId,
+        userId: auth.currentUser?.uid || 'anonymous_submit',
         ktpUrl,
         kkUrl,
         status: 'Menunggu Persetujuan',
@@ -5988,6 +5989,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         ...wargaData,
         id,
         tenantId,
+        userId: auth.currentUser?.uid || 'anonymous_submit',
         status: 'Menunggu Persetujuan',
         submittedAt: new Date().toISOString(),
         catatan: 'Konfirmasi Data Mandiri (Tidak ada perubahan)'
