@@ -197,6 +197,22 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
   `;
 };
 
+// Global utility helpers
+const calculateAge = (tglLahir: string) => {
+  if (!tglLahir) return "-";
+  // Format anticipated: "YYYY-MM-DD"
+  const parts = tglLahir.split('-');
+  if (parts.length !== 3) return "-";
+  const birthDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -518,7 +534,7 @@ export default function App() {
 
     const unsubWarga = onSnapshot(getWargaQuery(), 
       (snap) => {
-        const data = snap.docs.map(doc => ({ ...doc.data() }));
+        const data = snap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
         setWargaData(data);
         onDataLoaded();
       },
@@ -975,7 +991,7 @@ export default function App() {
               return ['dashboard', 'transaksi', 'kas', 'bank-sampah'].includes(item.id);
             }
             if (currentUser?.role === 'RT') {
-              return ['dashboard', 'warga', 'transaksi', 'posyandu', 'bank-sampah', 'inventaris', 'surat', 'kop-template', 'kas'].includes(item.id);
+              return ['dashboard', 'warga', 'verifikasi', 'transaksi', 'posyandu', 'bank-sampah', 'inventaris', 'surat', 'kop-template', 'kas'].includes(item.id);
             }
             if (item.id === 'users' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
             if (item.id === 'pengaturan' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
@@ -1583,63 +1599,57 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
   };
 
   // Stats calculation
+
+  // --- STATS CALCULATION ---
   const totalWarga = wargaData.length;
   // Improved KK detection: count unique KK IDs
-  const kepalaKeluarga = new Set(wargaData.map((w: any) => w.kk)).size;
+  const uniqueKK = new Set(wargaData.map((w: any) => w.kk).filter(kk => kk)).size;
+  const kepalaKeluarga = uniqueKK;
   const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
   const suratPending = suratData.filter(s => s.status === 'Diajukan').length;
 
-  const calculateAge = (tglLahir: string) => {
-    if (!tglLahir) return -1;
-    // Handle both YYYY-MM-DD and DD-MM-YYYY formats if possible
-    let birthDate: Date;
-    if (tglLahir.includes('-')) {
-      const parts = tglLahir.split('-');
-      if (parts[0].length === 4) {
-        birthDate = new Date(tglLahir);
-      } else {
-        birthDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-      }
-    } else {
-      birthDate = new Date(tglLahir);
-    }
-    
-    if (isNaN(birthDate.getTime())) return -1;
-    
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const totalLansia = wargaData.filter(w => {
-    const age = calculateAge(w.tglLahir);
-    return age >= 60;
-  }).length;
-  const totalBalita = wargaData.filter(w => {
-    const age = calculateAge(w.tglLahir);
-    return age >= 0 && age <= 5;
-  }).length;
-  const totalAnak = wargaData.filter(w => {
-    const age = calculateAge(w.tglLahir);
-    return age >= 6 && age <= 12;
-  }).length;
-  const totalRemaja = wargaData.filter(w => {
-    const age = calculateAge(w.tglLahir);
-    return age >= 13 && age <= 18;
-  }).length;
-  const totalDewasa = wargaData.filter(w => {
-    const age = calculateAge(w.tglLahir);
-    return age > 18 && age < 60;
-  }).length;
-  
+  // Additional Demography Stats
   const totalLaki = wargaData.filter(w => w.jk === 'Laki-Laki').length;
   const totalPerempuan = wargaData.filter(w => w.jk === 'Perempuan').length;
-
   
+  const ages = wargaData.map(w => {
+    const res = calculateAge(w.tglLahir);
+    return typeof res === 'number' ? res : -1;
+  });
+  const totalBalita = ages.filter(age => age >= 0 && age <= 5).length;
+  const totalAnak = ages.filter(age => age >= 6 && age <= 12).length;
+  const totalRemaja = ages.filter(age => age >= 13 && age <= 18).length;
+  const totalDewasa = ages.filter(age => age >= 19 && age <= 59).length;
+  const totalLansia = ages.filter(age => age >= 60).length;
+
+  // Merged Recent Activities
+  const recentActivities = [
+    ...kasData.map(k => ({
+      title: k.tipe === 'Masuk' ? 'Pemasukan Kas' : 'Pengeluaran Kas',
+      desc: k.keterangan || k.transaksi,
+      date: k.tanggal,
+      amount: k.debit || k.kredit,
+      type: k.tipe === 'Masuk' ? 'in' : 'out'
+    })),
+    ...suratData.map(s => ({
+      title: 'Pengajuan Surat',
+      desc: `${s.pemohon} - ${s.jenisSurat}`,
+      date: s.tanggal,
+      status: s.status,
+      type: 'doc'
+    })),
+    ...wargaData.slice(-5).map(w => ({
+      title: 'Warga Baru',
+      desc: w.nama,
+      date: w.tglDaftar || 'Baru Saja',
+      type: 'warga'
+    }))
+  ].sort((a, b) => {
+    const dateA = new Date(a.date).getTime() || 0;
+    const dateB = new Date(b.date).getTime() || 0;
+    return dateB - dateA;
+  }).slice(0, 10);
+
   // Arus Kas Setahun Data
   const dataYearly = months.map(m => {
     const trxInMonth = kasData.filter(trx => trx.tanggal.includes(m.id));
@@ -1675,36 +1685,6 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
 
   const pieData30Days = getActData('30days');
   const pieDataYearly = getActData('yearly');
-
-  // Merged Recent Activities
-  const recentActivities = [
-    ...kasData.map(k => ({ date: k.tanggal, title: k.transaksi, desc: `${k.nama}: ${k.keterangan}`, type: k.tipe === 'Masuk' ? 'in' : 'out', amount: k.debit || k.kredit })),
-    ...suratData.map(s => ({ 
-      date: s.tanggal, 
-      title: `Surat: ${s.jenisSurat || s.jenis || s.keperluan || 'Pengantar'}`, 
-      desc: `Pemohon: ${s.pemohon}`, 
-      type: 'doc', 
-      status: s.status 
-    })),
-    ...posyanduKegiatanData.map(p => ({
-      date: p.tanggal,
-      title: 'Posyandu',
-      desc: p.keterangan || 'Kegiatan Posyandu',
-      type: 'info'
-    })),
-    ...inventarisData.map(i => ({
-      date: i.updatedAt || new Date().toISOString(),
-      title: 'Inventaris',
-      desc: i.nama_barang || 'Perubahan Inventaris',
-      type: 'info'
-    })),
-    ...sampahSetoranData.map(s => ({
-      date: s.tanggal,
-      title: 'Bank Sampah',
-      desc: `${s.namaNasabah}: ${s.berat}kg`,
-      type: 'in'
-    }))
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
 
   return (
     <div className="space-y-6">
@@ -2108,22 +2088,64 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   const [selectedWargaIds, setSelectedWargaIds] = useState<string[]>([]);
   const [wargaToDelete, setWargaToDelete] = useState<any>(null);
   const [isDeletingWarga, setIsDeletingWarga] = useState(false);
-  const itemsPerPage = 1000;
+  const itemsPerPage = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Logic for detecting duplicates ---
+  const findDuplicates = () => {
+    const nikCount: Record<string, string[]> = {};
+    wargaData.forEach(w => {
+      if (!w.nik) return;
+      if (!nikCount[w.nik]) nikCount[w.nik] = [];
+      nikCount[w.nik].push(w.docId);
+    });
+    
+    const duplicateNiks = Object.keys(nikCount).filter(nik => nikCount[nik].length > 1);
+    const docsToDelete: string[] = [];
+    duplicateNiks.forEach(nik => {
+      // Keep the first one, delete the rest
+      const ids = nikCount[nik];
+      docsToDelete.push(...ids.slice(1));
+    });
+    return { duplicateNiks, docsToDelete };
+  };
+
+  const { duplicateNiks, docsToDelete } = findDuplicates();
+  const [isCleaning, setIsCleaning] = useState(false);
+
+  const handleCleanupDuplicates = async () => {
+    if (docsToDelete.length === 0) return;
+    if (!window.confirm(`Ditemukan ${duplicateNiks.length} NIK ganda dengan total ${docsToDelete.length} dokumen redundant. Hapus data redundant?`)) return;
+
+    setIsCleaning(true);
+    try {
+      const batch = writeBatch(db);
+      docsToDelete.forEach(id => {
+        batch.delete(doc(db, "data_warga", id));
+      });
+      await batch.commit();
+      showNotification(`Berhasil membersihkan ${docsToDelete.length} data ganda.`, 'success');
+    } catch (error: any) {
+      console.error("Cleanup error:", error);
+      showNotification("Gagal membersihkan data ganda.", 'error');
+    } finally {
+      setIsCleaning(false);
+    }
+  };
 
   const toggleSelectAll = () => {
     if (selectedWargaIds.length === filteredWargaData.length) {
       setSelectedWargaIds([]);
     } else {
-      setSelectedWargaIds(filteredWargaData.map(w => w.nik));
+      setSelectedWargaIds(filteredWargaData.map(w => w.docId));
     }
   };
 
-  const toggleSelectWarga = (nik: string) => {
-    if (selectedWargaIds.includes(nik)) {
-      setSelectedWargaIds(selectedWargaIds.filter(id => id !== nik));
+  const toggleSelectWarga = (docId: string) => {
+    if (selectedWargaIds.includes(docId)) {
+      setSelectedWargaIds(selectedWargaIds.filter(id => id !== docId));
     } else {
-      setSelectedWargaIds([...selectedWargaIds, nik]);
+      setSelectedWargaIds([...selectedWargaIds, docId]);
     }
   };
 
@@ -2151,7 +2173,6 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
         await batch.commit();
       }
 
-      setWargaData((prev: any) => prev.filter((w: any) => !selectedWargaIds.includes(w.nik)));
       setSelectedWargaIds([]);
       showNotification(`Berhasil menghapus ${totalCount} data warga.`, "success");
     } catch (error: any) {
@@ -2252,7 +2273,6 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       await batch.commit();
       console.log("Batch committed successfully");
 
-      setWargaData((prev: any) => [...prev, ...newData]);
       showNotification(`Berhasil mengimpor ${newData.length} data warga.`, 'success');
     } catch (error: any) {
       console.error("Firebase Import Error Detail:", error);
@@ -2262,7 +2282,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   // Form State for Adding/Editing
   const [formData, setFormData] = useState({
-    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI", agama: "Islam"
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -2312,13 +2332,24 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'data_warga', editingWarga.nik), { ...formData, tenantId: tenantId });
+      const originalId = editingWarga.docId || editingWarga.nik;
+      const newId = formData.nik;
+
+      if (originalId !== newId) {
+        // Jika ID berubah (atau sebelumnya menggunakan auto-id), pindahkan data ke ID NIK yang benar
+        await setDoc(doc(db, 'data_warga', newId), { ...formData, tenantId: tenantId });
+        await deleteDoc(doc(db, 'data_warga', originalId));
+      } else {
+        await updateDoc(doc(db, 'data_warga', originalId), { ...formData, tenantId: tenantId });
+      }
+
       setShowEditForm(false);
       setEditingWarga(null);
       resetForm();
       showNotification("Perubahan data warga berhasil disimpan!", 'success');
     } catch (error: any) {
-      handleFirestoreError(error, 'update', `/data_warga/${editingWarga.nik}`);
+      const targetId = editingWarga.docId || editingWarga.nik;
+      handleFirestoreError(error, 'update', `/data_warga/${targetId}`);
       showNotification("Gagal memperbarui data warga.", 'error');
     } finally {
       setIsLoadingDB(false);
@@ -2330,8 +2361,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     
     setIsDeletingWarga(true);
     try {
-      await deleteDoc(doc(db, 'data_warga', wargaToDelete.nik));
-      setWargaData((prev: any) => prev.filter((w: any) => w.nik !== wargaToDelete.nik));
+      const docId = wargaToDelete.docId || wargaToDelete.nik;
+      await deleteDoc(doc(db, 'data_warga', docId));
       setWargaToDelete(null);
     } catch (error: any) {
       handleFirestoreError(error, 'delete', `/warga/${wargaToDelete.nik}`);
@@ -2350,7 +2381,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   const resetForm = () => {
     setFormData({
-      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI"
+      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI", agama: "Islam"
     });
   };
 
@@ -2371,22 +2402,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     // Filter Kategori Umur
     let matchUmur = true;
     if (filterKategoriUmur !== "Semua") {
-      const calculateAge = (tglLahir: string) => {
-        if (!tglLahir) return -1;
-        // Parse "YYYY-MM-DD"
-        const parts = tglLahir.split('-');
-        if (parts.length !== 3) return -1;
-        const birthDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        return age;
-      };
-      
-      const age = calculateAge(w.tglLahir);
+      const ageResult = calculateAge(w.tglLahir);
+      const age = typeof ageResult === 'number' ? ageResult : -1;
       if (age !== -1) {
         if (filterKategoriUmur === "Balita") matchUmur = age <= 5;
         else if (filterKategoriUmur === "Remaja") matchUmur = age >= 6 && age <= 17;
@@ -2509,14 +2526,19 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   // Logika Pagination
   const totalPages = Math.ceil(filteredWargaData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const paginatedWarga = filteredWargaData.slice(startIndex, startIndex + itemsPerPage);
   
   const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      // Optional: scroll table to top
+    }
   };
 
   const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
   };
 
   return (
@@ -2608,6 +2630,17 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                       <span>{isDeletingWarga ? 'Menghapus...' : `Hapus (${selectedWargaIds.length} item)`}</span>
                     </button>
                   )}
+                  {docsToDelete.length > 0 && (
+                    <button 
+                      onClick={handleCleanupDuplicates}
+                      disabled={isCleaning}
+                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+                      title={`Ada ${docsToDelete.length} data ganda`}
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>{isCleaning ? 'Membersihkan...' : `Bersihkan (${docsToDelete.length})`}</span>
+                    </button>
+                  )}
                   <button 
                     onClick={() => { resetForm(); setShowAddForm(true); }}
                     className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
@@ -2638,57 +2671,52 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
               </th>
-              <th className="px-6 py-3 print:px-2">Foto</th>
               <th className="px-6 py-3 print:px-2">Nama Lengkap</th>
-              <th className="px-6 py-3 print:px-2">Posisi dalam Keluarga</th>
+              <th className="px-6 py-3 print:px-2">Umur</th>
+              <th className="px-6 py-3 print:px-2">Jenis Kelamin</th>
+              <th className="px-6 py-3 print:px-2">Posisi Keluarga</th>
               <th className="px-6 py-3 print:px-2">Profesi</th>
-              <th className="px-6 py-3 print:px-2">NIK</th>
-              <th className="px-6 py-3 print:px-2">No. KK</th>
               <th className="px-6 py-3 print:px-2 text-center">RT/RW</th>
               <th className="px-6 py-3 print:px-2">Alamat</th>
-              <th className="px-6 py-3 text-center print:px-2">Status</th>
               <th className="px-6 py-3 print:px-2">No. HP</th>
+              <th className="px-6 py-3 text-center print:px-2">Status</th>
               <th className="px-6 py-3 text-right print:hidden">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700 print:divide-slate-300">
-            {filteredWargaData.length > 0 ? filteredWargaData.map((warga, idx) => {
-              // Sembunyikan baris jika bukan di halaman ini (kecuali jika sedang nge-print)
-              const isVisible = idx >= startIndex && idx < endIndex;
+            {paginatedWarga.length > 0 ? paginatedWarga.map((warga, idx) => {
               return (
-              <tr key={idx} className={`${isVisible ? '' : 'hidden print:table-row'} hover:bg-slate-50 transition-colors print:break-inside-avoid`}>
+              <tr key={warga.docId || warga.nik || idx} className="hover:bg-slate-50 transition-colors print:break-inside-avoid">
                 <td className="px-6 py-3 print:px-2">
                   <input 
                     type="checkbox" 
-                    checked={selectedWargaIds.includes(warga.nik)}
-                    onChange={() => toggleSelectWarga(warga.nik)}
+                    checked={selectedWargaIds.includes(warga.docId)}
+                    onChange={() => toggleSelectWarga(warga.docId)}
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                 </td>
-                <td className="px-6 py-3 print:px-2">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
-                    {warga.foto ? (
-                      <img src={warga.foto} alt={warga.nama} className="w-full h-full object-cover" />
-                    ) : warga.ktpUrl ? (
-                      <img src={warga.ktpUrl} alt="KTP" className="w-full h-full object-cover opacity-50" />
-                    ) : (
-                      <User className="w-5 h-5 text-slate-400" />
+                <td className="px-6 py-3 font-semibold text-slate-800 print:px-2">
+                  <div className="flex items-center gap-1.5">
+                    {warga.nama}
+                    {warga.terverifikasi && (
+                      <div className="bg-green-100 text-green-600 p-0.5 rounded-full" title="Terverifikasi Mandiri">
+                        <CheckCircle className="w-3 h-3" />
+                      </div>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-3 font-semibold text-slate-800 print:px-2">{warga.nama}</td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{calculateAge(warga.tglLahir)}</td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.jk}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 font-medium print:px-2">{warga.posisi}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.profesi}</td>
-                <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.nik}</td>
-                <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.kk}</td>
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black text-center">{warga.rt}/{warga.rw}</td>
                 <td className="px-6 py-3 text-xs print:px-2">{warga.blok}</td>
+                <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.hp}</td>
                 <td className="px-6 py-3 text-center print:px-2">
                   <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${warga.status === 'Warga Tetap' ? 'border-green-200 bg-green-50 text-green-700' : 'border-blue-200 bg-blue-50 text-blue-700'} print:border-0 print:p-0 print:bg-transparent print:text-slate-800`}>
                     {warga.status}
                   </span>
                 </td>
-                <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.hp}</td>
                 {userRole !== 'Viewer' && (
                   <td className="px-6 py-3 text-right print:hidden">
                     <div className="flex items-center justify-end gap-2">
@@ -2727,8 +2755,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
           </tbody>
         </table>
       </div>
-      <div className="p-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500 bg-slate-50 print:hidden">
-        <p>Menampilkan {filteredWargaData.length > 0 ? Math.min(startIndex + 1, filteredWargaData.length) : 0} - {Math.min(endIndex, filteredWargaData.length)} dari {filteredWargaData.length} warga</p>
+      <div className="p-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 bg-slate-50 print:hidden gap-3">
+        <p>Menampilkan {paginatedWarga.length > 0 ? startIndex + 1 : 0} - {startIndex + paginatedWarga.length} dari {filteredWargaData.length} warga</p>
         <div className="flex gap-2">
            <button 
              onClick={handlePrevPage}
@@ -2793,6 +2821,18 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                   <option value="S1">S1</option>
                   <option value="S2">S2</option>
                   <option value="S3">S3</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Agama</label>
+                <select required name="agama" value={(formData as any).agama} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                  <option value="Islam">Islam</option>
+                  <option value="Kristen">Kristen</option>
+                  <option value="Katolik">Katolik</option>
+                  <option value="Hindu">Hindu</option>
+                  <option value="Buddha">Buddha</option>
+                  <option value="Konghucu">Konghucu</option>
                 </select>
               </div>
 
@@ -3038,12 +3078,20 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                     <p className="font-medium text-slate-800">{viewWarga.profesi || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Pendidikan</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Pendidikan Terakhir</p>
                     <p className="font-medium text-slate-800">{viewWarga.pendidikanTerakhir || '-'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Status Kawin</p>
                     <p className="font-medium text-slate-800">{viewWarga.kawin || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Posisi Keluarga</p>
+                    <p className="font-medium text-slate-800">{viewWarga.posisi || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Agama</p>
+                    <p className="font-medium text-slate-800">{viewWarga.agama || '-'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Kewarganegaraan</p>
@@ -5367,22 +5415,37 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
       const wargaSnap = await getDoc(wargaRef);
 
       const updatedData = {
-        kk: item.kk,
-        blok: item.blok,
-        hp: item.hp,
-        profesi: item.pekerjaan || item.profesi,
-        pendidikan: item.pendidikan || "",
-        statusKawin: item.statusKawin || "",
-        foto: item.ktpUrl || wargaSnap.data()?.foto || ""
+        nama: item.nama || wargaSnap.data()?.nama || "",
+        kk: item.kk || wargaSnap.data()?.kk || "",
+        blok: item.alamat || item.blok || wargaSnap.data()?.blok || "",
+        hp: item.hp || wargaSnap.data()?.hp || "",
+        profesi: item.pekerjaan || item.profesi || wargaSnap.data()?.profesi || "",
+        pendidikanTerakhir: item.pendidikan || item.pendidikanTerakhir || wargaSnap.data()?.pendidikanTerakhir || "",
+        kawin: item.statusKawin || item.kawin || wargaSnap.data()?.kawin || "",
+        foto: item.ktpUrl || wargaSnap.data()?.foto || "",
+        ktpUrl: item.ktpUrl || wargaSnap.data()?.ktpUrl || "",
+        rt: item.rt || wargaSnap.data()?.rt || "01",
+        rw: item.rw || wargaSnap.data()?.rw || "05",
+        tempatLahir: item.tempatLahir || wargaSnap.data()?.tempatLahir || "",
+        tglLahir: item.tglLahir || wargaSnap.data()?.tglLahir || "",
+        jk: item.jk || wargaSnap.data()?.jk || "",
+        agama: item.agama || wargaSnap.data()?.agama || "Islam",
+        posisi: item.posisi || wargaSnap.data()?.posisi || "",
+        kewarganegaraan: item.kewarganegaraan || wargaSnap.data()?.kewarganegaraan || "WNI",
+        terverifikasi: true,
+        updatedAt: new Date().toISOString()
       };
 
       if (wargaSnap.exists()) {
         batch.update(wargaRef, updatedData);
       } else {
-        // Handle case if warga doesn't exist in master?
-        // Fallback: create if it's a new verification but NIK was validated during login?
-        // For simplicity, we assume they exist since Warga Login checks wargaData.
-        batch.set(wargaRef, { ...item, status: 'Aktif', role: 'Warga' }, { merge: true });
+        // Jika data belum ada, buat baru
+        batch.set(wargaRef, {
+          ...item,
+          ...updatedData,
+          status: 'Warga Tetap',
+          tenantId: tenantId
+        }, { merge: true });
       }
 
       await batch.commit();
@@ -5390,6 +5453,7 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
       setSelectedItem(null);
     } catch (err) {
       handleFirestoreError(err, 'update', 'verifikasi_warga/data_warga');
+      showNotification("Gagal memproses persetujuan.", "error");
     } finally {
       setIsLoadingDB(false);
     }
@@ -5541,6 +5605,10 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
                     <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest border-b border-blue-50 pb-2">Perubahan Data</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Nama Lengkap Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.nama}</p>
+                      </div>
+                      <div className="col-span-2">
                         <label className="text-[10px] text-slate-400 uppercase mb-1 block">KK Baru</label>
                         <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.kk}</p>
                       </div>
@@ -5549,12 +5617,44 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
                         <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.blok}</p>
                       </div>
                       <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tempat Lahir</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tempatLahir}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tanggal Lahir</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tglLahir}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Jenis Kelamin</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.jk}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Agama</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.agama || 'Islam'}</p>
+                      </div>
+                      <div>
                         <label className="text-[10px] text-slate-400 uppercase mb-1 block">HP Baru</label>
                         <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.hp}</p>
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 uppercase mb-1 block">Pekerjaan</label>
                         <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.profesi}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Pendidikan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.pendidikanTerakhir}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Status Kawin</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.kawin}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Posisi Keluarga</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.posisi}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Kewarganegaraan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.kewarganegaraan}</p>
                       </div>
                     </div>
 
@@ -5786,11 +5886,9 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         ...wargaData,
         id,
         tenantId,
-        status: 'Disetujui',
+        status: 'Menunggu Persetujuan',
         submittedAt: new Date().toISOString(),
-        approvedAt: new Date().toISOString(),
-        approvedBy: 'Sistem (Konfirmasi Mandiri)',
-        catatan: 'Dikonfirmasi benar oleh warga'
+        catatan: 'Konfirmasi Data Mandiri (Tidak ada perubahan)'
       };
       await setDoc(doc(db, 'verifikasi_warga', id), submission);
       showNotification("Terima kasih! Data Anda telah diverifikasi sukses.", "success");
@@ -5949,6 +6047,15 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
               <form onSubmit={handleSubmitPerbaikan} className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="col-span-2">
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nama Lengkap</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.nama}
+                      onChange={(e) => setFormData({...formData, nama: e.target.value})}
+                     />
+                  </div>
+                  <div className="col-span-2">
                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nomor KK</label>
                      <input 
                       type="text" 
@@ -5956,6 +6063,50 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
                       value={formData.kk}
                       onChange={(e) => setFormData({...formData, kk: e.target.value})}
                      />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Tempat Lahir</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.tempatLahir}
+                      onChange={(e) => setFormData({...formData, tempatLahir: e.target.value})}
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Tanggal Lahir</label>
+                     <input 
+                      type="date" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.tglLahir}
+                      onChange={(e) => setFormData({...formData, tglLahir: e.target.value})}
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Jenis Kelamin</label>
+                     <select 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.jk}
+                      onChange={(e) => setFormData({...formData, jk: e.target.value})}
+                     >
+                       <option value="Laki-Laki">Laki-Laki</option>
+                       <option value="Perempuan">Perempuan</option>
+                     </select>
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Agama</label>
+                     <select 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.agama || "Islam"}
+                      onChange={(e) => setFormData({...formData, agama: e.target.value})}
+                     >
+                       <option value="Islam">Islam</option>
+                       <option value="Kristen">Kristen</option>
+                       <option value="Katolik">Katolik</option>
+                       <option value="Hindu">Hindu</option>
+                       <option value="Buddha">Buddha</option>
+                       <option value="Konghucu">Konghucu</option>
+                     </select>
                   </div>
                   <div className="col-span-2">
                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Alamat (Blok/Unit)</label>
@@ -5982,6 +6133,46 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
                       value={formData.profesi}
                       onChange={(e) => setFormData({...formData, profesi: e.target.value})}
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Pendidikan Terakhir</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.pendidikanTerakhir}
+                      onChange={(e) => setFormData({...formData, pendidikanTerakhir: e.target.value})}
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Status Kawin</label>
+                     <select 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.kawin}
+                      onChange={(e) => setFormData({...formData, kawin: e.target.value})}
+                     >
+                       <option value="Belum Kawin">Belum Kawin</option>
+                       <option value="Kawin">Kawin</option>
+                       <option value="Cerai Hidup">Cerai Hidup</option>
+                       <option value="Cerai Mati">Cerai Mati</option>
+                     </select>
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Posisi Keluarga</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.posisi}
+                      onChange={(e) => setFormData({...formData, posisi: e.target.value})}
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Kewarganegaraan</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.kewarganegaraan}
+                      onChange={(e) => setFormData({...formData, kewarganegaraan: e.target.value})}
                      />
                   </div>
                   <div className="col-span-2">
