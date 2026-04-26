@@ -5962,13 +5962,26 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
       }
 
       const id = activeSubmission?.id || `VRF-${Date.now()}`;
+      
       const submission = {
-        ...formData,
-        nik: String(formData.nik || wargaData.nik || ""),
-        nama: String(formData.nama || wargaData.nama || ""),
         id,
         tenantId,
         userId: auth.currentUser.uid,
+        nik: String(formData.nik || wargaData.nik || ""),
+        nama: String(formData.nama || wargaData.nama || ""),
+        kk: formData.kk || wargaData.kk || "",
+        rt: formData.rt || wargaData.rt || "",
+        rw: formData.rw || wargaData.rw || "",
+        agama: formData.agama || wargaData.agama || "",
+        jk: formData.jk || wargaData.jk || "",
+        tempatLahir: formData.tempatLahir || wargaData.tempatLahir || "",
+        tglLahir: formData.tglLahir || wargaData.tglLahir || "",
+        alamat: formData.alamat || wargaData.alamat || "",
+        profesi: formData.profesi || wargaData.profesi || "",
+        pendidikanTerakhir: formData.pendidikanTerakhir || wargaData.pendidikanTerakhir || "",
+        kawin: formData.kawin || wargaData.kawin || "",
+        posisi: formData.posisi || wargaData.posisi || "",
+        kewarganegaraan: formData.kewarganegaraan || wargaData.kewarganegaraan || "",
         ktpUrl,
         kkUrl,
         status: 'Menunggu Persetujuan',
@@ -5986,7 +5999,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
       showNotification("Pengajuan perbaikan data berhasil dikirim. Menunggu verifikasi admin.", "success");
       setIsEditing(false);
     } catch (err) {
-      handleFirestoreError(err, 'create', 'verifikasi_warga');
+      handleFirestoreError(err, activeSubmission?.id ? 'update' : 'create', 'verifikasi_warga');
     } finally {
       setIsLoadingDB(false);
       setUploading(false);
@@ -6001,21 +6014,37 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
     setIsLoadingDB(true);
     try {
       const id = activeSubmission?.id || `VRF-${Date.now()}`;
+      
       const submission = {
-        ...wargaData,
-        nik: String(wargaData.nik || ""),
-        nama: String(wargaData.nama || ""),
         id,
         tenantId,
         userId: auth.currentUser.uid,
+        nik: String(wargaData.nik || ""),
+        nama: String(wargaData.nama || ""),
+        kk: wargaData.kk || "",
+        rt: wargaData.rt || "",
+        rw: wargaData.rw || "",
+        agama: wargaData.agama || "",
+        jk: wargaData.jk || "",
+        tempatLahir: wargaData.tempatLahir || "",
+        tglLahir: wargaData.tglLahir || "",
+        alamat: wargaData.alamat || "",
+        profesi: wargaData.profesi || "",
+        pendidikanTerakhir: wargaData.pendidikanTerakhir || "",
+        kawin: wargaData.kawin || "",
+        posisi: wargaData.posisi || "",
+        kewarganegaraan: wargaData.kewarganegaraan || "",
+        ktpUrl: activeSubmission?.ktpUrl || wargaData.foto || "",
+        kkUrl: activeSubmission?.kkUrl || "",
         status: 'Menunggu Persetujuan',
         submittedAt: new Date().toISOString(),
         catatan: 'Konfirmasi Data Mandiri (Tidak ada perubahan)'
       };
+
       await setDoc(doc(db, 'verifikasi_warga', id), submission);
       showNotification("Terima kasih! Data Anda telah diverifikasi sukses.", "success");
     } catch (err) {
-      handleFirestoreError(err, 'create', 'verifikasi_warga');
+      handleFirestoreError(err, activeSubmission?.id ? 'update' : 'create', 'verifikasi_warga');
     } finally {
       setIsLoadingDB(false);
     }

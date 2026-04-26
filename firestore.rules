@@ -235,11 +235,16 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(id) && isValidVerifikasi(incoming()) && 
                     incoming().userId == request.auth.uid;
       
-      allow update: if isSignedIn() && (
+      allow update: if isSignedIn() && isValidVerifikasi(incoming()) && (
         (isOperator() && isSameTenant(existing()) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'catatan', 'updatedAt'])) || 
         (
           isOwnerOfVerifikasi(existing()) && 
-          incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'nik', 'ktpUrl', 'kkUrl', 'updatedAt', 'agama', 'tempatLahir', 'tglLahir', 'jk', 'kk', 'alamat', 'rt', 'rw', 'profesi', 'pendidikanTerakhir', 'kawin', 'posisi', 'kewarganegaraan', 'userId', 'status', 'submittedAt', 'catatan', 'tenantId', 'id'])
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'id', 'tenantId', 'userId', 'nik', 'nama', 'kk', 'rt', 'rw', 
+            'agama', 'jk', 'tempatLahir', 'tglLahir', 'alamat', 'profesi', 
+            'pendidikanTerakhir', 'kawin', 'posisi', 'kewarganegaraan', 
+            'ktpUrl', 'kkUrl', 'status', 'submittedAt', 'catatan'
+          ])
         )
       );
       allow delete: if isAdmin();
