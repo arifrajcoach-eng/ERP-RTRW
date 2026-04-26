@@ -76,7 +76,8 @@ service cloud.firestore {
              data.tenantId is string && data.tenantId.size() <= 60 &&
              data.kk is string &&
              data.rt is string &&
-             data.rw is string;
+             data.rw is string &&
+             (!('agama' in data) || data.agama is string);
     }
 
     function isValidKas(data) {
@@ -140,7 +141,9 @@ service cloud.firestore {
     }
 
     function isValidVerifikasi(data) {
-      return data.nik is string && data.nama is string && data.tenantId is string && data.status in ["Belum Diverifikasi", "Menunggu Persetujuan", "Disetujui", "Ditolak"];
+      return data.nik is string && data.nama is string && data.tenantId is string && 
+             data.status in ["Belum Diverifikasi", "Menunggu Persetujuan", "Disetujui", "Ditolak"] &&
+             (!('agama' in data) || data.agama is string);
     }
 
     function isValidPemeriksaan(data) {
@@ -209,7 +212,8 @@ service cloud.firestore {
       // List should filter by tenantId OR be Super Admin
       allow list: if isSignedIn() && (
         isSuperAdmin() || 
-        (resource.data.tenantId == getTenantId() && (isOperator() || resource.data.userId == request.auth.uid))
+        (resource.data.tenantId == getTenantId() && isOperator()) ||
+        (resource.data.userId == request.auth.uid)
       );
       allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()) || request.auth.uid == existing().get('userId', ''));
       
@@ -217,7 +221,7 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && isSameTenant(existing()) && (
         (isOperator() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'catatan', 'updatedAt'])) || 
-        (request.auth.uid == existing().get('userId', '') && incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'nik', 'ktpUrl', 'kkUrl', 'updatedAt']))
+        (request.auth.uid == existing().get('userId', '') && incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'nik', 'ktpUrl', 'kkUrl', 'updatedAt', 'agama', 'tempatLahir', 'tglLahir', 'jk', 'kk', 'alamat', 'rt', 'rw', 'profesi', 'pendidikanTerakhir', 'kawin', 'posisi', 'kewarganegaraan']))
       );
       allow delete: if isAdmin();
     }

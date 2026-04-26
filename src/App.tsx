@@ -269,6 +269,14 @@ export default function App() {
               userData.role = 'ADMIN';
             }
             setCurrentUser(userData);
+          } else if (user.isAnonymous) {
+            // Anonymous Citizen
+            setCurrentUser({ 
+              name: "Warga (Anonymous)", 
+              role: "Warga", 
+              uid: user.uid,
+              tenantId: "RW26_SMART" 
+            });
           } else {
             // If No Firestore doc yet, use default based on email (for easy migration)
             let role = 'RT';
@@ -701,10 +709,31 @@ export default function App() {
       (err) => { handleFirestoreError(err, 'list', 'emergencies'); onDataLoaded(); }
     );
 
-    const unsubVerifikasi = onSnapshot(query(collection(db, 'verifikasi_warga'), where('tenantId', '==', tId)), 
+    const getVerifikasiQuery = () => {
+      const base = collection(db, 'verifikasi_warga');
+      if (currentUser?.isSuperAdmin) return query(base);
+      
+      const constraints = [where('tenantId', '==', tId)];
+      
+      // If not an admin/operator, filter by their own userId
+      const isOperatorRole = currentUser && (currentUser.isSuperAdmin || ['RW', 'RT', 'ADMIN', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser.role));
+      
+      if (!isOperatorRole) {
+        // If it's a citizen (logged in via anonymous auth or linked)
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+           // We ONLY filter by userId for citizens to satisfy rules
+           return query(base, where('userId', '==', uid));
+        }
+      }
+      
+      return query(base, ...constraints);
+    };
+
+    const unsubVerifikasi = onSnapshot(getVerifikasiQuery(), 
       (snap) => {
         setVerifikasiWargaData(snap.docs.map(doc => ({ ...doc.data() })));
-        if (!currentUser && wargaAuth) onDataLoaded(); // Only count this for warga loading
+        if (!currentUser && wargaAuth) onDataLoaded(); 
       },
       (err) => { 
         handleFirestoreError(err, 'list', 'verifikasi_warga'); 
@@ -1622,6 +1651,15 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
   const totalDewasa = ages.filter(age => age >= 19 && age <= 59).length;
   const totalLansia = ages.filter(age => age >= 60).length;
 
+  const religionStats = {
+    islam: wargaData.filter(w => (w.agama || '').toLowerCase() === 'islam').length,
+    kristen: wargaData.filter(w => (w.agama || '').toLowerCase() === 'kristen').length,
+    katolik: wargaData.filter(w => (w.agama || '').toLowerCase() === 'katolik').length,
+    hindu: wargaData.filter(w => (w.agama || '').toLowerCase() === 'hindu').length,
+    budha: wargaData.filter(w => (w.agama || '').toLowerCase() === 'budha').length,
+    konghucu: wargaData.filter(w => (w.agama || '').toLowerCase() === 'konghucu').length,
+  };
+
   // Merged Recent Activities
   const recentActivities = [
     ...kasData.map(k => ({
@@ -1640,7 +1678,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
     })),
     ...wargaData.slice(-5).map(w => ({
       title: 'Warga Baru',
-      desc: w.nama,
+      desc: `${w.nama} (${w.agama || '-'})`,
       date: w.tglDaftar || 'Baru Saja',
       type: 'warga'
     }))
@@ -1953,6 +1991,25 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
               <p className="text-xl font-black text-emerald-600">{totalLansia}</p>
             </div>
           </div>
+
+          <div className="mt-8 border-t border-slate-100 pt-6">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Distribusi Agama</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { label: 'Islam', count: religionStats.islam, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { label: 'Kristen', count: religionStats.kristen, color: 'text-blue-600', bg: 'bg-blue-50' },
+                { label: 'Katolik', count: religionStats.katolik, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                { label: 'Hindu', count: religionStats.hindu, color: 'text-orange-600', bg: 'bg-orange-50' },
+                { label: 'Budha', count: religionStats.budha, color: 'text-amber-600', bg: 'bg-amber-50' },
+                { label: 'Konghucu', count: religionStats.konghucu, color: 'text-red-600', bg: 'bg-red-50' },
+              ].map((stat, i) => (
+                <div key={i} className={`${stat.bg} p-3 rounded-xl border border-white/50 flex flex-col items-center justify-center text-center shadow-sm`}>
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-1">{stat.label}</p>
+                  <p className={`text-xl font-black ${stat.color}`}>{stat.count}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
       </div>
@@ -2088,7 +2145,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   const [selectedWargaIds, setSelectedWargaIds] = useState<string[]>([]);
   const [wargaToDelete, setWargaToDelete] = useState<any>(null);
   const [isDeletingWarga, setIsDeletingWarga] = useState(false);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Logic for detecting duplicates ---
@@ -2262,15 +2319,20 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
     try {
       // 2. Use batch to write data efficiently
-      const batch = writeBatch(db);
+      const batchSize = 400; // Firestore limit is 500, use 400 for safety
       
       console.log("Batching items:", newData.length);
-      for (const item of newData) {
-        const docRef = doc(db, 'data_warga', item.nik);
-        batch.set(docRef, item);
+      for (let i = 0; i < newData.length; i += batchSize) {
+        const chunk = newData.slice(i, i + batchSize);
+        const batch = writeBatch(db);
+        chunk.forEach(item => {
+          // Use tenantId prefix to ensure uniqueness across multi-tenant environment
+          const docId = `${tenantId}_${item.nik}`;
+          const docRef = doc(db, 'data_warga', docId);
+          batch.set(docRef, item);
+        });
+        await batch.commit();
       }
-      
-      await batch.commit();
       console.log("Batch committed successfully");
 
       showNotification(`Berhasil mengimpor ${newData.length} data warga.`, 'success');
@@ -2310,7 +2372,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     
     setIsLoadingDB(true);
     try {
-      await setDoc(doc(db, 'data_warga', newWarga.nik), newWarga);
+      const docId = `${tenantId}_${newWarga.nik}`;
+      await setDoc(doc(db, 'data_warga', docId), newWarga);
       setShowAddForm(false);
       resetForm();
       showNotification("Data warga berhasil ditambahkan!", 'success');
@@ -2332,8 +2395,8 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
     setIsLoadingDB(true);
     try {
-      const originalId = editingWarga.docId || editingWarga.nik;
-      const newId = formData.nik;
+      const originalId = editingWarga.docId || `${tenantId}_${editingWarga.nik}`;
+      const newId = `${tenantId}_${formData.nik}`;
 
       if (originalId !== newId) {
         // Jika ID berubah (atau sebelumnya menggunakan auto-id), pindahkan data ke ID NIK yang benar
@@ -2385,55 +2448,61 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     });
   };
 
-  // Membuat daftar opsi statis untuk RT (20) dan RW (50)
-  const uniqueRTs = ["Semua", ...Array.from({ length: 20 }, (_, i) => String(i + 1).padStart(2, '0'))];
-  const uniqueRWs = ["Semua", ...Array.from({ length: 50 }, (_, i) => String(i + 1).padStart(2, '0'))];
+  // Membuat daftar opsi dinamis untuk RT dan RW berdasarkan data yang ada
+  const foundRTs = Array.from(new Set(wargaData.map(w => w.rt))).filter(rt => rt).sort();
+  const foundRWs = Array.from(new Set(wargaData.map(w => w.rw))).filter(rw => rw).sort();
+  
+  // Gunakan RT/RW yang ada di data, jika kosong sediakan default 01-10 / 01-20
+  const uniqueRTs = ["Semua", ...(foundRTs.length > 0 ? foundRTs : Array.from({ length: 10 }, (_, i) => String(i + 1).padStart(2, '0')))];
+  const uniqueRWs = ["Semua", ...(foundRWs.length > 0 ? foundRWs : Array.from({ length: 10 }, (_, i) => String(i + 1).padStart(2, '0')))];
 
-  // Terapkan filter pada data
-  const filteredWargaData = wargaData.filter(w => {
-    // Filter RT/RW - Normalize to string and trim leading zeros for comparison
-    const normalize = (val: string) => val ? val.toString().replace(/^0+/, '') : "";
-    const filterRTNormalized = filterRT === "Semua" ? "Semua" : filterRT.replace(/^0+/, '');
-    const filterRWNormalized = filterRW === "Semua" ? "Semua" : filterRW.replace(/^0+/, '');
-    
-    const matchRT = filterRT === "Semua" || normalize(w.rt) === filterRTNormalized;
-    const matchRW = filterRW === "Semua" || normalize(w.rw) === filterRWNormalized;
-    
-    // Filter Kategori Umur
-    let matchUmur = true;
-    if (filterKategoriUmur !== "Semua") {
-      const ageResult = calculateAge(w.tglLahir);
-      const age = typeof ageResult === 'number' ? ageResult : -1;
-      if (age !== -1) {
-        if (filterKategoriUmur === "Balita") matchUmur = age <= 5;
-        else if (filterKategoriUmur === "Remaja") matchUmur = age >= 6 && age <= 17;
-        else if (filterKategoriUmur === "Dewasa") matchUmur = age >= 18 && age < 60;
-        else if (filterKategoriUmur === "Lansia") matchUmur = age >= 60;
-      } else {
-        matchUmur = false; // Jika tgl_lahir kosong, abaikan dari filter umur kecuali "Semua"
+  // Terapkan filter pada data - Optimized with useMemo for large datasets
+  const filteredWargaData = useMemo(() => {
+    return wargaData.filter(w => {
+      // Filter RT/RW - Normalize to string and trim leading zeros for comparison
+      const normalize = (val: string) => val ? val.toString().replace(/^0+/, '') : "";
+      const filterRTNormalized = filterRT === "Semua" ? "Semua" : filterRT.replace(/^0+/, '');
+      const filterRWNormalized = filterRW === "Semua" ? "Semua" : filterRW.replace(/^0+/, '');
+      
+      const matchRT = filterRT === "Semua" || normalize(w.rt || "") === filterRTNormalized;
+      const matchRW = filterRW === "Semua" || normalize(w.rw || "") === filterRWNormalized;
+      
+      // Filter Kategori Umur
+      let matchUmur = true;
+      if (filterKategoriUmur !== "Semua") {
+        const ageResult = calculateAge(w.tglLahir);
+        const age = typeof ageResult === 'number' ? ageResult : -1;
+        if (age !== -1) {
+          if (filterKategoriUmur === "Balita") matchUmur = age <= 5;
+          else if (filterKategoriUmur === "Remaja") matchUmur = age >= 6 && age <= 17;
+          else if (filterKategoriUmur === "Dewasa") matchUmur = age >= 18 && age < 60;
+          else if (filterKategoriUmur === "Lansia") matchUmur = age >= 60;
+        } else {
+          matchUmur = false; // Jika tgl_lahir kosong, abaikan dari filter umur kecuali "Semua"
+        }
       }
-    }
-    
-    // Fiter Pencarian
-    const searchLower = searchQuery.toLowerCase();
-    const matchSearch = searchQuery === "" || 
-      w.nama?.toLowerCase().includes(searchLower) ||
-      w.nik?.includes(searchQuery) ||
-      w.kk?.includes(searchQuery) ||
-      w.hp?.includes(searchQuery);
+      
+      // Fiter Pencarian
+      const searchLower = searchQuery.toLowerCase();
+      const matchSearch = searchQuery === "" || 
+        w.nama?.toLowerCase().includes(searchLower) ||
+        w.nik?.includes(searchQuery) ||
+        w.kk?.includes(searchQuery) ||
+        w.hp?.includes(searchQuery);
 
-    return matchRT && matchRW && matchUmur && matchSearch;
-  });
+      return matchRT && matchRW && matchUmur && matchSearch;
+    });
+  }, [wargaData, filterRT, filterRW, filterKategoriUmur, searchQuery]);
 
   const handleExportExcel = () => {
     const headers = [
-      'Nama Lengkap', 'NIK', 'No. KK', 'Tempat Lahir', 'Tgl Lahir', 'Jenis Kelamin', 
+      'Nama Lengkap', 'NIK', 'No. KK', 'Agama', 'Tempat Lahir', 'Tgl Lahir', 'Jenis Kelamin', 
       'Posisi dalam Keluarga', 'Profesi / Pekerjaan', 'Pendidikan Terakhir', 'Status Kawin', 'Kewarganegaraan', 
       'RT', 'RW', 'Alamat/Blok', 'Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Status Warga', 'No. HP (WA)', 'Email'
     ];
     const rows = filteredWargaData.map(w => 
       [
-        `"${w.nama || ''}"`, `"${w.nik || ''}"`, `"${w.kk || ''}"`, `"${w.tempatLahir || ''}"`, `"${w.tglLahir || ''}"`, `"${w.jk || ''}"`,
+        `"${w.nama || ''}"`, `"${w.nik || ''}"`, `"${w.kk || ''}"`, `"${w.agama || ''}"`, `"${w.tempatLahir || ''}"`, `"${w.tglLahir || ''}"`, `"${w.jk || ''}"`,
         `"${w.posisi || ''}"`, `"${w.profesi || ''}"`, `"${w.pendidikanTerakhir || ''}"`, `"${w.kawin || ''}"`, `"${w.kewarganegaraan || ''}"`,
         `"${w.rt || ''}"`, `"${w.rw || ''}"`, `"${w.blok || ''}"`, `"${w.kelurahan || ''}"`, `"${w.kecamatan || ''}"`, `"${w.kota_kab || ''}"`, `"${w.status || ''}"`, `"${w.hp || ''}"`, `"${w.email || ''}"`
       ].join(',')
@@ -2474,6 +2543,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
         { label: "Tempat Lahir", value: warga.tempatLahir },
         { label: "Tanggal Lahir", value: warga.tglLahir },
         { label: "Jenis Kelamin", value: warga.jk },
+        { label: "Agama", value: warga.agama },
         { label: "Profesi", value: warga.profesi },
         { label: "Pendidikan", value: warga.pendidikanTerakhir },
         { label: "Status Kawin", value: warga.kawin },
@@ -2523,10 +2593,14 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     setCurrentPage(1); // Kembali ke halaman 1 saat filter/pencarian berubah
   };
 
-  // Logika Pagination
+  // Logika Pagination - Optimized with useMemo
   const totalPages = Math.ceil(filteredWargaData.length / itemsPerPage);
+  const paginatedWarga = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredWargaData.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredWargaData, currentPage, itemsPerPage]);
+
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedWarga = filteredWargaData.slice(startIndex, startIndex + itemsPerPage);
   
   const handlePrevPage = () => {
     if (currentPage > 1) {
@@ -2674,6 +2748,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
               <th className="px-6 py-3 print:px-2">Nama Lengkap</th>
               <th className="px-6 py-3 print:px-2">Umur</th>
               <th className="px-6 py-3 print:px-2">Jenis Kelamin</th>
+              <th className="px-6 py-3 print:px-2">Agama</th>
               <th className="px-6 py-3 print:px-2">Posisi Keluarga</th>
               <th className="px-6 py-3 print:px-2">Profesi</th>
               <th className="px-6 py-3 print:px-2 text-center">RT/RW</th>
@@ -2707,6 +2782,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                 </td>
                 <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{calculateAge(warga.tglLahir)}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.jk}</td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.agama || '-'}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 font-medium print:px-2">{warga.posisi}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.profesi}</td>
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black text-center">{warga.rt}/{warga.rw}</td>
@@ -2756,7 +2832,22 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
         </table>
       </div>
       <div className="p-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 bg-slate-50 print:hidden gap-3">
-        <p>Menampilkan {paginatedWarga.length > 0 ? startIndex + 1 : 0} - {startIndex + paginatedWarga.length} dari {filteredWargaData.length} warga</p>
+        <div className="flex items-center gap-3">
+          <p>Menampilkan {paginatedWarga.length > 0 ? startIndex + 1 : 0} - {startIndex + paginatedWarga.length} dari {filteredWargaData.length} warga</p>
+          <div className="h-4 w-[1px] bg-slate-200 hidden sm:block"></div>
+          <div className="flex items-center gap-1.5">
+            <span>Tampilkan:</span>
+            <select 
+              value={itemsPerPage} 
+              onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              className="bg-white border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {[10, 25, 50, 100, 500].map(val => (
+                <option key={val} value={val}>{val}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="flex gap-2">
            <button 
              onClick={handlePrevPage}
@@ -5529,6 +5620,7 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
             <thead>
               <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 <th className="px-6 py-4">Warga</th>
+                <th className="px-6 py-4">Agama</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Diajukan</th>
                 <th className="px-6 py-4">Terakhir Oleh</th>
@@ -5553,6 +5645,9 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
                         <p className="text-[10px] font-medium text-slate-400">NIK: {item.nik}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-slate-500">
+                    {item.agama || '-'}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${statusColors[item.status]}`}>
@@ -5617,20 +5712,20 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
                         <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.blok}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tempat Lahir</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tempatLahir}</p>
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tanggal Lahir</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tglLahir}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Agama Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.agama || 'Islam'}</p>
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 uppercase mb-1 block">Jenis Kelamin</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.jk}</p>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.jk || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Agama</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.agama || 'Islam'}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tempat Lahir</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tempatLahir || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tanggal Lahir</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tglLahir || '-'}</p>
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 uppercase mb-1 block">HP Baru</label>
@@ -5988,6 +6083,10 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pekerjaan</p>
                     <p className="text-sm font-bold text-slate-700">{wargaData.profesi || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Agama</p>
+                    <p className="text-sm font-bold text-slate-700">{wargaData.agama || '-'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Pernikahan</p>
