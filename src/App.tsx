@@ -6455,14 +6455,28 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
     setIsLoading(true);
     setError('');
 
+    if (!nik && !kodeKeluarga) {
+      setError('Silakan isi NIK atau Nomor KK Anda untuk verifikasi.');
+      setIsLoading(false);
+      return;
+    }
+
     // Search in wargaData
-    const found = wargaData.find(w => w.nik === nik && w.kk === kodeKeluarga);
+    let found;
+    if (nik && kodeKeluarga) {
+      found = wargaData.find(w => w.nik === nik && w.kk === kodeKeluarga);
+    } else if (nik) {
+      found = wargaData.find(w => w.nik === nik);
+    } else {
+      found = wargaData.find(w => w.kk === kodeKeluarga);
+    }
+
     if (found) {
       // Sign in anonymously to Firestore to satisfy "isSignedIn()" rules
       signInAnonymously(auth).catch(err => console.error("Anonymous signin failed:", err));
       
       // Find other family members
-      const familyMembers = wargaData.filter(w => w.kk === kodeKeluarga);
+      const familyMembers = wargaData.filter(w => w.kk === found.kk);
       const wargaAuthData = { ...found, listWargaInKK: familyMembers };
       
       setTimeout(() => {
@@ -6471,7 +6485,7 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
       }, 800);
     } else {
       setTimeout(() => {
-        setError('NIK atau Kode Keluarga tidak cocok. Silakan hubungi RT/RW jika ada kesalahan data.');
+        setError('Data tidak ditemukan. Pastikan NIK atau Nomor KK yang Anda masukkan sudah benar.');
         setIsLoading(false);
       }, 500);
     }
@@ -6665,22 +6679,20 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                     <input
                       type="text"
-                      required
                       maxLength={16}
                       value={nik}
                       onChange={(e) => setNik(e.target.value)}
                       className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                      placeholder="16 Digit NIK Anda"
+                      placeholder="Masukkan 16 Digit NIK Anda"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Kode Keluarga (No. KK / HP)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Nomor Kartu Keluarga (No. KK)</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                     <input
-                      type="password"
-                      required
+                      type="text"
                       value={kodeKeluarga}
                       onChange={(e) => setKodeKeluarga(e.target.value)}
                       className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
@@ -6690,7 +6702,7 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
                 </div>
                 <div className="p-4 bg-blue-50 rounded-xl">
                   <p className="text-[10px] text-blue-700 font-medium leading-relaxed italic">
-                    * Gunakan NIK dan No. KK untuk masuk. Fitur ini memungkinkan Anda memverifikasi data diri secara mandiri tanpa harus ke kantor RT.
+                    * Gunakan NIK atau No. KK untuk masuk. Cukup isi salah satu kolom saja untuk memverifikasi data diri Anda.
                   </p>
                 </div>
                 <button
