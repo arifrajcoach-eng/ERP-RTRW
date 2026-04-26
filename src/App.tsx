@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -2746,14 +2746,18 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                 />
               </th>
               <th className="px-6 py-3 print:px-2">Nama Lengkap</th>
-              <th className="px-6 py-3 print:px-2">Umur</th>
+              <th className="px-6 py-3 print:px-2">NIK & No. KK</th>
+              <th className="px-6 py-3 print:px-2">Tempat/Tgl Lahir</th>
               <th className="px-6 py-3 print:px-2">Jenis Kelamin</th>
               <th className="px-6 py-3 print:px-2">Agama</th>
               <th className="px-6 py-3 print:px-2">Posisi Keluarga</th>
               <th className="px-6 py-3 print:px-2">Profesi</th>
+              <th className="px-6 py-3 print:px-2">Pendidikan/Status Kawin</th>
               <th className="px-6 py-3 print:px-2 text-center">RT/RW</th>
-              <th className="px-6 py-3 print:px-2">Alamat</th>
-              <th className="px-6 py-3 print:px-2">No. HP</th>
+              <th className="px-6 py-3 print:px-2">Alamat/Blok</th>
+              <th className="px-6 py-3 print:px-2">Kel/Kec/Kota</th>
+              <th className="px-6 py-3 print:px-2">Kontak</th>
+              <th className="px-6 py-3 print:px-2">Kewarganegaraan</th>
               <th className="px-6 py-3 text-center print:px-2">Status</th>
               <th className="px-6 py-3 text-right print:hidden">Aksi</th>
             </tr>
@@ -2761,7 +2765,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
           <tbody className="divide-y divide-slate-100 text-slate-700 print:divide-slate-300">
             {paginatedWarga.length > 0 ? paginatedWarga.map((warga, idx) => {
               return (
-              <tr key={warga.docId || warga.nik || idx} className="hover:bg-slate-50 transition-colors print:break-inside-avoid">
+              <tr key={warga.docId || warga.nik || idx} className="hover:bg-slate-50 transition-colors print:break-inside-avoid whitespace-nowrap">
                 <td className="px-6 py-3 print:px-2">
                   <input 
                     type="checkbox" 
@@ -2780,14 +2784,33 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{calculateAge(warga.tglLahir)}</td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">
+                  <div className="font-mono text-slate-700">{warga.nik || '-'}</div>
+                  <div className="font-mono text-slate-400">KK: {warga.kk || '-'}</div>
+                </td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">
+                  <div>{warga.tempatLahir || '-'}, {warga.tglLahir || '-'}</div>
+                  <div className="text-[10px] text-slate-400">Umur: {calculateAge(warga.tglLahir)}</div>
+                </td>
                 <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.jk}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.agama || '-'}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 font-medium print:px-2">{warga.posisi}</td>
                 <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.profesi}</td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">
+                  <div>{warga.pendidikanTerakhir || '-'}</div>
+                  <div className="text-slate-400">{warga.kawin || '-'}</div>
+                </td>
                 <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black text-center">{warga.rt}/{warga.rw}</td>
                 <td className="px-6 py-3 text-xs print:px-2">{warga.blok}</td>
-                <td className="px-6 py-3 text-slate-500 font-mono text-xs print:px-2 print:text-black">{warga.hp}</td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">
+                  <div>{warga.kelurahan || '-'}</div>
+                  <div>{warga.kecamatan || '-'} / {warga.kota_kab || '-'}</div>
+                </td>
+                <td className="px-6 py-3 text-slate-500 text-xs print:px-2">
+                  <div className="font-mono">{warga.hp || '-'}</div>
+                  <div className="text-slate-400">{warga.email || '-'}</div>
+                </td>
+                <td className="px-6 py-3 text-xs text-slate-500 print:px-2">{warga.kewarganegaraan || 'WNI'}</td>
                 <td className="px-6 py-3 text-center print:px-2">
                   <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${warga.status === 'Warga Tetap' ? 'border-green-200 bg-green-50 text-green-700' : 'border-blue-200 bg-blue-50 text-blue-700'} print:border-0 print:p-0 print:bg-transparent print:text-slate-800`}>
                     {warga.status}
@@ -2922,7 +2945,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                   <option value="Kristen">Kristen</option>
                   <option value="Katolik">Katolik</option>
                   <option value="Hindu">Hindu</option>
-                  <option value="Buddha">Buddha</option>
+                  <option value="Budha">Budha</option>
                   <option value="Konghucu">Konghucu</option>
                 </select>
               </div>
@@ -6203,7 +6226,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
                        <option value="Kristen">Kristen</option>
                        <option value="Katolik">Katolik</option>
                        <option value="Hindu">Hindu</option>
-                       <option value="Buddha">Buddha</option>
+                       <option value="Budha">Budha</option>
                        <option value="Konghucu">Konghucu</option>
                      </select>
                   </div>
