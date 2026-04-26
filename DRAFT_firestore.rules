@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /verifikasi_warga/{docId} {
+      // 1. Allow authenticated (including anonymous) users to read/update
+      // their own document only, identified by the 'authUid' field.
+      // Admins/Operators can always access.
+      
+      function isAdmin() { return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+      function isOwner(resourceData) { return request.auth != null && request.auth.uid == resourceData.authUid; }
+
+      // Allow get/update if user owns the record
+      allow get, update: if (isSignedIn() && isOwner(resource.data)) || isAdmin();
+      
+      // Allow create if user sets their own authUid
+      allow create: if isSignedIn() && (
+        request.resource.data.authUid == request.auth.uid || isAdmin()
+      );
+      
+      allow delete: if isAdmin();
+      allow list: if isAdmin();
+    }
+    
+    // ... other collections ...
+  }
+}

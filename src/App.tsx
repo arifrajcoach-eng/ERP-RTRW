@@ -266,15 +266,15 @@ export default function App() {
             // Force Super Admin status for the specific master email
             const isMasterEmail = user.email === 'arifrajcoach@gmail.com';
             if (isMasterEmail) {
-              if (!userData.isSuperAdmin || userData.role !== 'ADMIN') {
+              if (!userData.isSuperAdmin || userData.role !== 'SUPER_ADMIN') {
                 userData.isSuperAdmin = true;
-                userData.role = 'ADMIN';
+                userData.role = 'SUPER_ADMIN';
                 userData.name = 'Bpk. Arif (Super Admin)';
                 // Persistent update to database
                 await updateDoc(userDocRef, { 
-                  isSuperAdmin: true, 
-                  role: 'ADMIN',
-                  name: userData.name 
+                    isSuperAdmin: true, 
+                    role: 'SUPER_ADMIN',
+                    name: userData.name 
                 });
               }
             }
@@ -285,7 +285,8 @@ export default function App() {
               name: "Warga (Anonymous)", 
               role: "Warga", 
               uid: user.uid,
-              tenantId: "RW26_SMART" 
+              tenantId: "RW26_SMART",
+              isSuperAdmin: false 
             });
           } else {
             // If No Firestore doc yet, use default based on email (for easy migration)
@@ -299,7 +300,7 @@ export default function App() {
             const isSuperAdmin = isMasterEmail;
             
             if (isMasterEmail) { 
-              role = 'ADMIN'; 
+              role = 'SUPER_ADMIN'; 
               name = 'Bpk. Arif (Super Admin)'; 
             }
             
@@ -311,7 +312,7 @@ export default function App() {
               role: role, 
               email: user.email, 
               tenantId, 
-              isSuperAdmin,
+              isSuperAdmin: !!isSuperAdmin,
               rt: "01",
               status: "AKTIF",
               created_at: new Date().toISOString()
@@ -509,7 +510,9 @@ export default function App() {
       // If we are not initializing and still have no user, try to sign in anonymously
       // to trigger the listeners (satisfying the rules)
       if (!isAuthInitializing) {
-        signInAnonymously(auth).catch(err => console.error("Auto anonymous signin failed:", err));
+        signInAnonymously(auth)
+          .then(() => console.log("Auto anonymous signin successful!"))
+          .catch(err => console.error("Auto anonymous signin failed:", err));
       }
       setIsLoadingDB(false);
       return;
@@ -727,6 +730,12 @@ export default function App() {
 
     const getVerifikasiQuery = () => {
       const base = collection(db, 'verifikasi_warga');
+      
+      // Prevent unauthorized list operations
+      if (!auth.currentUser || (!currentUser?.isSuperAdmin && !currentUser?.role)) {
+         return query(base, where('tenantId', '==', 'NONE_MATCH'));
+      }
+
       if (currentUser?.isSuperAdmin) return query(base);
       
       const constraints = [where('tenantId', '==', tId)];
@@ -1085,8 +1094,13 @@ export default function App() {
           <div className="flex items-center space-x-2 md:space-x-4">
              <div className="flex items-center space-x-2 md:space-x-3 pl-4 border-l border-slate-200">
                <div className="text-right hidden lg:block">
-                 <p className="text-sm font-bold leading-none text-slate-800">{currentUser.name}</p>
-                 <span className="text-[10px] uppercase font-bold text-blue-600 mt-1 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block">{currentUser.role}</span>
+                 <p className="text-sm font-bold leading-none text-slate-800 flex items-center justify-end gap-1.5">
+                   {currentUser.name}
+                   {currentUser.isSuperAdmin && <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />}
+                 </p>
+                 <span className={`text-[10px] uppercase font-bold mt-1 px-1.5 py-0.5 rounded border inline-block ${currentUser.isSuperAdmin ? 'bg-slate-900 text-white border-slate-900' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                   {currentUser.isSuperAdmin ? 'SUPER ADMIN' : currentUser.role}
+                 </span>
                </div>
                <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-100 border border-blue-400 overflow-hidden">
                  {userPhoto ? (
@@ -6479,14 +6493,29 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
     );
 
     if (found) {
-      // Find other family members
-      const familyMembers = wargaData.filter(w => String(w.kk).trim() === String(found.kk).trim());
-      const wargaAuthData = { ...found, listWargaInKK: familyMembers };
-      
-      setTimeout(() => {
-        setWargaAuth(wargaAuthData);
+      try {
+        // Sign in anonymously and link the UID to this citizen's document
+        console.log("Logging in anonymously for citizen:", found.id);
+        const userCredential = await signInAnonymously(auth);
+        const uid = userCredential.user.uid;
+        
+        // Update the document with authUid for security rules
+        const vRef = doc(db, 'verifikasi_warga', found.id);                
+        await updateDoc(vRef, { authUid: uid });
+        
+        // Find other family members
+        const familyMembers = wargaData.filter(w => String(w.kk).trim() === String(found.kk).trim());
+        const wargaAuthData = { ...found, authUid: uid, listWargaInKK: familyMembers };
+        
+        setTimeout(() => {
+          setWargaAuth(wargaAuthData);
+          setIsLoading(false);
+        }, 800);
+      } catch (err) {
+        console.error("Login Error:", err);
+        setError('Gagal masuk. Silakan coba lagi.');
         setIsLoading(false);
-      }, 800);
+      }
     } else {
       setTimeout(() => {
         setError('Data tidak ditemukan. NIK atau No. KK tidak cocok. Silakan hubungi RT/RW jika ada kesalahan data.');
@@ -6550,7 +6579,7 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
       const isArif = user.email === 'arifrajcoach@gmail.com';
       const userData = {
         email: user.email,
-        role: isArif ? 'ADMIN' : 'Viewer',
+        role: isArif ? 'SUPER_ADMIN' : 'Viewer',
         isSuperAdmin: isArif,
         name: isArif ? 'Bpk. Arif (Super Admin)' : (user.displayName || 'User'),
         tenantId: 'RW26_SMART', // De-facto tenant
@@ -6760,10 +6789,11 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
       name: formData.get('nama') as string, // Legacy compatibility
       username: formData.get('username') as string,
       password: formData.get('password') as string,
-      role: formData.get('role') as "ADMIN" | "RW" | "RT" | "BENDAHARA" | "SEKRETARIS",
+      role: formData.get('role') as any,
       rt: formData.get('rt') as string,
       nik: formData.get('nik') as string,
       status: formData.get('status') as "AKTIF" | "NONAKTIF",
+      isSuperAdmin: formData.get('isSuperAdmin') === 'true',
       tenantId,
       created_at: editingUser?.created_at || new Date().toISOString()
     };
@@ -6846,6 +6876,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                    </td>
                    <td className="px-4 py-3">
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${
+                        user.role === 'SUPER_ADMIN' ? 'bg-slate-900 text-white border-slate-900' :
                         user.role === 'ADMIN' || user.role === 'RW' ? 'bg-red-50 text-red-600 border-red-100' :
                         user.role === 'RT' || user.role === 'SEKRETARIS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                         'bg-green-50 text-green-600 border-green-100'
@@ -6930,11 +6961,20 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                     <div>
                       <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Peran (Role)</label>
                       <select name="role" defaultValue={editingUser?.role || 'RT'} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
+                         <option value="SUPER_ADMIN">SUPER ADMIN</option>
                          <option value="ADMIN">ADMIN</option>
                          <option value="RW">RW</option>
                          <option value="RT">RT</option>
                          <option value="BENDAHARA">BENDAHARA</option>
                          <option value="SEKRETARIS">SEKRETARIS</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Akses Khusus</label>
+                      <select name="isSuperAdmin" defaultValue={editingUser?.isSuperAdmin ? 'true' : 'false'} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
+                         <option value="false">Standard User</option>
+                         <option value="true">Super Admin Power</option>
                       </select>
                     </div>
 
