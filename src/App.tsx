@@ -5942,6 +5942,10 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
 
   const handleSubmitPerbaikan = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth.currentUser) {
+      showNotification("Sesi login mandiri tidak ditemukan. Silakan login kembali.", "error");
+      return;
+    }
     setIsLoadingDB(true);
     setUploading(true);
     setUploadPct(0);
@@ -5960,15 +5964,23 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
       const id = activeSubmission?.id || `VRF-${Date.now()}`;
       const submission = {
         ...formData,
+        nik: String(formData.nik || wargaData.nik || ""),
+        nama: String(formData.nama || wargaData.nama || ""),
         id,
         tenantId,
-        userId: auth.currentUser?.uid || 'anonymous_submit',
+        userId: auth.currentUser.uid,
         ktpUrl,
         kkUrl,
         status: 'Menunggu Persetujuan',
         submittedAt: new Date().toISOString(),
         catatan: ''
       };
+
+      if (!submission.nik || !submission.nama) {
+        showNotification("Data NIK atau Nama tidak lengkap. Silakan periksa kembali profil Anda.", "error");
+        setIsLoadingDB(false);
+        return;
+      }
 
       await setDoc(doc(db, 'verifikasi_warga', id), submission);
       showNotification("Pengajuan perbaikan data berhasil dikirim. Menunggu verifikasi admin.", "success");
@@ -5982,14 +5994,20 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
   };
 
   const handleDataSudahBenar = async () => {
+    if (!auth.currentUser) {
+      showNotification("Sesi login mandiri tidak ditemukan. Silakan login kembali.", "error");
+      return;
+    }
     setIsLoadingDB(true);
     try {
       const id = activeSubmission?.id || `VRF-${Date.now()}`;
       const submission = {
         ...wargaData,
+        nik: String(wargaData.nik || ""),
+        nama: String(wargaData.nama || ""),
         id,
         tenantId,
-        userId: auth.currentUser?.uid || 'anonymous_submit',
+        userId: auth.currentUser.uid,
         status: 'Menunggu Persetujuan',
         submittedAt: new Date().toISOString(),
         catatan: 'Konfirmasi Data Mandiri (Tidak ada perubahan)'
@@ -6463,33 +6481,80 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
       return;
     }
 
-    // Search in wargaData
-    let found;
-    if (nik && kodeKeluarga) {
-      found = wargaData.find(w => w.nik === nik && w.kk === kodeKeluarga);
-    } else if (nik) {
-      found = wargaData.find(w => w.nik === nik);
-    } else {
-      found = wargaData.find(w => w.kk === kodeKeluarga);
-    }
+    try {
+      // 1. Sign in anonymously first to satisfy Firestore rules
+      await signInAnonymously(auth);
 
-    if (found) {
-      // Sign in anonymously to Firestore to satisfy "isSignedIn()" rules
-      signInAnonymously(auth).catch(err => console.error("Anonymous signin failed:", err));
+      const cleanNik = nik.trim();
+      const cleanKK = kodeKeluarga.trim();
+      const numNik = !isNaN(Number(cleanNik)) && cleanNik !== "" ? Number(cleanNik) : null;
+      const numKK = !isNaN(Number(cleanKK)) && cleanKK !== "" ? Number(cleanKK) : null;
+
+      // 2. Query Firestore directly for the citizen
+      const base = collection(db, 'data_warga');
+      const defaultTenant = 'RW26_SMART';
+
+      // We'll try a few variations to be safe (String vs Number in DB)
+      const queryList = [];
       
-      // Find other family members
-      const familyMembers = wargaData.filter(w => w.kk === found.kk);
-      const wargaAuthData = { ...found, listWargaInKK: familyMembers };
+      if (cleanNik && cleanKK) {
+        queryList.push(query(base, where('tenantId', '==', defaultTenant), where('nik', '==', cleanNik), where('kk', '==', cleanKK)));
+        if (numNik !== null) queryList.push(query(base, where('tenantId', '==', defaultTenant), where('nik', '==', numNik), where('kk', '==', cleanKK)));
+      } else if (cleanNik) {
+        queryList.push(query(base, where('tenantId', '==', defaultTenant), where('nik', '==', cleanNik)));
+        if (numNik !== null) queryList.push(query(base, where('tenantId', '==', defaultTenant), where('nik', '==', numNik)));
+      } else {
+        queryList.push(query(base, where('tenantId', '==', defaultTenant), where('kk', '==', cleanKK)));
+        if (numKK !== null) queryList.push(query(base, where('tenantId', '==', defaultTenant), where('kk', '==', numKK)));
+      }
+
+      let foundDoc = null;
+      for (const q of queryList) {
+        try {
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            foundDoc = snap.docs[0];
+            break;
+          }
+        } catch (e) {
+          console.warn("Sub-query failed:", e);
+        }
+      }
       
-      setTimeout(() => {
-        setWargaAuth(wargaAuthData);
-        setIsLoading(false);
-      }, 800);
-    } else {
-      setTimeout(() => {
+      if (!foundDoc) {
         setError('Data tidak ditemukan. Pastikan NIK atau Nomor KK yang Anda masukkan sudah benar.');
         setIsLoading(false);
-      }, 500);
+        return;
+      }
+
+      handleFoundWarga(foundDoc);
+
+    } catch (err: any) {
+      console.error("Login Error:", err);
+      setError('Terjadi kesalahan saat mencoba masuk. Silakan coba lagi.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleFoundWarga = async (docSnap: any) => {
+    const base = collection(db, 'data_warga');
+    const found = { docId: docSnap.id, ...docSnap.data() } as any;
+
+    try {
+      // Find other family members (needed for the dashboard)
+      const familyQ = query(base, where('tenantId', '==', found.tenantId || 'RW26_SMART'), where('kk', '==', found.kk));
+      const familySnap = await getDocs(familyQ);
+      const familyMembers = familySnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+
+      const wargaAuthData = { ...found, listWargaInKK: familyMembers };
+      
+      setWargaAuth(wargaAuthData);
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Error fetching family members:", err);
+      // Still allow login even if family fetch fails
+      setWargaAuth({ ...found, listWargaInKK: [found] });
+      setIsLoading(false);
     }
   };
 
