@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { db, storage } from '../firebase';
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Settings, Save, Upload, FileText, PlusCircle, CheckCircle } from 'lucide-react';
 
 export default function KopTemplateManagementView({ currentUser, settings, showNotification, handleFirestoreError }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
@@ -48,7 +48,7 @@ function TemplateSuratFisik({ formData, logoUrl }: { formData: any, logoUrl: str
         </div>
         
         <div className="mt-6">
-            <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {formData.rt || '...'} / RW {formData.rw || '...'} Kelurahan {formData.kelurahan || '...'} Kecamatan {formData.kecamatan || '...'} {(formData.kabupaten?.toUpperCase().includes('KABUPATEN') || formData.kabupaten?.toUpperCase().includes('KOTA')) ? '' : 'Kabupaten '}{formData.kabupaten || '...'}</p>
+            <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {formData.rt || '...'} / RW {formData.rw || '...'}</p>
             <p className="mb-4">Dengan ini menerangkan bahwa :</p>
             <div className="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
                <div>Nama</div><div>:</div><div>...........................................................................</div>
@@ -276,28 +276,42 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     }
 
     setUploading(true);
-    setUploadProgress(0); // Optional: You can remove this or use a simulated progress if uploadBytes doesn't supply it.
+    setUploadProgress(0);
     try {
       // 2. Upload to Firebase
       const storagePath = `branding/${tenantId}/logo_${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
       
-      // Try using uploadBytes which returns a Promise directly
-      const snapshot = await uploadBytes(storageRef, file);
-      setUploadProgress(100);
-      
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      
-      // 3. Update Firestore
-      await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: downloadURL }, { merge: true });
-      setLogoUrl(downloadURL);
-      showNotification("Logo berhasil diunggah", 'success');
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        }, 
+        (error) => {
+          console.error("Upload error:", error);
+          showNotification(`Gagal mengunggah logo: ${error.message}`, 'error');
+          setUploading(false);
+          setUploadProgress(0);
+        }, 
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          
+          // 3. Update Firestore
+          await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: downloadURL }, { merge: true });
+          setLogoUrl(downloadURL);
+          showNotification("Logo berhasil diunggah", 'success');
+          setUploading(false);
+          setUploadProgress(0);
+        }
+      );
     } catch (error: any) {
       console.error("Upload error:", error);
-      showNotification(`Gagal mengunggah logo: ${error.message || 'Error tidak diketahui'}`, 'error');
-    } finally {
+      showNotification(`Gagal memulai unggahan: ${error.message || 'Error tidak diketahui'}`, 'error');
       setUploading(false);
       setUploadProgress(0);
+    } finally {
       e.target.value = ''; // Reset input
     }
   };
@@ -340,6 +354,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         
         <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-2">Logo RT/RW</label>
+            <p className="text-[10px] text-slate-500 mb-2">Logo akan muncul otomatis di pojok kiri atas kop surat.</p>
             {logoUrl ? (
               <div className="flex items-center gap-4 mb-3">
                 <img src={logoUrl} alt="Logo" className="w-20 h-20 object-contain border rounded p-1 bg-white" />

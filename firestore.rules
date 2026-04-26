@@ -36,16 +36,14 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
-      let data = getUserData();
       return isSignedIn() && (
         request.auth.token.email == 'arifrajcoach@gmail.com' || 
-        (data != null && data.get('isSuperAdmin', false) == true)
+        (getUserData() != null && getUserData().get('isSuperAdmin', false) == true)
       );
     }
 
     function isAdmin() {
-      let role = getRole();
-      return isSignedIn() && (isSuperAdmin() || role == 'ADMIN' || role == 'RW');
+      return isSignedIn() && (isSuperAdmin() || getRole() == 'ADMIN' || getRole() == 'RW');
     }
 
     function isOperator() {
@@ -75,7 +73,10 @@ service cloud.firestore {
     function isValidWarga(data) {
       return data.nik is string && data.nik.size() >= 1 &&
              data.nama is string && data.nama.size() <= 100 &&
-             data.tenantId is string && data.tenantId.size() <= 50;
+             data.tenantId is string && data.tenantId.size() <= 60 &&
+             data.kk is string &&
+             data.rt is string &&
+             data.rw is string;
     }
 
     function isValidKas(data) {
@@ -198,15 +199,18 @@ service cloud.firestore {
       allow list: if isSignedIn() && (isSuperAdmin() || (resource.data.tenantId == getTenantId() && (getRole() != 'RT' || resource.data.rt == getUserData().get('rt', ''))));
       allow get: if isSignedIn() && (isSuperAdmin() || (isSameTenant(existing()) && (getRole() != 'RT' || existing().get('rt', '') == getUserData().get('rt', ''))));
       
-      allow create: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || incoming().rt == getUserData().get('rt', ''));
-      allow update: if isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (isSuperAdmin() || getRole() != 'RT' || (existing().rt == getUserData().get('rt', '') && incoming().rt == getUserData().get('rt', '')));
-      allow delete: if isAdmin();
+      allow create: if isSuperAdmin() || (isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(incoming()) && (getRole() != 'RT' || incoming().rt == getUserData().get('rt', '')));
+      allow update: if isSuperAdmin() || (isOperator() && isValidId(nik) && isValidWarga(incoming()) && isSameTenant(existing()) && isSameTenant(incoming()) && (getRole() != 'RT' || (existing().rt == getUserData().get('rt', ''))));
+      allow delete: if isAdmin() || isOperator();
     }
 
     // --- Verifikasi Warga Collection ---
     match /verifikasi_warga/{id} {
       // List should filter by tenantId OR be Super Admin
-      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
+      allow list: if isSignedIn() && (
+        isSuperAdmin() || 
+        (resource.data.tenantId == getTenantId() && (isOperator() || resource.data.userId == request.auth.uid))
+      );
       allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()) || request.auth.uid == existing().get('userId', ''));
       
       allow create: if isSignedIn() && isValidId(id) && isValidVerifikasi(incoming()) && isSameTenant(incoming()) && incoming().userId == request.auth.uid;

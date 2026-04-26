@@ -14,9 +14,11 @@ import {
   signOut,
   signInAnonymously,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { auth, storage } from './firebase';
 import KopTemplateManagementView from './components/KopTemplateManagementView';
 
@@ -65,6 +67,135 @@ const INITIAL_INVENTARIS_DATA = [
   { id: "INV-BRG-002", nama_barang: "Tenda 3x4 Meter", kategori: "Aset Tenda & Kursi", jumlah: 2, kondisi: "Baik", lokasi: "Gudang RW", tanggal_pengadaan: "2023-05-15", keterangan: "Bantuan Desa" },
   { id: "INV-BRG-003", nama_barang: "Sound System Portable", kategori: "Elektronik", jumlah: 1, kondisi: "Rusak Ringan", lokasi: "Pos Kamling", tanggal_pengadaan: "2022-11-20", keterangan: "Mic kadang putus" },
 ];
+
+// Shared Helper for Document Generation
+const generateSuratHTML = (surat: any, kop: any, settings: any) => {
+  return `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cetak Surat - ${surat.nomor_surat || surat.id}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+          body { 
+            font-family: 'Times New Roman', Times, serif; 
+            background: #fff;
+            margin: 0; 
+            padding: 0; 
+          }
+          .print-container {
+            width: 210mm;
+            margin: 0 auto;
+            background: white;
+            padding: 15mm;
+            font-size: 0.875rem;
+          }
+          @media print {
+            @page { margin: 1.5cm; }
+            body { background: white; }
+            .print-container { padding: 0; margin: 0; width: 100%; box-shadow: none; }
+          }
+          .details td { padding: 2px 0; vertical-align: top; }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          <!-- Kop Surat -->
+          <div class="flex items-center gap-4 relative">
+               ${surat.show_logo === 'yes' && kop.logo_url ? `<img src="${kop.logo_url}" crossorigin="anonymous" alt="Logo" class="w-20 h-20 object-contain" />` : '<div class="w-20"></div>'}
+               <div class="flex-1 text-center">
+                   <h2 class="text-lg font-bold uppercase">${kop.nama_rt || `RUKUN TETANGGA ${kop.rt || '...'} / RUKUN WARGA ${kop.rw || '...'}`}</h2>
+                   <p class="text-sm">KELURAHAN ${kop.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kop.kecamatan?.toUpperCase() || '...'}</p>
+                   <p class="text-sm font-bold">${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KABUPATEN') || (kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase()}</p>
+                   <p class="text-[10px]">Sekretariat : ${kop.alamat || '...'} | Email: ${kop.email || '...'} | Instagram: ${kop.instagram || '...'}</p>
+               </div>
+               <div class="w-20"></div>
+          </div>
+          <div class="border-b-4 border-black mt-2"></div>
+          <div class="border-b-2 border-black mt-0.5"></div>
+          
+          <div class="text-center mt-6">
+              <h3 class="text-lg font-bold underline">${surat.jenisSurat || 'SURAT PENGANTAR'}</h3>
+              <p>Nomor : ${surat.nomor_surat || '...... / RT .... / RW .... / Tahun 202...'}</p>
+          </div>
+          
+          <div class="mt-6 leading-relaxed">
+              <p class="mb-4">Yang bertanda tangan di bawah ini Ketua RT ${surat.rt || kop.rt || '...'} / RW ${surat.rw || kop.rw || '...'}</p>
+              <p class="mb-4">Dengan ini menerangkan bahwa :</p>
+              <div class="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
+                 <div>Nama</div><div>:</div><div><strong>${surat.pemohon}</strong></div>
+                 <div>Tempat Tgl, Lahir</div><div>:</div><div>${surat.ttl || '-'}</div>
+                 <div>Jenis Kelamin</div><div>:</div><div>${surat.jk || '-'}</div>
+                 <div>Pekerjaan</div><div>:</div><div>${surat.pekerjaan || '-'}</div>
+                 <div>Kewarganegaraan</div><div>:</div><div>${surat.kewarganegaraan || 'WNI'}</div>
+                 <div>No. KTP/NIK</div><div>:</div><div>${surat.nik || '-'}</div>
+                 <div>Status Perkawinan</div><div>:</div><div>${surat.statusKawin || '-'}</div>
+                 <div>Alamat</div><div>:</div><div>${surat.alamat || '-'}</div>
+                 <div class="mt-2">Maksud / Keperluan</div><div class="mt-2">:</div><div class="mt-2 font-bold">${surat.keperluan || '-'}</div>
+              </div>
+              <p class="mt-6">Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
+          </div>
+
+          <div class="mt-12 flex justify-between">
+              <div class="text-center">
+                  <p>Mengetahui,</p>
+                  <p>Ketua RW ${surat.rw || kop.rw || '....'}</p>
+                  <div class="h-20"></div>
+                  <p class="font-bold underline">${surat.ketua_rw_nama || kop.nama_ketua_rw || '...................................'}</p>
+              </div>
+              <div class="text-center">
+                  <p>${(() => {
+                      const kab = kop.kabupaten || settings.kabupaten || 'Bekasi';
+                      const prefix = kab.toUpperCase().includes('KABUPATEN') || kab.toUpperCase().includes('KOTA') ? '' : 'Kabupaten ';
+                      return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    })()}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  <p>${surat.jabatan_ttd || 'Ketua RT'} ${surat.rt || kop.rt || '....'}</p>
+                  <div class="h-20"></div>
+                  <p class="font-bold underline">${surat.ketua || kop.nama_ketua_rt || '...................................'}</p>
+              </div>
+          </div>
+
+          <div class="mt-12 border-t border-black pt-2 text-[10px] text-gray-500">
+               <div class="flex justify-between font-mono">
+                  <div>Ref Code: ${surat.id}</div>
+                  <div>Sistem Informasi RW 26 - Digital Archive</div>
+                  <div>Digital Signature Certified</div>
+               </div>
+          </div>
+        </div>
+        <script>
+          function checkImages() {
+            const images = document.getElementsByTagName('img');
+            let loadedCount = 0;
+            if (images.length === 0) {
+              setTimeout(() => { window.print(); window.close(); }, 500);
+              return;
+            }
+            for (let i = 0; i < images.length; i++) {
+              if (images[i].complete) {
+                loadedCount++;
+              } else {
+                images[i].addEventListener('load', () => {
+                  loadedCount++;
+                  if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 500);
+                });
+                images[i].addEventListener('error', () => {
+                  loadedCount++;
+                  if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 500);
+                });
+              }
+            }
+            if (loadedCount === images.length) {
+              setTimeout(() => { window.print(); window.close(); }, 500);
+            }
+          }
+          window.onload = checkImages;
+        </script>
+      </body>
+    </html>
+  `;
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -698,18 +829,36 @@ export default function App() {
     }
   };
 
-  // Helper for uploading files to Firebase Storage
-  const handleFileUpload = async (file: File, folder: string) => {
+  // Helper for uploading files to Firebase Storage with Progress
+  const handleFileUpload = async (file: File, folder: string, onProgress?: (pct: number) => void) => {
     try {
       const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return downloadURL;
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      if (onProgress) onProgress(0); // Initialize
+
+      return new Promise<string>((resolve, reject) => {
+        uploadTask.on('state_changed', 
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            if (onProgress) onProgress(progress);
+          }, 
+          (error) => {
+            console.error("Upload error:", error);
+            reject(error);
+          }, 
+          async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          }
+        );
+      });
     } catch (error) {
       console.error("Storage upload error:", error);
       throw error;
     }
   };
+
 
   // Effect to sync data to localStorage (keep as secondary backup)
   useEffect(() => { localStorage.setItem('rw26_wargaData', JSON.stringify(wargaData)); }, [wargaData]);
@@ -735,12 +884,19 @@ export default function App() {
       <WargaProfileView 
         wargaData={wargaAuth} 
         verifikasiData={verifikasiWargaData} 
+        suratData={suratData}
+        setSuratData={setSuratData}
         setWargaAuth={setWargaAuth} 
         tenantId={wargaAuth.tenantId || 'RW26_SMART'} 
         setIsLoadingDB={setIsLoadingDB} 
         handleFileUpload={handleFileUpload} 
         showNotification={showNotification} 
-        handleFirestoreError={handleFirestoreError} 
+        handleFirestoreError={handleFirestoreError}
+        kopSettings={kopSettings}
+        getSetting={getSetting}
+        usersData={usersData}
+        generateSuratHTML={generateSuratHTML}
+        settings={settings}
       />
     );
   }
@@ -925,7 +1081,7 @@ export default function App() {
              userRole={currentUser.role} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'} 
              setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} 
           />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} />}
           {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {activeTab === 'kas' && <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
@@ -1428,8 +1584,8 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
 
   // Stats calculation
   const totalWarga = wargaData.length;
-  // Improved KK detection: based on the exact phrase the user requested
-  const kepalaKeluarga = wargaData.filter(w => w.posisi === 'Suami (kepala Keluarga)').length;
+  // Improved KK detection: count unique KK IDs
+  const kepalaKeluarga = new Set(wargaData.map((w: any) => w.kk)).size;
   const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
   const suratPending = suratData.filter(s => s.status === 'Diajukan').length;
 
@@ -1949,10 +2105,63 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   const [filterRW, setFilterRW] = useState("Semua");
   const [filterKategoriUmur, setFilterKategoriUmur] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedWargaIds, setSelectedWargaIds] = useState<string[]>([]);
   const [wargaToDelete, setWargaToDelete] = useState<any>(null);
   const [isDeletingWarga, setIsDeletingWarga] = useState(false);
-  const itemsPerPage = 8; // Tampilkan 8 data per halaman agar rapi
+  const itemsPerPage = 1000;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleSelectAll = () => {
+    if (selectedWargaIds.length === filteredWargaData.length) {
+      setSelectedWargaIds([]);
+    } else {
+      setSelectedWargaIds(filteredWargaData.map(w => w.nik));
+    }
+  };
+
+  const toggleSelectWarga = (nik: string) => {
+    if (selectedWargaIds.includes(nik)) {
+      setSelectedWargaIds(selectedWargaIds.filter(id => id !== nik));
+    } else {
+      setSelectedWargaIds([...selectedWargaIds, nik]);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedWargaIds.length === 0) return;
+    
+    if (!window.confirm(`Yakin ingin menghapus ${selectedWargaIds.length} data terpilih?`)) return;
+
+    setIsDeletingWarga(true);
+    try {
+      const uniqueIds = Array.from(new Set(selectedWargaIds));
+      const totalCount = uniqueIds.length;
+      const chunks = [];
+      for (let i = 0; i < totalCount; i += 500) {
+        chunks.push(uniqueIds.slice(i, i + 500));
+      }
+
+      for (const chunk of chunks) {
+        const batch = writeBatch(db);
+        chunk.forEach(id => {
+          if (id) {
+            batch.delete(doc(db, "data_warga", id));
+          }
+        });
+        await batch.commit();
+      }
+
+      setWargaData((prev: any) => prev.filter((w: any) => !selectedWargaIds.includes(w.nik)));
+      setSelectedWargaIds([]);
+      showNotification(`Berhasil menghapus ${totalCount} data warga.`, "success");
+    } catch (error: any) {
+      console.error("Bulk delete error:", error);
+      handleFirestoreError(error, "delete", "/data_warga");
+      showNotification("Gagal menghapus data warga. Pastikan Anda memiliki akses yang cukup.", "error");
+    } finally {
+      setIsDeletingWarga(false);
+    }
+  };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1991,42 +2200,63 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   };
 
   const processImportedData = async (data: any[]) => {
-    const newData = data.map((row: any) => ({
+    // 1. Filter out invalid data (missing NIK or Nama)
+    const validData = data.filter((row: any) => {
+      const nik = row['NIK'] || row['nik'];
+      const nama = row['Nama Lengkap'] || row['nama'];
+      return nik && nik.toString().trim() !== "" && nama && nama.toString().trim() !== "";
+    });
+
+    if (validData.length === 0) {
+      showNotification("Tidak ada data warga valid yang ditemukan (NIK dan Nama wajib ada).", "error");
+      return;
+    }
+
+    const newData = validData.map((row: any) => ({
       tenantId: tenantId,
-      nama: row['Nama Lengkap'] || row['nama'] || "",
-      nik: row['NIK'] || row['nik'] || "",
-      kk: row['No. KK'] || row['no_kk'] || row['kk'] || "",
-      rt: row['RT'] || row['rt'] || "01",
-      rw: row['RW'] || row['rw'] || "05",
-      blok: row['Alamat'] || row['alamat'] || row['blok'] || "",
-      status: row['Status Warga'] || row['status'] || "Warga Tetap",
-      hp: row['No. HP'] || row['hp'] || "",
-      email: row['Email'] || row['email'] || "",
-      foto: row['Foto Profil'] || row['foto'] || "",
-      posisi: row['Posisi dalam Keluarga'] || row['posisi'] || "",
-      profesi: row['Profesi'] || row['profesi'] || "",
-      jk: row['Jenis Kelamin'] || row['jk'] || "Laki-Laki",
-      tglLahir: row['Tanggal Lahir'] || row['tgl_lahir'] || "",
-      tempatLahir: row['Tempat Lahir'] || row['tempat_lahir'] || "",
-      kawin: row['Status Kawin'] || row['kawin'] || "Belum Kawin",
-      kewarganegaraan: row['Kewarganegaraan'] || row['kewarganegaraan'] || "WNI",
+      nama: (row['Nama Lengkap'] || row['nama'] || "").toString(),
+      nik: (row['NIK'] || row['nik'] || "").toString(),
+      kk: (row['No. KK'] || row['no_kk'] || row['kk'] || "").toString(),
+      tempatLahir: (row['Tempat Lahir'] || row['tempat_lahir'] || "").toString(),
+      tglLahir: (row['Tgl Lahir'] || row['tgl_lahir'] || "").toString(),
+      jk: (row['Jenis Kelamin'] || row['jk'] || "").toString(),
+      posisi: (row['Posisi dalam Keluarga'] || row['posisi'] || "").toString(),
+      profesi: (row['Profesi / Pekerjaan'] || row['profesi'] || "").toString(),
+      pendidikanTerakhir: (row['Pendidikan Terakhir'] || row['pendidikanTerakhir'] || "").toString(),
+      kawin: (row['Status Kawin'] || row['kawin'] || "").toString(),
+      kewarganegaraan: (row['Kewarganegaraan'] || row['kewarganegaraan'] || "").toString(),
+      rt: (row['RT'] || row['rt'] || "01").toString(),
+      rw: (row['RW'] || row['rw'] || "05").toString(),
+      blok: (row['Alamat/Blok'] || row['alamat'] || row['blok'] || "").toString(),
+      kelurahan: (row['Kelurahan'] || row['kelurahan'] || "").toString(),
+      kecamatan: (row['Kecamatan'] || row['kecamatan'] || "").toString(),
+      kota_kab: (row['Kota/Kabupaten'] || row['kota_kab'] || "").toString(),
+      status: (row['Status Warga'] || row['status'] || "Warga Tetap").toString(),
+      hp: (row['No. HP (WA)'] || row['hp'] || "").toString(),
+      email: (row['Email'] || row['email'] || "").toString(),
+      foto: row['Foto Profil'] || "",
+      ktpUrl: row['Foto KTP'] || "",
       tglDaftar: new Date().toISOString().split('T')[0]
     }));
 
-    if (newData.length > 0) {
-      try {
-        // In Firestore, we set documents by their ID (NIK)
-        for (const item of newData) {
-          await setDoc(doc(db, 'data_warga', item.nik), item);
-        }
-        setWargaData((prev: any) => [...prev, ...newData]);
-        showNotification(`Berhasil mengimpor ${newData.length} data warga.`, 'success');
-      } catch (error: any) {
-        console.error("Firebase Import Error:", error);
-        showNotification("Gagal sinkronisasi data ke Firebase: " + error.message, 'error');
+    try {
+      // 2. Use batch to write data efficiently
+      const batch = writeBatch(db);
+      
+      console.log("Batching items:", newData.length);
+      for (const item of newData) {
+        const docRef = doc(db, 'data_warga', item.nik);
+        batch.set(docRef, item);
       }
-    } else {
-      showNotification("Tidak ada data valid yang ditemukan.", 'info');
+      
+      await batch.commit();
+      console.log("Batch committed successfully");
+
+      setWargaData((prev: any) => [...prev, ...newData]);
+      showNotification(`Berhasil mengimpor ${newData.length} data warga.`, 'success');
+    } catch (error: any) {
+      console.error("Firebase Import Error Detail:", error);
+      showNotification("Gagal sinkronisasi data ke Firebase: " + (error.message || error), 'error');
     }
   };
 
@@ -2130,16 +2360,23 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   // Terapkan filter pada data
   const filteredWargaData = wargaData.filter(w => {
-    // Filter RT/RW
-    const matchRT = filterRT === "Semua" || w.rt === filterRT;
-    const matchRW = filterRW === "Semua" || w.rw === filterRW;
+    // Filter RT/RW - Normalize to string and trim leading zeros for comparison
+    const normalize = (val: string) => val ? val.toString().replace(/^0+/, '') : "";
+    const filterRTNormalized = filterRT === "Semua" ? "Semua" : filterRT.replace(/^0+/, '');
+    const filterRWNormalized = filterRW === "Semua" ? "Semua" : filterRW.replace(/^0+/, '');
+    
+    const matchRT = filterRT === "Semua" || normalize(w.rt) === filterRTNormalized;
+    const matchRW = filterRW === "Semua" || normalize(w.rw) === filterRWNormalized;
     
     // Filter Kategori Umur
     let matchUmur = true;
     if (filterKategoriUmur !== "Semua") {
       const calculateAge = (tglLahir: string) => {
         if (!tglLahir) return -1;
-        const birthDate = new Date(tglLahir);
+        // Parse "YYYY-MM-DD"
+        const parts = tglLahir.split('-');
+        if (parts.length !== 3) return -1;
+        const birthDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
@@ -2174,91 +2411,93 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   const handleExportExcel = () => {
     const headers = [
       'Nama Lengkap', 'NIK', 'No. KK', 'Tempat Lahir', 'Tgl Lahir', 'Jenis Kelamin', 
-      'Posisi dalam Keluarga', 'Profesi / Pekerjaan', 'Agama', 'Status Kawin', 'Kewarganegaraan', 
-      'RT', 'RW', 'Alamat/Blok', 'Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Status Warga', 'No. HP (WA)'
+      'Posisi dalam Keluarga', 'Profesi / Pekerjaan', 'Pendidikan Terakhir', 'Status Kawin', 'Kewarganegaraan', 
+      'RT', 'RW', 'Alamat/Blok', 'Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Status Warga', 'No. HP (WA)', 'Email'
     ];
     const rows = filteredWargaData.map(w => 
       [
         `"${w.nama || ''}"`, `"${w.nik || ''}"`, `"${w.kk || ''}"`, `"${w.tempatLahir || ''}"`, `"${w.tglLahir || ''}"`, `"${w.jk || ''}"`,
-        `"${w.posisi || ''}"`, `"${w.profesi || ''}"`, `"${w.agama || ''}"`, `"${w.kawin || ''}"`, `"${w.kewarganegaraan || ''}"`,
-        `"${w.rt || ''}"`, `"${w.rw || ''}"`, `"${w.blok || ''}"`, `"${w.kelurahan || ''}"`, `"${w.kecamatan || ''}"`, `"${w.kota_kab || ''}"`, `"${w.status || ''}"`, `"${w.hp || ''}"`
+        `"${w.posisi || ''}"`, `"${w.profesi || ''}"`, `"${w.pendidikanTerakhir || ''}"`, `"${w.kawin || ''}"`, `"${w.kewarganegaraan || ''}"`,
+        `"${w.rt || ''}"`, `"${w.rw || ''}"`, `"${w.blok || ''}"`, `"${w.kelurahan || ''}"`, `"${w.kecamatan || ''}"`, `"${w.kota_kab || ''}"`, `"${w.status || ''}"`, `"${w.hp || ''}"`, `"${w.email || ''}"`
       ].join(',')
     );
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Data_Warga_RW26.csv");
+    link.setAttribute("download", `Data_Warga_Lengkap_${tenantId}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleExportPDF = () => {
-    // Gunakan orientasi lanskap ('l') agar tabel yang lebar bisa muat
-    const doc = new jsPDF('l', 'mm', 'a4');
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Konfigurasi Judul PDF
-    doc.setFontSize(16);
-    doc.text("DATA WARGA LENGKAP RW 26 BERJUANG", 14, 15);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
-
-    // Konfigurasi Tabel Data Warga yang Lebih Lengkap
-    const tableColumn = [
-      "Nama Lengkap", "NIK / KK", "L/P", "Posisi", 
-      "TTL & Agama", "Pekerjaan", "RT/RW", "Alamat Domisili", 
-      "Status", "No HP"
-    ];
-    const tableRows: any[] = [];
-
-    filteredWargaData.forEach(warga => {
-      const ttl_agama = `${warga.tempatLahir || '-'}, ${warga.tglLahir || '-'}\n${warga.agama || '-'}`;
-      const nik_kk = `${warga.nik || '-'}\n${warga.kk || '-'}`;
-      const alamat_lengkap = `${warga.blok || '-'}\nKel: ${warga.kelurahan || '-'}, Kec: ${warga.kecamatan || '-'}\nKota: ${warga.kota_kab || '-'}`;
+    filteredWargaData.forEach((warga, index) => {
+      if (index > 0) doc.addPage();
       
-      const rowData = [
-        warga.nama || "-",
-        nik_kk,
-        warga.jk === 'Laki-Laki' ? 'L' : (warga.jk === 'Perempuan' ? 'P' : '-'),
-        warga.posisi || "-",
-        ttl_agama,
-        warga.profesi || "-",
-        `${warga.rt || '-'}/${warga.rw || '-'}`,
-        alamat_lengkap,
-        warga.status || "-",
-        warga.hp || "-"
+      // Header
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("BIODATA WARGA", pageWidth / 2, 20, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`SMART RW - ${tenantId}`, pageWidth / 2, 26, { align: 'center' });
+      doc.line(14, 30, pageWidth - 14, 30);
+
+      let currentY = 40;
+      
+      // Fields to display
+      const fields = [
+        { label: "Nama Lengkap", value: warga.nama },
+        { label: "NIK", value: warga.nik },
+        { label: "No. KK", value: warga.kk },
+        { label: "Tempat Lahir", value: warga.tempatLahir },
+        { label: "Tanggal Lahir", value: warga.tglLahir },
+        { label: "Jenis Kelamin", value: warga.jk },
+        { label: "Profesi", value: warga.profesi },
+        { label: "Pendidikan", value: warga.pendidikanTerakhir },
+        { label: "Status Kawin", value: warga.kawin },
+        { label: "Kewarganegaraan", value: warga.kewarganegaraan },
+        { label: "Posisi Keluarga", value: warga.posisi },
+        { label: "Status Warga", value: warga.status },
+        { label: "RT / RW", value: `${warga.rt || '-'} / ${warga.rw || '-'}` },
+        { label: "Alamat", value: warga.blok },
+        { label: "Kelurahan", value: warga.kelurahan },
+        { label: "Kecamatan", value: warga.kecamatan },
+        { label: "Kota/Kabupaten", value: warga.kota_kab },
+        { label: "No. HP (WA)", value: warga.hp },
+        { label: "Email", value: warga.email },
       ];
-      tableRows.push(rowData);
+
+      doc.setFontSize(10);
+      fields.forEach((field) => {
+        doc.setFont("helvetica", "bold");
+        doc.text(`${field.label}`, 14, currentY);
+        doc.setFont("helvetica", "normal");
+        // Handle long values with text wrapping if necessary, but here we just show labels carefully
+        const val = field.value || '-';
+        doc.text(`: ${val}`, 55, currentY);
+        currentY += 8;
+      });
+
+      // Signature area (optional but common for official biodata)
+      currentY += 20;
+      const signatureY = currentY;
+      doc.setFontSize(10);
+      doc.text("Ketua RT / RW", 140, signatureY);
+      doc.text("( ____________________ )", 135, signatureY + 25);
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 285);
+      doc.setTextColor(0);
     });
 
-    // Generate tabel menggunakan extension autoTable
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 28,
-      theme: 'grid',
-      styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-      headStyles: { fillColor: [59, 130, 246], halign: 'center', valign: 'middle' }, // Warna biru
-      columnStyles: {
-        0: { cellWidth: 35 }, // Nama
-        1: { cellWidth: 35 }, // NIK / KK
-        2: { cellWidth: 8, halign: 'center' }, // L/P
-        3: { cellWidth: 20 }, // Posisi
-        4: { cellWidth: 30 }, // TTL & Agama
-        5: { cellWidth: 25 }, // Pekerjaan
-        6: { cellWidth: 12, halign: 'center' }, // RT/RW
-        7: { cellWidth: 60 }, // Alamat
-        8: { cellWidth: 20 }, // Status
-        9: { cellWidth: 25 }  // No HP
-      },
-      alternateRowStyles: { fillColor: [248, 250, 252] }, // Warna slate-50
-    });
-
-    // Simpan dokumen PDF
-    doc.save(`Data_Warga_Lengkap_RW26_${new Date().getTime()}.pdf`);
+    doc.save(`Biodata_Warga_Lengkap_${tenantId}.pdf`);
   };
 
   // Reset page when filter changes
@@ -2359,6 +2598,16 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                     accept=".csv, .xlsx, .xls" 
                     className="hidden" 
                   />
+                  {selectedWargaIds.length > 0 && (
+                    <button 
+                      onClick={handleBulkDelete}
+                      disabled={isDeletingWarga}
+                      className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 animate-pulse ring-2 ring-red-400 ring-offset-2"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{isDeletingWarga ? 'Menghapus...' : `Hapus (${selectedWargaIds.length} item)`}</span>
+                    </button>
+                  )}
                   <button 
                     onClick={() => { resetForm(); setShowAddForm(true); }}
                     className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
@@ -2381,6 +2630,14 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
         <table className="w-full text-left text-sm print:text-xs">
           <thead className="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-wider print:bg-white print:text-slate-800 print:border-b-2 print:border-slate-800">
             <tr>
+              <th className="px-6 py-3 print:px-2">
+                <input 
+                  type="checkbox" 
+                  checked={selectedWargaIds.length > 0 && selectedWargaIds.length === filteredWargaData.length}
+                  onChange={toggleSelectAll}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+              </th>
               <th className="px-6 py-3 print:px-2">Foto</th>
               <th className="px-6 py-3 print:px-2">Nama Lengkap</th>
               <th className="px-6 py-3 print:px-2">Posisi dalam Keluarga</th>
@@ -2400,6 +2657,14 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
               const isVisible = idx >= startIndex && idx < endIndex;
               return (
               <tr key={idx} className={`${isVisible ? '' : 'hidden print:table-row'} hover:bg-slate-50 transition-colors print:break-inside-avoid`}>
+                <td className="px-6 py-3 print:px-2">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedWargaIds.includes(warga.nik)}
+                    onChange={() => toggleSelectWarga(warga.nik)}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </td>
                 <td className="px-6 py-3 print:px-2">
                   <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
                     {warga.foto ? (
@@ -2522,6 +2787,9 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                   <option value="SD">SD</option>
                   <option value="SMP">SMP</option>
                   <option value="SMA">SMA</option>
+                  <option value="DIPLOMA 2">DIPLOMA 2</option>
+                  <option value="DIPLOMA 3">DIPLOMA 3</option>
+                  <option value="DIPLOMA 4">DIPLOMA 4</option>
                   <option value="S1">S1</option>
                   <option value="S2">S2</option>
                   <option value="S3">S3</option>
@@ -2757,45 +3025,52 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Email</p>
                     <p className="font-medium text-slate-800">{viewWarga.email || '-'}</p>
                   </div>
-                  
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tempat, Tanggal Lahir</p>
-                    <p className="font-medium text-slate-800">{(viewWarga.tempatLahir && viewWarga.tglLahir) ? `${viewWarga.tempatLahir}, ${viewWarga.tglLahir}` : '-'}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tempat, Tgl Lahir</p>
+                    <p className="font-medium text-slate-800">{viewWarga.tempatLahir || '-'}, {viewWarga.tglLahir || '-'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Jenis Kelamin</p>
                     <p className="font-medium text-slate-800">{viewWarga.jk || '-'}</p>
                   </div>
-
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Profesi / Pekerjaan</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Profesi</p>
                     <p className="font-medium text-slate-800">{viewWarga.profesi || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Posisi dalam Keluarga</p>
-                    <p className="font-medium text-slate-800">{viewWarga.posisi || '-'}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Pendidikan</p>
+                    <p className="font-medium text-slate-800">{viewWarga.pendidikanTerakhir || '-'}</p>
                   </div>
-
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Agama / Status Kawin</p>
-                    <p className="font-medium text-slate-800">{(viewWarga.agama || '-') + ' / ' + (viewWarga.kawin || '-')}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Status Kawin</p>
+                    <p className="font-medium text-slate-800">{viewWarga.kawin || '-'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Kewarganegaraan</p>
                     <p className="font-medium text-slate-800">{viewWarga.kewarganegaraan || '-'}</p>
                   </div>
-
-                  <div className="col-span-2 pt-4 border-t border-slate-100">
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Alamat Lengkap (Domisili)</p>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">RT / RW</p>
+                    <p className="font-medium text-slate-800 font-mono">{viewWarga.rt || '-'}/{viewWarga.rw || '-'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Alamat Lengkap</p>
                     <p className="font-medium text-slate-800">
-                      {viewWarga.blok ? `${viewWarga.blok}, ` : ''} 
-                      RT {viewWarga.rt} / RW {viewWarga.rw} 
-                      {viewWarga.kelurahan ? `, Kel. ${viewWarga.kelurahan}` : ''}
-                      {viewWarga.kecamatan ? `, Kec. ${viewWarga.kecamatan}` : ''}
-                      {viewWarga.kota_kab ? `, ${viewWarga.kota_kab}` : ''}
+                      {viewWarga.blok || '-'} <br/>
+                      Kel: {viewWarga.kelurahan || '-'}, Kec: {viewWarga.kecamatan || '-'} <br/>
+                      {viewWarga.kota_kab || '-'}
                     </p>
                   </div>
                 </div>
+
+                {viewWarga.ktpUrl && (
+                  <div className="border-t border-slate-100 pt-4">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Dokumen KTP</p>
+                    <div className="w-full h-40 bg-slate-100 rounded-xl overflow-hidden shadow-inner flex items-center justify-center border border-slate-200">
+                      <img src={viewWarga.ktpUrl} className="max-w-full max-h-full object-contain" alt="KTP" />
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
@@ -3451,11 +3726,14 @@ function IuranView(f_params) {
   );
 }
 
-function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], userRole, currentUser, getSetting, kopSettings, tenantId, setIsLoadingDB, handleFirestoreError, showNotification }: { suratData: any[], setSuratData: any, wargaData?: any[], usersData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, kopSettings: any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], userRole, currentUser, getSetting, kopSettings, tenantId, setIsLoadingDB, handleFirestoreError, showNotification, settings, handleFileUpload }: { suratData: any[], setSuratData: any, wargaData?: any[], usersData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, kopSettings: any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, settings: any, handleFileUpload: any }) {
+  const [activeView, setActiveView] = useState<'manajemen' | 'arsip'>('manajemen');
   const [showSuratForm, setShowSuratForm] = useState(false);
   const [editingSurat, setEditingSurat] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
+  const [filterMonth, setFilterMonth] = useState("-1");
   const formRef = useRef<HTMLFormElement>(null);
 
   const toRoman = (num: number) => {
@@ -3585,7 +3863,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
 
   const handleCetak = (id: string) => {
     const surat = suratData.find(s => s.id === id);
-    if (!surat) return;
+    if (!surat || !generateSuratHTML) return;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -3593,142 +3871,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
       return;
     }
 
-    const html = `
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Cetak Surat - ${surat.nomor_surat || surat.id}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-            body { 
-              font-family: 'Times New Roman', Times, serif; 
-              background: #fff;
-              margin: 0; 
-              padding: 0; 
-            }
-            .print-container {
-              width: 210mm;
-              margin: 0 auto;
-              background: white;
-              padding: 15mm;
-              font-size: 0.875rem;
-            }
-            @media print {
-              @page { margin: 1.5cm; }
-              body { background: white; }
-              .print-container { padding: 0; margin: 0; width: 100%; box-shadow: none; }
-            }
-            .details td { padding: 2px 0; vertical-align: top; }
-          </style>
-        </head>
-        <body>
-          <div class="print-container">
-            <!-- Kop Surat -->
-            <div class="flex items-center gap-4 relative">
-                 ${surat.show_logo === 'yes' && kopSettings.logo_url ? `<img src="${kopSettings.logo_url}" crossorigin="anonymous" alt="Logo" class="w-20 h-20 object-contain" />` : '<div class="w-20"></div>'}
-                 <div class="flex-1 text-center">
-                     <h2 class="text-lg font-bold uppercase">${kopSettings.nama_rt || `RUKUN TETANGGA ${kopSettings.rt || '...'} / RUKUN WARGA ${kopSettings.rw || '...'}`}</h2>
-                     <p class="text-sm">KELURAHAN ${kopSettings.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kopSettings.kecamatan?.toUpperCase() || '...'}</p>
-                     <p class="text-sm font-bold">${(kopSettings.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KABUPATEN') || (kopSettings.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}${(kopSettings.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase()}</p>
-                     <p class="text-[10px]">Sekretariat : ${kopSettings.alamat || '...'} | Email: ${kopSettings.email || '...'} | Instagram: ${kopSettings.instagram || '...'}</p>
-                 </div>
-                 <!-- Spacer to balance the logo -->
-                 <div class="w-20"></div>
-            </div>
-            <div class="border-b-4 border-black mt-2"></div>
-            <div class="border-b-2 border-black mt-0.5"></div>
-            
-            <!-- Surat -->
-            <div class="text-center mt-6">
-                <h3 class="text-lg font-bold underline">SURAT PENGANTAR</h3>
-                <p>Nomor : ${surat.nomor_surat || '...... / RT .... / RW .... / Tahun 202...'}</p>
-            </div>
-            
-            <div class="mt-6">
-                <p class="mb-4">Yang bertanda tangan di bawah ini Ketua RT ${surat.rt || kopSettings.rt || '...'} / RW ${surat.rw || kopSettings.rw || '...'} Kelurahan ${kopSettings.kelurahan || '...'} Kecamatan ${kopSettings.kecamatan || '...'} ${(kopSettings.kabupaten?.toUpperCase().includes('KABUPATEN') || kopSettings.kabupaten?.toUpperCase().includes('KOTA')) ? '' : 'Kabupaten '}${kopSettings.kabupaten || settings.kabupaten || '...'}</p>
-                <p class="mb-4">Dengan ini menerangkan bahwa :</p>
-                <div class="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
-                   <div>Nama</div><div>:</div><div><strong>${surat.pemohon}</strong></div>
-                   <div>Tempat Tgl, Lahir</div><div>:</div><div>${surat.ttl || '-'}</div>
-                   <div>Jenis Kelamin</div><div>:</div><div>${surat.jk || '-'}</div>
-                   <div>Pekerjaan</div><div>:</div><div>${surat.pekerjaan || '-'}</div>
-                   <div>Kewarganegaraan</div><div>:</div><div>WNI</div>
-                   <div>No. KTP/NIK</div><div>:</div><div>${surat.nik || '-'}</div>
-                   <div>Status Perkawinan</div><div>:</div><div>${surat.statusKawin || '-'}</div>
-                   <div>Alamat</div><div>:</div><div>${surat.alamat || '-'}</div>
-                   <div>Maksud / Keperluan</div><div>:</div><div>${surat.keperluan || '-'}</div>
-                </div>
-                <p class="mt-6">Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
-            </div>
-
-            <!-- Tanda Tangan -->
-            <div class="mt-12 flex justify-between">
-                <div class="text-center">
-                    <p>Mengetahui,</p>
-                    <p>Ketua RW ${surat.rw || kopSettings.rw || '....'}</p>
-                    <div class="h-20"></div>
-                    <p class="font-bold">( <u>${surat.ketua_rw_nama || kopSettings.nama_ketua_rw || '...................................'}</u> )</p>
-                </div>
-                <div class="text-center">
-                    <p>${(() => {
-                        const kab = kopSettings.kabupaten || settings.kabupaten || 'Bekasi';
-                        const prefix = kab.toUpperCase().includes('KABUPATEN') || kab.toUpperCase().includes('KOTA') ? '' : 'Kabupaten ';
-                        return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-                      })()}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                    <p>${surat.jabatan_ttd || 'Ketua RT'} ${surat.rt || kopSettings.rt || '....'}</p>
-                    <div class="h-20"></div>
-                    <p class="font-bold">( <u>${surat.ketua || kopSettings.nama_ketua_rt || '...................................'}</u> )</p>
-                </div>
-            </div>
-
-            <!-- Footer Arsip-->
-            <div class="mt-12 border-t border-black pt-2 text-[10px] text-gray-500">
-                 <div class="flex justify-between">
-                    <div>TL. Berkas / Surat No : ......</div>
-                    <div>Hal : ......</div>
-                    <div>Tgl : ......</div>
-                 </div>
-                 <div class="mt-2 flex gap-4">
-                    <div class="flex items-center gap-1"><div class="w-3 h-3 border border-black"></div> Berkas Sesuai</div>
-                    <div class="flex items-center gap-1"><div class="w-3 h-3 border border-black"></div> Berkas ke Kecamatan</div>
-                    <div class="flex items-center gap-1">Paraf Arsiparis <div class="w-20 h-4 border border-black"></div></div>
-                 </div>
-            </div>
-          </div>
-          <script>
-            function checkImages() {
-              const images = document.getElementsByTagName('img');
-              let loadedCount = 0;
-              if (images.length === 0) {
-                setTimeout(() => window.print(), 500);
-                return;
-              }
-              for (let i = 0; i < images.length; i++) {
-                if (images[i].complete) {
-                  loadedCount++;
-                  if (loadedCount === images.length) setTimeout(() => window.print(), 500);
-                } else {
-                  images[i].addEventListener('load', () => {
-                    loadedCount++;
-                    if (loadedCount === images.length) setTimeout(() => window.print(), 500);
-                  });
-                  images[i].addEventListener('error', () => {
-                    loadedCount++;
-                    if (loadedCount === images.length) setTimeout(() => window.print(), 500);
-                  });
-                }
-              }
-              if (loadedCount === images.length) {
-                setTimeout(() => window.print(), 500);
-              }
-            }
-            window.onload = checkImages;
-          </script>
-        </body>
-      </html>
-    `;
-
+    const html = generateSuratHTML(surat, kopSettings, settings);
     printWindow.document.write(html);
     printWindow.document.close();
   };
@@ -3806,96 +3949,222 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
   };
 
   const pendingCount = suratData.filter(s => s.status === 'Diajukan').length;
+  const [uploadPct, setUploadPct] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const handleFileUploadSurat = async (suratId: string, file: File) => {
+    setUploading(true);
+    setUploadPct(0);
+    setIsLoadingDB(true);
+    try {
+      const url = await handleFileUpload(file, 'arsip_surat', (pct: number) => setUploadPct(pct));
+      await updateDoc(doc(db, 'surat', suratId), { file_url: url });
+      setSuratData((prev: any[]) => prev.map(s => s.id === suratId ? {...s, file_url: url} : s));
+      showNotification("Berkas berhasil diupload", "success");
+    } catch (error: any) {
+      handleFirestoreError(error, 'write', `/surat/${suratId}`);
+    } finally {
+      setIsLoadingDB(false);
+      setUploading(false);
+    }
+  };
+
+  const completedCount = suratData.filter(s => s.status === 'Selesai').length;
+
+  const monthMap: Record<string, string> = {
+    "Jan": "0", "Feb": "1", "Mar": "2", "Apr": "3", "May": "4", "Jun": "5",
+    "Jul": "6", "Aug": "7", "Sep": "8", "Oct": "9", "Nov": "10", "Dec": "11"
+  };
+
+  const filteredSurat = suratData.filter(s => {
+    if (activeView === 'manajemen') return s.status === 'Diajukan';
+    
+    // Arsip filters
+    const matchesYear = filterYear === "Semua" || s.tanggal.includes(filterYear);
+    
+    const monthStr = s.tanggal.split(' ')[1];
+    const sMonthIdx = monthMap[monthStr];
+    const matchesMonth = filterMonth === "-1" || sMonthIdx === filterMonth;
+
+    return s.status === 'Selesai' && matchesYear && matchesMonth;
+  });
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white gap-3">
-        <h3 className="text-sm font-bold text-slate-800 flex items-center">
-          <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-          Layanan Surat Pengantar
-        </h3>
-        <div className="flex flex-wrap gap-2 items-center">
-          {pendingCount > 0 ? (
-            <span className="flex-1 sm:flex-none text-center bg-orange-50 text-orange-600 border border-orange-100 text-[10px] px-3 py-1.5 rounded font-bold tracking-wider uppercase">
-              {pendingCount} Pending
-            </span>
-          ) : (
-            <span className="flex-1 sm:flex-none text-center bg-green-50 text-green-600 border border-green-100 text-[10px] px-3 py-1.5 rounded font-bold tracking-wider uppercase">
-              Tuntas
-            </span>
-          )}
-          {userRole !== 'Viewer' && (
-            <button onClick={() => setShowSuratForm(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
-              <PlusCircle className="w-3.5 h-3.5" />
-              Buat Surat
-            </button>
-          )}
+    <div className="space-y-6">
+      {/* Header Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pengajuan</p>
+            <p className="text-2xl font-black text-slate-800 tracking-tighter">{suratData.length}</p>
+          </div>
+          <div className="bg-blue-50 p-2 rounded-xl text-blue-600">
+            <FileText className="w-6 h-6" />
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Belum Diproses</p>
+            <p className="text-2xl font-black text-orange-600 tracking-tighter">{pendingCount}</p>
+          </div>
+          <div className="bg-orange-50 p-2 rounded-xl text-orange-600">
+            <Activity className="w-6 h-6" />
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sudah Selesai</p>
+            <p className="text-2xl font-black text-green-600 tracking-tighter">{completedCount}</p>
+          </div>
+          <div className="bg-green-50 p-2 rounded-xl text-green-600">
+            <CheckCircle className="w-6 h-6" />
+          </div>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold tracking-wider">
-            <tr>
-              <th className="px-6 py-4">ID Pengajuan</th>
-              <th className="px-6 py-4">Tanggal</th>
-              <th className="px-6 py-4 text-left">Pemohon</th>
-              <th className="px-6 py-4 text-left">Jenis</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700">
-            {suratData.length > 0 ? suratData.map((surat) => (
-              <tr key={surat.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 text-slate-400 font-mono text-[11px]">{surat.id.substring(0, 10)}</td>
-                <td className="px-6 py-4 text-[11px] whitespace-nowrap">{surat.tanggal}</td>
-                <td className="px-6 py-4 text-[11px] font-bold text-slate-800">{surat.pemohon}</td>
-                <td className="px-6 py-4 text-[11px] font-medium text-slate-600 whitespace-nowrap">{surat.jenisSurat}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md border ${
-                    surat.status === 'Selesai' ? 'border-green-200 bg-green-50 text-green-700' : 
-                    surat.status === 'Ditolak' ? 'border-red-200 bg-red-50 text-red-700' :
-                    'border-orange-200 bg-orange-50 text-orange-700'
-                  }`}>
-                    {surat.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right flex justify-end gap-2">
-                  {userRole !== 'Viewer' && surat.status === 'Diajukan' && (
-                    <>
-                      <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-bold text-green-700 hover:bg-green-100 transition-colors cursor-pointer bg-green-50 px-3 py-1.5 rounded border border-green-200">
-                        Setujui
-                      </button>
-                      <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-bold text-red-700 hover:bg-red-100 transition-colors cursor-pointer bg-red-50 px-3 py-1.5 rounded border border-red-200">
-                        Tolak
-                      </button>
-                    </>
-                  )}
-                  {userRole !== 'Viewer' && (
-                    <button onClick={() => handleEdit(surat)} className="text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer bg-blue-50 p-2 rounded border border-blue-200" title="Edit">
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  {surat.status === 'Selesai' && (
-                    <button onClick={() => handleCetak(surat.id)} className="text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 p-2 rounded transition-colors cursor-pointer" title="Cetak Surat">
-                      <Printer className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan={6} className="px-6 py-12 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
-                    <FileText className="w-10 h-10 opacity-20" />
-                    <p className="text-xs font-medium">Belum ada pengajuan surat.</p>
-                  </div>
-                </td>
-              </tr>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+        {/* Unified Workflow Tabs */}
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white gap-4">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button 
+              onClick={() => setActiveView('manajemen')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'manajemen' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Manajemen (Active)
+            </button>
+            <button 
+              onClick={() => setActiveView('arsip')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'arsip' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Arsip Digital
+            </button>
+          </div>
+          
+          <div className="flex gap-2">
+            {activeView === 'arsip' && (
+              <>
+                <select 
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="Semua">Semua Tahun</option>
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+                <select 
+                  value={filterMonth}
+                  onChange={(e) => setFilterMonth(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="-1">Semua Bulan</option>
+                  {Object.entries(monthMap).map(([name, idx]) => <option key={idx} value={idx}>{name}</option>)}
+                </select>
+              </>
             )}
-          </tbody>
-        </table>
+            {userRole !== 'Viewer' && (
+              <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
+                <PlusCircle className="w-3.5 h-3.5" />
+                Buat Surat Baru
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] font-black tracking-widest border-b border-slate-100">
+              <tr>
+                <th className="px-6 py-4">Status & Tanggal</th>
+                <th className="px-6 py-4 text-left">Pemohon (NIK)</th>
+                <th className="px-6 py-4 text-left">Maksud / Keperluan</th>
+                <th className="px-6 py-4 text-right">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 text-slate-700">
+              {filteredSurat.length > 0 ? filteredSurat.map((surat) => (
+                <tr key={surat.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col gap-1.5">
+                       <span className={`w-fit px-2 py-0.5 text-[8px] uppercase font-black rounded border ${
+                        surat.status === 'Selesai' ? 'border-green-200 bg-green-50 text-green-700' : 
+                        surat.status === 'Ditolak' ? 'border-red-200 bg-red-50 text-red-700' :
+                        'border-orange-200 bg-orange-50 text-orange-700'
+                      }`}>
+                        {surat.status}
+                      </span>
+                      <p className="text-[10px] text-slate-400 font-bold">{surat.tanggal}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <p className="text-[11px] font-black text-slate-800 leading-tight">{surat.pemohon}</p>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{surat.nik}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-[11px] font-medium text-slate-600 line-clamp-2 max-w-xs">{surat.keperluan}</p>
+                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter mt-1">{surat.jenisSurat}</p>
+                  </td>
+                  <td className="px-6 py-4 text-right relative">
+                    <div className="flex justify-end gap-1.5">
+                      {userRole !== 'Viewer' && surat.status === 'Diajukan' && (
+                        <>
+                          <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-black uppercase text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 hover:bg-green-100 transition-all active:scale-95">Setujui</button>
+                          <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-black uppercase text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 transition-all active:scale-95">Tolak</button>
+                        </>
+                      )}
+                      
+                      <div className="flex gap-1 group-hover:opacity-100 opacity-60 transition-opacity">
+                        <button onClick={() => handleEdit(surat)} className="bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 p-2 rounded-lg border border-slate-100 transition-all" title="Edit Data">
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        {surat.status === 'Selesai' && (
+                          <div className="flex gap-1">
+                            <button onClick={() => handleCetak(surat.id)} className="bg-slate-900 hover:bg-slate-800 text-white p-2 rounded-lg transition-all shadow-lg active:scale-95" title="Cetak Surat Digital">
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                            <label className={`bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-600 p-2 rounded-lg border border-slate-200 transition-all cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`} title="Upload Scan Berkas">
+                              <Upload className="w-3.5 h-3.5" />
+                              <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUploadSurat(surat.id, e.target.files[0])} />
+                            </label>
+                            {uploading && (
+                              <div className="absolute top-0 left-0 h-1 bg-blue-600 transition-all duration-300" style={{ width: `${uploadPct}%` }}></div>
+                            )}
+                            {surat.file_url && (
+                              <a href={surat.file_url} target="_blank" rel="noreferrer" className="bg-green-50 hover:bg-green-100 text-green-600 p-2 rounded-lg border border-green-200 transition-all" title="Lihat Berkas">
+                                <FileText className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        <button onClick={() => handleDelete(surat.id)} className="bg-slate-50 hover:bg-red-50 text-slate-300 hover:text-red-500 p-2 rounded-lg border border-slate-100 transition-all" title="Hapus Permanen">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center border border-slate-100">
+                        <FileText className="w-8 h-8 text-slate-200" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Tidak ada data surat</p>
+                        <p className="text-[10px] text-slate-300 italic">Data surat yang diproses atau diarsipkan akan muncul di sini.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
 
       {/* Modal / Overlay Pembuatan Surat */}
       {showSuratForm && (
@@ -4923,6 +5192,32 @@ function PengaturanView({ tenantId, settings, userRole, handleFileUpload, showNo
         </form>
       </div>
 
+      <div className="bg-red-50 p-6 rounded-xl border border-red-200">
+        <h4 className="text-sm font-bold text-red-800 mb-2">Peringatan: Reset Data Warga</h4>
+        <p className="text-xs text-red-600 mb-4">Fitur ini akan menghapus <strong>SELURUH</strong> data warga di sistem. Data yang sudah dihapus tidak bisa dikembalikan. Gunakan dengan sangat hati-hati.</p>
+        <button 
+          onClick={async () => {
+            if (confirm("Apakah Anda yakin ingin menghapus SELURUH data warga? Tindakan ini tidak dapat dibatalkan!")) {
+              try {
+                // Delete batch
+                const { collection, getDocs, writeBatch, doc } = await import('firebase/firestore');
+                const wargaSnapshot = await getDocs(collection(db, 'data_warga'));
+                const batch = writeBatch(db);
+                wargaSnapshot.forEach((docSnapshot) => batch.delete(docSnapshot.ref));
+                await batch.commit();
+                showNotification("Seluruh data warga berhasil dihapus.", "success");
+              } catch (e) {
+                console.error(e);
+                showNotification("Gagal menghapus data.", "error");
+              }
+            }
+          }}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
+        >
+          Hapus Semua Data Warga
+        </button>
+      </div>
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col">
         <h3 className="text-sm font-bold text-slate-800 mb-6 flex items-center">
           <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
@@ -5343,29 +5638,121 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
   );
 }
 
-function WargaProfileView({ wargaData, verifikasiData, setWargaAuth, tenantId, setIsLoadingDB, handleFileUpload, showNotification, handleFirestoreError }: { wargaData: any, verifikasiData: any[], setWargaAuth: any, tenantId: string, setIsLoadingDB: any, handleFileUpload: any, showNotification: any, handleFirestoreError: any }) {
+function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratData, setWargaAuth, tenantId, setIsLoadingDB, handleFileUpload, showNotification, handleFirestoreError, kopSettings, getSetting, usersData, generateSuratHTML, settings }: { wargaData: any, verifikasiData: any[], suratData?: any[], setSuratData: any, setWargaAuth: any, tenantId: string, setIsLoadingDB: any, handleFileUpload: any, showNotification: any, handleFirestoreError: any, kopSettings: any, getSetting: any, usersData: any[], generateSuratHTML: any, settings: any }) {
+  const [activeCitizenTab, setActiveCitizenTab] = useState<'profil' | 'layanan' | 'riwayat'>('profil');
+  const [uploadPct, setUploadPct] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>(wargaData);
   const [files, setFiles] = useState<{ktp?: File, kk?: File}>({});
   const [uploading, setUploading] = useState(false);
 
-  // Get active submission
+  // Get active submission for data verification
   const activeSubmission = verifikasiData.find(v => v.nik === wargaData.nik);
+  
+  // Get citizen's letters
+  const mySurat = suratData.filter(s => s.nik === wargaData.nik);
+
+  const getAutoNomorSurat = (rt: string, rw: string) => {
+    const year = new Date().getFullYear();
+    const lastCount = suratData.length + 1;
+    const num = `${lastCount}`.padStart(3, '0');
+    // Simple Roman Month
+    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    const month = romanMonths[new Date().getMonth()];
+    return `${num}/RT.${rt}/RW.${rw}/${month}/${year}`;
+  };
+
+  const handleAjukanSurat = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    setIsLoadingDB(true);
+
+    try {
+      const suratId = `SRT-${Date.now()}`;
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      
+      const rt = wargaData.rt || "01";
+      const rw = wargaData.rw || "01";
+      const nomorOtomatis = getAutoNomorSurat(rt, rw);
+      
+      // Get officials from usersData
+      const ketuaRT = usersData.find(u => u.role === 'RT' && u.rt === rt)?.nama || "";
+      const ketuaRW = usersData.find(u => u.role === 'RW')?.nama || "";
+
+      const payload = {
+        tenantId,
+        id: suratId,
+        tanggal: formattedDate,
+        submittedAt: now.toISOString(),
+        pemohon: wargaData.nama,
+        nik: wargaData.nik,
+        kk: wargaData.kk || "",
+        ttl: `${wargaData.tempatLahir || ''}, ${wargaData.tglLahir || ''}`,
+        jk: wargaData.jk || "",
+        kewarganegaraan: wargaData.kewarganegaraan || "WNI",
+        pekerjaan: wargaData.profesi || "",
+        agama: wargaData.agama || "Islam",
+        statusKawin: wargaData.statusKawin || wargaData.posisi || "Belum Kawin",
+        alamat: `RT ${rt} / RW ${rw}, Blok ${wargaData.blok || '-'}`,
+        rt,
+        rw,
+        kelurahan: wargaData.kelurahan || "Sukamaju",
+        kecamatan: wargaData.kecamatan || "Sukajaya",
+        keperluan: fd.get('keperluan') as string,
+        jenisSurat: fd.get('jenisSurat') as string,
+        status: "Diajukan",
+        nomor_surat: nomorOtomatis,
+        ketua: ketuaRT,
+        ketua_rw_nama: ketuaRW,
+        show_logo: "yes",
+        jabatan_ttd: "Ketua RT"
+      };
+
+      await setDoc(doc(db, 'surat', suratId), payload);
+      setSuratData([payload, ...suratData]);
+      showNotification("Pengajuan surat berhasil dikirim!", "success");
+      setActiveCitizenTab('riwayat');
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'surat');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleCetakSurat = (id: string) => {
+    const surat = suratData.find(s => s.id === id);
+    if (!surat || surat.status !== 'Selesai' || !generateSuratHTML) {
+        showNotification("Surat belum selesai atau sistem cetak tidak siap.", "error");
+        return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Gagal membuka jendela cetak. Pastikan pop-up blocker diizinkan.');
+      return;
+    }
+
+    const html = generateSuratHTML(surat, kopSettings, settings);
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   const handleSubmitPerbaikan = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoadingDB(true);
     setUploading(true);
+    setUploadPct(0);
 
     try {
       let ktpUrl = activeSubmission?.ktpUrl || wargaData.foto || "";
       let kkUrl = activeSubmission?.kkUrl || "";
 
       if (files.ktp) {
-        ktpUrl = await handleFileUpload(files.ktp, 'ktp');
+        ktpUrl = await handleFileUpload(files.ktp, 'ktp', (pct) => setUploadPct(pct));
       }
       if (files.kk) {
-        kkUrl = await handleFileUpload(files.kk, 'kk');
+        kkUrl = await handleFileUpload(files.kk, 'kk', (pct) => setUploadPct(pct));
       }
 
       const id = activeSubmission?.id || `VRF-${Date.now()}`;
@@ -5465,164 +5852,288 @@ function WargaProfileView({ wargaData, verifikasiData, setWargaAuth, tenantId, s
           </div>
         )}
 
+        {/* Improved Unified Workflow Tabs */}
+        <div className="flex bg-slate-50 border-b border-slate-100">
+           {[
+             { id: 'profil', label: 'Profil & Data', icon: User },
+             { id: 'layanan', label: 'Ajukan Surat', icon: PlusCircle },
+             { id: 'riwayat', label: 'Riwayat & Arsip', icon: History }
+           ].map(tab => (
+             <button
+               key={tab.id}
+               onClick={() => {setActiveCitizenTab(tab.id as any); setIsEditing(false);}}
+               className={`flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeCitizenTab === tab.id ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+             >
+               <tab.icon className="w-3.5 h-3.5" />
+               <span className="hidden sm:inline">{tab.label}</span>
+             </button>
+           ))}
+        </div>
+
         <div className="p-8">
-          {!isEditing ? (
-            <div className="space-y-8">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor KK</p>
-                  <p className="text-sm font-bold text-slate-700">{wargaData.kk || '-'}</p>
+          {activeCitizenTab === 'profil' && (
+            !isEditing ? (
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor KK</p>
+                    <p className="text-sm font-bold text-slate-700">{wargaData.kk || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor HP</p>
+                    <p className="text-sm font-bold text-slate-700">{wargaData.hp || '-'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Alamat sesuai KTP</p>
+                    <p className="text-sm font-bold text-slate-700">{wargaData.blok ? `Blok ${wargaData.blok}, ` : ''}RT {wargaData.rt}/RW {wargaData.rw}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pekerjaan</p>
+                    <p className="text-sm font-bold text-slate-700">{wargaData.profesi || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Pernikahan</p>
+                    <p className="text-sm font-bold text-slate-700">{wargaData.statusKawin || wargaData.posisi || '-'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor HP</p>
-                  <p className="text-sm font-bold text-slate-700">{wargaData.hp || '-'}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Alamat sesuai KTP</p>
-                  <p className="text-sm font-bold text-slate-700">{wargaData.blok ? `Blok ${wargaData.blok}, ` : ''}RT {wargaData.rt}/RW {wargaData.rw}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pekerjaan</p>
-                  <p className="text-sm font-bold text-slate-700">{wargaData.profesi || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Pernikahan</p>
-                  <p className="text-sm font-bold text-slate-700">{wargaData.statusKawin || wargaData.posisi || '-'}</p>
-                </div>
-              </div>
 
-              {/* Anggota Keluarga Section */}
-              <div className="pt-6 border-t border-slate-100">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  Anggota Keluarga (Satu KK)
-                </h3>
-                <div className="space-y-2">
-                  {wargaData.kk ? (
-                    wargaData.listWargaInKK?.length > 0 ? (
-                      wargaData.listWargaInKK.map((m: any) => (
-                        <div key={m.nik} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
-                          <div>
-                            <p className="text-xs font-bold text-slate-700">{m.nama}</p>
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{m.posisi} • {m.nik}</p>
+                {/* Anggota Keluarga Section */}
+                <div className="pt-6 border-t border-slate-100">
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    Anggota Keluarga (Satu KK)
+                  </h3>
+                  <div className="space-y-2">
+                    {wargaData.kk ? (
+                      wargaData.listWargaInKK?.length > 0 ? (
+                        wargaData.listWargaInKK.map((m: any) => (
+                          <div key={m.nik} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                            <div>
+                              <p className="text-xs font-bold text-slate-700">{m.nama}</p>
+                              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{m.posisi} • {m.nik}</p>
+                            </div>
+                            <div className="text-[9px] font-black px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-500 uppercase">
+                              Warga
+                            </div>
                           </div>
-                          <div className="text-[9px] font-black px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-500 uppercase">
-                            Warga
-                          </div>
-                        </div>
-                      ))
+                        ))
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">Data anggota keluarga tidak ditemukan.</p>
+                      )
                     ) : (
-                      <p className="text-xs text-slate-400 italic">Data anggota keluarga tidak ditemukan.</p>
-                    )
-                  ) : (
-                    <p className="text-xs text-slate-400 italic">Nomor KK belum tersedia.</p>
+                      <p className="text-xs text-slate-400 italic">Nomor KK belum tersedia.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+                  <button 
+                    onClick={handleDataSudahBenar}
+                    disabled={currentStatus === 'Disetujui' || currentStatus === 'Menunggu Persetujuan'}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Data Sudah Benar
+                  </button>
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    disabled={currentStatus === 'Menunggu Persetujuan'}
+                    className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-3.5 px-6 rounded-2xl transition-all border border-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Edit className="w-5 h-5" />
+                    Ajukan Perbaikan
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitPerbaikan} className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nomor KK</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.kk}
+                      onChange={(e) => setFormData({...formData, kk: e.target.value})}
+                     />
+                  </div>
+                  <div className="col-span-2">
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Alamat (Blok/Unit)</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.blok}
+                      onChange={(e) => setFormData({...formData, blok: e.target.value})}
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nomor HP/WA</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.hp}
+                      onChange={(e) => setFormData({...formData, hp: e.target.value})}
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Pekerjaan</label>
+                     <input 
+                      type="text" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
+                      value={formData.profesi}
+                      onChange={(e) => setFormData({...formData, profesi: e.target.value})}
+                     />
+                  </div>
+                  <div className="col-span-2">
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Upload Foto KTP (Jika ada perubahan)</label>
+                     <div className="mt-2 flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                            <p className="text-xs text-slate-500">{files.ktp ? files.ktp.name : 'Pilih File atau Tarik ke sini'}</p>
+                          </div>
+                          <input type="file" className="hidden" accept="image/*" onChange={(e) => setFiles({...files, ktp: e.target.files?.[0]})} title="KTP" />
+                        </label>
+                     </div>
+                  </div>
+                  <div className="col-span-2">
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Upload Foto Kartu Keluarga</label>
+                     <div className="mt-2 flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                            <p className="text-xs text-slate-500">{files.kk ? files.kk.name : 'Pilih File atau Tarik ke sini'}</p>
+                          </div>
+                          <input type="file" className="hidden" accept="image/*" onChange={(e) => setFiles({...files, kk: e.target.files?.[0]})} title="KK" />
+                        </label>
+                     </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 py-3.5 border border-slate-200 rounded-2xl font-bold text-slate-600"
+                  >
+                    Batal
+                  </button>
+                  {uploading && (
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
+                      <div 
+                        className="bg-blue-600 h-full transition-all duration-300 shadow-[0_0_8px_rgba(37,99,235,0.5)]" 
+                        style={{ width: `${uploadPct}%` }}
+                      ></div>
+                    </div>
                   )}
+                  <button 
+                    type="submit"
+                    disabled={uploading}
+                    className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-100 disabled:opacity-50"
+                  >
+                    {uploading ? `Mengunggah ${Math.round(uploadPct)}%` : 'Simpan & Ajukan'}
+                  </button>
                 </div>
+              </form>
+            )
+          )}
+
+          {activeCitizenTab === 'layanan' && (
+            <div className="space-y-6">
+              <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                <h4 className="text-sm font-bold text-blue-800 mb-1">Layanan Surat Mandiri</h4>
+                <p className="text-[11px] text-blue-600 leading-relaxed font-medium">Anda dapat mengajukan surat keterangan atau pengantar secara mandiri. Admin akan memverifikasi pengajuan Anda.</p>
               </div>
 
-              <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
-                <button 
-                  onClick={handleDataSudahBenar}
-                  disabled={currentStatus === 'Disetujui' || currentStatus === 'Menunggu Persetujuan'}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  Data Sudah Benar
-                </button>
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  disabled={currentStatus === 'Menunggu Persetujuan'}
-                  className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-3.5 px-6 rounded-2xl transition-all border border-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Edit className="w-5 h-5" />
-                  Ajukan Perbaikan
-                </button>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmitPerbaikan} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="col-span-2">
-                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nomor KK</label>
-                   <input 
-                    type="text" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
-                    value={formData.kk}
-                    onChange={(e) => setFormData({...formData, kk: e.target.value})}
-                   />
-                </div>
-                <div className="col-span-2">
-                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Alamat (Blok/Unit)</label>
-                   <input 
-                    type="text" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
-                    value={formData.blok}
-                    onChange={(e) => setFormData({...formData, blok: e.target.value})}
-                   />
-                </div>
+              <form onSubmit={handleAjukanSurat} className="space-y-4">
                 <div>
-                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Nomor HP/WA</label>
-                   <input 
-                    type="text" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
-                    value={formData.hp}
-                    onChange={(e) => setFormData({...formData, hp: e.target.value})}
-                   />
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Jenis Surat yang Dibutuhkan</label>
+                  <select name="jenisSurat" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold text-slate-700">
+                    <option value="SURAT PENGANTAR">SURAT PENGANTAR (Umum)</option>
+                    <option value="SURAT KETERANGAN DOMISILI">SURAT KETERANGAN DOMISILI</option>
+                    <option value="SURAT PENGANTAR SKCK">SURAT PENGANTAR SKCK</option>
+                    <option value="SURAT KETERANGAN USAHA">SURAT KETERANGAN USAHA</option>
+                    <option value="SURAT KETERANGAN TIDAK MAMPU (SKTM)">SURAT KETERANGAN TIDAK MAMPU (SKTM)</option>
+                  </select>
                 </div>
-                <div>
-                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Pekerjaan</label>
-                   <input 
-                    type="text" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold"
-                    value={formData.profesi}
-                    onChange={(e) => setFormData({...formData, profesi: e.target.value})}
-                   />
-                </div>
-                <div className="col-span-2">
-                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Upload Foto KTP (Jika ada perubahan)</label>
-                   <div className="mt-2 flex items-center justify-center w-full">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                          <p className="text-xs text-slate-500">{files.ktp ? files.ktp.name : 'Pilih File atau Tarik ke sini'}</p>
-                        </div>
-                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setFiles({...files, ktp: e.target.files?.[0]})} title="KTP" />
-                      </label>
-                   </div>
-                </div>
-                <div className="col-span-2">
-                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Upload Foto Kartu Keluarga</label>
-                   <div className="mt-2 flex items-center justify-center w-full">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                          <p className="text-xs text-slate-500">{files.kk ? files.kk.name : 'Pilih File atau Tarik ke sini'}</p>
-                        </div>
-                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setFiles({...files, kk: e.target.files?.[0]})} title="KK" />
-                      </label>
-                   </div>
-                </div>
-              </div>
 
-              <div className="flex gap-4 pt-4">
-                <button 
-                  type="button" 
-                  onClick={() => setIsEditing(false)}
-                  className="flex-1 py-3.5 border border-slate-200 rounded-2xl font-bold text-slate-600"
-                >
-                  Batal
-                </button>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Maksud / Keperluan Surat</label>
+                  <textarea 
+                    name="keperluan" 
+                    required 
+                    rows={4} 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold text-slate-700"
+                    placeholder="Contoh: Mengurus KTP baru, Persyaratan kerja, dll..."
+                  ></textarea>
+                </div>
+
                 <button 
                   type="submit"
-                  disabled={uploading}
-                  className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-100 disabled:opacity-50"
+                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2"
                 >
-                  {uploading ? 'Mengunggah...' : 'Simpan & Ajukan'}
+                  <PlusCircle className="w-4 h-4" />
+                  Kirim Pengajuan Surat
                 </button>
-              </div>
-            </form>
+              </form>
+            </div>
+          )}
+
+          {activeCitizenTab === 'riwayat' && (
+            <div className="space-y-4">
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <History className="w-4 h-4 text-blue-600" />
+                Arsip Surat Anda
+              </h4>
+              
+              {mySurat.length > 0 ? (
+                <div className="space-y-3">
+                  {mySurat.map((surat: any) => (
+                    <div key={surat.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-mono mb-1">{surat.nomor_surat || surat.id}</p>
+                          <p className="text-sm font-bold text-slate-800">{surat.jenisSurat}</p>
+                        </div>
+                        <span className={`px-2.5 py-1 text-[9px] uppercase font-black rounded-lg border ${
+                          surat.status === 'Selesai' ? 'border-green-200 bg-green-100 text-green-700' : 
+                          surat.status === 'Ditolak' ? 'border-red-200 bg-red-100 text-red-700' :
+                          'border-yellow-200 bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {surat.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {surat.tanggal}
+                        </div>
+                        {surat.status === 'Selesai' && (
+                          <div className="flex items-center gap-2">
+                             <button 
+                               onClick={() => handleCetakSurat(surat.id)}
+                               className="px-4 py-1.5 bg-slate-900 text-white rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center gap-1.5 hover:bg-slate-800 transition-all active:scale-95 shadow-md"
+                             >
+                               <Printer className="w-3 h-3" />
+                               Cetak Surat
+                             </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-400 text-center">
+                  <FileText className="w-12 h-12 opacity-20 mb-3" />
+                  <p className="text-xs font-bold uppercase tracking-widest">Belum ada riwayat surat</p>
+                  <p className="text-[10px] mt-1 italic">Ajukan surat baru melalui menu Layanan.</p>
+                </div>
+              )}
+            </div>
           )}
         </div>
+
       </div>
       
       <div className="mt-6 text-center">
@@ -5709,6 +6220,35 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Check if user entry exists in users collection
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      const isArif = user.email === 'arifrajcoach@gmail.com';
+      const userData = {
+        email: user.email,
+        role: isArif ? 'ADMIN' : 'Viewer',
+        tenantId: 'RW26_SMART', // De-facto tenant
+        createdAt: userDoc.exists() ? userDoc.data()?.createdAt || new Date().toISOString() : new Date().toISOString()
+      };
+
+      // Always ensure the role and tenant are set
+      await setDoc(userRef, userData, { merge: true });
+    } catch (err: any) {
+      console.error("Google Login Error:", err);
+      setError(`Gagal login dengan Google: ${err.message}`);
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md text-slate-900">
@@ -5747,50 +6287,77 @@ function LoginView({ setWargaAuth, wargaData }: { setWargaAuth: any, wargaData: 
             )}
 
             {loginMode === 'admin' ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input
-                      type="text"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                      placeholder="Contoh: admin@rw26.com atau admin"
-                    />
+              <>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                      <input
+                        type="text"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                        placeholder="Contoh: admin@rw26.com atau admin"
+                      />
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                      placeholder="Masukkan password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                        placeholder="Masukkan password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
                   </div>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
+                  </button>
+                </form>
+
+                <div className="mt-6">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-100"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-4 text-slate-400 font-bold tracking-widest uppercase">Atau akses cepat</span>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                    className="w-full py-4 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-[0.98]"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    Masuk dengan Google
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
-                >
-                  {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
-                </button>
-              </form>
+              </>
             ) : (
               <form onSubmit={handleWargaLogin} className="space-y-6">
                 <div>
