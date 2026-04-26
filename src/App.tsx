@@ -619,7 +619,7 @@ export default function App() {
     // 4.5 Inventaris Listener
     const unsubInventaris = onSnapshot(query(collection(db, 'inventaris'), where('tenantId', '==', tId)), 
       (snap) => {
-        const data = snap.docs.map(doc => ({ ...doc.data() }));
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setInventarisData(data);
         onDataLoaded();
       },
@@ -632,7 +632,7 @@ export default function App() {
     // 4.6 Inventaris Logs Listener
     const unsubInventarisLogs = onSnapshot(query(collection(db, 'inventaris_logs'), where('tenantId', '==', tId)), 
       (snap) => {
-        const data = snap.docs.map(doc => ({ ...doc.data() }));
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setInventarisLogs(data);
       },
       (err) => {
@@ -9718,7 +9718,11 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
   const [uploadPct, setUploadPct] = useState(0);
   const [uploading, setUploading] = useState(false);
 
-  const canEdit = userRole === 'ADMIN' || userRole === 'RW' || userRole === 'RT' || userRole === 'BENDAHARA' || userRole === 'SEKRETARIS';
+  const canEdit = useMemo(() => {
+    if (!userRole) return false;
+    const roleUpper = userRole.toUpperCase();
+    return roleUpper === 'ADMIN' || roleUpper === 'RW' || roleUpper === 'RT' || roleUpper === 'BENDAHARA' || roleUpper === 'SEKRETARIS' || currentUser?.isSuperAdmin;
+  }, [userRole, currentUser?.isSuperAdmin]);
 
   const filteredData = inventarisData.filter((item: any) => 
     item.nama_barang?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -9895,16 +9899,52 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
   };
 
   const handleDeleteItem = async (id: string, nama: string) => {
-    if (!canEdit) return;
-    if (!window.confirm(`Hapus barang ${nama} dari inventaris?`)) return;
+    if (!id || id === 'undefined') {
+      console.error("Critical: Attempted to delete item with invalid ID");
+      showNotification("Kesalahan: ID barang tidak ditemukan.", "error");
+      return;
+    }
+
+    if (!canEdit) {
+      showNotification("Anda tidak memiliki izin untuk menghapus aset.", "error");
+      return;
+    }
+    
+    if (!window.confirm(`Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`)) return;
 
     setIsLoadingDB(true);
     try {
       await deleteDoc(doc(db, 'inventaris', id));
-      setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
-      showNotification("Barang berhasil dihapus.", "success");
+      showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
     } catch (error: any) {
-      handleFirestoreError(error, 'delete', 'inventaris');
+      console.error("Firestore Delete Asset Error:", error);
+      handleFirestoreError(error, 'delete', `inventaris/${id}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleDeleteLog = async (logId: string) => {
+    if (!logId || logId === 'undefined') {
+      console.error("Critical: Attempted to delete log with invalid ID");
+      showNotification("Kesalahan: ID riwayat tidak ditemukan.", "error");
+      return;
+    }
+
+    if (!canEdit) {
+      showNotification("Anda tidak memiliki izin untuk menghapus riwayat.", "error");
+      return;
+    }
+
+    if (!window.confirm("Hapus riwayat aktivitas ini? Tindakan ini tidak dapat dibatalkan.")) return;
+
+    setIsLoadingDB(true);
+    try {
+      await deleteDoc(doc(db, 'inventaris_logs', logId));
+      showNotification("Catatan aktivitas berhasil dihapus.", "success");
+    } catch (error: any) {
+      console.error("Firestore Delete Log Error:", error);
+      handleFirestoreError(error, 'delete', `inventaris_logs/${logId}`);
     } finally {
       setIsLoadingDB(false);
     }
@@ -10018,14 +10058,9 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
                           <History className="w-3.5 h-3.5" />
                         </button>
                         {canEdit && (
-                          <>
-                            <button onClick={() => { setEditingItem(item); setShowAddForm(true); }} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100">
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => handleDeleteItem(item.id, item.nama_barang)} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
+                          <button onClick={() => { setEditingItem(item); setShowAddForm(true); }} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100" title="Edit Aset">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -10313,7 +10348,9 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
                             }`}>
                               {log.aktivitas}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-400">{log.tanggal}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-mono text-slate-400">{log.tanggal}</span>
+                            </div>
                           </div>
                           
                           {log.aktivitas === 'Barang Masuk' && (

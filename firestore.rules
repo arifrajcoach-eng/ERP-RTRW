@@ -261,9 +261,9 @@ service cloud.firestore {
       allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
       allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
       
-      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidInventaris(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isEmailVerified() && isValidInventaris(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin() && isEmailVerified();
+      allow create: if (isSuperAdmin() || (isOperator() && isEmailVerified())) && isValidId(id) && isValidInventaris(incoming()) && isSameTenant(incoming());
+      allow update: if (isSuperAdmin() || (isOperator() && isEmailVerified())) && isValidInventaris(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isSuperAdmin() || (isAdmin() && isEmailVerified());
     }
 
     // --- Inventaris Logs Collection ---
@@ -271,9 +271,9 @@ service cloud.firestore {
       allow list: if isSignedIn() && (isSuperAdmin() || resource.data.tenantId == getTenantId());
       allow get: if isSignedIn() && (isSuperAdmin() || isSameTenant(existing()));
       
-      allow create: if isOperator() && isEmailVerified() && isValidId(id) && isValidInventarisLog(incoming()) && isSameTenant(incoming());
-      allow update: if isOperator() && isEmailVerified() && isValidInventarisLog(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
-      allow delete: if isAdmin() && isEmailVerified();
+      allow create: if (isSuperAdmin() || (isOperator() && isEmailVerified())) && isValidId(id) && isValidInventarisLog(incoming()) && isSameTenant(incoming());
+      allow update: if (isSuperAdmin() || (isOperator() && isEmailVerified())) && isValidInventarisLog(incoming()) && isSameTenant(existing()) && isSameTenant(incoming());
+      allow delete: if isSuperAdmin() || (isAdmin() && isEmailVerified());
     }
 
     match /inventaris_kategori/{id} {
