@@ -3062,9 +3062,10 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Posisi dalam Keluarga</label>
                   <select required name="posisi" value={formData.posisi} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium cursor-pointer">
                     <option value="" disabled>Pilih posisi...</option>
-                    <option value="Suami (kepala Keluarga)">Suami (kepala Keluarga)</option>
+                    <option value="Suami (Kepala Keluarga)">Suami (Kepala Keluarga)</option>
                     <option value="Istri">Istri</option>
                     <option value="Anak">Anak</option>
+                    <option value="Cucu">Cucu</option>
                     <option value="Famili lain">Famili lain</option>
                     <option value="Lainya">Lainya</option>
                   </select>
