@@ -999,9 +999,13 @@ export default function App() {
 
   if (isAuthInitializing) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-medium tracking-tight">Menyiapkan Sesi Keamanan...</p>
+      <div className="min-h-screen bg-mesh flex flex-col items-center justify-center p-6 text-center">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
+          <Baby className="w-8 h-8 text-brand-pink absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce-slow" />
+        </div>
+        <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW 26 <span className="text-brand-pink">SMART</span></h2>
+        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
       </div>
     );
   }
@@ -1033,7 +1037,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans print:h-auto print:bg-white text-sm relative">
+    <div className="flex h-screen w-full bg-mesh text-slate-900 font-sans print:h-auto print:bg-white text-sm relative">
       {/* SOS EMERGENCY OVERLAY */}
       <AnimatePresence>
         {activeEmergency && (
@@ -1058,14 +1062,15 @@ export default function App() {
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'}`}>
-        <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-blue-600 flex items-center gap-2">
-              <img src="/logo_rw26.png" alt="Logo RW 26" className="w-8 h-8" referrerPolicy="no-referrer" />
-              RW 26 BERJUANG
+      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white/90 backdrop-blur-md border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'}`}>
+        <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between bg-white relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-all"></div>
+          <div className="relative z-10">
+            <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-2 font-elegant">
+              <img src="/logo_rw26.png" alt="Logo RW 26" className="w-8 h-8 animate-float" referrerPolicy="no-referrer" />
+              RW 26 <span className="text-brand-pink">SMART</span>
             </h1>
-            <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Smart System by Nexapps</p>
+            <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Berdampak & Memberdayakan</p>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(false)}
@@ -1074,13 +1079,13 @@ export default function App() {
             <X className="w-6 h-6" />
           </button>
         </div>
-        <div className="flex-shrink-0 px-6 py-4 bg-slate-50 border-b border-slate-100">
+        <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 border-b border-slate-100">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Multi-Tenant Aktif</p>
+            <div className="w-2 h-2 rounded-full bg-brand-green animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sistem Pintar Aktif</p>
           </div>
-          <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-[9px] text-blue-600 font-bold uppercase tracking-tight">ID Klien:</p>
+          <div className="p-2 bg-soft-blue rounded-xl border border-blue-100">
+            <p className="text-[9px] text-brand-blue font-bold uppercase tracking-tight">ID Klien:</p>
             <p className="text-[10px] text-slate-700 font-mono font-bold truncate">{currentUser.tenantId || 'RW26_SMART'}</p>
           </div>
         </div>
@@ -1115,21 +1120,28 @@ export default function App() {
             if (item.id === 'pengaturan' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
             if (item.id === 'super-admin' && !currentUser?.isSuperAdmin) return false;
             return true;
-          }).map((item) => (
+          }).map((item: any) => (
             <button
               key={item.id}
               onClick={() => {
                 setActiveTab(item.id);
                 setIsSidebarOpen(false); // Close sidebar on mobile after selection
               }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-                activeTab === item.id
-                  ? 'bg-slate-100 text-slate-800 font-semibold'
-                  : 'text-slate-600 hover:bg-slate-50 font-medium'
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative overflow-hidden ${
+                activeTab === item.id 
+                  ? 'bg-soft-blue text-brand-blue font-black shadow-sm' 
+                  : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
-              <item.icon className="w-4 h-4" />
-              {item.label}
+              <div className={`transition-all duration-300 ${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'}`}>
+                <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-brand-blue' : 'text-slate-400 group-hover:text-brand-blue'}`} />
+              </div>
+              <span className={`text-[11px] font-bold tracking-tight ${activeTab === item.id ? 'translate-x-1' : 'group-hover:translate-x-1'} transition-transform uppercase`}>
+                {item.label}
+              </span>
+              {activeTab === item.id && (
+                <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-brand-blue rounded-l-full"></div>
+              )}
             </button>
           ))}
         </nav>
@@ -1864,97 +1876,30 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
       </AnimatePresence>
 
       {/* Quick Access Shortcuts */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <button 
-          onClick={handleTriggerSOS}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-red-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center group-hover:scale-110 transition-transform ring-2 ring-red-100">
-            <Siren className="w-5 h-5 text-red-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700 uppercase tracking-tighter">SOS Darurat</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('warga')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Users className="w-5 h-5 text-blue-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">Data Warga</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('transaksi')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-green-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <CreditCard className="w-5 h-5 text-green-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">Transaksi</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('bank-sampah')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Recycle className="w-5 h-5 text-amber-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">Bank Sampah</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('posyandu')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-pink-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Stethoscope className="w-5 h-5 text-pink-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">Kesehatan Warga</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('inventaris')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-violet-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Package className="w-5 h-5 text-violet-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">Inventaris</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('surat')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-purple-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <FileText className="w-5 h-5 text-purple-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">Surat</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('voting')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Vote className="w-5 h-5 text-indigo-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">E-Pemilu</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('toko')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Store className="w-5 h-5 text-orange-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">E-Toko</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('verifikasi')}
-          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <ShieldCheck className="w-5 h-5 text-blue-600" />
-          </div>
-          <span className="text-xs font-bold text-slate-700">Verifikasi</span>
-        </button>
+      <div className="grid grid-cols-2 lg:grid-cols-5 xl:grid-cols-10 gap-3 px-1">
+        {[
+          { id: 'sos', label: 'SOS', icon: Siren, color: 'brand-pink', bg: 'soft-pink', action: handleTriggerSOS },
+          { id: 'warga', label: 'WARGA', icon: Users, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('warga') },
+          { id: 'transaksi', label: 'TRANSAKSI', icon: CreditCard, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('transaksi') },
+          { id: 'sampah', label: 'SAMPAH', icon: Recycle, color: 'brand-green', bg: 'soft-green', action: () => setActiveTab('bank-sampah') },
+          { id: 'kesehatan', label: 'KESEHATAN', icon: Baby, color: 'brand-pink', bg: 'soft-pink', action: () => setActiveTab('posyandu') },
+          { id: 'inventaris', label: 'ASET', icon: Package, color: 'brand-purple', bg: 'soft-purple', action: () => setActiveTab('inventaris') },
+          { id: 'surat', label: 'SURAT', icon: FileText, color: 'cyan-500', bg: 'cyan-50', action: () => setActiveTab('surat') },
+          { id: 'voting', label: 'PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting') },
+          { id: 'toko', label: 'TOKO', icon: ShoppingBag, color: 'orange-500', bg: 'orange-50', action: () => setActiveTab('etoko') },
+          { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck, color: 'emerald-500', bg: 'soft-green', action: () => setActiveTab('verifikasi') },
+        ].map(item => (
+          <button 
+            key={item.id}
+            onClick={item.action}
+            className="bg-white/80 backdrop-blur-sm p-4 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-2 group active:scale-95"
+          >
+            <div className={`w-12 h-12 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner`}>
+              <item.icon className={`w-6 h-6 text-${item.color}`} />
+            </div>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{item.label}</span>
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -7948,7 +7893,7 @@ function PosyanduView({
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Manajemen Kesehatan Ibu & Anak</p>
           </div>
         </div>
-        <div className="flex gap-1 bg-slate-50 p-1 rounded-xl">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-50 p-1 rounded-xl overflow-x-auto no-scrollbar">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'balita', label: 'Balita', icon: Users },
@@ -7959,11 +7904,13 @@ function PosyanduView({
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                activeSubTab === tab.id ? 'bg-white text-pink-600 shadow-sm border border-pink-100' : 'text-slate-500 hover:bg-slate-100'
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeSubTab === tab.id 
+                  ? 'bg-white text-brand-pink shadow-lg shadow-pink-100 border border-pink-50' 
+                  : 'text-slate-500 hover:bg-white/50'
               }`}
             >
-              <tab.icon className="w-3.5 h-3.5" />
+              <tab.icon className={`w-4 h-4 ${activeSubTab === tab.id ? 'animate-bounce-slow' : ''}`} />
               {tab.label}
             </button>
           ))}
@@ -7971,30 +7918,71 @@ function PosyanduView({
       </div>
 
       {activeSubTab === 'dashboard' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Total Balita ({stats.totalBalita})</p>
-              <div className="flex gap-2 text-[10px] font-bold">
-                <span className="text-green-600">Sehat: {stats.balitaSehat}</span>
-                <span className="text-orange-600">Risiko: {stats.balitaRisiko}</span>
-                <span className="text-red-600">Stunting: {stats.balitaStunting}</span>
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-blue-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Baby className="w-16 h-16 text-brand-pink" />
+              </div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Total Balita</p>
+              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalBalita}</p>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-[10px] font-bold p-2 bg-soft-green rounded-lg">
+                  <span className="text-slate-500">SEHAT</span>
+                  <span className="text-emerald-600 font-black">{stats.balitaSehat}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-bold p-2 bg-soft-yellow rounded-lg">
+                  <span className="text-slate-500">RISIKO</span>
+                  <span className="text-amber-600 font-black">{stats.balitaRisiko}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-bold p-2 bg-soft-pink rounded-lg">
+                  <span className="text-slate-500">STUNTING</span>
+                  <span className="text-brand-pink font-black">{stats.balitaStunting}</span>
+                </div>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ibu Hamil ({stats.totalIbuHamil})</p>
-              <p className="text-[10px] font-bold text-pink-600">Risiko Tinggi: {stats.ibuHamilRisiko}</p>
+            
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-pink-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <HeartPulse className="w-16 h-16 text-brand-pink" />
+              </div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Ibu Hamil</p>
+              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalIbuHamil}</p>
+              <div className="p-3 bg-soft-pink rounded-xl border border-pink-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Risiko Tinggi</span>
+                  <span className="text-brand-pink font-black text-lg">{stats.ibuHamilRisiko}</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Lansia</p>
-              <p className="text-2xl font-black text-blue-600">{stats.totalLansia}</p>
+
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-purple-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Activity className="w-16 h-16 text-brand-purple" />
+              </div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Warga Lansia</p>
+              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalLansia}</p>
+              <div className="p-3 bg-soft-purple rounded-xl border border-purple-100">
+                <p className="text-[10px] font-bold text-brand-purple uppercase tracking-widest">Monitoring Rutin</p>
+              </div>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Posbindu ({stats.totalPosbindu})</p>
-              <p className="text-[10px] font-bold text-red-600">Hipertensi: {stats.posbinduHipertensi}</p>
-              <p className="text-[10px] font-bold text-orange-600">Asam Urat: {stats.posbinduAsamUrat}</p>
-              <p className="text-[10px] font-bold text-blue-600">Gula Darah: {stats.posbinduGulaDarah}</p>
-              <p className="text-[9px] text-slate-400 mt-2 italic">* Jantung, Paru, Mata, & Ginjal belum terlacak.</p>
+
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-blue-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Stethoscope className="w-16 h-16 text-brand-blue" />
+              </div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Monitoring Posbindu</p>
+              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalPosbindu}</p>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="p-2 bg-slate-50 rounded-lg text-center">
+                  <p className="text-[8px] font-bold text-slate-400 uppercase">Hipertensi</p>
+                  <p className="text-xs font-black text-red-500">{stats.posbinduHipertensi}</p>
+                </div>
+                <div className="p-2 bg-slate-50 rounded-lg text-center">
+                  <p className="text-[8px] font-bold text-slate-400 uppercase">Gula Darah</p>
+                  <p className="text-xs font-black text-brand-blue">{stats.posbinduGulaDarah}</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -8048,61 +8036,65 @@ function PosyanduView({
       )}
 
       {activeSubTab === 'posbindu' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col gap-2">
-            <div className="flex flex-row items-center gap-2">
-              <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Cari warga..." 
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleImportExcel}
-                />
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+          <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                <div className="relative w-full sm:w-auto">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Cari warga..." 
+                    className="w-full md:w-80 pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-brand-pink/20 focus:border-brand-pink outline-none shadow-inner transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleImportExcel}
+                  />
+                </div>
+                <div className="flex gap-2 justify-center w-full sm:w-auto">
+                  <button onClick={() => fileInputRef.current?.click()} className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90" title="Impor Data">
+                    <Upload className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                       const doc = new jsPDF();
+                       doc.text("Laporan Posbindu", 10, 10);
+                       autoTable(doc, {
+                           head: [['NIK', 'Nama', 'TD', 'GDS']],
+                           body: pemeriksaanPosbinduData.map(p => [p.nik, p.nama, p.tekananDarah, p.gulaDarah])
+                       });
+                       doc.save(`Laporan_Posbindu_${new Date().toISOString().split('T')[0]}.pdf`);
+                    }}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
+                    title="Export PDF"
+                  >
+                    <FileText className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const ws = XLSX.utils.json_to_sheet(pemeriksaanPosbinduData);
+                      const wb = XLSX.utils.book_new();
+                      XLSX.utils.book_append_sheet(wb, ws, "Posbindu");
+                      XLSX.writeFile(wb, `Data_Posbindu_${new Date().toISOString().split('T')[0]}.xlsx`);
+                    }}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
+                    title="Export Excel"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
-              <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <Upload className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => {
-                   const doc = new jsPDF();
-                   doc.text("Laporan Posbindu", 10, 10);
-                   autoTable(doc, {
-                       head: [['NIK', 'Nama', 'TD', 'GDS']],
-                       body: pemeriksaanPosbinduData.map(p => [p.nik, p.nama, p.tekananDarah, p.gulaDarah])
-                   });
-                   doc.save(`Laporan_Posbindu_${new Date().toISOString().split('T')[0]}.pdf`);
-                }}
-                className="p-2 bg-white border border-slate-200 rounded-lg text-red-600 hover:bg-red-50"
-              >
-                <FileText className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => {
-                  const ws = XLSX.utils.json_to_sheet(pemeriksaanPosbinduData);
-                  const wb = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(wb, ws, "Posbindu");
-                  XLSX.writeFile(wb, `Data_Posbindu_${new Date().toISOString().split('T')[0]}.xlsx`);
-                }}
-                className="p-2 bg-white border border-slate-200 rounded-lg text-green-600 hover:bg-green-50"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex justify-center">
               <button 
                 onClick={() => { setEditingPosbinduItem(null); setShowPosbinduForm(true); }}
-                className="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-pink-700 flex items-center gap-2"
+                className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 flex items-center gap-2 transition-all active:scale-95"
               >
-                <Plus className="w-4 h-4" /> Tambah Pemeriksaan
+                <PlusCircle className="w-5 h-5" /> Tambah Pemeriksaan
               </button>
             </div>
           </div>
@@ -8219,19 +8211,19 @@ function PosyanduView({
 
       {activeSubTab === 'balita' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-md">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
                   placeholder="Cari balita..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
+                  className="w-full md:w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-center w-full sm:w-auto">
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -8262,16 +8254,14 @@ function PosyanduView({
                 </button>
               </div>
             </div>
-          <div className="flex justify-center">
             <button 
               onClick={() => { setEditingItem(null); setShowBalitaForm(true); }}
-              className="px-4 py-2 bg-pink-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-pink-100 hover:bg-pink-700 flex items-center gap-2 transition-all active:scale-95"
+              className="px-4 py-2 bg-pink-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-pink-100 hover:bg-pink-700 flex items-center gap-2 transition-all active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
               Daftar Balita
             </button>
           </div>
-        </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -8514,18 +8504,18 @@ function PosyanduView({
       {activeSubTab === 'ibuhamil' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-md">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
                   placeholder="Cari ibu hamil..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
+                  className="w-full md:w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-center w-full sm:w-auto">
                 <input 
                   type="file" 
                   ref={fileInputRefIbuHamil} 
@@ -8620,24 +8610,24 @@ function PosyanduView({
       )}
 
       {activeSubTab === 'kegiatan' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+          <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
              <div className="flex items-center gap-3">
-               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Jadwal & Agenda Kesehatan Warga</h3>
+               <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight font-elegant">Jadwal & Agenda <span className="text-brand-pink">Kesehatan</span></h3>
                <div className="flex gap-2">
-                 <button onClick={exportKegiatanPDF} className="p-1.5 bg-white border border-slate-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors" title="Export PDF">
-                   <FileText className="w-4 h-4" />
+                 <button onClick={exportKegiatanPDF} className="p-2 bg-white border border-slate-200 text-brand-pink rounded-xl hover:bg-pink-50 transition-all active:scale-90" title="Export PDF">
+                   <FileText className="w-5 h-5" />
                  </button>
-                 <button onClick={exportKegiatanExcel} className="p-1.5 bg-white border border-slate-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="Export Excel">
-                   <FileSpreadsheet className="w-4 h-4" />
+                 <button onClick={exportKegiatanExcel} className="p-2 bg-white border border-slate-200 text-brand-blue rounded-xl hover:bg-blue-50 transition-all active:scale-90" title="Export Excel">
+                   <FileSpreadsheet className="w-5 h-5" />
                  </button>
                </div>
              </div>
              <button 
                onClick={() => { setEditingItem(null); setShowKegiatanForm(true); }}
-               className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-2"
+               className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 transition-all flex items-center gap-2 active:scale-95"
              >
-               <PlusCircle className="w-4 h-4" />
+               <PlusCircle className="w-5 h-5" />
                Buat Agenda
              </button>
           </div>
