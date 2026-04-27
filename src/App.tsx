@@ -264,13 +264,15 @@ export default function App() {
           if (userDoc.exists()) {
             let userData = userDoc.data() as any;
             // Force Super Admin status for the specific master email
-            const isMasterEmail = user.email === 'arifrajcoach@gmail.com';
+            const isMasterEmail = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
             if (isMasterEmail) {
-              if (!userData.isSuperAdmin || userData.role !== 'SUPER_ADMIN') {
-                userData.isSuperAdmin = true;
-                userData.role = 'SUPER_ADMIN';
+              userData.isSuperAdmin = true;
+              userData.role = 'SUPER_ADMIN';
+              if (!userData.name || userData.name === 'User') {
                 userData.name = 'Bpk. Arif (Super Admin)';
-                // Persistent update to database
+              }
+              // Persistent update to database if needed
+              if (userData.role !== 'SUPER_ADMIN' || !userData.isSuperAdmin) {
                 await updateDoc(userDocRef, { 
                     isSuperAdmin: true, 
                     role: 'SUPER_ADMIN',
@@ -293,7 +295,7 @@ export default function App() {
             let role = 'RT';
             let name = user.email?.split('@')[0] || 'User';
             
-            const isMasterEmail = user.email === 'arifrajcoach@gmail.com';
+            const isMasterEmail = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
             
             // Set default tenantId to 'RW26_SMART' for the current user
             const tenantId = 'RW26_SMART';
@@ -937,28 +939,25 @@ export default function App() {
 
   // Centralized Error Handler for Firestore
   const handleFirestoreError = (err: any, op: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write', path: string) => {
-    if (err?.code === 'permission-denied') {
-      const errorInfo = {
-        error: "Missing or insufficient permissions",
-        operationType: op,
-        path: path,
-        authInfo: {
-          userId: auth.currentUser?.uid || 'anonymous',
-          email: auth.currentUser?.email || '',
-          emailVerified: auth.currentUser?.emailVerified || false,
-          isAnonymous: auth.currentUser?.isAnonymous ?? true,
-          providerInfo: auth.currentUser?.providerData.map(p => ({
-            providerId: p.providerId,
-            displayName: p.displayName || '',
-            email: p.email || ''
-          })) || []
-        }
-      };
-      console.error("Firestore Security Error:", JSON.stringify(errorInfo, null, 2));
-      alert(`Akses Ditolak: Peran anda mungkin belum terdaftar di database atau sesi anda habis. (${op} pada ${path}).`);
-    } else {
-      console.error(`Firestore ${op} error on ${path}:`, err);
-    }
+    const errInfo = {
+      error: err instanceof Error ? err.message : String(err),
+      operationType: op,
+      path: path,
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+        isAnonymous: auth.currentUser?.isAnonymous,
+        tenantId: currentUser?.tenantId || 'unknown',
+        providerInfo: auth.currentUser?.providerData?.map(provider => ({
+          providerId: provider.providerId,
+          email: provider.email,
+        })) || []
+      }
+    };
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    showNotification(`Akses Gagal: ${op.toUpperCase()} pada ${path}. Sesi anda mungkin habis atau izin ditolak.`);
+    throw new Error(JSON.stringify(errInfo));
   };
 
   // Helper for uploading files to Firebase Storage with Progress
@@ -6620,20 +6619,25 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
       // ... same error logic
       let msg = `Gagal masuk (${err.code}). Periksa kembali email dan password Anda.`;
       
-      if (err.code === 'auth/user-not-found') {
-        msg = 'PENGGUNA TIDAK DITEMUKAN: Silakan daftarkan email ini di Firebase Console.';
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        if (targetEmail?.toLowerCase() === 'arifrajcoach@gmail.com') {
+          msg = 'AKUN BELUM TERDAFTAR: Bpk. Arif, silakan gunakan tombol "Masuk dengan Google" atau daftarkan email ini di Firebase Console > Authentication.';
+        } else {
+          msg = 'KREDENSIAL SALAH: Email atau password tidak sesuai. Silakan hubungi admin.';
+        }
       } else if (err.code === 'auth/wrong-password') {
-        msg = 'PASSWORD SALAH: Password tidak sesuai.';
-      } else if (err.code === 'auth/invalid-credential') {
-        msg = 'KREDENSIAL TIDAK VALID: Email atau password salah.';
+        msg = 'PASSWORD SALAH: Periksa kembali kata sandi Anda.';
       } else if (err.code === 'auth/invalid-email') {
         msg = 'FORMAT EMAIL SALAH: Masukkan format email yang benar.';
       } else if (err.code === 'auth/operation-not-allowed') {
-        msg = 'METODE LOGIN BELUM AKTIF: Anda harus mengaktifkan "Email/Password" di tab "Sign-in method" di Firebase Console.';
+        msg = 'METODE LOGIN NON-AKTIF: Aktifkan "Email/Password" di Firebase Console > Authentication > Sign-in method.';
       } else if (err.code === 'auth/network-request-failed') {
-        msg = 'MASALAH JARINGAN: Periksa koneksi internet Anda atau cek apakah Firebase config sudah benar.';
+        msg = 'MASALAH JARINGAN (Timeout): Firebase tidak dapat dijangkau. Coba refresh halaman (F5) atau cek apakah domain ini sudah diizinkan di Firebase Console.';
+      } else {
+        msg = `Gagal masuk (${err.code || 'ERR'}). ${err.message || ''}`;
       }
       
+      console.error("Login Details:", { code: err.code, message: err.message });
       setError(msg);
       setIsLoading(false);
     }
@@ -6651,7 +6655,7 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
       const userRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userRef);
       
-      const isArif = user.email === 'arifrajcoach@gmail.com';
+      const isArif = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
       const userData = {
         email: user.email,
         role: isArif ? 'SUPER_ADMIN' : 'Viewer',
@@ -8161,11 +8165,13 @@ function PosyanduView({
                 if (editingPosbinduItem) {
                   await setDoc(doc(db, 'pemeriksaan_posbindu', editingPosbinduItem.id), data, { merge: true });
                 } else {
-                  await setDoc(doc(db, 'pemeriksaan_posbindu', `PB-${Date.now()}`), { ...data, id: `PB-${Date.now()}` });
+                  const newId = `PB-${Date.now()}`;
+                  await setDoc(doc(db, 'pemeriksaan_posbindu', newId), { ...data, id: newId });
                 }
                 showNotification("Data Posbindu berhasil disimpan!");
                 setShowPosbinduForm(false);
               } catch (err) {
+                console.error("Save Posbindu Error:", err);
                 handleFirestoreError(err, 'write', 'pemeriksaan_posbindu');
               }
             }} className="space-y-4">
