@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -390,7 +390,9 @@ export default function App() {
   const [balitaData, setBalitaData] = useState<any[]>([]);
   const [ibuHamilData, setIbuHamilData] = useState<any[]>([]);
   const [posyanduKegiatanData, setPosyanduKegiatanData] = useState<any[]>([]);
+  const [posbinduKegiatanData, setPosbinduKegiatanData] = useState<any[]>([]);
   const [pemeriksaanBalitaData, setPemeriksaanBalitaData] = useState<any[]>([]);
+  const [pemeriksaanPosbinduData, setPemeriksaanPosbinduData] = useState<any[]>([]);
   const [imunisasiData, setImunisasiData] = useState<any[]>([]);
   const [sampahKategoriData, setSampahKategoriData] = useState<any[]>([]);
   const [sampahSetoranData, setSampahSetoranData] = useState<any[]>([]);
@@ -417,6 +419,14 @@ export default function App() {
 
   const [isSOSConfirmOpen, setIsSOSConfirmOpen] = useState(false);
   const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
+
+  useEffect(() => {
+    if (currentUser?.role === 'Viewer' || (!currentUser && wargaAuth)) {
+      if (activeTab === 'dashboard' || activeTab === 'transaksi' || activeTab === 'kas' || activeTab === 'posyandu') {
+        setActiveTab('warga');
+      }
+    }
+  }, [currentUser, wargaAuth, activeTab]);
 
   const handleTriggerSOS = async () => {
     if (!currentUser) return;
@@ -520,9 +530,13 @@ export default function App() {
 
     const tId = currentUser?.tenantId || wargaAuth?.tenantId || 'RW26_SMART';
 
+    const isViewer = currentUser?.role === 'Viewer';
+    const isCitizen = currentUser?.role === 'Warga' || (!currentUser && !!wargaAuth);
+    const hasFullAccess = !isCitizen && !isViewer;
+
     setIsLoadingDB(true);
     let loadedSections = 0;
-    const totalSections = currentUser?.isSuperAdmin ? 16 : (currentUser?.role === 'ADMIN' ? 15 : (currentUser ? 14 : 5));
+    const totalSections = currentUser?.isSuperAdmin ? 16 : (currentUser?.role === 'ADMIN' ? 15 : (hasFullAccess ? 14 : 3)); // Settings, Warga, Emergencies for Viewer/Citizen
 
     const onDataLoaded = () => {
       loadedSections++;
@@ -572,153 +586,199 @@ export default function App() {
     );
 
     // 2. Kas Listener
-    const getKasQuery = () => {
-      const base = collection(db, 'kas');
-      const constraints = [where('tenantId', '==', tId)];
-      if (currentUser?.role === 'RT') {
-        constraints.push(where('rt', '==', currentUser.rt || '01'));
-      }
-      return query(base, ...constraints);
-    };
+    let unsubKas = () => {};
+    if (hasFullAccess) {
+      const getKasQuery = () => {
+        const base = collection(db, 'kas');
+        const constraints = [where('tenantId', '==', tId)];
+        if (currentUser?.role === 'RT') {
+          constraints.push(where('rt', '==', currentUser.rt || '01'));
+        }
+        return query(base, ...constraints);
+      };
 
-    const unsubKas = onSnapshot(getKasQuery(), 
-      (snap) => {
-        const data = snap.docs.map(doc => ({ ...doc.data() }));
-        setKasData(data);
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, 'list', 'kas');
-        onDataLoaded();
-      }
-    );
+      unsubKas = onSnapshot(getKasQuery(), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          setKasData(data);
+          onDataLoaded();
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'kas');
+          onDataLoaded();
+        }
+      );
+    }
 
     // 3. Surat Listener
-    const unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId)), 
-      (snap) => {
-        const data = snap.docs.map(doc => ({ ...doc.data() }));
-        const filtered = currentUser?.role === 'RT' 
-          ? data.filter((s: any) => s.rt === currentUser.rt)
-          : data;
-        setSuratData(filtered);
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, 'list', 'surat');
-        onDataLoaded();
-      }
-    );
+    let unsubSurat = () => {};
+    if (hasFullAccess) {
+      unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId)), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          const filtered = currentUser?.role === 'RT' 
+            ? data.filter((s: any) => s.rt === currentUser.rt)
+            : data;
+          setSuratData(filtered);
+          onDataLoaded();
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'surat');
+          onDataLoaded();
+        }
+      );
+    }
 
     // 4. Iuran Listener
-    const unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', tId)), 
-      (snap) => {
-        const data = snap.docs.map(doc => ({ ...doc.data() }));
-        const filtered = currentUser?.role === 'RT'
-          ? data.filter((i: any) => i.rt === currentUser.rt)
-          : data;
-        setIuranData(filtered);
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, 'list', 'iuran');
-        onDataLoaded();
-      }
-    );
+    let unsubIuran = () => {};
+    if (hasFullAccess) {
+      unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', tId)), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          const filtered = currentUser?.role === 'RT'
+            ? data.filter((i: any) => i.rt === currentUser.rt)
+            : data;
+          setIuranData(filtered);
+          onDataLoaded();
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'iuran');
+          onDataLoaded();
+        }
+      );
+    }
 
     // 4.5 Inventaris Listener
-    const unsubInventaris = onSnapshot(query(collection(db, 'inventaris'), where('tenantId', '==', tId)), 
-      (snap) => {
-        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setInventarisData(data);
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, 'list', 'inventaris');
-        onDataLoaded();
-      }
-    );
+    let unsubInventaris = () => {};
+    let unsubInventarisLogs = () => {};
+    let unsubInventarisKategori = () => {};
+    let unsubInventarisLokasi = () => {};
+    let unsubInventarisSupplier = () => {};
 
-    // 4.6 Inventaris Logs Listener
-    const unsubInventarisLogs = onSnapshot(query(collection(db, 'inventaris_logs'), where('tenantId', '==', tId)), 
-      (snap) => {
-        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setInventarisLogs(data);
-      },
-      (err) => {
-        handleFirestoreError(err, 'list', 'inventaris_logs');
-      }
-    );
+    if (hasFullAccess) {
+      unsubInventaris = onSnapshot(query(collection(db, 'inventaris'), where('tenantId', '==', tId)), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setInventarisData(data);
+          onDataLoaded();
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'inventaris');
+          onDataLoaded();
+        }
+      );
 
-    // 4.7 Inventaris Kategori/Lokasi/Supplier
-    const unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', '==', tId)), 
-      (snap) => setInventarisKategori(snap.docs.map(doc => ({ ...doc.data() })))
-    );
-    const unsubInventarisLokasi = onSnapshot(query(collection(db, 'inventaris_lokasi'), where('tenantId', '==', tId)), 
-      (snap) => setInventarisLokasi(snap.docs.map(doc => ({ ...doc.data() })))
-    );
-    const unsubInventarisSupplier = onSnapshot(query(collection(db, 'inventaris_supplier'), where('tenantId', '==', tId)), 
-      (snap) => setInventarisSupplier(snap.docs.map(doc => ({ ...doc.data() })))
-    );
+      // 4.6 Inventaris Logs Listener
+      unsubInventarisLogs = onSnapshot(query(collection(db, 'inventaris_logs'), where('tenantId', '==', tId)), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setInventarisLogs(data);
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'inventaris_logs');
+        }
+      );
+
+      // 4.7 Inventaris Kategori/Lokasi/Supplier
+      unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', '==', tId)), 
+        (snap) => setInventarisKategori(snap.docs.map(doc => ({ ...doc.data() })))
+      );
+      unsubInventarisLokasi = onSnapshot(query(collection(db, 'inventaris_lokasi'), where('tenantId', '==', tId)), 
+        (snap) => setInventarisLokasi(snap.docs.map(doc => ({ ...doc.data() })))
+      );
+      unsubInventarisSupplier = onSnapshot(query(collection(db, 'inventaris_supplier'), where('tenantId', '==', tId)), 
+        (snap) => setInventarisSupplier(snap.docs.map(doc => ({ ...doc.data() })))
+      );
+    }
 
     // 4.8 Posyandu Listeners
-    const unsubBalita = onSnapshot(query(collection(db, 'balita'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'balita'); onDataLoaded(); }
-    );
-    const unsubIbuHamil = onSnapshot(query(collection(db, 'ibu_hamil'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setIbuHamilData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'ibu_hamil'); onDataLoaded(); }
-    );
-    const unsubPosyanduKegiatan = onSnapshot(query(collection(db, 'posyandu_kegiatan'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setPosyanduKegiatanData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'posyandu_kegiatan'); onDataLoaded(); }
-    );
-    const unsubPemeriksaanBalita = onSnapshot(query(collection(db, 'pemeriksaan_balita'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setPemeriksaanBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'pemeriksaan_balita'); onDataLoaded(); }
-    );
-    const unsubImunisasi = onSnapshot(query(collection(db, 'imunisasi'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setImunisasiData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'imunisasi'); onDataLoaded(); }
-    );
+    let unsubBalita = () => {};
+    let unsubIbuHamil = () => {};
+    let unsubPosyanduKegiatan = () => {};
+    let unsubPosbinduKegiatan = () => {};
+    let unsubPemeriksaanBalita = () => {};
+    let unsubPemeriksaanPosbindu = () => {};
+    let unsubImunisasi = () => {};
+
+    if (hasFullAccess) {
+      unsubBalita = onSnapshot(query(collection(db, 'balita'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'balita'); onDataLoaded(); }
+      );
+      unsubIbuHamil = onSnapshot(query(collection(db, 'ibu_hamil'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setIbuHamilData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'ibu_hamil'); onDataLoaded(); }
+      );
+      unsubPosyanduKegiatan = onSnapshot(query(collection(db, 'posyandu_kegiatan'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setPosyanduKegiatanData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'posyandu_kegiatan'); onDataLoaded(); }
+      );
+      unsubPosbinduKegiatan = onSnapshot(query(collection(db, 'posbindu_kegiatan'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setPosbinduKegiatanData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'posbindu_kegiatan'); onDataLoaded(); }
+      );
+      unsubPemeriksaanBalita = onSnapshot(query(collection(db, 'pemeriksaan_balita'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setPemeriksaanBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'pemeriksaan_balita'); onDataLoaded(); }
+      );
+      unsubPemeriksaanPosbindu = onSnapshot(query(collection(db, 'pemeriksaan_posbindu'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setPemeriksaanPosbinduData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'pemeriksaan_posbindu'); onDataLoaded(); }
+      );
+      unsubImunisasi = onSnapshot(query(collection(db, 'imunisasi'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setImunisasiData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'imunisasi'); onDataLoaded(); }
+      );
+    }
 
     // 4.9 Bank Sampah Listeners
-    const unsubSampahKategori = onSnapshot(query(collection(db, 'sampah_kategori'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setSampahKategoriData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'sampah_kategori'); onDataLoaded(); }
-    );
-    const unsubSampahSetoran = onSnapshot(query(collection(db, 'sampah_setoran'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setSampahSetoranData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'sampah_setoran'); onDataLoaded(); }
-    );
-    const unsubSampahTarikSaldo = onSnapshot(query(collection(db, 'sampah_tarik_saldo'), where('tenantId', '==', tId)), 
-      (snap) => {
-        setSampahTarikSaldoData(snap.docs.map(doc => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => { handleFirestoreError(err, 'list', 'sampah_tarik_saldo'); onDataLoaded(); }
-    );
+    let unsubSampahKategori = () => {};
+    let unsubSampahSetoran = () => {};
+    let unsubSampahTarikSaldo = () => {};
+    if (hasFullAccess) {
+      unsubSampahKategori = onSnapshot(query(collection(db, 'sampah_kategori'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setSampahKategoriData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'sampah_kategori'); onDataLoaded(); }
+      );
+      unsubSampahSetoran = onSnapshot(query(collection(db, 'sampah_setoran'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setSampahSetoranData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'sampah_setoran'); onDataLoaded(); }
+      );
+      unsubSampahTarikSaldo = onSnapshot(query(collection(db, 'sampah_tarik_saldo'), where('tenantId', '==', tId)), 
+        (snap) => {
+          setSampahTarikSaldoData(snap.docs.map(doc => ({ ...doc.data() })));
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'sampah_tarik_saldo'); onDataLoaded(); }
+      );
+    }
 
     const unsubEmergencies = onSnapshot(query(collection(db, 'emergencies'), where('tenantId', '==', tId)), 
       (snap) => {
@@ -747,8 +807,8 @@ export default function App() {
         // If it's a citizen (logged in via anonymous auth or linked)
         const uid = auth.currentUser?.uid;
         if (uid) {
-           // We ONLY filter by userId for citizens to satisfy rules
-           return query(base, where('userId', '==', uid));
+           // We ONLY filter by authUid for citizens to satisfy rules
+           return query(base, where('authUid', '==', uid));
         }
       }
       
@@ -817,7 +877,9 @@ export default function App() {
       unsubBalita();
       unsubIbuHamil();
       unsubPosyanduKegiatan();
+      unsubPosbinduKegiatan();
       unsubPemeriksaanBalita();
+      unsubPemeriksaanPosbindu();
       unsubImunisasi();
       unsubSampahKategori();
       unsubSampahSetoran();
@@ -1029,7 +1091,7 @@ export default function App() {
             { id: 'warga', label: 'Data Warga', icon: Users },
             { id: 'verifikasi', label: 'Verifikasi Mandiri', icon: ShieldCheck },
             { id: 'transaksi', label: 'Transaksi', icon: CreditCard },
-            { id: 'posyandu', label: 'Posyandu', icon: Baby },
+            { id: 'posyandu', label: 'Kesehatan Warga', icon: Baby },
             { id: 'bank-sampah', label: 'Bank Sampah', icon: Recycle },
             { id: 'etoko', label: 'E-Toko', icon: ShoppingBag },
             { id: 'voting', label: 'E-Pemilu', icon: Vote },
@@ -1041,6 +1103,9 @@ export default function App() {
             { id: 'super-admin', label: 'Super Admin', icon: Shield },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
           ].filter(item => {
+            if (currentUser?.role === 'Viewer') {
+              return ['warga'].includes(item.id);
+            }
             if (currentUser?.role === 'BENDAHARA') {
               return ['dashboard', 'transaksi', 'kas', 'bank-sampah'].includes(item.id);
             }
@@ -1131,7 +1196,9 @@ export default function App() {
               balitaData={balitaData} setBalitaData={setBalitaData}
               ibuHamilData={ibuHamilData} setIbuHamilData={setIbuHamilData}
               posyanduKegiatanData={posyanduKegiatanData} setPosyanduKegiatanData={setPosyanduKegiatanData}
+              posbinduKegiatanData={posbinduKegiatanData} setPosbinduKegiatanData={setPosbinduKegiatanData}
               pemeriksaanBalitaData={pemeriksaanBalitaData} setPemeriksaanBalitaData={setPemeriksaanBalitaData}
+              pemeriksaanPosbinduData={pemeriksaanPosbinduData} setPemeriksaanPosbinduData={setPemeriksaanPosbinduData}
               imunisasiData={imunisasiData} setImunisasiData={setImunisasiData}
               wargaData={wargaData} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'}
               setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification}
@@ -1842,7 +1909,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
           <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Stethoscope className="w-5 h-5 text-pink-600" />
           </div>
-          <span className="text-xs font-bold text-slate-700">Posyandu</span>
+          <span className="text-xs font-bold text-slate-700">Kesehatan Warga</span>
         </button>
         <button 
           onClick={() => setActiveTab('inventaris')}
@@ -5977,11 +6044,12 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         kkUrl = await handleFileUpload(files.kk, 'kk', (pct) => setUploadPct(pct));
       }
 
-      const id = activeSubmission?.id || `VRF-${Date.now()}`;
+      const id = activeSubmission?.id || wargaData.docId || wargaData.id || `VRF-${Date.now()}`;
       const submission = {
         ...formData,
         id,
         tenantId,
+        authUid: auth.currentUser?.uid || activeSubmission?.authUid || "",
         ktpUrl,
         kkUrl,
         status: 'Menunggu Persetujuan',
@@ -5989,7 +6057,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         catatan: ''
       };
 
-      await setDoc(doc(db, 'verifikasi_warga', id), submission);
+      await setDoc(doc(db, 'verifikasi_warga', id), submission, { merge: true });
       showNotification("Pengajuan perbaikan data berhasil dikirim. Menunggu verifikasi admin.", "success");
       setIsEditing(false);
     } catch (err) {
@@ -6003,16 +6071,17 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
   const handleDataSudahBenar = async () => {
     setIsLoadingDB(true);
     try {
-      const id = activeSubmission?.id || `VRF-${Date.now()}`;
+      const id = activeSubmission?.id || wargaData.docId || wargaData.id || `VRF-${Date.now()}`;
       const submission = {
         ...wargaData,
         id,
         tenantId,
+        authUid: auth.currentUser?.uid || activeSubmission?.authUid || "",
         status: 'Menunggu Persetujuan',
         submittedAt: new Date().toISOString(),
         catatan: 'Konfirmasi Data Mandiri (Tidak ada perubahan)'
       };
-      await setDoc(doc(db, 'verifikasi_warga', id), submission);
+      await setDoc(doc(db, 'verifikasi_warga', id), submission, { merge: true });
       showNotification("Terima kasih! Data Anda telah diverifikasi sukses.", "success");
     } catch (err) {
       handleFirestoreError(err, 'create', 'verifikasi_warga');
@@ -6501,7 +6570,13 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
         
         // Update the document with authUid for security rules
         const vRef = doc(db, 'verifikasi_warga', found.id);                
-        await updateDoc(vRef, { authUid: uid });
+        await setDoc(vRef, { 
+          authUid: uid,
+          nik: found.nik,
+          kk: found.kk,
+          nama: found.nama,
+          tenantId: found.tenantId
+        }, { merge: true });
         
         // Find other family members
         const familyMembers = wargaData.filter(w => String(w.kk).trim() === String(found.kk).trim());
@@ -7276,20 +7351,24 @@ function PosyanduView({
   balitaData, setBalitaData, 
   ibuHamilData, setIbuHamilData, 
   posyanduKegiatanData, setPosyanduKegiatanData, 
-  pemeriksaanBalitaData, setPemeriksaanBalitaData, 
+  posbinduKegiatanData, setPosbinduKegiatanData,
+  pemeriksaanBalitaData, setPemeriksaanBalitaData,
+  pemeriksaanPosbinduData, setPemeriksaanPosbinduData,
   imunisasiData, setImunisasiData,
   wargaData, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification 
 }: any) {
-  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'balita' | 'ibuhamil' | 'kegiatan' | 'timeline' | 'ibuhamil_detail'>('dashboard');
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'balita' | 'ibuhamil' | 'kegiatan' | 'posbindu' | 'timeline' | 'ibuhamil_detail'>('dashboard');
   const [showBalitaForm, setShowBalitaForm] = useState(false);
   const [showIbuHamilForm, setShowIbuHamilForm] = useState(false);
   const [showKegiatanForm, setShowKegiatanForm] = useState(false);
+  const [showPosbinduForm, setShowPosbinduForm] = useState(false);
   const [showPemeriksaanForm, setShowPemeriksaanForm] = useState(false);
   const [showImunisasiForm, setShowImunisasiForm] = useState(false);
   const [selectedBalita, setSelectedBalita] = useState<any>(null);
   const [selectedIbuHamil, setSelectedIbuHamil] = useState<any>(null);
   const [selectedKegiatan, setSelectedKegiatan] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingPosbinduItem, setEditingPosbinduItem] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputRefIbuHamil = useRef<HTMLInputElement>(null);
@@ -7512,7 +7591,7 @@ function PosyanduView({
         formatTgl(i.tanggal),
         'Imunisasi',
         i.jenisImunisasi,
-        'Posyandu'
+        'Kesehatan Warga'
       ])
     ].sort((a: any, b: any) => b[0].localeCompare(a[0]));
 
@@ -7671,7 +7750,7 @@ function PosyanduView({
     setIsLoadingDB(true);
     try {
       await setDoc(doc(db, 'posyandu_kegiatan', id), data);
-      showNotification("Kegiatan Posyandu disimpan!");
+      showNotification("Kegiatan Kesehatan Warga disimpan!");
       setShowKegiatanForm(false);
       setEditingItem(null);
     } catch (err) { handleFirestoreError(err, 'write', 'posyandu_kegiatan'); }
@@ -7744,7 +7823,20 @@ function PosyanduView({
   // Dashboard Stats
   const stats = {
     totalBalita: balitaData.length,
-    ibuHamil: ibuHamilData.length,
+    balitaSehat: balitaData.filter((b: any) => b.statusStunting === 'Normal').length,
+    balitaRisiko: balitaData.filter((b: any) => b.statusStunting === 'Risiko Stunting').length,
+    balitaStunting: balitaData.filter((b: any) => b.statusStunting === 'Stunting').length,
+    
+    totalIbuHamil: ibuHamilData.length,
+    ibuHamilRisiko: ibuHamilData.filter((i: any) => (i.riwayatKesehatan || '').toLowerCase().includes('risiko')).length,
+    
+    totalLansia: wargaData.filter((w: any) => typeof calculateAge(w.tglLahir) === 'number' && calculateAge(w.tglLahir) >= 60).length,
+    
+    totalPosbindu: pemeriksaanPosbinduData.length,
+    posbinduHipertensi: pemeriksaanPosbinduData.filter((p: any) => p.tekananDarah && parseInt(p.tekananDarah.toString().split('/')[0]) >= 140).length,
+    posbinduAsamUrat: pemeriksaanPosbinduData.filter((p: any) => p.asamUrat && parseFloat(p.asamUrat) > 7).length,
+    posbinduGulaDarah: pemeriksaanPosbinduData.filter((p: any) => p.gulaDarah && parseFloat(p.gulaDarah) > 200).length,
+    
     posyanduTerakhir: posyanduKegiatanData.sort((a: any, b: any) => b.tanggal.localeCompare(a.tanggal))[0],
     stuntingCount: balitaData.filter((b: any) => b.statusStunting === 'Stunting').length,
     risikoStunting: balitaData.filter((b: any) => b.statusStunting === 'Risiko Stunting').length
@@ -7847,7 +7939,7 @@ function PosyanduView({
             <Baby className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Posyandu</h2>
+            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Kesehatan Warga</h2>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Manajemen Kesehatan Ibu & Anak</p>
           </div>
         </div>
@@ -7856,6 +7948,7 @@ function PosyanduView({
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'balita', label: 'Balita', icon: Users },
             { id: 'ibuhamil', label: 'Ibu Hamil', icon: HeartPulse },
+            { id: 'posbindu', label: 'Posbindu', icon: Activity },
             { id: 'kegiatan', label: 'Kegiatan', icon: Calendar },
           ].map(tab => (
             <button
@@ -7876,22 +7969,27 @@ function PosyanduView({
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Total Balita</p>
-              <p className="text-2xl font-black text-slate-800">{stats.totalBalita}</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ibu Hamil</p>
-              <p className="text-2xl font-black text-pink-600">{stats.ibuHamil}</p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm">
-              <p className="text-[10px] text-red-600 font-bold uppercase tracking-widest mb-1">Kasus Stunting</p>
-              <p className="text-2xl font-black text-red-700">{stats.stuntingCount}</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Risiko Stunting</p>
-              <div className="flex items-center justify-between">
-                <p className="text-2xl font-black text-orange-700">{stats.risikoStunting}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Total Balita ({stats.totalBalita})</p>
+              <div className="flex gap-2 text-[10px] font-bold">
+                <span className="text-green-600">Sehat: {stats.balitaSehat}</span>
+                <span className="text-orange-600">Risiko: {stats.balitaRisiko}</span>
+                <span className="text-red-600">Stunting: {stats.balitaStunting}</span>
               </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ibu Hamil ({stats.totalIbuHamil})</p>
+              <p className="text-[10px] font-bold text-pink-600">Risiko Tinggi: {stats.ibuHamilRisiko}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Lansia</p>
+              <p className="text-2xl font-black text-blue-600">{stats.totalLansia}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Posbindu ({stats.totalPosbindu})</p>
+              <p className="text-[10px] font-bold text-red-600">Hipertensi: {stats.posbinduHipertensi}</p>
+              <p className="text-[10px] font-bold text-orange-600">Asam Urat: {stats.posbinduAsamUrat}</p>
+              <p className="text-[10px] font-bold text-blue-600">Gula Darah: {stats.posbinduGulaDarah}</p>
+              <p className="text-[9px] text-slate-400 mt-2 italic">* Jantung, Paru, Mata, & Ginjal belum terlacak.</p>
             </div>
           </div>
 
@@ -7923,7 +8021,7 @@ function PosyanduView({
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
               <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <span className="w-1.5 h-4 bg-blue-500 rounded-full"></span>
-                Jadwal Posyandu Terakhir / Mendatang
+                Jadwal Kesehatan Warga Terakhir / Mendatang
               </h3>
               {stats.posyanduTerakhir ? (
                 <div className="flex-1 flex flex-col justify-center text-center p-6 bg-slate-50 rounded-2xl border border-slate-100">
@@ -7940,6 +8038,174 @@ function PosyanduView({
                 <div className="flex-1 flex items-center justify-center text-slate-400 italic text-sm">Belum ada kegiatan dijadwalkan.</div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'posbindu' && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col gap-2">
+            <div className="flex flex-row items-center gap-2">
+              <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Cari warga..." 
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleImportExcel}
+                />
+              </div>
+              <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Upload className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => {
+                   const doc = new jsPDF();
+                   doc.text("Laporan Posbindu", 10, 10);
+                   autoTable(doc, {
+                       head: [['NIK', 'Nama', 'TD', 'GDS']],
+                       body: pemeriksaanPosbinduData.map(p => [p.nik, p.nama, p.tekananDarah, p.gulaDarah])
+                   });
+                   doc.save(`Laporan_Posbindu_${new Date().toISOString().split('T')[0]}.pdf`);
+                }}
+                className="p-2 bg-white border border-slate-200 rounded-lg text-red-600 hover:bg-red-50"
+              >
+                <FileText className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => {
+                  const ws = XLSX.utils.json_to_sheet(pemeriksaanPosbinduData);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, "Posbindu");
+                  XLSX.writeFile(wb, `Data_Posbindu_${new Date().toISOString().split('T')[0]}.xlsx`);
+                }}
+                className="p-2 bg-white border border-slate-200 rounded-lg text-green-600 hover:bg-green-50"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex justify-center">
+              <button 
+                onClick={() => { setEditingPosbinduItem(null); setShowPosbinduForm(true); }}
+                className="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-pink-700 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Tambah Pemeriksaan
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs uppercase bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-6 py-3">Nama</th>
+                  <th className="px-6 py-3">Tanggal</th>
+                  <th className="px-6 py-3">Tekanan Darah</th>
+                  <th className="px-6 py-3">Gula Darah</th>
+                  <th className="px-6 py-3">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pemeriksaanPosbinduData
+                  .filter((item: any) => item.nama?.toLowerCase().includes(searchQuery.toLowerCase()) || item.nik?.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map((item: any) => (
+                  <tr key={item.id}>
+                    <td className="px-6 py-3 font-bold">{item.nama}</td>
+                    <td className="px-6 py-3">{item.tanggal}</td>
+                    <td className="px-6 py-3">{item.tekananDarah}</td>
+                    <td className="px-6 py-3">{item.gulaDarah} mg/dL</td>
+                    <td className="px-6 py-3">
+                      <button onClick={() => { setEditingPosbinduItem(item); setShowPosbinduForm(true); }} className="text-blue-600 hover:text-blue-800 font-bold">Edit</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {showPosbinduForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <h3 className="text-xl font-black text-slate-800 mb-6">{editingPosbinduItem ? 'Edit' : 'Tambah'} Pemeriksaan Posbindu</h3>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const data = {
+                tenantId,
+                nama: formData.get('nama'),
+                nik: formData.get('nik'),
+                tanggalLahir: formData.get('tanggalLahir'),
+                gender: formData.get('gender'),
+                alamat: formData.get('alamat'),
+                merokok: formData.get('merokok') === 'on' ? 'true' : 'false',
+                aktivitasFisik: formData.get('aktivitasFisik'),
+                tanggal: new Date().toISOString().split('T')[0],
+                beratBadan: formData.get('beratBadan'),
+                tinggiBadan: formData.get('tinggiBadan'),
+                tekananDarah: formData.get('tekananDarah'),
+                gulaDarah: formData.get('gulaDarah'),
+                kolesterol: formData.get('kolesterol'),
+                asamUrat: formData.get('asamUrat'),
+              };
+              
+              try {
+                if (editingPosbinduItem) {
+                  await setDoc(doc(db, 'pemeriksaan_posbindu', editingPosbinduItem.id), data, { merge: true });
+                } else {
+                  await setDoc(doc(db, 'pemeriksaan_posbindu', `PB-${Date.now()}`), { ...data, id: `PB-${Date.now()}` });
+                }
+                showNotification("Data Posbindu berhasil disimpan!");
+                setShowPosbinduForm(false);
+              } catch (err) {
+                handleFirestoreError(err, 'write', 'pemeriksaan_posbindu');
+              }
+            }} className="space-y-4">
+              <input name="nik" placeholder="NIK" defaultValue={editingPosbinduItem?.nik} className="w-full p-3 border rounded-xl" required />
+              <input name="nama" placeholder="Nama" defaultValue={editingPosbinduItem?.nama} className="w-full p-3 border rounded-xl" required />
+              <div className="grid grid-cols-2 gap-4">
+                <input name="tanggalLahir" placeholder="Tanggal Lahir" defaultValue={editingPosbinduItem?.tanggalLahir} type="date" className="w-full p-3 border rounded-xl" />
+                <select name="gender" defaultValue={editingPosbinduItem?.gender} className="w-full p-3 border rounded-xl">
+                    <option value="">Jenis Kelamin</option>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                </select>
+              </div>
+              <input name="alamat" placeholder="Alamat (RT/RW)" defaultValue={editingPosbinduItem?.alamat} className="w-full p-3 border rounded-xl" />
+              <div className="grid grid-cols-2 gap-4">
+                <input name="beratBadan" placeholder="BB (kg)" defaultValue={editingPosbinduItem?.beratBadan} type="number" className="w-full p-3 border rounded-xl" />
+                <input name="tinggiBadan" placeholder="TB (cm)" defaultValue={editingPosbinduItem?.tinggiBadan} type="number" className="w-full p-3 border rounded-xl" />
+              </div>
+              <input name="tekananDarah" placeholder="Tekanan Darah (Cth: 120/80)" defaultValue={editingPosbinduItem?.tekananDarah} className="w-full p-3 border rounded-xl" />
+              <div className="grid grid-cols-3 gap-2">
+                <input name="gulaDarah" placeholder="GDS" defaultValue={editingPosbinduItem?.gulaDarah} type="number" className="p-3 border rounded-xl" />
+                <input name="kolesterol" placeholder="Kol" defaultValue={editingPosbinduItem?.kolesterol} type="number" className="p-3 border rounded-xl" />
+                <input name="asamUrat" placeholder="AU" defaultValue={editingPosbinduItem?.asamUrat} type="number" className="p-3 border rounded-xl" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex items-center gap-2">
+                    <input name="merokok" type="checkbox" defaultChecked={editingPosbinduItem?.merokok === 'true'} /> Merokok
+                </label>
+                <select name="aktivitasFisik" defaultValue={editingPosbinduItem?.aktivitasFisik} className="w-full p-3 border rounded-xl">
+                    <option value="">Aktivitas Fisik</option>
+                    <option value="Ringan">Ringan (Jarang gerak)</option>
+                    <option value="Sedang">Sedang (Jalan rutin)</option>
+                    <option value="Berat">Berat (Olahraga rutin)</option>
+                </select>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button type="button" onClick={() => setShowPosbinduForm(false)} className="flex-1 p-3 border rounded-xl">Batal</button>
+                <button type="submit" className="flex-1 p-3 bg-blue-600 text-white rounded-xl">Simpan</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -7968,7 +8234,7 @@ function PosyanduView({
                 />
                 <button 
                   onClick={() => fileInputRef.current?.click()} 
-                  className="p-1.5 bg-white border border-slate-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" 
+                  className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" 
                   title="Impor Database (Excel/CSV)"
                 >
                   <Upload className="w-4 h-4" />
@@ -7989,6 +8255,7 @@ function PosyanduView({
                 </button>
               </div>
             </div>
+          <div className="flex justify-center">
             <button 
               onClick={() => { setEditingItem(null); setShowBalitaForm(true); }}
               className="px-4 py-2 bg-pink-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-pink-100 hover:bg-pink-700 flex items-center gap-2 transition-all active:scale-95"
@@ -7997,6 +8264,7 @@ function PosyanduView({
               Daftar Balita
             </button>
           </div>
+        </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -8260,7 +8528,7 @@ function PosyanduView({
                 />
                 <button 
                   onClick={() => fileInputRefIbuHamil.current?.click()} 
-                  className="p-1.5 bg-white border border-slate-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" 
+                  className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" 
                   title="Impor Database (Excel/CSV)"
                 >
                   <Upload className="w-4 h-4" />
@@ -8348,7 +8616,7 @@ function PosyanduView({
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
              <div className="flex items-center gap-3">
-               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Jadwal & Agenda Posyandu</h3>
+               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Jadwal & Agenda Kesehatan Warga</h3>
                <div className="flex gap-2">
                  <button onClick={exportKegiatanPDF} className="p-1.5 bg-white border border-slate-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors" title="Export PDF">
                    <FileText className="w-4 h-4" />
@@ -8532,7 +8800,7 @@ function PosyanduView({
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
                  <h3 className="font-bold flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
-                    {editingItem ? 'Edit Jadwal Posyandu' : 'Buat Jadwal Posyandu'}
+                    {editingItem ? 'Edit Jadwal Kesehatan Warga' : 'Buat Jadwal Kesehatan Warga'}
                  </h3>
                  <button onClick={() => setShowKegiatanForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
               </div>
@@ -8544,7 +8812,7 @@ function PosyanduView({
                     </div>
                     <div>
                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Lokasi Kegiatan</label>
-                       <input type="text" name="lokasi" required defaultValue={editingItem?.lokasi || 'Posyandu RT 01'} placeholder="Cth: Balai Warga RT 01..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500" />
+                       <input type="text" name="lokasi" required defaultValue={editingItem?.lokasi || 'Kesehatan Warga RT 01'} placeholder="Cth: Balai Warga RT 01..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500" />
                     </div>
                     <div>
                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Keterangan / Agenda</label>
