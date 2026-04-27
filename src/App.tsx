@@ -438,6 +438,12 @@ export default function App() {
   const confirmSOS = async () => {
     setIsSOSConfirmOpen(false);
     setIsSOSTriggering(true);
+    
+    // Add vibration for supported devices
+    if ('vibrate' in navigator) {
+      navigator.vibrate([300, 100, 300, 100, 300, 100, 500]);
+    }
+
     try {
       const id = `SOS-${Date.now()}`;
       let userLocation = "Lokasi Tidak Diketahui";
@@ -1134,9 +1140,9 @@ export default function App() {
               }`}
             >
               <div className={`transition-all duration-300 ${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'}`}>
-                <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-brand-blue' : 'text-slate-400 group-hover:text-brand-blue'}`} />
+                <item.icon className={`w-6 h-6 ${activeTab === item.id ? 'text-brand-blue' : 'text-slate-400 group-hover:text-brand-blue'}`} />
               </div>
-              <span className={`text-[11px] font-bold tracking-tight ${activeTab === item.id ? 'translate-x-1' : 'group-hover:translate-x-1'} transition-transform uppercase`}>
+              <span className={`text-sm font-bold tracking-tight ${activeTab === item.id ? 'translate-x-1' : 'group-hover:translate-x-1'} transition-transform uppercase`}>
                 {item.label}
               </span>
               {activeTab === item.id && (
@@ -1298,20 +1304,20 @@ export default function App() {
               <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-red-50">
                 <Siren className="w-12 h-12 text-red-600 animate-pulse" />
               </div>
-              <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-4">Kirimi Sinyal Darurat?</h2>
-              <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8 px-4">
+              <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4">Kirimi Sinyal Darurat?</h2>
+              <p className="text-slate-600 text-base font-medium leading-relaxed mb-8 px-2">
                 Tindakan ini akan memberitahukan seluruh pengurus dan warga RW26 secara instan. Gunakan hanya untuk keadaan mendesak.
               </p>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                  <button 
                    onClick={confirmSOS}
-                   className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-xl shadow-red-200"
+                   className="w-full py-5 bg-red-600 text-white rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-xl shadow-red-200"
                  >
                    Ya, Kirim SOS Sekarang
                  </button>
                  <button 
                    onClick={() => setIsSOSConfirmOpen(false)}
-                   className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                   className="w-full py-5 bg-slate-100 text-slate-600 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-slate-200 transition-all active:scale-95"
                  >
                    Batal
                  </button>
@@ -1892,12 +1898,12 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
           <button 
             key={item.id}
             onClick={item.action}
-            className="bg-white/80 backdrop-blur-sm p-4 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-2 group active:scale-95"
+            className="bg-white/80 backdrop-blur-sm p-5 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95"
           >
-            <div className={`w-12 h-12 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner`}>
-              <item.icon className={`w-6 h-6 text-${item.color}`} />
+            <div className={`w-14 h-14 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner`}>
+              <item.icon className={`w-8 h-8 text-${item.color}`} />
             </div>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{item.label}</span>
+            <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">{item.label}</span>
           </button>
         ))}
       </div>
@@ -7904,13 +7910,13 @@ function PosyanduView({
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${
+              className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${
                 activeSubTab === tab.id 
                   ? 'bg-white text-brand-pink shadow-lg shadow-pink-100 border border-pink-50' 
                   : 'text-slate-500 hover:bg-white/50'
               }`}
             >
-              <tab.icon className={`w-4 h-4 ${activeSubTab === tab.id ? 'animate-bounce-slow' : ''}`} />
+              <tab.icon className={`w-5 h-5 ${activeSubTab === tab.id ? 'animate-bounce-slow' : ''}`} />
               {tab.label}
             </button>
           ))}
@@ -7920,67 +7926,67 @@ function PosyanduView({
       {activeSubTab === 'dashboard' && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-blue-100/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Baby className="w-16 h-16 text-brand-pink" />
+            <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Baby className="w-20 h-20 text-brand-pink" />
               </div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Total Balita</p>
-              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalBalita}</p>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-[10px] font-bold p-2 bg-soft-green rounded-lg">
-                  <span className="text-slate-500">SEHAT</span>
-                  <span className="text-emerald-600 font-black">{stats.balitaSehat}</span>
+              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Total Balita</p>
+              <p className="text-4xl font-black text-slate-800 mb-5">{stats.totalBalita}</p>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between text-xs font-bold p-3 bg-soft-green rounded-xl">
+                  <span className="text-slate-500 uppercase tracking-tighter">SEHAT</span>
+                  <span className="text-emerald-600 font-black text-lg">{stats.balitaSehat}</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-bold p-2 bg-soft-yellow rounded-lg">
-                  <span className="text-slate-500">RISIKO</span>
-                  <span className="text-amber-600 font-black">{stats.balitaRisiko}</span>
+                <div className="flex items-center justify-between text-xs font-bold p-3 bg-soft-yellow rounded-xl">
+                  <span className="text-slate-500 uppercase tracking-tighter">RISIKO</span>
+                  <span className="text-amber-600 font-black text-lg">{stats.balitaRisiko}</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-bold p-2 bg-soft-pink rounded-lg">
-                  <span className="text-slate-500">STUNTING</span>
-                  <span className="text-brand-pink font-black">{stats.balitaStunting}</span>
+                <div className="flex items-center justify-between text-xs font-bold p-3 bg-soft-pink rounded-xl">
+                  <span className="text-slate-500 uppercase tracking-tighter">STUNTING</span>
+                  <span className="text-brand-pink font-black text-lg">{stats.balitaStunting}</span>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-pink-100/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <HeartPulse className="w-16 h-16 text-brand-pink" />
+            <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-pink-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <HeartPulse className="w-20 h-20 text-brand-pink" />
               </div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Ibu Hamil</p>
-              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalIbuHamil}</p>
-              <div className="p-3 bg-soft-pink rounded-xl border border-pink-100">
+              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Ibu Hamil</p>
+              <p className="text-4xl font-black text-slate-800 mb-5">{stats.totalIbuHamil}</p>
+              <div className="p-4 bg-soft-pink rounded-2xl border border-pink-100">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">Risiko Tinggi</span>
-                  <span className="text-brand-pink font-black text-lg">{stats.ibuHamilRisiko}</span>
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">Risiko Tinggi</span>
+                  <span className="text-brand-pink font-black text-2xl">{stats.ibuHamilRisiko}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-purple-100/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Activity className="w-16 h-16 text-brand-purple" />
+            <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-purple-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Activity className="w-20 h-20 text-brand-purple" />
               </div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Warga Lansia</p>
-              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalLansia}</p>
-              <div className="p-3 bg-soft-purple rounded-xl border border-purple-100">
-                <p className="text-[10px] font-bold text-brand-purple uppercase tracking-widest">Monitoring Rutin</p>
+              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Warga Lansia</p>
+              <p className="text-4xl font-black text-slate-800 mb-5">{stats.totalLansia}</p>
+              <div className="p-4 bg-soft-purple rounded-2xl border border-purple-100">
+                <p className="text-xs font-black text-brand-purple uppercase tracking-widest">Monitoring Rutin</p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-blue-100/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Stethoscope className="w-16 h-16 text-brand-blue" />
+            <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-100/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Stethoscope className="w-20 h-20 text-brand-blue" />
               </div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Monitoring Posbindu</p>
-              <p className="text-3xl font-black text-slate-800 mb-4">{stats.totalPosbindu}</p>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <div className="p-2 bg-slate-50 rounded-lg text-center">
-                  <p className="text-[8px] font-bold text-slate-400 uppercase">Hipertensi</p>
-                  <p className="text-xs font-black text-red-500">{stats.posbinduHipertensi}</p>
+              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Pemeriksaan Posbindu</p>
+              <p className="text-4xl font-black text-slate-800 mb-5">{stats.totalPosbindu}</p>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <div className="p-3 bg-slate-50 rounded-xl text-center border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">Hipertensi</p>
+                  <p className="text-xl font-black text-red-500">{stats.posbinduHipertensi}</p>
                 </div>
-                <div className="p-2 bg-slate-50 rounded-lg text-center">
-                  <p className="text-[8px] font-bold text-slate-400 uppercase">Gula Darah</p>
-                  <p className="text-xs font-black text-brand-blue">{stats.posbinduGulaDarah}</p>
+                <div className="p-3 bg-slate-50 rounded-xl text-center border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">Gula Darah</p>
+                  <p className="text-xl font-black text-brand-blue">{stats.posbinduGulaDarah}</p>
                 </div>
               </div>
             </div>
@@ -8045,7 +8051,7 @@ function PosyanduView({
                   <input 
                     type="text" 
                     placeholder="Cari warga..." 
-                    className="w-full md:w-80 pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-brand-pink/20 focus:border-brand-pink outline-none shadow-inner transition-all"
+                    className="w-full md:w-96 pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-base focus:ring-4 focus:ring-brand-pink/10 focus:border-brand-pink outline-none shadow-inner transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
