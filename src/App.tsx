@@ -2716,21 +2716,21 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                 onChange={handleFilterChange(setFilterRW)}
                 className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
               >
-                {uniqueRWs.map(rw => <option key={`rw-${rw}`} value={rw}>RW {rw === 'Semua' ? 'Semua' : rw}</option>)}
+                {uniqueRWs.map(rw => <option key={`rw-${rw}`} value={rw}>{rw === 'Semua' ? 'RW' : 'RW ' + rw}</option>)}
               </select>
               <select 
                 value={filterRT}
                 onChange={handleFilterChange(setFilterRT)}
                 className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
               >
-                {uniqueRTs.map(rt => <option key={`rt-${rt}`} value={rt}>RT {rt === 'Semua' ? 'Semua' : rt}</option>)}
+                {uniqueRTs.map(rt => <option key={`rt-${rt}`} value={rt}>{rt === 'Semua' ? 'RT' : 'RT ' + rt}</option>)}
               </select>
               <select 
                 value={filterKategoriUmur}
                 onChange={handleFilterChange(setFilterKategoriUmur)}
                 className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
               >
-                <option value="Semua">Semua Umur</option>
+                <option value="Semua">Usia</option>
                 <option value="Balita">Balita (0-5)</option>
                 <option value="Remaja">Remaja (6-17)</option>
                 <option value="Dewasa">Dewasa (18-59)</option>
@@ -3066,7 +3066,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                     <option value="Istri">Istri</option>
                     <option value="Anak">Anak</option>
                     <option value="Cucu">Cucu</option>
-                    <option value="Famili lain">Famili lain</option>
+                    <option value="Family Lain">Family Lain</option>
                     <option value="Lainya">Lainya</option>
                   </select>
                 </div>
