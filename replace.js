@@ -1,0 +1,12 @@
+import fs from 'fs';
+let code = fs.readFileSync('src/App.tsx', 'utf8');
+code = code.replace(/backdrop-blur-md/g, '');
+code = code.replace(/backdrop-blur-xl/g, '');
+code = code.replace(/backdrop-blur-sm/g, '');
+code = code.replace(/backdrop-blur-2xl/g, '');
+code = code.replace(/backdrop-blur-lg/g, '');
+code = code.replace(/bg-mesh/g, 'bg-slate-50');
+code = code.replace(/animate-float/g, '');
+code = code.replace(/animate-pulse/g, '');
+fs.writeFileSync('src/App.tsx', code);
+console.log('Done replacement!');

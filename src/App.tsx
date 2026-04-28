@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -402,6 +402,7 @@ export default function App() {
   const [emergenciesData, setEmergenciesData] = useState<any[]>([]);
   const [verifikasiWargaData, setVerifikasiWargaData] = useState<any[]>([]);
   const [isSOSTriggering, setIsSOSTriggering] = useState(false);
+  const [hiddenEmergencyId, setHiddenEmergencyId] = useState<string | null>(null);
 
   const [usersData, setUsersData] = useState<any[]>([]);
   const [tenantsData, setTenantsData] = useState<any[]>([]);
@@ -412,7 +413,18 @@ export default function App() {
   const [dbError, setDbError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  const activeEmergency = emergenciesData.find(e => e.status === 'ACTIVE');
+  const activeEmergency = emergenciesData.find(e => e.status === 'ACTIVE' && e.id !== hiddenEmergencyId);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    // Additional generic cleanup or logic for emergencies can go here.
+    // The actual audio playing logic has been moved to SOSOverlay.
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeEmergency]);
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setNotification({ message, type });
@@ -432,6 +444,14 @@ export default function App() {
 
   const handleTriggerSOS = async () => {
     if (!currentUser) return;
+    
+    // Feedback getar saat tombol SOS awal ditekan
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate([200]); // Getar pendek
+      } catch (e) {}
+    }
+    
     setIsSOSConfirmOpen(true);
   };
 
@@ -441,7 +461,33 @@ export default function App() {
     
     // Add vibration for supported devices
     if ('vibrate' in navigator) {
-      navigator.vibrate([300, 100, 300, 100, 300, 100, 500]);
+      try {
+        navigator.vibrate([1000, 500, 1000, 500]);
+      } catch (e) {}
+    }
+
+    // Play immediate war sound
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+      oscillator.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 1.5);
+      oscillator.frequency.linearRampToValueAtTime(300, audioCtx.currentTime + 3);
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5);
+      gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 2.5);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 3);
+    } catch (e) {
+      console.error("Audio API warning/not supported", e);
     }
 
     try {
@@ -1005,7 +1051,7 @@ export default function App() {
 
   if (isAuthInitializing) {
     return (
-      <div className="min-h-screen bg-mesh flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="relative">
           <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
           <Baby className="w-8 h-8 text-brand-pink absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce-slow" />
@@ -1043,16 +1089,21 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-mesh text-slate-900 font-sans print:h-auto print:bg-white text-sm relative">
+    <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans print:h-auto print:bg-white text-sm relative">
       {/* SOS EMERGENCY OVERLAY */}
       <AnimatePresence>
         {activeEmergency && (
-          <SOSOverlay emergency={activeEmergency} onResolve={handleResolveSOS} canResolve={currentUser.role !== 'Viewer'} />
+          <SOSOverlay 
+            emergency={activeEmergency} 
+            onResolve={handleResolveSOS} 
+            onCloseLocal={() => setHiddenEmergencyId(activeEmergency.id)}
+            canResolve={currentUser.role !== 'Viewer' || auth.currentUser?.uid === activeEmergency.userId}
+          />
         )}
       </AnimatePresence>
 
       {isLoadingDB && (
-        <div className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+        <div className="fixed inset-0 z-[9999] bg-white/80  flex flex-col items-center justify-center p-6 text-center">
           <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Sinkronisasi Database</h2>
           <p className="text-slate-500 max-w-xs mx-auto">Mohon tunggu sebentar, sistem sedang memuat data dari Firebase...</p>
@@ -1062,18 +1113,18 @@ export default function App() {
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-slate-900/60  z-40 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white/90 backdrop-blur-md border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'}`}>
+      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white/90  border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'}`}>
         <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between bg-white relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-all"></div>
           <div className="relative z-10">
             <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-2 font-elegant">
-              <img src="/logo_rw26.png" alt="Logo RW 26" className="w-8 h-8 animate-float" referrerPolicy="no-referrer" />
+              <img src="/logo_rw26.png" alt="Logo RW 26" className="w-8 h-8 " referrerPolicy="no-referrer" />
               RW 26 <span className="text-brand-pink">SMART</span>
             </h1>
             <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Berdampak & Memberdayakan</p>
@@ -1087,7 +1138,7 @@ export default function App() {
         </div>
         <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 border-b border-slate-100">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-brand-green animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
+            <div className="w-2 h-2 rounded-full bg-brand-green  shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sistem Pintar Aktif</p>
           </div>
           <div className="p-2 bg-soft-blue rounded-xl border border-blue-100">
@@ -1167,7 +1218,7 @@ export default function App() {
              <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded border border-slate-200 uppercase font-mono tracking-wider hidden sm:inline-block">
                GAS-DB-V4
              </span>
-             <div className="flex items-center gap-1.5 bg-green-50 text-green-600 text-[10px] px-2 py-1 rounded border border-green-100 uppercase font-bold tracking-wider animate-pulse">
+             <div className="flex items-center gap-1.5 bg-green-50 text-green-600 text-[10px] px-2 py-1 rounded border border-green-100 uppercase font-bold tracking-wider ">
                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                Live Sync Active
              </div>
@@ -1286,7 +1337,7 @@ export default function App() {
           {isSOSTriggering ? (
             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
-            <Siren className="w-8 h-8 group-hover:animate-pulse" />
+            <Siren className="w-8 h-8 group-hover:" />
           )}
         </motion.button>
       )}
@@ -1294,7 +1345,7 @@ export default function App() {
       {/* SOS CONFIRMATION MODAL */}
       <AnimatePresence>
         {isSOSConfirmOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 ">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -1302,7 +1353,7 @@ export default function App() {
               className="bg-white w-full max-w-sm rounded-[32px] p-8 text-center shadow-2xl border border-red-100"
             >
               <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-red-50">
-                <Siren className="w-12 h-12 text-red-600 animate-pulse" />
+                <Siren className="w-12 h-12 text-red-600 " />
               </div>
               <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4">Kirimi Sinyal Darurat?</h2>
               <p className="text-slate-600 text-base font-medium leading-relaxed mb-8 px-2">
@@ -1330,55 +1381,74 @@ export default function App() {
   );
 }
 
-function SOSOverlay({ emergency, onResolve, canResolve }: any) {
+function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
+  const [isMuted, setIsMuted] = useState(false);
+
   useEffect(() => {
-    // Vibration: Urgent pattern
-    if (navigator.vibrate) {
-      // Repeat long pulses for urgency
-      const pattern = Array(24).fill([500, 200]).flat();
-      navigator.vibrate(pattern);
+    let interval: NodeJS.Timeout;
+    let audioCtx: AudioContext | null = null;
+    
+    if (!isMuted) {
+      const playPulse = () => {
+        // Vibrate for all supported devices
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          try {
+            navigator.vibrate([1000, 500, 1000, 500]);
+          } catch (e) {}
+        }
+
+        // Sound Notification using Web Audio API (Suara Sinyal Perang)
+        try {
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+
+          // Sinyal Perang: Sweeping frequency
+          oscillator.type = 'sawtooth';
+          oscillator.frequency.setValueAtTime(300, audioCtx.currentTime); 
+          oscillator.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 1.5); 
+          oscillator.frequency.linearRampToValueAtTime(300, audioCtx.currentTime + 3); 
+
+          // Volume curve
+          gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+          gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5);
+          gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 2.5);
+          gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 3);
+        } catch (e) {
+          console.error("Audio API warning/not supported", e);
+        }
+      };
+
+      // Play immediately
+      playPulse();
+      // Repeat every 3 seconds to match the siren length
+      interval = setInterval(playPulse, 3000);
+    } else {
+      // Stop vibration if muted
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try { navigator.vibrate(0); } catch(e){}
+      }
     }
 
-    // Audio - Police Siren (Yelp/Wail style)
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    let count = 0;
-    const playSiren = () => {
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-
-      // Police Yelp Style: Fast frequency sweep
-      oscillator.type = 'triangle'; // Richer sound than sine
-      oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
-      oscillator.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.25);
-      oscillator.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 0.5);
-      oscillator.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.75);
-      oscillator.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 1.0);
-      
-      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.0);
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 1.0);
-    };
-
-    playSiren();
-    const interval = setInterval(() => {
-      count++;
-      if (count < 12) { // Loop 12 times as requested
-        playSiren();
-      } else {
-        clearInterval(interval);
-      }
-    }, 1000);
-
     return () => {
-      clearInterval(interval);
-      audioCtx.close();
+      if (interval) clearInterval(interval);
+      if (audioCtx && audioCtx.state !== 'closed') {
+        try { audioCtx.close(); } catch(e){}
+      }
     };
-  }, []);
+  }, [isMuted]);
 
   return (
     <motion.div 
@@ -1398,16 +1468,16 @@ function SOSOverlay({ emergency, onResolve, canResolve }: any) {
          <motion.div 
            animate={{ scale: [1, 1.2, 1] }} 
            transition={{ repeat: Infinity, duration: 1 }}
-           className="w-24 h-24 sm:w-32 sm:h-32 bg-white/20 rounded-full flex items-center justify-center mb-8 backdrop-blur-md"
+           className="w-24 h-24 sm:w-32 sm:h-32 bg-white/20 rounded-full flex items-center justify-center mb-8 "
          >
-            <Siren className="w-12 h-12 sm:w-16 sm:h-16 text-white animate-pulse" />
+            <Siren className="w-12 h-12 sm:w-16 sm:h-16 text-white " />
          </motion.div>
 
          <h1 className="text-4xl sm:text-6xl font-black mb-4 tracking-tighter uppercase italic">
            Sinyal Darurat Aktif!
          </h1>
          
-         <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 sm:p-8 rounded-3xl w-full mb-8 shadow-2xl">
+         <div className="bg-white/10  border border-white/20 p-6 sm:p-8 rounded-3xl w-full mb-8 shadow-2xl">
             <div className="flex flex-col gap-4 text-left">
                <div className="flex items-center gap-4 border-b border-white/10 pb-4">
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden">
@@ -1483,14 +1553,45 @@ function SOSOverlay({ emergency, onResolve, canResolve }: any) {
            Membutuhkan Pertolongan Segera!
          </p>
 
+         {/* Maps Navigation Button */}
+         {emergency.latitude && emergency.longitude && (
+           <button 
+             onClick={() => window.open(`https://www.google.com/maps?q=${emergency.latitude},${emergency.longitude}`, '_blank')}
+             className="px-10 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-2xl mb-4 flex items-center justify-center gap-2"
+           >
+             <MapPin className="w-6 h-6" />
+             CEK LOKASI KEJADIAN
+           </button>
+         )}
+
+         {/* Global Resolve Button */}
          {canResolve && (
             <button 
               onClick={() => onResolve(emergency.id)}
-              className="px-10 py-5 bg-white text-red-600 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-slate-100 transition-all active:scale-95 shadow-2xl"
+              className="px-10 py-5 bg-white text-red-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-slate-100 transition-all active:scale-95 shadow-2xl mb-4 flex items-center justify-center gap-2"
             >
-              Nonaktifkan Sinyal (Masalah Selesai)
+              <CheckCircle className="w-6 h-6 border-2 border-red-600 rounded-full" />
+              STOP SOS & KEMBALI KE MENU UTAMA
             </button>
          )}
+
+         {/* Local actions: Mute and Hide */}
+         <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-2">
+           {!isMuted && (
+              <button 
+                onClick={() => setIsMuted(true)}
+                className="px-6 py-4 bg-red-700/50  border border-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <BellOff className="w-5 h-5" /> Stop Suara/Getar
+              </button>
+           )}
+           <button 
+             onClick={onCloseLocal}
+             className="px-6 py-4 bg-red-900/50  border border-red-800 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-950 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+           >
+             <X className="w-5 h-5" /> Tutup Paksa Mode SOS
+           </button>
+         </div>
          
          <p className="mt-8 text-[10px] font-bold opacity-60 uppercase tracking-widest">
             Sinyal ini terkirim ke seluruh warga RW26 SMART
@@ -1709,7 +1810,7 @@ function EVotingView({ userRole }: { userRole: string }) {
       </div>
 
       {showConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+        <div className="fixed inset-0 bg-black/50  flex items-center justify-center p-6 z-50">
           <div className="bg-white p-8 rounded-3xl max-w-sm w-full">
             <h3 className="text-xl font-black mb-4">Konfirmasi Pilihan</h3>
             <p className="mb-6">Anda yakin ingin memilih <span className="font-bold">{candidates.find(c => c.id === showConfirm)?.name}</span>?</p>
@@ -1851,7 +1952,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
                
                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex items-center gap-5">
-                     <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center animate-pulse backdrop-blur-md">
+                     <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center  ">
                         <Siren className="w-8 h-8 text-white" />
                      </div>
                      <div>
@@ -1869,7 +1970,13 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
                   
                   <div className="flex items-center gap-3 w-full md:w-auto">
                      <button 
-                       onClick={() => setActiveTab('dashboard')} // Refresh or just scroll to focus
+                       onClick={() => {
+                         if (activeSOS.latitude && activeSOS.longitude) {
+                           window.open(`https://www.google.com/maps?q=${activeSOS.latitude},${activeSOS.longitude}`, '_blank');
+                         } else {
+                           alert('Koordinat lokasi tidak tersedia.');
+                         }
+                       }}
                        className="flex-1 md:flex-none px-6 py-3 bg-white text-red-600 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-900/20 active:scale-95 transition-all"
                      >
                        Cek Lokasi
@@ -1898,7 +2005,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
           <button 
             key={item.id}
             onClick={item.action}
-            className="bg-white/80 backdrop-blur-sm p-5 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95"
+            className="bg-white/80  p-5 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95"
           >
             <div className={`w-14 h-14 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner`}>
               <item.icon className={`w-8 h-8 text-${item.color}`} />
@@ -2102,7 +2209,7 @@ function ConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4 print:hidden">
+    <div className="fixed inset-0 bg-slate-900/60  flex justify-center items-center z-[100] p-4 print:hidden">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2719,7 +2826,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
                     <button 
                       onClick={handleBulkDelete}
                       disabled={isDeletingWarga}
-                      className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 animate-pulse ring-2 ring-red-400 ring-offset-2"
+                      className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95  ring-2 ring-red-400 ring-offset-2"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>{isDeletingWarga ? 'Menghapus...' : `Hapus (${selectedWargaIds.length} item)`}</span>
@@ -2912,7 +3019,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
       {/* Modal Tambah/Edit Warga */}
       {(showAddForm || showEditForm) && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 ">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800">{showAddForm ? 'Tambah Data Warga' : 'Edit Data Warga'}</h3>
@@ -3152,7 +3259,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
       <AnimatePresence>
         {viewWarga && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 print:hidden">
+          <div className="fixed inset-0 bg-slate-900/60  flex justify-center items-center z-50 p-4 print:hidden">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -3283,7 +3390,7 @@ function PaymentModal({ amount, onClose, onConfirm }: { amount: number, onClose:
   const [method, setMethod] = useState('');
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+    <div className="fixed inset-0 bg-black/50  flex items-center justify-center p-6 z-50">
       <div className="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl">
         <h3 className="text-2xl font-black mb-2 text-slate-800">Pembayaran Digital</h3>
         <p className="text-slate-600 mb-6">Total Tagihan: <span className="font-bold text-blue-600">Rp {amount.toLocaleString()}</span></p>
@@ -3759,7 +3866,7 @@ function IuranView(f_params) {
 
       {/* Modal / Overlay Catat Pembayaran */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 print:hidden">
+        <div className="fixed inset-0 bg-slate-900/60  flex justify-center items-center z-50 p-4 print:hidden">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -4352,7 +4459,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
 
       {/* Modal / Overlay Pembuatan Surat */}
       {showSuratForm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 print:hidden">
+        <div className="fixed inset-0 bg-slate-900/60  flex justify-center items-center z-50 p-4 print:hidden">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -4902,7 +5009,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
 
       {/* Modal / Overlay Catat Pemasukan */}
       {showMasukForm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 print:hidden">
+        <div className="fixed inset-0 bg-slate-900/60  flex justify-center items-center z-50 p-4 print:hidden">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -5727,7 +5834,7 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setSelectedItem(null)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/40 "
             />
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
@@ -6062,7 +6169,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
             <LogOut className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 overflow-hidden shadow-lg">
+            <div className="w-20 h-20 rounded-2xl bg-white/20  flex items-center justify-center border border-white/30 overflow-hidden shadow-lg">
               {wargaData.foto ? (
                 <img src={wargaData.foto} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -6627,34 +6734,42 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md text-slate-900">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-brand-pink/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 "></div>
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-brand-blue/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 " style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-brand-yellow/20 rounded-full blur-2xl "></div>
+
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-200 mb-4 animate-[bounce_2s_infinite]">
-            <Users className="w-8 h-8" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-white shadow-xl shadow-brand-blue/20 mb-6 relative group isolate">
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue to-cyan-400 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity -z-10"></div>
+            <Users className="w-10 h-10 text-brand-blue group-hover:text-white transition-colors" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none">RW 26 BERJUANG</h1>
-          <p className="text-slate-500 font-medium mt-2 tracking-tight">Smart Management Information System (Firebase Edition)</p>
+          <h1 className="text-4xl font-black tracking-tight text-slate-800 uppercase leading-none font-elegant">
+            RW 26 <span className="text-brand-pink">SMART</span>
+          </h1>
+          <p className="text-slate-500 font-bold text-sm mt-3 tracking-tighter uppercase">Keluarga Hebat, Lingkungan Cerdas</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
-          <div className="flex border-b border-slate-100">
+        <div className="bg-white/90  rounded-[2.5rem] shadow-2xl shadow-slate-300/50 border border-white overflow-hidden">
+          <div className="flex border-b border-slate-100/50 bg-white/50 ">
             <button 
               onClick={() => setLoginMode('admin')}
-              className={`flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-all ${loginMode === 'admin' ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600 bg-slate-50'}`}
+              className={`flex-1 py-5 text-xs font-black uppercase tracking-widest transition-all ${loginMode === 'admin' ? 'text-brand-blue bg-white border-b-2 border-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
             >
-              Manajemen (Admin)
+              Pengurus
             </button>
             <button 
               onClick={() => setLoginMode('warga')}
-              className={`flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-all ${loginMode === 'warga' ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600 bg-slate-50'}`}
+              className={`flex-1 py-5 text-xs font-black uppercase tracking-widest transition-all ${loginMode === 'warga' ? 'text-brand-pink bg-white border-b-2 border-brand-pink shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
             >
-              Warga Mandiri
+              Warga
             </button>
           </div>
           <div className="p-8">
-            <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary text-slate-900">
-              {loginMode === 'admin' ? 'Masuk ke Sistem ERP' : 'Verifikasi Data Warga'}
+            <h2 className="text-xl font-black text-slate-800 mb-6 font-elegant tracking-tight">
+              {loginMode === 'admin' ? 'Masuk ke Sistem Pengurus' : 'Verifikasi Data Warga Utama'}
             </h2>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
@@ -6667,35 +6782,39 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
               <>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email / Username</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Email Pengelola</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <User className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
+                      </div>
                       <input
                         type="text"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                        placeholder="Contoh: admin@rw26.com atau admin"
+                        className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base"
+                        placeholder="Contoh: admin@rw26.com"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Kata Sandi</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <Lock className="w-6 h-6 text-slate-400 group-focus-within:text-brand-pink transition-colors" />
+                      </div>
                       <input
                         type={showPassword ? "text" : "password"}
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                        placeholder="Masukkan password"
+                        className="w-full pl-14 pr-14 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-bold text-base"
+                        placeholder="Masukkan sandi rahasia..."
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-pink transition-colors p-2 rounded-full hover:bg-pink-50"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -6704,26 +6823,26 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                    className="w-full bg-brand-blue hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base tracking-wide"
                   >
-                    {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Sekarang'}
+                    {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Ayo Masuk!'}
                   </button>
                 </form>
 
-                <div className="mt-6">
-                  <div className="relative mb-6">
+                <div className="mt-8">
+                  <div className="relative mb-8">
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-slate-100"></div>
+                      <div className="w-full border-t-2 border-slate-100 border-dashed"></div>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-4 text-slate-400 font-bold tracking-widest uppercase">Atau akses cepat</span>
+                    <div className="relative flex justify-center">
+                      <span className="bg-white px-6 py-2 rounded-full border border-slate-100 text-[10px] text-slate-400 font-black tracking-widest uppercase shadow-sm">Atau akses cepat</span>
                     </div>
                   </div>
 
                   <button 
                     onClick={handleGoogleLogin}
                     disabled={isLoading}
-                    className="w-full py-4 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-[0.98]"
+                    className="w-full py-5 bg-white border-2 border-slate-100 text-slate-700 rounded-[1.5rem] font-bold flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] shadow-sm"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -6738,64 +6857,71 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
             ) : (
               <form onSubmit={handleWargaLogin} className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Nomor Induk Kependudukan (NIK)</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Nomor Induk Kependudukan (NIK)</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                      <User className="w-6 h-6 text-slate-400 group-focus-within:text-brand-pink transition-colors" />
+                    </div>
                     <input
                       type="text"
                       required
                       maxLength={16}
                       value={nik}
                       onChange={(e) => setNik(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-bold text-base tracking-widest font-mono"
                       placeholder="16 Digit NIK Anda"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Kode Keluarga (No. KK / HP)</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Kode Keluarga (No. KK / HP)</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                      <Lock className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
+                    </div>
                     <input
                       type="password"
                       required
                       value={kodeKeluarga}
                       onChange={(e) => setKodeKeluarga(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
-                      placeholder="Masukkan Nomor KK Anda"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base tracking-widest font-mono"
+                      placeholder="Masukkan Kode Rahasia"
                     />
                   </div>
                 </div>
-                <div className="p-4 bg-blue-50 rounded-xl">
-                  <p className="text-[10px] text-blue-700 font-medium leading-relaxed italic">
-                    * Gunakan NIK dan No. KK untuk masuk. Fitur ini memungkinkan Anda memverifikasi data diri secara mandiri tanpa harus ke kantor RT.
+                <div className="p-5 bg-soft-pink rounded-[1.5rem] border border-pink-100 flex items-start gap-4">
+                  <div className="p-2 bg-white rounded-full shrink-0">
+                    <ShieldCheck className="w-6 h-6 text-brand-pink" />
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed pt-1">
+                    Verifikasi mandiri aman dengan NIK dan No. KK tanpa harus antri di Balai RW!
                   </p>
                 </div>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-lg shadow-slate-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                  className="w-full bg-brand-pink hover:bg-pink-500 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-pink-500/20 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base tracking-wide"
                 >
-                  {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Verifikasi Data Saya'}
+                  {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Cek Status Warga'}
                 </button>
               </form>
             )}
              
              {loginMode === 'admin' && (
-               <div className="mt-8 pt-6 border-t border-slate-100">
-                 <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Demo Quick Login</p>
-               <div className="grid grid-cols-1 gap-2">
-                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'arifrajcoach@gmail.com', '4R1f080162')} className="w-full bg-slate-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-slate-800">SUPER ADMIN</button>
-                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'admin@rw26.com', 'admin123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">ADMIN</button>
-                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'operator@rw26.com', 'operator123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">OPERATOR</button>
-                 <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'warga@rw26.com', 'warga123')} className="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-200">VIEWER</button>
+               <div className="mt-8 pt-8 border-t-2 border-slate-100 border-dashed">
+                 <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Awal Cepat Uji Coba</p>
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'arifrajcoach@gmail.com', '4R1f080162')} className="w-full bg-slate-50 hover:bg-brand-blue hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Super</button>
+                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'admin@rw26.com', 'admin123')} className="w-full bg-slate-50 hover:bg-brand-pink hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Admin</button>
+                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'operator@rw26.com', 'operator123')} className="w-full bg-slate-50 hover:bg-brand-yellow hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Kader</button>
+                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'warga@rw26.com', 'warga123')} className="w-full bg-slate-50 hover:bg-brand-green hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Warga</button>
                  </div>
-              </div>
-            )}
+               </div>
+             )}
           </div>
-          <div className="p-6 bg-slate-50 border-t border-slate-100 italic">
-            <p className="text-center text-[10px] text-slate-400">
-              Demo Users (Firestore): admin@rw26.com | operator@rw26.com | viewer@rw26.com
+          <div className="p-6 bg-white/50  border-t-2 border-white flex justify-center items-center">
+            <p className="text-center text-[10px] font-bold text-slate-400 flex items-center gap-2 uppercase tracking-widest">
+              <Baby className="w-4 h-4 text-brand-pink" /> 100% Ramah Anak & Keluarga
             </p>
           </div>
         </div>
@@ -6952,7 +7078,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
        </div>
 
        {showForm && (
-         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+         <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
             <motion.div 
                initial={{ opacity: 0, scale: 0.95 }}
                animate={{ opacity: 1, scale: 1 }}
@@ -7215,7 +7341,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
        </div>
 
        {showAddForm && (
-         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+         <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4">
             <motion.div 
                initial={{ opacity: 0, scale: 0.9 }}
                animate={{ opacity: 1, scale: 1 }}
@@ -8042,7 +8168,7 @@ function PosyanduView({
       )}
 
       {activeSubTab === 'posbindu' && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+        <div className="bg-white/80  rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
           <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex flex-col gap-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
@@ -8376,7 +8502,7 @@ function PosyanduView({
                <div className="bg-gradient-to-br from-pink-500 to-rose-600 p-8 rounded-3xl text-white shadow-xl shadow-pink-100 space-y-6 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                   <div className="relative z-10 flex flex-col items-center text-center">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border border-white/30">
+                    <div className="w-20 h-20 bg-white/20  rounded-full flex items-center justify-center mb-4 border border-white/30">
                       <FileText className="w-10 h-10 text-white" />
                     </div>
                     <h3 className="text-xl font-black mb-2 uppercase tracking-widest">Digital Health Card</h3>
@@ -8464,7 +8590,7 @@ function PosyanduView({
                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-xl shadow-blue-100 space-y-6 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                   <div className="relative z-10 flex flex-col items-center text-center">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border border-white/30">
+                    <div className="w-20 h-20 bg-white/20  rounded-full flex items-center justify-center mb-4 border border-white/30">
                       <HeartPulse className="w-10 h-10 text-white" />
                     </div>
                     <h3 className="text-xl font-black mb-2 uppercase tracking-widest">Pregnancy Health Card</h3>
@@ -8616,7 +8742,7 @@ function PosyanduView({
       )}
 
       {activeSubTab === 'kegiatan' && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+        <div className="bg-white/80  rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
           <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
              <div className="flex items-center gap-3">
                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight font-elegant">Jadwal & Agenda <span className="text-brand-pink">Kesehatan</span></h3>
@@ -8664,7 +8790,7 @@ function PosyanduView({
 
       {/* MODAL: TAMBAH BALITA */}
       {showBalitaForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                  <h3 className="font-bold text-slate-800">{editingItem ? 'Edit Data Balita' : 'Registrasi Balita Baru'}</h3>
@@ -8714,7 +8840,7 @@ function PosyanduView({
 
       {/* MODAL: TAMBAH PEMERIKSAAN */}
       {showPemeriksaanForm && selectedBalita && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
                  <h3 className="font-bold flex items-center gap-2">
@@ -8753,7 +8879,7 @@ function PosyanduView({
 
       {/* MODAL: TAMBAH IMUNISASI */}
       {showImunisasiForm && selectedBalita && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
                  <h3 className="font-bold flex items-center gap-2">
@@ -8798,7 +8924,7 @@ function PosyanduView({
 
       {/* MODAL: TAMBAH KEGIATAN */}
       {showKegiatanForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
                  <h3 className="font-bold flex items-center gap-2">
@@ -8833,7 +8959,7 @@ function PosyanduView({
 
       {/* MODAL: REGISTER IBU HAMIL */}
       {showIbuHamilForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
                  <h3 className="font-bold">{editingItem ? 'Edit Data Ibu Hamil' : 'Register Ibu Hamil'}</h3>
@@ -9838,7 +9964,7 @@ function BankSampahView({
 
       {/* MODALS */}
       {showKategoriForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                 <h3 className="font-bold text-slate-800">{editingItem ? 'Edit Kategori' : 'Tambah Kategori Sampah'}</h3>
@@ -9873,7 +9999,7 @@ function BankSampahView({
       )}
 
       {showSetoranForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden my-auto">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
                 <span className="flex items-center gap-2"><Recycle className="w-4 h-4 text-emerald-600" /> Catat Setoran Baru</span>
@@ -9922,7 +10048,7 @@ function BankSampahView({
       )}
 
       {showTarikForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
                 <span className="flex items-center gap-2"><HandCoins className="w-4 h-4 text-blue-600" /> {editingItem ? 'Edit Tarik Saldo' : 'Tarik Saldo Nasabah'}</span>
@@ -9960,7 +10086,7 @@ function BankSampahView({
       )}
 
       {showNasabahForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
                 <span className="flex items-center gap-2"><User className="w-4 h-4 text-emerald-600" /> {editingItem ? 'Edit Data Nasabah (Warga)' : 'Tambah Nasabah (Warga)'}</span>
@@ -10403,7 +10529,7 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
 
       {/* MODAL: TAMBAH/EDIT BARANG */}
       {showAddForm && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                <div className="flex items-center gap-3">
@@ -10514,7 +10640,7 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
 
       {/* MODAL: CATAT AKTIVITAS */}
       {showLogForm && selectedItem && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -10648,7 +10774,7 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
 
       {/* MODAL: RIWAYAT AKTIVITAS */}
       {showLogHistory && selectedItem && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 overflow-hidden">
              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                <h3 className="font-bold text-slate-800 flex items-center gap-2">
