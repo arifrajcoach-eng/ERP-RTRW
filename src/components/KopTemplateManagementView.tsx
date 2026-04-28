@@ -264,12 +264,6 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
 
-    // Validation
-    const maxSize = 1 * 1024 * 1024; // 1MB
-    if (file.size > maxSize) {
-      showNotification("Ukuran file maksimal 1MB", 'error');
-      return;
-    }
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
       showNotification("Hanya file .png, .jpg, atau .jpeg yang diizinkan", 'error');
@@ -277,44 +271,58 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     }
 
     setUploading(true);
-    setUploadProgress(0);
-    try {
-      // 2. Upload to Firebase
-      const storagePath = `branding/${tenantId}/logo_${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, storagePath);
-      
-      const uploadTask = uploadBytesResumable(storageRef, file);
+    setUploadProgress(10);
+    
+    // Fallback using FileReader and Canvas resizing to bypass Firebase Storage issues
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
 
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        }, 
-        (error) => {
-          console.error("Upload error:", error);
-          showNotification(`Gagal mengunggah logo: ${error.message}`, 'error');
-          setUploading(false);
-          setUploadProgress(0);
-        }, 
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          
-          // 3. Update Firestore
-          await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: downloadURL }, { merge: true });
-          setLogoUrl(downloadURL);
-          showNotification("Logo berhasil diunggah", 'success');
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Use webp for better compression
+        const dataUrl = canvas.toDataURL('image/webp', 0.8); 
+        setUploadProgress(80);
+        
+        try {
+          await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: dataUrl }, { merge: true });
+          setLogoUrl(dataUrl);
+          showNotification("Logo berhasil disimpan", 'success');
+        } catch (error: any) {
+          console.error(error);
+          showNotification(`Gagal menyimpan logo: ${error.message}`, 'error');
+        } finally {
           setUploading(false);
           setUploadProgress(0);
         }
-      );
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      showNotification(`Gagal memulai unggahan: ${error.message || 'Error tidak diketahui'}`, 'error');
-      setUploading(false);
-      setUploadProgress(0);
-    } finally {
-      e.target.value = ''; // Reset input
-    }
+      };
+      if (event.target?.result) {
+        img.src = event.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Reset input
   };
 
   const handleRemoveLogo = async () => {
@@ -382,6 +390,17 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
               </div>
             )}
             <p className="text-[10px] text-slate-400 mt-1 italic">* Format .png/.jpg maksimal 1MB</p>
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Atau Gunakan Link / URL Gambar</label>
+              <input 
+                 type="text" 
+                 value={logoUrl} 
+                 onChange={(e) => setLogoUrl(e.target.value)} 
+                 placeholder="https://..." 
+                 className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+              />
+              <p className="text-[10px] text-slate-400 mt-1 italic">Gunakan link langsung ke gambar bersumber dari web (Akhiri .png/.jpg). Sesudah isi klik 'Simpan Branding'</p>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -457,7 +476,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         <h3 className="text-lg font-semibold mb-4 text-slate-700">Live Preview</h3>
         <div ref={previewRef} className="p-4 bg-white overflow-x-auto">
           {/* Note: Dummy surat object for preview */}
-          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR' }} kop={formData} settings={settings} />
+          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR', show_logo: 'yes' }} kop={{ ...formData, logo_url: logoUrl }} settings={settings} />
         </div>
       </div>
     </div>

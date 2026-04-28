@@ -104,7 +104,7 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
         <div class="print-container">
           <!-- Kop Surat -->
           <div class="flex items-center gap-4 relative">
-               ${surat.show_logo === 'yes' && kop.logo_url ? `<img src="${kop.logo_url}" crossorigin="anonymous" alt="Logo" class="w-20 h-20 object-contain" />` : '<div class="w-20"></div>'}
+               ${surat.show_logo !== 'no' && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-20 h-20 object-contain" />` : '<div class="w-20"></div>'}
                <div class="flex-1 text-center">
                    <h2 class="text-lg font-bold uppercase">${kop.nama_rt || `RUKUN TETANGGA ${kop.rt || '...'} / RUKUN WARGA ${kop.rw || '...'}`}</h2>
                    <p class="text-sm">KELURAHAN ${kop.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kop.kecamatan?.toUpperCase() || '...'}</p>
@@ -122,7 +122,7 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
           </div>
           
           <div class="mt-6 leading-relaxed">
-              <p class="mb-4">Yang bertanda tangan di bawah ini Ketua RT ${surat.rt || kop.rt || '...'} / RW ${surat.rw || kop.rw || '...'}</p>
+              <p class="mb-4">Yang bertanda tangan di bawah ini Ketua RT ${surat.rt || kop.rt || '...'} / RW ${surat.rw || kop.rw || '...'} Kelurahan ${ (kop.kelurahan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase()) } Kecamatan ${ (kop.kecamatan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase()) } ${ ((kop.kabupaten || settings.kabupaten || 'Bekasi').toLowerCase().includes('kabupaten') || (kop.kabupaten || settings.kabupaten || 'Bekasi').toLowerCase().includes('kota') ? '' : 'Kabupaten ') + (kop.kabupaten || settings.kabupaten || 'Bekasi').toLowerCase().replace(/\b\w/g, s => s.toUpperCase()) }</p>
               <p class="mb-4">Dengan ini menerangkan bahwa :</p>
               <div class="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
                  <div>Nama</div><div>:</div><div><strong>${surat.pemohon}</strong></div>
@@ -143,7 +143,7 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
                   <p>Mengetahui,</p>
                   <p>Ketua RW ${surat.rw || kop.rw || '....'}</p>
                   <div class="h-20"></div>
-                  <p class="font-bold underline">${surat.ketua_rw_nama || kop.nama_ketua_rw || '...................................'}</p>
+                  <p class="font-bold underline">( ${surat.ketua_rw_nama || kop.nama_ketua_rw || '...................................'} )</p>
               </div>
               <div class="text-center">
                   <p>${(() => {
@@ -153,7 +153,7 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
                     })()}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   <p>${surat.jabatan_ttd || 'Ketua RT'} ${surat.rt || kop.rt || '....'}</p>
                   <div class="h-20"></div>
-                  <p class="font-bold underline">${surat.ketua || kop.nama_ketua_rt || '...................................'}</p>
+                  <p class="font-bold underline">( ${surat.ketua || kop.nama_ketua_rt || '...................................'} )</p>
               </div>
           </div>
 
@@ -163,23 +163,20 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
                     <!-- Kiri: TL. Berkas, Berkas Sesuai -->
                     <div class="flex flex-col">
                       <span>TL. Berkas / Surat No :</span>
-                      <div class="flex items-center mt-1">
-                        <div class="w-6 h-4 border border-black mr-2"></div> Berkas Sesuai
-                      </div>
+                      <span class="mt-1">Berkas Sesuai</span>
+                      <div class="w-20 h-6 border border-black mt-1 bg-white"></div>
                     </div>
                     <!-- Tengah: Hal, Berkas Kecamatan -->
                     <div class="flex flex-col">
                       <span>Hal:</span>
-                      <div class="flex items-center mt-1">
-                        <div class="w-6 h-4 border border-black mr-2"></div> Berkas Kecamatan
-                      </div>
+                      <span class="mt-1">Berkas Kecamatan</span>
+                      <div class="w-20 h-6 border border-black mt-1 bg-white"></div>
                     </div>
                     <!-- Kanan: Tgl, Paraf Arsiparis -->
                     <div class="flex flex-col">
-                      <span>Tgl:</span>
-                      <div class="flex items-center mt-1">
-                        Paraf Arsiparis <div class="w-24 h-6 border border-black ml-2"></div>
-                      </div>
+                      <span>Tgl :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-</span>
+                      <span class="mt-1">Paraf Arsiparis</span>
+                      <div class="w-20 h-6 border border-black mt-1 bg-white"></div>
                     </div>
                   </div>
                </div>
@@ -1178,7 +1175,7 @@ export default function App() {
             <p className="text-[10px] text-slate-700 font-mono font-bold truncate">{currentUser.tenantId || 'RW26_SMART'}</p>
           </div>
         </div>
-        <nav className="flex-1 px-4 space-y-2 mt-6">
+        <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto pb-20 scrollbar-hide">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
@@ -1288,7 +1285,7 @@ export default function App() {
 
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
-          {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} emergenciesData={emergenciesData} handleTriggerSOS={handleTriggerSOS} userRole={currentUser.role} setActiveTab={setActiveTab} posyanduKegiatanData={posyanduKegiatanData} inventarisData={inventarisData} sampahSetoranData={sampahSetoranData} />}
+          {activeTab === 'dashboard' && <DashboardView kasData={kasData} wargaData={wargaData} suratData={suratData} iuranData={iuranData} emergenciesData={emergenciesData} handleTriggerSOS={handleTriggerSOS} userRole={currentUser.role} setActiveTab={setActiveTab} posyanduKegiatanData={posyanduKegiatanData} inventarisData={inventarisData} sampahSetoranData={sampahSetoranData} bukuTamuData={bukuTamuData} verifikasiWargaData={verifikasiWargaData} sampahTarikSaldoData={sampahTarikSaldoData} />}
           {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'buku-tamu' && (
             <BukuTamuView 
@@ -1868,7 +1865,7 @@ function EVotingView({ userRole }: { userRole: string }) {
   );
 }
 
-function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesData, handleTriggerSOS, userRole, setActiveTab, posyanduKegiatanData, inventarisData, sampahSetoranData }: { kasData: any[], wargaData: any[], suratData: any[], iuranData: any[], emergenciesData: any[], handleTriggerSOS: () => void, userRole: string, setActiveTab: (tab: string) => void, posyanduKegiatanData: any[], inventarisData: any[], sampahSetoranData: any[] }) {
+function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesData, handleTriggerSOS, userRole, setActiveTab, posyanduKegiatanData, inventarisData, sampahSetoranData, bukuTamuData, verifikasiWargaData, sampahTarikSaldoData }: { kasData: any[], wargaData: any[], suratData: any[], iuranData: any[], emergenciesData: any[], handleTriggerSOS: () => void, userRole: string, setActiveTab: (tab: string) => void, posyanduKegiatanData: any[], inventarisData: any[], sampahSetoranData: any[], bukuTamuData: any[], verifikasiWargaData: any[], sampahTarikSaldoData: any[] }) {
   const [kasPeriod, setKasPeriod] = useState('yearly');
   const [piePeriod, setPiePeriod] = useState('30days');
 
@@ -1929,8 +1926,40 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
     ...wargaData.slice(-5).map(w => ({
       title: 'Warga Baru',
       desc: `${w.nama} (${w.agama || '-'})`,
-      date: w.tglDaftar || 'Baru Saja',
+      date: w.tglDaftar || new Date().toISOString(),
       type: 'warga'
+    })),
+    ...bukuTamuData.map(t => ({
+      title: t.status === 'Selesai' ? 'Tamu Pergi' : 'Tamu Masuk',
+      desc: `${t.nama} - ${t.tujuan}`,
+      date: t.status === 'Selesai' && t.waktuKeluar ? t.waktuKeluar : t.waktuDatang,
+      type: 'tamu'
+    })),
+    ...verifikasiWargaData.map(v => ({
+      title: 'Verifikasi Data',
+      desc: `${v.nama} (${v.status || 'Menunggu'})`,
+      date: v.createdAt || new Date().toISOString(),
+      type: 'verifikasi'
+    })),
+    ...posyanduKegiatanData.map(p => ({
+      title: 'Kesehatan Warga',
+      desc: p.namaKegiatan || p.lokasi || 'Kegiatan Kesehatan',
+      date: p.tanggal,
+      type: 'kesehatan'
+    })),
+    ...sampahSetoranData.map(s => ({
+      title: 'Setoran Bank Sampah',
+      desc: `Nasabah ID: ${s.nasabahId} - Rp ${Intl.NumberFormat('id-ID').format(s.totalRp || s.total || 0)}`,
+      date: s.tanggal,
+      amount: s.totalRp || s.total || 0,
+      type: 'sampah_in'
+    })),
+    ...sampahTarikSaldoData.map(s => ({
+      title: 'Tarik Saldo Bank Sampah',
+      desc: `Nasabah ID: ${s.nasabahId} - Rp ${Intl.NumberFormat('id-ID').format(s.jumlahRp || s.jumlah || 0)}`,
+      date: s.tanggal,
+      amount: s.jumlahRp || s.jumlah || 0,
+      type: 'sampah_out'
     }))
   ].sort((a, b) => {
     const dateA = new Date(a.date).getTime() || 0;
@@ -1977,7 +2006,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
   return (
     <div className="space-y-6">
       {/* Quick Access Shortcuts */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 xl:grid-cols-10 gap-3 px-1">
+      <div className="flex xl:grid xl:grid-cols-10 gap-3 px-1 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
         {[
           { id: 'sos', label: 'SOS', icon: Siren, color: 'brand-pink', bg: 'soft-pink', action: handleTriggerSOS },
           { id: 'warga', label: 'WARGA', icon: Users, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('warga') },
@@ -1993,7 +2022,7 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
           <button 
             key={item.id}
             onClick={item.action}
-            className="bg-white/80  p-5 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95"
+            className="flex-shrink-0 w-24 xl:w-auto snap-start bg-white/80 p-4 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95"
           >
             <div className={`w-14 h-14 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner`}>
               <item.icon className={`w-8 h-8 text-${item.color}`} />
@@ -2070,8 +2099,8 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 14, fill: '#94a3b8'}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 14, fill: '#94a3b8'}} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={(value: number) => [`Rp ${new Intl.NumberFormat('id-ID').format(value)}`]}
@@ -2140,14 +2169,20 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
             <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${
-                  act.type === 'in' ? 'bg-green-50 text-green-600' : 
-                  act.type === 'out' ? 'bg-red-50 text-red-600' : 
+                  ['in', 'sampah_in'].includes(act.type) ? 'bg-green-50 text-green-600' : 
+                  ['out', 'sampah_out'].includes(act.type) ? 'bg-red-50 text-red-600' : 
                   act.type === 'doc' ? 'bg-blue-50 text-blue-600' :
+                  act.type === 'verifikasi' ? 'bg-emerald-50 text-emerald-600' :
+                  act.type === 'kesehatan' ? 'bg-pink-50 text-pink-600' :
+                  act.type === 'tamu' ? 'bg-orange-50 text-orange-600' :
                   'bg-slate-100 text-slate-600'
                 }`}>
-                  {act.type === 'in' ? <PlusCircle className="w-4 h-4" /> : 
-                   act.type === 'out' ? <MinusCircle className="w-4 h-4" /> : 
+                  {['in', 'sampah_in'].includes(act.type) ? <PlusCircle className="w-4 h-4" /> : 
+                   ['out', 'sampah_out'].includes(act.type) ? <MinusCircle className="w-4 h-4" /> : 
                    act.type === 'doc' ? <FileText className="w-4 h-4" /> :
+                   act.type === 'verifikasi' ? <ShieldCheck className="w-4 h-4" /> :
+                   act.type === 'kesehatan' ? <Baby className="w-4 h-4" /> :
+                   act.type === 'tamu' ? <UserCheck className="w-4 h-4" /> :
                    <Users className="w-4 h-4" />}
                 </div>
                 <div>
@@ -2157,11 +2192,11 @@ function DashboardView({ kasData, wargaData, suratData, iuranData, emergenciesDa
               </div>
               <div className="text-right">
                 <p className={`text-xs font-bold ${
-                  act.type === 'in' ? 'text-green-600' : 
-                  act.type === 'out' ? 'text-red-600' : 
+                  ['in', 'sampah_in'].includes(act.type) ? 'text-green-600' : 
+                  ['out', 'sampah_out'].includes(act.type) ? 'text-red-600' : 
                   'text-slate-600'
                 }`}>
-                  {act.amount ? `Rp ${formatRupiah(act.amount)}` : (act.status || 'Aktif')}
+                  {act.amount !== undefined ? `Rp ${new Intl.NumberFormat('id-ID').format(act.amount)}` : (act.status || '-')}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-0.5">{act.date}</p>
               </div>
@@ -8731,8 +8766,8 @@ function PosyanduView({
                     { name: 'Stunting', count: stats.stuntingCount }
                   ]}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 14, fill: '#94a3b8'}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 14, fill: '#94a3b8'}} />
                     <Tooltip cursor={{fill: '#f8fafc'}} />
                     <Bar dataKey="count" radius={[4,4,0,0]}>
                       { [0,1,2].map((i) => <Cell key={i} fill={i === 0 ? '#10b981' : i === 1 ? '#f59e0b' : '#ef4444'} />) }
