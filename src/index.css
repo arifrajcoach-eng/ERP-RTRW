@@ -32,6 +32,12 @@
   
   --animate-bounce-slow: bounce-slow 3s infinite;
   --animate-float: float 6s ease-in-out infinite;
+  --animate-scan: scan 4s ease-in-out infinite;
+  
+  @keyframes scan {
+    0%, 100% { top: 0%; opacity: 0.2; }
+    50% { top: 100%; opacity: 1; }
+  }
   
   @keyframes bounce-slow {
     0%, 100% {

@@ -339,9 +339,32 @@
         "approvedBy": { "type": "string" }
       },
       "required": ["id", "nik", "nama", "tenantId", "status"]
+    },
+    "BukuTamu": {
+      "title": "Buku Tamu Digital",
+      "description": "Catatan tamu atau pengunjung lingkungan",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "alamat": { "type": "string" },
+        "noHp": { "type": "string" },
+        "tujuan": { "type": "string", "description": "Blok/No Rumah yang dituju" },
+        "keperluan": { "type": "string" },
+        "fotoUrl": { "type": "string", "description": "Foto wajah/identitas tamu" },
+        "waktuDatang": { "type": "string", "format": "date-time" },
+        "waktuKeluar": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Bertamu", "Selesai"] }
+      },
+      "required": ["id", "nama", "tujuan", "waktuDatang", "tenantId", "status"]
     }
   },
   "firestore": {
+    "/buku_tamu/{id}": {
+      "schema": "BukuTamu",
+      "description": "Koleksi catatan tamu digital"
+    },
     "/tenants/{tenantId}": {
       "schema": "Tenant",
       "description": "Koleksi data penyewa (RT/RW)"

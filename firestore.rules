@@ -4,7 +4,7 @@ service cloud.firestore {
     
     // --- Helper Functions ---
     function isSignedIn() { return request.auth != null; }
-    function isAdmin() { return isSignedIn() && (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || request.auth.token.email == 'arifrajcoach@gmail.com'); }
+    function isAdmin() { return isSignedIn() && (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || request.auth.token.email == 'arifrajcoach@gmail.com' || request.auth.uid == 'eHFrJ7Re1sb4xhMWlsHNoKr5qs53'); }
     function isOwner(resourceData) { return isSignedIn() && request.auth.uid == resourceData.authUid; }
     function isPengurus() {
       return isSignedIn() && (
@@ -32,6 +32,13 @@ service cloud.firestore {
     match /tenant_settings/{docId} {
       allow read: if isSignedIn();
       allow write: if isPengurus();
+    }
+
+    match /buku_tamu/{docId} {
+      allow list: if isSignedIn() && (isPengurus() || resource.data.tenantId == "RW26_SMART");
+      allow get: if isSignedIn() && (isPengurus() || resource.data.tenantId == "RW26_SMART");
+      allow create: if true; // Allow public check-in
+      allow update, delete: if isPengurus();
     }
 
     match /tenants/{docId} {
