@@ -5,6 +5,7 @@ import { db, storage } from '../firebase';
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Settings, Save, Upload, FileText, PlusCircle, CheckCircle } from 'lucide-react';
+import { SuratTemplate } from './SuratTemplate';
 
 export default function KopTemplateManagementView({ currentUser, settings, showNotification, handleFirestoreError }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
   const [activeSub, setActiveSub] = useState('branding');
@@ -455,7 +456,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
       <div className="bg-slate-100 p-6 rounded-lg border border-slate-200">
         <h3 className="text-lg font-semibold mb-4 text-slate-700">Live Preview</h3>
         <div ref={previewRef} className="p-4 bg-white overflow-x-auto">
-          <TemplateSuratFisik formData={formData} logoUrl={logoUrl} />
+          {/* Note: Dummy surat object for preview */}
+          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR' }} kop={formData} settings={settings} />
         </div>
       </div>
     </div>

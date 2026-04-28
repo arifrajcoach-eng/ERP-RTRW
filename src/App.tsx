@@ -157,11 +157,31 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
               </div>
           </div>
 
-          <div class="mt-12 border-t border-black pt-2 text-[10px] text-gray-500">
-               <div class="flex justify-between font-mono">
-                  <div>Ref Code: ${surat.id}</div>
-                  <div>Sistem Informasi RW 26 - Digital Archive</div>
-                  <div>Digital Signature Certified</div>
+          <div class="mt-12 border-t border-black pt-2 text-[10px] text-gray-800">
+               <div class="font-mono">
+                  <div class="grid grid-cols-3 gap-2 w-full">
+                    <!-- Kiri: TL. Berkas, Berkas Sesuai -->
+                    <div class="flex flex-col">
+                      <span>TL. Berkas / Surat No :</span>
+                      <div class="flex items-center mt-1">
+                        <div class="w-6 h-4 border border-black mr-2"></div> Berkas Sesuai
+                      </div>
+                    </div>
+                    <!-- Tengah: Hal, Berkas Kecamatan -->
+                    <div class="flex flex-col">
+                      <span>Hal:</span>
+                      <div class="flex items-center mt-1">
+                        <div class="w-6 h-4 border border-black mr-2"></div> Berkas Kecamatan
+                      </div>
+                    </div>
+                    <!-- Kanan: Tgl, Paraf Arsiparis -->
+                    <div class="flex flex-col">
+                      <span>Tgl:</span>
+                      <div class="flex items-center mt-1">
+                        Paraf Arsiparis <div class="w-24 h-6 border border-black ml-2"></div>
+                      </div>
+                    </div>
+                  </div>
                </div>
           </div>
         </div>
@@ -590,13 +610,6 @@ export default function App() {
   useEffect(() => {
     // We allow fetching for authenticated users OR anonymous citizens
     if (!currentUser && !wargaAuth) {
-      // If we are not initializing and still have no user, try to sign in anonymously
-      // to trigger the listeners (satisfying the rules)
-      if (!isAuthInitializing) {
-        signInAnonymously(auth)
-          .then(() => console.log("Auto anonymous signin successful!"))
-          .catch(err => console.error("Auto anonymous signin failed:", err));
-      }
       setIsLoadingDB(false);
       return;
     }
@@ -1081,11 +1094,11 @@ export default function App() {
     );
   }
 
-  if (!currentUser && !wargaAuth) {
+  if (!wargaAuth && (!currentUser || (currentUser.role === 'Warga' && currentUser.name === 'Warga (Anonymous)'))) {
     return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} isLoadingDB={isLoadingDB} />;
   }
 
-  if (!currentUser && wargaAuth) {
+  if (wargaAuth) {
     return (
       <WargaProfileView 
         wargaData={wargaAuth} 
@@ -5834,6 +5847,7 @@ function PengaturanView({ tenantId, settings, userRole, handleFileUpload, showNo
           wIdx++;
         }
       }
+
 
       setGenerateMsg('Warga berhasil di-generate. Membuat transaksi & kas...');
 
