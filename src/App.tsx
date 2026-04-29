@@ -1088,30 +1088,44 @@ export default function App() {
 
   // Helper for uploading files to Firebase Storage with Progress
   const handleFileUpload = async (file: File, folder: string, onProgress?: (pct: number) => void) => {
+    console.log(`Starting upload to ${folder}:`, file.name);
+    // Sanitize filename: remove spaces and special characters for better compatibility
+    const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const path = `${folder}/${Date.now()}_${safeName}`;
+    
     try {
-      const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
+      const storageRef = ref(storage, path);
       const uploadTask = uploadBytesResumable(storageRef, file);
       
       if (onProgress) onProgress(0); // Initialize
-
+      
       return new Promise<string>((resolve, reject) => {
         uploadTask.on('state_changed', 
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
             if (onProgress) onProgress(progress);
+            console.log(`Upload progress for ${file.name}: ${Math.round(progress)}%`);
           }, 
           (error) => {
-            console.error("Upload error:", error);
+            console.error("Upload error detail:", error);
+            showNotification(`Gagal upload: ${error.message}`, "error");
             reject(error);
           }, 
           async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve(downloadURL);
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              console.log(`Upload complete for ${file.name}. URL:`, downloadURL);
+              resolve(downloadURL);
+            } catch (err: any) {
+              console.error("Error getting download URL:", err);
+              reject(err);
+            }
           }
         );
       });
-    } catch (error) {
-      console.error("Storage upload error:", error);
+    } catch (error: any) {
+      console.error("Storage upload error catch:", error);
+      showNotification(`System Error: ${error.message}`, "error");
       throw error;
     }
   };
@@ -1736,6 +1750,7 @@ function ETokoView({
   currentUser, 
   wargaAuth, 
   handleFirestoreError,
+  handleFileUpload,
   showNotification 
 }: { 
   userRole: string, 
@@ -2335,11 +2350,15 @@ function ETokoView({
                     <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-dashed border-slate-200 flex items-center justify-center group relative">
                       {productForm.image ? (
                         <>
-                          <img src={productForm.image} className="w-full h-full object-cover" />
+                          {productForm.image.toLowerCase().endsWith('.pdf') ? (
+                            <FileText className="w-8 h-8 text-brand-blue" />
+                          ) : (
+                            <img src={productForm.image} className="w-full h-full object-cover" />
+                          )}
                           <button 
                             type="button"
                             onClick={() => setProductForm({...productForm, image: ''})}
-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -2360,22 +2379,29 @@ function ETokoView({
                              setIsLoading(true);
                              try {
                                const url = await handleFileUpload(file, 'toko_products');
-                               setProductForm({...productForm, image: url});
+                               setProductForm(prev => ({...prev, image: url}));
                                showNotification("Foto produk berhasil diupload", "success");
                              } catch (err) {
-                               showNotification("Gagal upload foto", "error");
+                               console.error("Upload error in component:", err);
                              } finally {
                                setIsLoading(false);
+                               if (e.target) e.target.value = '';
                              }
                            }
                          }}
                        />
                        <button 
                          type="button"
-                         onClick={() => fileInputRef.current?.click()}
-                         className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-blue/30 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                         disabled={isLoading}
+                         onClick={() => {
+                           if (fileInputRef.current) {
+                             fileInputRef.current.value = '';
+                             fileInputRef.current.click();
+                           }
+                         }}
+                         className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-blue/30 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
                        >
-                         <Upload className="w-4 h-4" /> Pilih Foto Produk
+                         {isLoading ? 'Mengupload...' : <><Upload className="w-4 h-4" /> Pilih Foto Produk</>}
                        </button>
                     </div>
                   </div>
@@ -2688,11 +2714,15 @@ function EVotingView({
                     <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-dashed border-slate-200 flex items-center justify-center group relative">
                       {newCandidatePhoto ? (
                         <>
-                          <img src={newCandidatePhoto} className="w-full h-full object-cover" />
+                          {newCandidatePhoto.toLowerCase().endsWith('.pdf') ? (
+                            <FileText className="w-8 h-8 text-brand-blue" />
+                          ) : (
+                            <img src={newCandidatePhoto} className="w-full h-full object-cover" />
+                          )}
                           <button 
                             type="button"
                             onClick={() => setNewCandidatePhoto('')}
-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -2716,20 +2746,32 @@ function EVotingView({
                               setNewCandidatePhoto(url);
                               showNotification("Berkas berhasil diupload", "success");
                             } catch (err) {
-                              showNotification("Gagal upload berkas", "error");
+                              console.error("Upload error in component:", err);
                             } finally {
                               setIsLoading(false);
+                              if (e.target) e.target.value = '';
                             }
                           }
                         }}
                       />
                       <button 
                         type="button"
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => {
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                            fileInputRef.current.click();
+                          }
+                        }}
                         disabled={isLoading}
-                        className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-blue/30 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                        className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-blue/30 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
                       >
-                        <Upload className="w-4 h-4" /> Pilih Foto / Berkas
+                        {isLoading ? (
+                          <span className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 animate-spin" /> Mengupload...
+                          </span>
+                        ) : (
+                          <><Upload className="w-4 h-4" /> Pilih Foto / Berkas</>
+                        )}
                       </button>
                       <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight ml-1">PNG, JPG, PDF (Maks. 5MB)</p>
                     </div>
@@ -2764,7 +2806,7 @@ function EVotingView({
              const percentage = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
              
              return (
-              <div key={c.id} className={`group bg-white rounded-[2.5rem] shadow-xl border-2 transition-all relative overflow-hidden flex flex-col ${hasVoted && userVotes.find(v => v.candidateId === id)?.candidateId === c.id ? 'border-brand-blue' : 'border-transparent'}`}>
+              <div key={c.id} className={`group bg-white rounded-[2.5rem] shadow-xl border-2 transition-all relative overflow-hidden flex flex-col ${hasVoted && userVotes.find(v => v.voterId === voterId)?.candidateId === c.id ? 'border-brand-blue' : 'border-transparent'}`}>
                 {hasVoted && userVotes.find(v => v.voterId === voterId)?.candidateId === c.id && (
                   <div className="absolute top-4 right-4 bg-brand-blue text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 z-10 shadow-lg">
                     <CheckCircle className="w-3 h-3" /> Pilihan Anda
@@ -2839,11 +2881,15 @@ function EVotingView({
                           <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-dashed border-slate-200 flex items-center justify-center group relative">
                             {editPhoto ? (
                               <>
-                                <img src={editPhoto} className="w-full h-full object-cover" />
+                                {editPhoto.toLowerCase().endsWith('.pdf') ? (
+                                  <FileText className="w-8 h-8 text-brand-blue" />
+                                ) : (
+                                  <img src={editPhoto} className="w-full h-full object-cover" />
+                                )}
                                 <button 
                                   type="button"
                                   onClick={() => setEditPhoto('')}
-                                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -2867,20 +2913,32 @@ function EVotingView({
                                     setEditPhoto(url);
                                     showNotification("Berkas berhasil diupload", "success");
                                   } catch (err) {
-                                    showNotification("Gagal upload berkas", "error");
+                                    console.error("Upload error in component:", err);
                                   } finally {
                                     setIsLoading(false);
+                                    if (e.target) e.target.value = '';
                                   }
                                 }
                               }}
                             />
                             <button 
                               type="button"
-                              onClick={() => editFileInputRef.current?.click()}
+                              onClick={() => {
+                                if (editFileInputRef.current) {
+                                  editFileInputRef.current.value = '';
+                                  editFileInputRef.current.click();
+                                }
+                              }}
                               disabled={isLoading}
-                              className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-blue/30 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                              className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-blue/30 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
                             >
-                              <Upload className="w-4 h-4" /> Ubah Foto / Berkas
+                              {isLoading ? (
+                                <span className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 animate-spin" /> Mengupload...
+                                </span>
+                              ) : (
+                                <><Upload className="w-4 h-4" /> Ubah Foto / Berkas</>
+                              )}
                             </button>
                           </div>
                         </div>
