@@ -1175,7 +1175,7 @@ export default function App() {
           <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
           <img src="/logo_rw.png?v=5" alt="Loading" className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[120%] animate-pulse" referrerPolicy="no-referrer" />
         </div>
-        <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW 26 <span className="text-brand-pink">SMART</span></h2>
+        <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
       </div>
     );
@@ -1256,9 +1256,12 @@ export default function App() {
           <div className="relative z-10">
             <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-2 font-elegant">
               <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-8 h-8 " referrerPolicy="no-referrer" />
-              RW 26 <span className="text-brand-pink">SMART</span>
+              RW26 <span className="text-brand-pink">BERJUANG</span>
             </h1>
-            <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Berdampak & Memberdayakan</p>
+            <div className="mt-1 flex flex-col items-start pl-10">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Berdampak & Memberdayakan</p>
+              <p className="text-[8px] text-slate-400/80 font-bold tracking-widest mt-0.5 ml-6">Powered by Nexapps</p>
+            </div>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(false)}
@@ -1766,7 +1769,7 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
          </div>
          
          <p className="mt-8 text-[10px] font-bold opacity-60 uppercase tracking-widest">
-            Sinyal ini terkirim ke seluruh warga RW26 SMART
+           Sinyal ini terkirim ke seluruh warga RW26 BERJUANG
          </p>
       </div>
     </motion.div>
@@ -4517,7 +4520,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       doc.text("BIODATA WARGA", pageWidth / 2, 20, { align: 'center' });
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`SMART RW - ${tenantId}`, pageWidth / 2, 26, { align: 'center' });
+      doc.text(`RW26 BERJUANG - ${tenantId}`, pageWidth / 2, 26, { align: 'center' });
       doc.line(14, 30, pageWidth - 14, 30);
 
       let currentY = 40;
@@ -6109,7 +6112,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
     
     // Header
     doc.setFontSize(16);
-    doc.text(settings.nama_organisasi || "SMART RW26", 105, 20, { align: 'center' });
+    doc.text(settings.nama_organisasi || "RW26 BERJUANG", 105, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.text(settings.alamat || "Laporan Transaksi", 105, 26, { align: 'center' });
     doc.line(20, 32, 190, 32);
@@ -8626,9 +8629,14 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
             <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-12 h-12 relative z-10" referrerPolicy="no-referrer" />
           </div>
           <h1 className="text-4xl font-black tracking-tight text-slate-800 uppercase leading-none font-elegant">
-            RW 26 <span className="text-brand-pink">SMART</span>
+            RW26 <span className="text-brand-pink">BERJUANG</span>
           </h1>
-          <p className="text-slate-500 font-bold text-sm mt-3 tracking-tighter uppercase">Keluarga Hebat, Lingkungan Cerdas</p>
+          <div className="mt-3 flex justify-center w-full">
+            <div className="flex flex-col items-center">
+              <p className="text-slate-500 font-bold text-sm tracking-tighter uppercase text-center w-full">Keluarga Hebat, Lingkungan Cerdas</p>
+              <p className="text-slate-400/80 font-bold text-xs tracking-widest mt-1 text-center">Powered by Nexapps</p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white/90  rounded-[2.5rem] shadow-2xl shadow-slate-300/50 border border-white overflow-hidden">
@@ -9159,7 +9167,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-800">Manajemen Tenant (Client RW/RT)</h3>
-              <p className="text-sm text-slate-500">Ekosistem Multi-Tenant RW 26 Smart System.</p>
+              <p className="text-sm text-slate-500">Ekosistem Multi-Tenant RW26 BERJUANG System.</p>
             </div>
           </div>
           <button 
