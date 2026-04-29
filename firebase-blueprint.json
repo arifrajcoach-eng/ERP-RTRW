@@ -358,9 +358,103 @@
         "status": { "type": "string", "enum": ["Bertamu", "Selesai"] }
       },
       "required": ["id", "nama", "tujuan", "waktuDatang", "tenantId", "status"]
+    },
+    "VotingCandidate": {
+      "title": "Kandidat Voting",
+      "description": "Data calon kandidat dalam pemilihan",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "profile": { "type": "string" },
+        "photo": { "type": "string" }
+      },
+      "required": ["id", "name", "tenantId"]
+    },
+    "VotingConfig": {
+      "title": "Konfigurasi Voting",
+      "description": "Pengaturan status dan aturan voting per tenant",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+        "aturan": { "type": "string" }
+      },
+      "required": ["tenantId", "status"]
+    },
+    "VotingVote": {
+      "title": "Suara Voting",
+      "description": "Catatan suara yang diberikan oleh warga",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "candidateId": { "type": "string" },
+        "voterId": { "type": "string", "description": "NIK atau UID pemilih" },
+        "voterName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "candidateId", "voterId", "tenantId"]
+    },
+    "TokoProduct": {
+      "title": "Produk E-Toko",
+      "description": "Daftar produk yang dijual di E-Toko warga",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "price", "stock", "tenantId"]
+    },
+    "TokoOrder": {
+      "title": "Pesanan E-Toko",
+      "description": "Catatan transaksi belanja warga",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "CANCELLED"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" }
+      },
+      "required": ["id", "customerId", "tenantId", "items", "total", "status"]
     }
   },
   "firestore": {
+    "/toko_products/{id}": {
+      "schema": "TokoProduct",
+      "description": "Koleksi produk e-toko"
+    },
+    "/toko_orders/{id}": {
+      "schema": "TokoOrder",
+      "description": "Koleksi pesanan e-toko"
+    },
+    "/voting_candidates/{id}": {
+      "schema": "VotingCandidate",
+      "description": "Koleksi kandidat voting"
+    },
+    "/voting_config/{tenantId}": {
+      "schema": "VotingConfig",
+      "description": "Konfigurasi voting per tenant"
+    },
+    "/voting_votes/{id}": {
+      "schema": "VotingVote",
+      "description": "Koleksi suara voting"
+    },
     "/buku_tamu/{id}": {
       "schema": "BukuTamu",
       "description": "Koleksi catatan tamu digital"

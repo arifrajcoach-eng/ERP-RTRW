@@ -1,0 +1,60 @@
+2556:                      <p className="text-slate-400 font-bold text-xs">Lengkapi formulir untuk mencatat kedatangan tamu</p>
+2719:                    <p className="text-xs font-bold text-slate-400">Total {bukuTamuData.length} catatan dalam basis data</p>
+4287:        showNotification(`${trxType === 'Masuk' ? 'Pemasukan' : 'Pengeluaran'} berhasil dicatat.`, 'success');
+4314:    link.setAttribute("download", "Laporan_Catatan_Transaksi.csv");
+4369:          Catatan Transaksi
+4395:                Catat
+4477:                          title="Edit Catatan"
+4504:      {/* Modal / Overlay Catat Pembayaran */}
+4511:                {editingTrx ? 'Edit Transaksi' : 'Catat'}
+4582:                <label className="block text-[11px] font-bold text-slate-500 mb-1">Keterangan Tambahan / Catatan</label>
+4583:                <textarea name="keterangan" defaultValue={editingTrx?.keterangan} rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Ada catatan khusus? (Opsional)"></textarea>
+4638:            message={`Apakah Anda yakin ingin menghapus catatan transaksi "${trxToDelete?.transaksi} - ${trxToDelete?.nama}"? Data akan dihapus secara permanen.`}
+5411:      showNotification("Catatan kas berhasil dihapus.", 'success');
+5414:      showNotification("Gagal menghapus catatan kas.", 'error');
+5483:      showNotification(`Gagal menyimpan catatan ${trxType}.`, 'error');
+5695:      {/* Modal / Overlay Catat Pemasukan */}
+5702:                Catat
+6335:  const [catatan, setCatatan] = useState('');
+6354:        catatan: 'Disetujui oleh admin'
+6408:    if (!catatan) {
+6409:      alert("Silakan berikan catatan alasan penolakan.");
+6416:        catatan,
+6422:      setCatatan('');
+6611:                      <label className="text-[10px] text-slate-400 uppercase mb-2 block font-black">Catatan Verifikasi</label>
+6615:                        value={catatan}
+6616:                        onChange={(e) => setCatatan(e.target.value)}
+6842:        catatan: ''
+6867:        catatan: 'Konfirmasi Data Mandiri (Tidak ada perubahan)'
+6919:        {activeSubmission?.catatan && activeSubmission.status === 'Ditolak' && (
+6923:              <p className="text-xs font-bold text-red-800 uppercase tracking-widest mb-1">Catatan Admin:</p>
+6924:              <p className="text-sm text-red-700 font-medium">{activeSubmission.catatan}</p>
+8429:    doc.text(`Catatan: ${mil.riwayatKesehatan || '-'}`, 14, 56);
+8588:      catatan: formData.get('catatan')
+8594:      showNotification("Hasil pemeriksaan berhasil dicatat!");
+8616:      showNotification("Catatan imunisasi disimpan!");
+9355:                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Catatan Riwayat</p>
+9357:                      "{selectedIbuHamil.riwayatKesehatan || 'Belum ada catatan medis khusus.'}"
+9511:                  <p className="text-[10px] text-slate-500 line-clamp-2">{kgt.keterangan || 'Tidak ada catatan tambahan.'}</p>
+9597:                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Catatan Tambahan</label>
+9598:                       <textarea name="catatan" rows={2} placeholder="Kondisi kesehatan balita saat ini..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500" />
+9617:                    Catat Imunisasi: {selectedBalita.nama}
+9713:                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Riwayat Kesehatan / Catatan</label>
+9875:      showNotification(`Setoran senilai Rp${total.toLocaleString()} berhasil dicatat`);
+9906:        showNotification(`Penarikan Rp${nominal.toLocaleString()} berhasil dicatat`);
+10326:                  Catat Setoran
+10735:                <span className="flex items-center gap-2"><Recycle className="w-4 h-4 text-emerald-600" /> Catat Setoran Baru</span>
+11015:      pencatat: currentUser.name,
+11047:       logData.catatan = formData.get('catatan') as string;
+11073:      showNotification("Transaksi berhasil dicatat!", "success");
+11129:      showNotification("Catatan aktivitas berhasil dihapus.", "success");
+11146:          <p className="text-sm text-slate-500 mt-1 max-w-lg">Kelola dan pantau aset yang dimiliki oleh organisasi, perbarui kondisi, serta catat lokasi penyimpanannya di satu tempat.</p>
+11233:                          title="Catat Aktivitas"
+11236:                          Catat
+11371:      {/* MODAL: CATAT AKTIVITAS */}
+11378:                 Catat Transaksi: {selectedItem.nama_barang}
+11490:                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Catatan Pengecekan</label>
+11491:                      <textarea name="catatan" rows={2} placeholder="Cth: 2 kursi patah diletakkan di luar, 1 kursi hilang..." className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:border-blue-500 outline-none" />
+11498:                 <button type="submit" className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100">Simpan Catatan</button>
+11561:                               {log.catatan && <span className="text-xs text-slate-500">{log.catatan}</span>}
+11568:                          <p className="text-[10px] text-slate-400 italic mt-1">Dicatat oleh: {log.pencatat}</p>
