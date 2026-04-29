@@ -22,7 +22,6 @@ import {
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { auth, storage } from './firebase';
 import KopTemplateManagementView from './components/KopTemplateManagementView';
-import logoImg from './logo.png';
 
 // --- INITIAL DUMMY DATA ---
 const INITIAL_WARGA_DATA = [
@@ -1084,7 +1083,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="relative">
           <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
-          <img src={logoImg} alt="Loading" className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[120%] animate-pulse" referrerPolicy="no-referrer" />
+          <img src="/logo_rw.png" alt="Loading" className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[120%] animate-pulse" referrerPolicy="no-referrer" />
         </div>
         <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW 26 <span className="text-brand-pink">SMART</span></h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
@@ -1154,7 +1153,7 @@ export default function App() {
           <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-all"></div>
           <div className="relative z-10">
             <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-2 font-elegant">
-              <img src={logoImg} alt="Logo RW 26" className="w-8 h-8 " referrerPolicy="no-referrer" />
+              <img src="/logo_rw.png" alt="Logo RW 26" className="w-8 h-8 " referrerPolicy="no-referrer" />
               RW 26 <span className="text-brand-pink">SMART</span>
             </h1>
             <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Berdampak & Memberdayakan</p>
@@ -7449,7 +7448,7 @@ function LoginView({ setWargaAuth, wargaData, isLoadingDB }: { setWargaAuth: any
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-white shadow-xl shadow-brand-blue/20 mb-6 relative group isolate">
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue to-cyan-400 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity -z-10"></div>
-            <img src={logoImg} alt="Logo RW 26" className="w-12 h-12 relative z-10" referrerPolicy="no-referrer" />
+            <img src="/logo_rw.png" alt="Logo RW 26" className="w-12 h-12 relative z-10" referrerPolicy="no-referrer" />
           </div>
           <h1 className="text-4xl font-black tracking-tight text-slate-800 uppercase leading-none font-elegant">
             RW 26 <span className="text-brand-pink">SMART</span>
