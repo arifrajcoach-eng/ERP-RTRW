@@ -4786,15 +4786,58 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
     const surat = suratData.find(s => s.id === id);
     if (!surat || !generateSuratHTML) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Gagal membuka jendela cetak. Pastikan pop-up blocker diizinkan.');
-      return;
-    }
-
     const html = generateSuratHTML(surat, kopSettings, settings);
-    printWindow.document.write(html);
-    printWindow.document.close();
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    if (iframe.contentWindow) {
+      iframe.contentWindow.document.open();
+      iframe.contentWindow.document.write(html);
+      iframe.contentWindow.document.close();
+      
+      iframe.onload = () => {
+         setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 1000);
+         }, 500);
+      };
+    } else {
+       const printWindow = window.open('', '_blank');
+       if (printWindow) {
+         printWindow.document.write(html);
+         printWindow.document.close();
+       } else {
+         alert('Gagal membuka jendela cetak. Pastikan pop-up blocker diizinkan.');
+       }
+    }
+  };
+
+  const exportSuratExcel = () => {
+    const dataToExport = filteredSurat.map((item: any) => ({
+      'ID Surat': item.id,
+      'Tanggal': item.tanggal,
+      'Pemohon': item.pemohon,
+      'NIK': item.nik,
+      'Jenis Surat': item.jenisSurat,
+      'Keperluan': item.keperluan,
+      'Status': item.status
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Surat');
+    XLSX.writeFile(workbook, `Data_Surat_${tenantId}.xlsx`);
+    showNotification('Data Surat berhasil diekspor ke Excel');
   };
 
   const handleAddSurat = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -4984,10 +5027,15 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
               </>
             )}
             {userRole !== 'Viewer' && (
-              <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
-                <PlusCircle className="w-3.5 h-3.5" />
-                Buat Surat Baru
-              </button>
+              <>
+                <button onClick={exportSuratExcel} className="p-2 bg-white border border-slate-200 text-brand-blue rounded-xl hover:bg-blue-50 transition-all active:scale-90" title="Export Excel">
+                  <Download className="w-4 h-4" />
+                </button>
+                <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Buat Surat Baru
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -6705,15 +6753,40 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         return;
     }
     
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Gagal membuka jendela cetak. Pastikan pop-up blocker diizinkan.');
-      return;
-    }
-
     const html = generateSuratHTML(surat, kopSettings, settings);
-    printWindow.document.write(html);
-    printWindow.document.close();
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    if (iframe.contentWindow) {
+      iframe.contentWindow.document.open();
+      iframe.contentWindow.document.write(html);
+      iframe.contentWindow.document.close();
+      
+      iframe.onload = () => {
+         setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 1000);
+         }, 500);
+      };
+    } else {
+       const printWindow = window.open('', '_blank');
+       if (printWindow) {
+         printWindow.document.write(html);
+         printWindow.document.close();
+       } else {
+         alert('Gagal membuka jendela cetak. Pastikan pop-up blocker diizinkan.');
+       }
+    }
   };
 
   const handleSubmitPerbaikan = async (e: React.FormEvent) => {

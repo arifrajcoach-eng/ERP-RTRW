@@ -1,6 +1,9 @@
 {
   "name": "SmartRW Multi-Tenant System",
   "description": "Sistem Manajemen Lingkungan (SmartRW) tingkat RW/RT dengan arsitektur Multi-Tenant, User Mapping per RT, dan Panel Super Admin untuk skalabilitas layanan.",
-  "requestFramePermissions": ["geolocation", "camera"],
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
   "majorCapabilities": []
 }
