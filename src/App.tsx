@@ -1153,7 +1153,7 @@ export default function App() {
           <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-all"></div>
           <div className="relative z-10">
             <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-2 font-elegant">
-              <img src="/logo_erprtrw.png" alt="Logo RW 26" className="w-8 h-8 " referrerPolicy="no-referrer" />
+              <img src="/logo_rw26_main.png" alt="Logo RW 26" className="w-8 h-8 " referrerPolicy="no-referrer" />
               RW 26 <span className="text-brand-pink">SMART</span>
             </h1>
             <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Berdampak & Memberdayakan</p>
