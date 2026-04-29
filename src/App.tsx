@@ -99,15 +99,15 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
       <body>
         <div class="print-container">
           <!-- Kop Surat -->
-          <div class="flex items-center gap-4 relative">
-               ${surat.show_logo !== 'no' && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-20 h-20 object-contain" />` : '<div class="w-20"></div>'}
+          <div class="flex items-center relative py-1">
+               ${surat.show_logo !== 'no' && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-24 h-24 object-contain ml-12 mr-2" />` : '<div class="w-24 ml-12 mr-2"></div>'}
                <div class="flex-1 text-center">
                    <h2 class="text-lg font-bold uppercase">${kop.nama_rt || `RUKUN TETANGGA ${kop.rt || '...'} / RUKUN WARGA ${kop.rw || '...'}`}</h2>
                    <p class="text-sm">KELURAHAN ${kop.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kop.kecamatan?.toUpperCase() || '...'}</p>
                    <p class="text-sm font-bold">${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KABUPATEN') || (kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase()}</p>
                    <p class="text-[10px]">Sekretariat : ${kop.alamat || '...'} | Email: ${kop.email || '...'} | Instagram: ${kop.instagram || '...'}</p>
                </div>
-               <div class="w-20"></div>
+               <div class="w-24 ml-2 mr-12"></div>
           </div>
           <div class="border-b-4 border-black mt-2"></div>
           <div class="border-b-2 border-black mt-0.5"></div>
@@ -135,13 +135,13 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
           </div>
 
           <div class="mt-12 flex justify-between">
-              <div class="text-center">
+              <div class="text-center ml-12">
                   <p>Mengetahui,</p>
                   <p>Ketua RW ${surat.rw || kop.rw || '....'}</p>
                   <div class="h-20"></div>
                   <p class="font-bold underline">( ${surat.ketua_rw_nama || kop.nama_ketua_rw || '...................................'} )</p>
               </div>
-              <div class="text-center">
+              <div class="text-center mr-12">
                   <p>${(() => {
                       const kab = kop.kabupaten || settings.kabupaten || 'Bekasi';
                       const prefix = kab.toUpperCase().includes('KABUPATEN') || kab.toUpperCase().includes('KOTA') ? '' : 'Kabupaten ';
@@ -1086,48 +1086,79 @@ export default function App() {
     throw new Error(JSON.stringify(errInfo));
   };
 
-  // Helper for uploading files to Firebase Storage with Progress
+  // Helper for uploading files. In this environment, Firebase Storage (bucket) might not be fully initialized.
+  // We use Base64 encoding and image compression as a fallback so the app works without the Storage bucket.
   const handleFileUpload = async (file: File, folder: string, onProgress?: (pct: number) => void) => {
-    console.log(`Starting upload to ${folder}:`, file.name);
-    // Sanitize filename: remove spaces and special characters for better compatibility
-    const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-    const path = `${folder}/${Date.now()}_${safeName}`;
+    console.log(`Starting base64 encoding for ${folder}:`, file.name);
     
-    try {
-      const storageRef = ref(storage, path);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+    if (onProgress) onProgress(10);
+    
+    return new Promise<string>((resolve, reject) => {
+      const isImage = file.type.startsWith('image/');
+      const reader = new FileReader();
       
-      if (onProgress) onProgress(0); // Initialize
-      
-      return new Promise<string>((resolve, reject) => {
-        uploadTask.on('state_changed', 
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            if (onProgress) onProgress(progress);
-            console.log(`Upload progress for ${file.name}: ${Math.round(progress)}%`);
-          }, 
-          (error) => {
-            console.error("Upload error detail:", error);
-            showNotification(`Gagal upload: ${error.message}`, "error");
-            reject(error);
-          }, 
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              console.log(`Upload complete for ${file.name}. URL:`, downloadURL);
-              resolve(downloadURL);
-            } catch (err: any) {
-              console.error("Error getting download URL:", err);
-              reject(err);
-            }
+      reader.onload = (e) => {
+        if (onProgress) onProgress(50);
+        const result = e.target?.result as string;
+        
+        if (isImage) {
+          // Compress image to fit well within Firestore's 1MB document limit
+          const img = new window.Image();
+          img.onload = () => {
+             const canvas = document.createElement('canvas');
+             const MAX_WIDTH = 800;
+             const MAX_HEIGHT = 800;
+             let width = img.width;
+             let height = img.height;
+
+             if (width > height) {
+               if (width > MAX_WIDTH) {
+                 height *= MAX_WIDTH / width;
+                 width = MAX_WIDTH;
+               }
+             } else {
+               if (height > MAX_HEIGHT) {
+                 width *= MAX_HEIGHT / height;
+                 height = MAX_HEIGHT;
+               }
+             }
+
+             canvas.width = width;
+             canvas.height = height;
+             const ctx = canvas.getContext('2d');
+             if (ctx) {
+                 ctx.drawImage(img, 0, 0, width, height);
+                 if (onProgress) onProgress(100);
+                 resolve(canvas.toDataURL('image/jpeg', 0.6)); // Compress to 60% JPEG
+             } else {
+                 if (onProgress) onProgress(100);
+                 resolve(result);
+             }
+          };
+          img.onerror = () => {
+             showNotification("Gagal memproses gambar.", "error");
+             reject(new Error("Failed to load image for compression"));
+          };
+          img.src = result;
+        } else {
+          // For non-images (PDFs), Firestore max document size is 1MB (~700KB before base64)
+          if (file.size > 700 * 1024) {
+              const errMsg = "File PDF/Dokumen terlalu besar. Maksimal 700KB untuk upload karena keterbatasan database.";
+              showNotification(errMsg, "error");
+              reject(new Error(errMsg));
+              return;
           }
-        );
-      });
-    } catch (error: any) {
-      console.error("Storage upload error catch:", error);
-      showNotification(`System Error: ${error.message}`, "error");
-      throw error;
-    }
+          if (onProgress) onProgress(100);
+          resolve(result);
+        }
+      };
+      
+      reader.onerror = (e) => {
+         showNotification("Gagal membaca file.", "error");
+         reject(e);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
 
@@ -5369,39 +5400,58 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
     const surat = suratData.find(s => s.id === id);
     if (!surat || !generateSuratHTML) return;
 
-    const html = generateSuratHTML(surat, kopSettings, settings);
+    const mergedSurat = { ...surat };
+    
+    // Attempt to merge warga data if available
+    const wargaObj = wargaData?.find(w => w.nik === surat.nik);
+    if (wargaObj) {
+        mergedSurat.ttl = `${wargaObj.tempatLahir || '-'}, ${wargaObj.tglLahir || '-'}`;
+        mergedSurat.jk = wargaObj.jk || '-';
+        mergedSurat.pekerjaan = wargaObj.profesi || '-';
+        mergedSurat.kewarganegaraan = wargaObj.kewarganegaraan || '-';
+        mergedSurat.statusKawin = wargaObj.kawin || '-';
+        mergedSurat.alamat = wargaObj.blok || (wargaObj.rt ? `RT ${wargaObj.rt} / RW ${wargaObj.rw}` : '-');
+    }
 
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
+    const html = generateSuratHTML(mergedSurat, kopSettings, settings);
 
-    if (iframe.contentWindow) {
-      iframe.contentWindow.document.open();
-      iframe.contentWindow.document.write(html);
-      iframe.contentWindow.document.close();
-      
-      iframe.onload = () => {
-         setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-            setTimeout(() => {
-              document.body.removeChild(iframe);
-            }, 1000);
-         }, 500);
-      };
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
     } else {
-       const printWindow = window.open('', '_blank');
-       if (printWindow) {
-         printWindow.document.write(html);
-         printWindow.document.close();
-       } else {
-         alert('Gagal membuka jendela cetak. Pastikan pop-up blocker diizinkan.');
-       }
+      // Fallback to iframe if pop-up is blocked
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+  
+      if (iframe.contentWindow) {
+        iframe.contentWindow.document.open();
+        iframe.contentWindow.document.write(html);
+        iframe.contentWindow.document.close();
+        
+        setTimeout(() => {
+          if (iframe.contentWindow) {
+             iframe.contentWindow.focus();
+             iframe.contentWindow.print();
+          }
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 1000);
+        }, 500);
+      }
     }
   };
 
@@ -7661,39 +7711,55 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         return;
     }
     
-    const html = generateSuratHTML(surat, kopSettings, settings);
+    const mergedSurat = { ...surat };
+    if (wargaData) {
+        mergedSurat.ttl = `${wargaData.tempatLahir || '-'}, ${wargaData.tglLahir || '-'}`;
+        mergedSurat.jk = wargaData.jk || '-';
+        mergedSurat.pekerjaan = wargaData.profesi || '-';
+        mergedSurat.kewarganegaraan = wargaData.kewarganegaraan || '-';
+        mergedSurat.statusKawin = wargaData.kawin || '-';
+        mergedSurat.alamat = wargaData.blok || (wargaData.rt ? `RT ${wargaData.rt} / RW ${wargaData.rw}` : '-');
+    }
 
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
+    const html = generateSuratHTML(mergedSurat, kopSettings, settings);
 
-    if (iframe.contentWindow) {
-      iframe.contentWindow.document.open();
-      iframe.contentWindow.document.write(html);
-      iframe.contentWindow.document.close();
-      
-      iframe.onload = () => {
-         setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-            setTimeout(() => {
-              document.body.removeChild(iframe);
-            }, 1000);
-         }, 500);
-      };
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
     } else {
-       const printWindow = window.open('', '_blank');
-       if (printWindow) {
-         printWindow.document.write(html);
-         printWindow.document.close();
-       } else {
-         alert('Gagal membuka jendela cetak. Pastikan pop-up blocker diizinkan.');
-       }
+      // Fallback to iframe if pop-up is blocked
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+  
+      if (iframe.contentWindow) {
+        iframe.contentWindow.document.open();
+        iframe.contentWindow.document.write(html);
+        iframe.contentWindow.document.close();
+        
+        setTimeout(() => {
+          if (iframe.contentWindow) {
+             iframe.contentWindow.focus();
+             iframe.contentWindow.print();
+          }
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 1000);
+        }, 500);
+      }
     }
   };
 
