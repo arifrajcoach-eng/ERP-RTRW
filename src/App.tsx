@@ -5724,13 +5724,6 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                         <button onClick={() => handleEdit(surat)} className="bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 p-2 rounded-lg border border-slate-100 transition-all" title="Edit Data">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
-                         <button onClick={() => handleCetak(surat.id)} className="bg-slate-900 hover:bg-slate-800 text-white p-2 rounded-lg transition-all shadow-lg active:scale-95" title="Cetak Surat Digital">
-                           <Printer className="w-3.5 h-3.5" />
-                         </button>
-                         <label className={`bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-600 p-2 rounded-lg border border-slate-200 transition-all cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`} title="Upload Scan Berkas">
-                           <Upload className="w-3.5 h-3.5" />
-                           <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUploadSurat(surat.id, e.target.files[0])} />
-                         </label>
                          {uploading && (
                            <div className="absolute top-0 left-0 h-1 bg-blue-600 transition-all duration-300" style={{ width: `${uploadPct}%` }}></div>
                          )}
@@ -8655,8 +8648,8 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
             </button>
           </div>
           <div className="p-8">
-            <h2 className="text-xl font-black text-slate-800 mb-6 font-elegant tracking-tight">
-              {loginMode === 'admin' ? 'Masuk ke Sistem Pengurus' : 'Verifikasi Data Warga Utama'}
+            <h2 className="text-xl font-black text-slate-800 mb-6 font-elegant tracking-tight text-center">
+              {loginMode === 'admin' ? 'LOGIN' : 'Verifikasi Data Warga Utama'}
             </h2>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
