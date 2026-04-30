@@ -261,27 +261,42 @@ export default function App() {
 
           if (userDoc.exists()) {
             let userData = userDoc.data() as any;
+            
+            // --- AUTO MIGRATION & REPAIR LOGIC ---
+            const isTrihUser = user.email?.toLowerCase() === 'trihprw26@rw26.com' || user.email?.toLowerCase().startsWith('trihprw26');
+            let needsUpdate = false;
+            
+            // Fix missing or wrong tenantId for known client
+            if (isTrihUser && userData.tenantId !== 'trihprw26') {
+              userData.tenantId = 'trihprw26';
+              needsUpdate = true;
+            }
+            
             // Force Super Admin status for the specific master email
             const isMasterEmail = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
             if (isMasterEmail) {
-              const needsUpdate = userData.role !== 'SUPER_ADMIN' || !userData.isSuperAdmin;
+              const isAdminStatusWrong = userData.role !== 'SUPER_ADMIN' || !userData.isSuperAdmin || userData.tenantId !== 'MASTER';
               
               userData.isSuperAdmin = true;
               userData.role = 'SUPER_ADMIN';
+              userData.tenantId = 'MASTER';
               if (!userData.name || userData.name === 'User') {
                 userData.name = 'Bpk. Arif (Super Admin)';
               }
-              // Persistent update to database if needed
-              if (needsUpdate) {
-                try {
-                  await updateDoc(userDocRef, { 
-                      isSuperAdmin: true, 
-                      role: 'SUPER_ADMIN',
-                      name: userData.name 
-                  });
-                } catch(e) {
-                  console.warn("Could not sync super admin status to DB, continuing anyway.", e);
-                }
+              if (isAdminStatusWrong) needsUpdate = true;
+            }
+            
+            // Persistent update to database if repair was needed
+            if (needsUpdate) {
+              try {
+                await updateDoc(userDocRef, { 
+                    isSuperAdmin: userData.isSuperAdmin || false, 
+                    role: userData.role,
+                    name: userData.name,
+                    tenantId: userData.tenantId
+                });
+              } catch(e) {
+                console.warn("Could not sync profile repairs to DB.", e);
               }
             }
             setCurrentUser(userData);
@@ -301,13 +316,24 @@ export default function App() {
             
             const isMasterEmail = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
             
-            // Set default tenantId to 'RW26_SMART' for the current user
-            const tenantId = 'RW26_SMART';
+            // Set default tenantId based on username or email
+            let tenantId = 'RW26_SMART';
+            if (user.email?.startsWith('trihprw26')) {
+              tenantId = 'trihprw26';
+            } else if (user.email?.includes('@')) {
+              // Extract potential tenantId from email if it's a custom domain or structured
+              const domain = user.email.split('@')[1];
+              if (domain !== 'gmail.com' && domain !== 'rw26.com') {
+                tenantId = domain.replace(/\./g, '_');
+              }
+            }
+            
             const isSuperAdmin = isMasterEmail;
             
             if (isMasterEmail) { 
               role = 'SUPER_ADMIN'; 
               name = 'Bpk. Arif (Super Admin)'; 
+              tenantId = 'MASTER'; // Super Admin sees overall or master data
             }
             
             const newUser = { 
@@ -317,7 +343,7 @@ export default function App() {
               username: user.email?.split('@')[0] || 'user',
               role: role, 
               email: user.email, 
-              tenantId, 
+              tenantId: tenantId, 
               isSuperAdmin: !!isSuperAdmin,
               rt: "01",
               status: "AKTIF",
@@ -4336,7 +4362,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       return;
     }
     
-    const newWarga = { ...formData, tenantId: tenantId, tglDaftar: new Date().toISOString().split('T')[0] };
+    const newWarga = { ...formData, tenantId: currentUser?.tenantId || 'RW26_SMART', tglDaftar: new Date().toISOString().split('T')[0] };
     
     setIsLoadingDB(true);
     try {
@@ -8245,19 +8271,8 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
 
 function SelfRegistrationView({ tenantId, onClose, handleFileUpload, showNotification, handleFirestoreError }: { tenantId: string, onClose: () => void, handleFileUpload: any, showNotification: any, handleFirestoreError: any }) {
   const [formData, setFormData] = useState({
-    nik: '',
-    nama: '',
-    kk: '',
-    hp: '',
-    blok: '',
-    rt: '01',
-    rw: '05',
-    pekerjaan: '',
-    statusKawin: 'Belum Kawin',
-    agama: 'Islam',
-    tempatLahir: '',
-    tglLahir: '',
-    jk: 'Laki-Laki'
+    nik: '', nama: '', kk: '', hp: '', blok: '', rt: '01', rw: '05',
+    pekerjaan: '', statusKawin: 'Belum Kawin', agama: 'Islam', tempatLahir: '', tglLahir: '', jk: 'Laki-Laki'
   });
   const [files, setFiles] = useState<{ktp?: File, kk?: File}>({});
   const [uploading, setUploading] = useState(false);
@@ -8267,148 +8282,56 @@ function SelfRegistrationView({ tenantId, onClose, handleFileUpload, showNotific
     e.preventDefault();
     setUploading(true);
     setUploadPct(0);
-
     try {
       let ktpUrl = "";
       let kkUrl = "";
-
-      if (files.ktp) {
-        ktpUrl = await handleFileUpload(files.ktp, 'ktp', (pct: number) => setUploadPct(pct));
-      }
-      if (files.kk) {
-        kkUrl = await handleFileUpload(files.kk, 'kk', (pct: number) => setUploadPct(pct));
-      }
+      if (files.ktp) ktpUrl = await handleFileUpload(files.ktp, 'ktp', (pct: number) => setUploadPct(pct));
+      if (files.kk) kkUrl = await handleFileUpload(files.kk, 'kk', (pct: number) => setUploadPct(pct));
 
       const id = `VRF-${Date.now()}`;
-      const payload = {
-        ...formData,
-        id,
-        tenantId,
-        ktpUrl,
-        kkUrl,
-        status: 'Menunggu Persetujuan',
-        submittedAt: new Date().toISOString(),
-        type: 'REGISTRASI_BARU'
-      };
-
-      await setDoc(doc(db, 'verifikasi_warga', id), payload);
-      showNotification("Pendaftaran berhasil dikirim! Silakan tunggu verifikasi admin untuk dapat login.", "success");
+      await setDoc(doc(db, 'verifikasi_warga', id), {
+        ...formData, id, tenantId, ktpUrl, kkUrl,
+        status: 'Menunggu Persetujuan', submittedAt: new Date().toISOString(), type: 'REGISTRASI_BARU'
+      });
+      showNotification("Pendaftaran warga berhasil!", "success");
       onClose();
-    } catch (err) {
-      handleFirestoreError(err, 'create', 'verifikasi_warga');
-    } finally {
-      setUploading(false);
-    }
+    } catch (err) { handleFirestoreError(err, 'create', 'verifikasi_warga'); }
+    finally { setUploading(false); }
   };
-
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
-        <div className="bg-brand-blue p-8 text-white flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight">Verifikasi Mandiri</h2>
-            <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">Pendaftaran Warga Baru</p>
-          </div>
-          <button onClick={onClose} className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+      <div className="bg-white p-8 rounded-xl shadow-lg">
+        <h2 className="text-xl font-bold mb-4">Pendaftaran Warga</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input required placeholder="NIK" value={formData.nik} onChange={e => setFormData({...formData, nik: e.target.value})} className="w-full p-2 border rounded" />
+          <input required placeholder="Nama" value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full p-2 border rounded" />
+          <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">Kirim</button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">NIK (16 Digit)</label>
-                <input required maxLength={16} value={formData.nik} onChange={e => setFormData({...formData, nik: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="3271..." />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nama Lengkap Sesuai KTP</label>
-                <input required value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="Contoh: Ahmad Suhendar" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">No. KK (16 Digit)</label>
-                <input required maxLength={16} value={formData.kk} onChange={e => setFormData({...formData, kk: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="3271..." />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nomor WhatsApp Aktif</label>
-                <input required value={formData.hp} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="0812..." />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Blok Rumah</label>
-                  <input required value={formData.blok} onChange={e => setFormData({...formData, blok: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="A/01" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">RT / RW</label>
-                  <div className="flex gap-2">
-                    <input required value={formData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="01" />
-                    <input required value={formData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="05" />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Agama</label>
-                <select value={formData.agama} onChange={e => setFormData({...formData, agama: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold">
-                  <option>Islam</option>
-                  <option>Kristen</option>
-                  <option>Katolik</option>
-                  <option>Hindu</option>
-                  <option>Budha</option>
-                  <option>Konghucu</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Tempat Lahir</label>
-                  <input required value={formData.tempatLahir} onChange={e => setFormData({...formData, tempatLahir: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" placeholder="Jakarta" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Tgl Lahir</label>
-                  <input required type="date" value={formData.tglLahir} onChange={e => setFormData({...formData, tglLahir: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 italic">Unggah Foto KTP (Disarankan)</label>
-              <div className="relative">
-                <input type="file" accept="image/*" onChange={e => setFiles({...files, ktp: e.target.files?.[0]})} className="hidden" id="ktp-upload" />
-                <label htmlFor="ktp-upload" className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-brand-blue/5 hover:border-brand-blue/30 transition-all">
-                  <Image className="w-8 h-8 text-slate-300 mb-2" />
-                  <p className="text-[10px] font-bold text-slate-500">{files.ktp ? files.ktp.name : 'Pilih Foto KTP'}</p>
-                </label>
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 italic">Unggah Foto KK (Opsional)</label>
-              <div className="relative">
-                <input type="file" accept="image/*" onChange={e => setFiles({...files, kk: e.target.files?.[0]})} className="hidden" id="kk-upload" />
-                <label htmlFor="kk-upload" className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-brand-blue/5 hover:border-brand-blue/30 transition-all">
-                  <FileText className="w-8 h-8 text-slate-300 mb-2" />
-                  <p className="text-[10px] font-bold text-slate-500">{files.kk ? files.kk.name : 'Pilih Foto Kartu Keluarga'}</p>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {uploading && (
-             <div className="w-full bg-slate-100 rounded-full h-2 uppercase text-[8px] font-black text-slate-400 text-center flex items-center justify-center overflow-hidden">
-                <div className="bg-brand-blue h-full transition-all duration-300" style={{ width: `${uploadPct}%` }}></div>
-                <span className="absolute">MENGUNGGAH BERKAS: {uploadPct}%</span>
-             </div>
-          )}
-
-          <div className="flex gap-4 pt-6">
-            <button type="button" onClick={onClose} className="flex-1 py-4 bg-slate-100 text-slate-500 font-black uppercase text-xs tracking-widest rounded-2xl hover:bg-slate-200 transition-all">Batal</button>
-            <button type="submit" disabled={uploading} className="flex-2 py-4 bg-brand-blue text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50">
-               {uploading ? 'Sedang Memproses...' : 'Kirim Data Verifikasi'}
-            </button>
-          </div>
+function TenantRegistrationView({ onClose, showNotification, handleFirestoreError }: { onClose: () => void, showNotification: any, handleFirestoreError: any }) {
+  const [formData, setFormData] = useState({ namaTenant: '', namaPJ: '', email: '' });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const id = `TENANT-${Date.now()}`;
+      await setDoc(doc(db, 'tenant_registrations', id), { ...formData, status: 'Menunggu Persetujuan', submittedAt: new Date().toISOString() });
+      showNotification("Pendaftaran tenant berhasil dikirim!", "success");
+      onClose();
+    } catch (err) { handleFirestoreError(err, 'create', 'tenant_registrations'); }
+  };
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="bg-white p-8 rounded-xl shadow-lg">
+        <h2 className="text-xl font-bold mb-4">Pendaftaran Tenant</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input required placeholder="Nama Tenant" value={formData.namaTenant} onChange={e => setFormData({...formData, namaTenant: e.target.value})} className="w-full p-2 border rounded" />
+          <input required placeholder="Nama Penanggung Jawab" value={formData.namaPJ} onChange={e => setFormData({...formData, namaPJ: e.target.value})} className="w-full p-2 border rounded" />
+          <input required type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 border rounded" />
+          <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">Kirim</button>
         </form>
       </div>
     </div>
@@ -8589,12 +8512,19 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       const userDoc = await getDoc(userRef);
       
       const isArif = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
+      let tenantId = 'RW26_SMART';
+      if (user.email?.startsWith('trihprw26')) {
+        tenantId = 'trihprw26';
+      } else if (isArif) {
+        tenantId = 'MASTER';
+      }
+      
       const userData = {
         email: user.email,
-        role: isArif ? 'SUPER_ADMIN' : 'Viewer',
+        role: isArif ? 'SUPER_ADMIN' : (userDoc.exists() ? userDoc.data()?.role || 'Viewer' : 'Viewer'),
         isSuperAdmin: isArif,
         name: isArif ? 'Bpk. Arif (Super Admin)' : (user.displayName || 'User'),
-        tenantId: 'RW26_SMART', // De-facto tenant
+        tenantId: userDoc.exists() ? userDoc.data()?.tenantId || tenantId : tenantId,
         createdAt: userDoc.exists() ? userDoc.data()?.createdAt || new Date().toISOString() : new Date().toISOString()
       };
 
