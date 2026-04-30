@@ -1450,7 +1450,7 @@ export default function App() {
              setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} 
              handleFileUpload={handleFileUpload}
           />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} />}
           {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
 
@@ -5264,7 +5264,7 @@ function FinansialDashboardView(f_params) {
 
 
 
-function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], userRole, currentUser, getSetting, kopSettings, tenantId, setIsLoadingDB, handleFirestoreError, showNotification, settings, handleFileUpload }: { suratData: any[], setSuratData: any, wargaData?: any[], usersData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, kopSettings: any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, settings: any, handleFileUpload: any }) {
+function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], userRole, currentUser, getSetting, kopSettings, tenantId, isLoadingDB, setIsLoadingDB, handleFirestoreError, showNotification, settings, handleFileUpload }: { suratData: any[], setSuratData: any, wargaData?: any[], usersData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, kopSettings: any, tenantId: string, isLoadingDB: boolean, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, settings: any, handleFileUpload: any }) {
   const [activeView, setActiveView] = useState<'manajemen' | 'arsip'>('manajemen');
   const [showSuratForm, setShowSuratForm] = useState(false);
   const [editingSurat, setEditingSurat] = useState<any | null>(null);
@@ -5392,6 +5392,19 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
       setIsLoadingDB(false);
     }
   };
+
+  useEffect(() => {
+    if (showSuratForm && formRef.current) {
+      if (editingSurat) {
+        Object.keys(editingSurat).forEach(key => {
+          const el = formRef.current?.elements.namedItem(key) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+          if (el) el.value = editingSurat[key];
+        });
+      } else {
+        formRef.current.reset();
+      }
+    }
+  }, [showSuratForm, editingSurat]);
 
   const handleEdit = (surat: any) => {
     setEditingSurat(surat);
@@ -5715,13 +5728,18 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                     <div className="flex justify-end gap-1.5">
                       {userRole !== 'Viewer' && surat.status === 'Diajukan' && (
                         <>
-                          <button onClick={() => handleSetujui(surat.id)} className="text-[10px] font-black uppercase text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 hover:bg-green-100 transition-all active:scale-95">Setujui</button>
-                          <button onClick={() => handleTolak(surat.id)} className="text-[10px] font-black uppercase text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 transition-all active:scale-95">Tolak</button>
+                          <button disabled={isLoadingDB} onClick={() => handleSetujui(surat.id)} className="text-[10px] font-black uppercase text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 hover:bg-green-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Setujui</button>
+                          <button disabled={isLoadingDB} onClick={() => handleTolak(surat.id)} className="text-[10px] font-black uppercase text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Tolak</button>
                         </>
                       )}
                       
                       <div className="flex gap-1 group-hover:opacity-100 opacity-60 transition-opacity">
-                        <button onClick={() => handleEdit(surat)} className="bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 p-2 rounded-lg border border-slate-100 transition-all" title="Edit Data">
+                        {surat.status === 'Selesai' && (
+                          <button onClick={() => handleCetak(surat.id)} className="bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 p-2 rounded-lg border border-slate-100 transition-all" title="Cetak Surat (PDF)">
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button disabled={isLoadingDB} onClick={() => handleEdit(surat)} className="bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 p-2 rounded-lg border border-slate-100 transition-all disabled:opacity-50 disabled:cursor-wait" title="Edit Data">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                          {uploading && (
@@ -5732,7 +5750,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                              <FileText className="w-3.5 h-3.5" />
                            </a>
                          )}
-                        <button onClick={() => handleDelete(surat.id)} className="bg-slate-50 hover:bg-red-50 text-slate-300 hover:text-red-500 p-2 rounded-lg border border-slate-100 transition-all" title="Hapus Permanen">
+                        <button disabled={isLoadingDB} onClick={() => handleDelete(surat.id)} className="bg-slate-50 hover:bg-red-50 text-slate-300 hover:text-red-500 p-2 rounded-lg border border-slate-100 transition-all disabled:opacity-50 disabled:cursor-wait" title="Hapus Permanen">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -5775,21 +5793,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
             </div>
             
             {showSuratForm && (
-              <script dangerouslySetInnerHTML={{ __html: `
-                (function() {
-                  const form = document.querySelector('form');
-                  if (!form) return;
-                  const editingSurat = ${JSON.stringify(editingSurat)};
-                  if (editingSurat) {
-                    Object.keys(editingSurat).forEach(key => {
-                      const el = form.elements.namedItem(key);
-                      if (el) el.value = editingSurat[key];
-                    });
-                  } else {
-                    form.reset();
-                  }
-                })();
-              `}} />
+              <></>
             )}
             <form ref={formRef} onSubmit={handleAddSurat} className="p-5 overflow-y-auto space-y-5">
               {/* Seksi 1: Identitas Pribadi */}
@@ -5984,7 +5988,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                   Batal
                 </button>
                 <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                  Ajukan Surat
+                  {editingSurat ? 'Simpan Data' : 'Ajukan Surat'}
                 </button>
               </div>
             </form>
@@ -10722,7 +10726,7 @@ function PosyanduView({
                  </div>
                  <div className="pt-4 flex gap-3">
                     <button type="button" onClick={() => setShowBalitaForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
-                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all">Simpan Data</button>
+                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
                  </div>
               </form>
            </motion.div>
@@ -10806,7 +10810,7 @@ function PosyanduView({
                  </div>
                  <div className="pt-4 flex gap-3">
                     <button type="button" onClick={() => setShowImunisasiForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
-                    <button type="submit" className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100 transition-all active:scale-95">Simpan Data</button>
+                    <button type="submit" className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100 transition-all active:scale-95">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
                  </div>
               </form>
            </motion.div>
@@ -10877,7 +10881,7 @@ function PosyanduView({
                  </div>
                  <div className="pt-4 flex gap-3">
                     <button type="button" onClick={() => setShowIbuHamilForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50 transition-all">Batal</button>
-                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all active:scale-95">Simpan Data</button>
+                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all active:scale-95">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
                  </div>
               </form>
            </motion.div>
