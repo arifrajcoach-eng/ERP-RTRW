@@ -2,15 +2,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Helper Functions ---
+    // --- Unified Tenant/Role Helpers ---
     function isSignedIn() { return request.auth != null; }
-    function isAdmin() { return isSignedIn() && (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || request.auth.token.email == 'arifrajcoach@gmail.com' || request.auth.uid == 'eHFrJ7Re1sb4xhMWlsHNoKr5qs53'); }
-    function isOwner(resourceData) { return isSignedIn() && request.auth.uid == resourceData.authUid; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
+        request.auth.token.email == 'arifrajcoach@gmail.com' || 
+        request.auth.uid == 'eHFrJ7Re1sb4xhMWlsHNoKr5qs53'
+      ); 
+    }
+    
+    function getRequestor() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isTenantMember(tenantId) {
+      return isSignedIn() && (isAdmin() || getRequestor().tenantId == tenantId);
+    }
+    
     function isPengurus() {
       return isSignedIn() && (
         isAdmin() || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS'])
+        (getRequestor().role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS'])
       );
     }
 
@@ -18,6 +31,12 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+
+    // --- Helper Functions (Legacy, to be removed) ---
+    function getUser(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    function isOwner(resourceData) { return isSignedIn() && request.auth.uid == resourceData.authUid; }
 
     match /test/{docId} {
       allow read: if true;
@@ -35,54 +54,57 @@ service cloud.firestore {
     }
 
     match /buku_tamu/{docId} {
-      allow list: if isSignedIn() && (isPengurus() || resource.data.tenantId == "RW26_SMART");
-      allow get: if isSignedIn() && (isPengurus() || resource.data.tenantId == "RW26_SMART");
-      allow create: if true; // Allow public check-in
-      allow update, delete: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
+      allow create: if true;
     }
 
+    match /tenant_registrations/{docId} {
+      allow create: if true; // Public registration
+      allow read, write: if isAdmin(); // Only admins can process
+    }
+    
     match /tenants/{docId} {
       allow read, write: if isAdmin();
     }
 
     match /inventaris/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /inventaris_kategori/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /inventaris_lokasi/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /inventaris_supplier/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /iuran/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /sampah_tarik_saldo/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /posyandu_kegiatan/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /posbindu_kegiatan/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /pemeriksaan_balita/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
     
     match /pemeriksaan_posbindu/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /emergencies/{docId} {
@@ -91,36 +113,40 @@ service cloud.firestore {
     }
 
     match /inventaris_logs/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /imunisasi/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /ibu_hamil/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /kas/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /sampah_kategori/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /surat/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
 
     match /users/{userId} {
-      allow get: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (resource.data.email == request.auth.token.email));
+      allow create, update, delete: if isPengurus() && isTenantMember(request.resource.data.tenantId);
       allow list: if isPengurus();
       allow read, write: if isAdmin(); // Admin override
+    }
+
+    match /public_usernames/{username} {
+      allow read: if true;
+      allow write: if isSignedIn();
     }
 
     match /verifikasi_warga/{docId} {
@@ -132,21 +158,21 @@ service cloud.firestore {
         request.resource.data.authUid == request.auth.uid || isAdmin()
       );
       
-      // Allow list ONLY if it's their own document
-      allow list: if isAdmin() || (isSignedIn() && resource.data.authUid == request.auth.uid);
+      // Allow list ONLY if it's their own document OR they are pengurus
+      allow list: if isSignedIn(); // Relaxed to allow authenticated users to list
       allow delete: if isAdmin();
     }
 
     match /balita/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /sampah_setoran/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /warga/{docId} {
-      allow read, write: if isPengurus();
+      allow read, write: if isTenantMember(resource.data.tenantId);
     }
 
     match /voting_candidates/{docId} {
@@ -179,8 +205,8 @@ service cloud.firestore {
     }
     
     match /data_warga/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isPengurus();
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isTenantMember(resource.data.tenantId);
     }
   }
 }

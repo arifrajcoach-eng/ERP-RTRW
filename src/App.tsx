@@ -258,28 +258,6 @@ export default function App() {
           // Fetch additional user info/role from Firestore
           const userDocRef = doc(db, 'users', user.uid);
           let userDoc = await getDoc(userDocRef);
-          
-          if (!userDoc.exists() && user.email) {
-            // Check for pre-registered doc using email
-            const preRegId = user.email.replace(/\./g, '_');
-            try {
-              const preRegDoc = await getDoc(doc(db, 'users', preRegId));
-              if (preRegDoc.exists()) {
-                // Convert pre-reg doc to UID-based doc
-                const data = preRegDoc.data();
-                const newUserInfo = { ...data, uid: user.uid, isPreRegistered: false };
-                await setDoc(userDocRef, newUserInfo);
-                try {
-                  await deleteDoc(preRegDoc.ref); // Clean up
-                } catch (e) {
-                  console.warn("Could not delete pre-reg doc, possibly rules restriction. Continuing...");
-                }
-                userDoc = await getDoc(userDocRef);
-              }
-            } catch (preRegErr) {
-              console.warn("Could not check pre-registered doc, ignoring...", preRegErr);
-            }
-          }
 
           if (userDoc.exists()) {
             let userData = userDoc.data() as any;
@@ -1304,10 +1282,10 @@ export default function App() {
             if (currentUser?.role === 'BENDAHARA') {
               return ['dashboard', 'keuangan', 'bank-sampah'].includes(item.id);
             }
-            if (currentUser?.role === 'RT') {
-              return ['dashboard', 'warga', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'inventaris', 'surat', 'kop-template'].includes(item.id);
+            if (['RT', 'RW'].includes(currentUser?.role || '')) {
+              return ['dashboard', 'warga', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'inventaris', 'surat', 'kop-template', 'users'].includes(item.id);
             }
-            if (item.id === 'users' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
+            if (item.id === 'users' && !['ADMIN', 'RT', 'RW'].includes(currentUser?.role) && !currentUser?.isSuperAdmin) return false;
             if (item.id === 'pengaturan' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
             if (item.id === 'super-admin' && !currentUser?.isSuperAdmin) return false;
             return true;
@@ -8545,13 +8523,30 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
     const targetPass = quickPass || password;
 
     try {
-      // Logic for easy demo: if user types "admin" and not an email, append a domain
-      let finalEmail = targetEmail;
-      if (!targetEmail.includes('@')) {
-        finalEmail = `${targetEmail}@rw26.com`;
-      }
+      // Logic for username OR email login
+      let loginEmail = targetEmail;
       
-      await signInWithEmailAndPassword(auth, finalEmail, targetPass);
+      // If the input doesn't contain '@', search for a username in public_usernames
+      if (!targetEmail.includes('@')) {
+        const usernameRef = doc(db, 'public_usernames', targetEmail);
+        const usernameDoc = await getDoc(usernameRef);
+        
+        if (usernameDoc.exists()) {
+          const userData = usernameDoc.data();
+          console.log('Found user data:', userData);
+          if (userData.email) {
+            loginEmail = userData.email;
+          } else {
+            throw new Error('Username valid, but no email set.');
+          }
+        } else if (targetEmail === 'trihprw26') {
+             loginEmail = 'trihprw26@rw26.com';
+        } else {
+             throw new Error('Username tidak ditemukan.');
+        }
+      }
+
+      await signInWithEmailAndPassword(auth, loginEmail, targetPass);
     } catch (err: any) {
       console.error("Login Error:", err);
       // ... same error logic
@@ -8666,7 +8661,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
               <>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Email Pengelola</label>
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Email/Username Pengelola</label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                         <User className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />

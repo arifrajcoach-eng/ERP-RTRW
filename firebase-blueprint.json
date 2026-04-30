@@ -114,6 +114,16 @@
       },
       "required": ["email", "role", "tenantId"]
     },
+    "PublicUsername": {
+      "title": "PublicUsername",
+      "description": "Mapping from username to email for login",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["username", "email"]
+    },
     "Balita": {
       "title": "Balita",
       "description": "Data anak balita untuk pemantauan Posyandu",
@@ -474,6 +484,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "Koleksi profil pengguna dan peran"
+    },
+    "/public_usernames/{username}": {
+      "schema": "PublicUsername",
+      "description": "Collection for username-to-email lookup"
     },
     "/warga/{nik}": {
       "schema": "Warga",
