@@ -133,7 +133,9 @@ service cloud.firestore {
     }
 
     match /surat/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId);
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || request.auth.uid == resource.data.authUid);
+      allow create: if isSignedIn() && request.resource.data.authUid == request.auth.uid;
+      allow update, delete: if isPengurus() && isTenantMember(resource.data.tenantId);
     }
 
 
@@ -150,17 +152,8 @@ service cloud.firestore {
     }
 
     match /verifikasi_warga/{docId} {
-      // Allow get/update if user owns the record
-      allow get, update: if (isSignedIn() && isOwner(resource.data)) || isAdmin();
-      
-      // Allow create if user sets their own authUid
-      allow create: if isSignedIn() && (
-        request.resource.data.authUid == request.auth.uid || isAdmin()
-      );
-      
-      // Allow list ONLY if it's their own document OR they are pengurus
-      allow list: if isSignedIn(); // Relaxed to allow authenticated users to list
-      allow delete: if isAdmin();
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
     match /balita/{docId} {
@@ -205,7 +198,7 @@ service cloud.firestore {
     }
     
     match /data_warga/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      allow read: if isSignedIn(); // Allow reading for discovery/login
       allow write: if isTenantMember(resource.data.tenantId);
     }
   }

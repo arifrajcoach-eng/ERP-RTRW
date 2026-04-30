@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { motion, AnimatePresence } from 'motion/react';
 import Webcam from 'react-webcam';
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, onSnapshot, getDocFromServer, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, getDoc, onSnapshot, getDocFromServer, writeBatch, limit } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -713,6 +713,24 @@ export default function App() {
           onDataLoaded();
         }
       );
+    } else if (isCitizen && (wargaAuth || currentUser?.role === 'Warga')) {
+      // Citizen listener: only their own letters
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId), where('authUid', '==', uid)), 
+          (snap) => {
+            const data = snap.docs.map(doc => ({ ...doc.data() }));
+            setSuratData(data);
+            onDataLoaded();
+          },
+          (err) => {
+            handleFirestoreError(err, 'list', 'surat');
+            onDataLoaded();
+          }
+        );
+      } else {
+        onDataLoaded();
+      }
     }
 
     // 4. Iuran Listener
@@ -943,7 +961,7 @@ export default function App() {
 
     const unsubVerifikasi = onSnapshot(getVerifikasiQuery(), 
       (snap) => {
-        setVerifikasiWargaData(snap.docs.map(doc => ({ ...doc.data() })));
+        setVerifikasiWargaData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         if (!currentUser && wargaAuth) onDataLoaded(); 
       },
       (err) => { 
@@ -1239,9 +1257,13 @@ export default function App() {
 
       {isLoadingDB && (
         <div className="fixed inset-0 z-[9999] bg-white/80  flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Sinkronisasi Database</h2>
-          <p className="text-slate-500 max-w-xs mx-auto">Mohon tunggu sebentar, sistem sedang memuat data dari Firebase...</p>
+          <div className="relative mb-6">
+            <div className="w-20 h-20 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+            <img src="/logo_rw.png?v=5" alt="Logo" className="w-10 h-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" referrerPolicy="no-referrer" />
+          </div>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight font-elegant mb-2 uppercase">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
+          <h2 className="text-lg font-bold text-slate-700 mb-2">Sinkronisasi Database</h2>
+          <p className="text-slate-500 max-w-xs mx-auto font-medium">Mohon tunggu sebentar, sistem sedang memproses data untuk Anda...</p>
         </div>
       )}
 
@@ -1258,8 +1280,8 @@ export default function App() {
         <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between bg-white relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-all"></div>
           <div className="relative z-10">
-            <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-2 font-elegant">
-              <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-8 h-8 " referrerPolicy="no-referrer" />
+            <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-3 font-elegant">
+              <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-10 h-10 drop-shadow-sm" referrerPolicy="no-referrer" />
               RW26 <span className="text-brand-pink">BERJUANG</span>
             </h1>
             <div className="mt-1 flex flex-col items-start pl-10">
@@ -4362,7 +4384,7 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       return;
     }
     
-    const newWarga = { ...formData, tenantId: currentUser?.tenantId || 'RW26_SMART', tglDaftar: new Date().toISOString().split('T')[0] };
+    const newWarga = { ...formData, tenantId: tenantId || 'RW26_SMART', tglDaftar: new Date().toISOString().split('T')[0] };
     
     setIsLoadingDB(true);
     try {
@@ -4452,7 +4474,32 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
 
   // Terapkan filter pada data - Optimized with useMemo for large datasets
   const filteredWargaData = useMemo(() => {
-    return wargaData.filter(w => {
+    // 1. De-duplicate by NIK first to ensure clean list
+    const uniqueMap: Record<string, any> = {};
+    wargaData.forEach(w => {
+      if (!w.nik) {
+        // For records without NIK, we rely on docId or just let them stay if unique enough
+        const id = w.docId || w.id || Math.random().toString();
+        uniqueMap[id] = w;
+        return;
+      }
+      
+      const existing = uniqueMap[w.nik];
+      if (!existing) {
+        uniqueMap[w.nik] = w;
+      } else {
+        // Priority: Verified > more complete data (e.g. has KK or Blok)
+        const isBetter = w.terverifikasi && !existing.terverifikasi;
+        const moreInfo = (w.blok && !existing.blok) || (w.kk && !existing.kk);
+        if (isBetter || (moreInfo && w.terverifikasi === existing.terverifikasi)) {
+           uniqueMap[w.nik] = w;
+        }
+      }
+    });
+
+    const uniqueWarga = Object.values(uniqueMap);
+
+    return uniqueWarga.filter((w: any) => {
       // Filter RT/RW - Normalize to string and trim leading zeros for comparison
       const normalize = (val: string) => val ? val.toString().replace(/^0+/, '') : "";
       const filterRTNormalized = filterRT === "Semua" ? "Semua" : filterRT.replace(/^0+/, '');
@@ -5369,11 +5416,20 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
   };
 
   const handleTolak = async (id: string) => {
+    if (!id) return;
+    const reason = prompt("Masukkan alasan penolakan surat:");
+    if (reason === null) return; // User cancelled
+
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'surat', id), { status: "Ditolak", tenantId: tenantId });
-      setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak" } : s));
-      showNotification("Pengajuan surat telah ditolak.", 'info');
+      await updateDoc(doc(db, 'surat', id), { 
+        status: "Ditolak", 
+        catatanAlasan: reason,
+        updatedAt: new Date().toISOString(),
+        rejectedBy: currentUser?.name || 'Admin'
+      });
+      setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak", catatanAlasan: reason } : s));
+      showNotification("Pengajuan surat telah ditolak dengan alasan.", 'info');
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/surat/${id}`);
       showNotification("Gagal menolak pengajuan surat.", 'error');
@@ -7273,11 +7329,47 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [catatan, setCatatan] = useState('');
 
-  const filteredData = verifikasiData.filter(v => {
-    const matchFilter = filter === 'All' || v.status === filter;
-    const matchSearch = String(v.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) || String(v.nik || '').includes(searchQuery);
-    return matchFilter && matchSearch;
-  });
+  // Sync selectedItem with latest verifikasiData to prevent stale state in modal
+  useEffect(() => {
+    if (selectedItem) {
+      const latest = verifikasiData.find(v => v.id === selectedItem.id);
+      if (latest && JSON.stringify(latest) !== JSON.stringify(selectedItem)) {
+        setSelectedItem(latest);
+      }
+    }
+  }, [verifikasiData, selectedItem]);
+
+  const filteredData = useMemo(() => {
+    // 1. Group by NIK and pick the one with latest submittedAt or status priority
+    const uniqueMap: Record<string, any> = {};
+    
+    verifikasiData.forEach(item => {
+      const nik = item.nik || 'unknown';
+      const existing = uniqueMap[nik];
+      
+      if (!existing) {
+        uniqueMap[nik] = item;
+      } else {
+        // Priority logic: Prefer 'Menunggu Persetujuan', then latest submittedAt
+        const isNewer = (item.submittedAt || '') > (existing.submittedAt || '');
+        const itemPrio = item.status === 'Menunggu Persetujuan' ? 2 : (!item.status || item.status === '-' ? 0 : 1);
+        const existingPrio = existing.status === 'Menunggu Persetujuan' ? 2 : (!existing.status || existing.status === '-' ? 0 : 1);
+        
+        if (itemPrio > existingPrio || (itemPrio === existingPrio && isNewer)) {
+          uniqueMap[nik] = item;
+        }
+      }
+    });
+
+    const dedupedData = Object.values(uniqueMap);
+
+    // 2. Apply filters
+    return dedupedData.filter((v: any) => {
+      const matchFilter = filter === 'All' || v.status === filter;
+      const matchSearch = String(v.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) || String(v.nik || '').includes(searchQuery);
+      return matchFilter && matchSearch;
+    });
+  }, [verifikasiData, filter, searchQuery]);
 
   const handleApprove = async (item: any) => {
     setIsLoadingDB(true);
@@ -7294,42 +7386,47 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
       });
 
       // 2. Update main warga record
-      // Find matching warga by NIK
-      const wargaRef = doc(db, 'data_warga', item.nik);
-      const wargaSnap = await getDoc(wargaRef);
+      // Standardize docId to tenantId_nik (consistent with import and add)
+      const standardDocId = `${tenantId}_${item.nik}`;
+      const targetRef = doc(db, 'data_warga', standardDocId);
+      const targetSnap = await getDoc(targetRef);
+      
+      const legacyRef = doc(db, 'data_warga', item.nik);
+      const legacySnap = (item.nik !== standardDocId) ? await getDoc(legacyRef) : null;
+      const legacyData = legacySnap?.exists() ? legacySnap.data() : null;
 
       const updatedData = {
-        nama: item.nama || wargaSnap.data()?.nama || "",
-        kk: item.kk || wargaSnap.data()?.kk || "",
-        blok: item.alamat || item.blok || wargaSnap.data()?.blok || "",
-        hp: item.hp || wargaSnap.data()?.hp || "",
-        profesi: item.pekerjaan || item.profesi || wargaSnap.data()?.profesi || "",
-        pendidikanTerakhir: item.pendidikan || item.pendidikanTerakhir || wargaSnap.data()?.pendidikanTerakhir || "",
-        kawin: item.statusKawin || item.kawin || wargaSnap.data()?.kawin || "",
-        foto: item.ktpUrl || wargaSnap.data()?.foto || "",
-        ktpUrl: item.ktpUrl || wargaSnap.data()?.ktpUrl || "",
-        rt: item.rt || wargaSnap.data()?.rt || "01",
-        rw: item.rw || wargaSnap.data()?.rw || "05",
-        tempatLahir: item.tempatLahir || wargaSnap.data()?.tempatLahir || "",
-        tglLahir: item.tglLahir || wargaSnap.data()?.tglLahir || "",
-        jk: item.jk || wargaSnap.data()?.jk || "",
-        agama: item.agama || wargaSnap.data()?.agama || "Islam",
-        posisi: item.posisi || wargaSnap.data()?.posisi || "",
-        kewarganegaraan: item.kewarganegaraan || wargaSnap.data()?.kewarganegaraan || "WNI",
+        nama: item.nama || targetSnap.data()?.nama || legacyData?.nama || "",
+        kk: item.kk || targetSnap.data()?.kk || legacyData?.kk || "",
+        blok: item.alamat || item.blok || targetSnap.data()?.blok || legacyData?.blok || "",
+        hp: item.hp || targetSnap.data()?.hp || legacyData?.hp || "",
+        profesi: item.pekerjaan || item.profesi || targetSnap.data()?.profesi || legacyData?.profesi || "",
+        pendidikanTerakhir: item.pendidikan || item.pendidikanTerakhir || targetSnap.data()?.pendidikanTerakhir || legacyData?.pendidikanTerakhir || "",
+        kawin: item.statusKawin || item.kawin || targetSnap.data()?.kawin || legacyData?.kawin || "",
+        foto: item.ktpUrl || targetSnap.data()?.foto || legacyData?.foto || "",
+        ktpUrl: item.ktpUrl || targetSnap.data()?.ktpUrl || legacyData?.ktpUrl || "",
+        rt: item.rt || targetSnap.data()?.rt || legacyData?.rt || "01",
+        rw: item.rw || targetSnap.data()?.rw || legacyData?.rw || "05",
+        tempatLahir: item.tempatLahir || targetSnap.data()?.tempatLahir || legacyData?.tempatLahir || "",
+        tglLahir: item.tglLahir || targetSnap.data()?.tglLahir || legacyData?.tglLahir || "",
+        jk: item.jk || targetSnap.data()?.jk || legacyData?.jk || "",
+        agama: item.agama || targetSnap.data()?.agama || legacyData?.agama || "Islam",
+        posisi: item.posisi || targetSnap.data()?.posisi || legacyData?.posisi || "",
+        kewarganegaraan: item.kewarganegaraan || targetSnap.data()?.kewarganegaraan || legacyData?.kewarganegaraan || "WNI",
         terverifikasi: true,
         updatedAt: new Date().toISOString()
       };
 
-      if (wargaSnap.exists()) {
-        batch.update(wargaRef, updatedData);
-      } else {
-        // Jika data belum ada, buat baru
-        batch.set(wargaRef, {
-          ...item,
-          ...updatedData,
-          status: 'Warga Tetap',
-          tenantId: tenantId
-        }, { merge: true });
+      // Always write to standardRef
+      batch.set(targetRef, {
+        tenantId: tenantId,
+        status: 'Warga Tetap',
+        ...updatedData
+      }, { merge: true });
+
+      // Clean up legacy record if it exists and is different
+      if (legacySnap?.exists() && standardDocId !== item.nik) {
+        batch.delete(legacyRef);
       }
 
       await batch.commit();
@@ -7344,23 +7441,73 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
   };
 
   const handleReject = async (item: any) => {
-    if (!catatan) {
-      alert("Silakan berikan catatan alasan penolakan.");
-      return;
+    // 1. Determine if this is an "Undo Approval" situation
+    const isAlreadyApproved = item.status === 'Disetujui';
+    const isSelected = selectedItem && selectedItem.id === item.id;
+    
+    // 2. Identify the Reason
+    // If the modal is open (isSelected) and user typed something, use that.
+    // Otherwise, we'll prompt.
+    let reason = isSelected ? catatan.trim() : "";
+    
+    if (!reason || isAlreadyApproved) {
+      const promptTitle = isAlreadyApproved 
+        ? `ALASAN BATALKAN PERSETUJUAN & TOLAK (${item.nama}):` 
+        : `ALASAN PENOLAKAN (${item.nama}):`;
+      
+      const promptReason = prompt(promptTitle, reason);
+      if (!promptReason || promptReason.trim().length === 0) {
+        showNotification("Alasan wajib diisi.", "warning");
+        return;
+      }
+      reason = promptReason.trim();
     }
+
+    const confirmMsg = isAlreadyApproved 
+      ? `PERINGATAN: Membatalkan persetujuan akan menolak pengajuan ini.\n\nLanjutkan pembatalan & penolakan untuk: ${item.nama}?` 
+      : `Konfirmasi penolakan pengajuan: ${item.nama}?`;
+
+    if (!confirm(confirmMsg)) return;
+
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'verifikasi_warga', item.id), {
+      const batch = writeBatch(db);
+      const docId = item.id || item.docId; // Support both naming conventions
+      if (!docId) throw new Error("ID Dokumen tidak ditemukan");
+
+      const vRef = doc(db, 'verifikasi_warga', docId);
+      
+      // Update the verification log
+      const updateData: any = {
         status: 'Ditolak',
-        catatan,
-        approvedAt: new Date().toISOString(),
-        approvedBy: currentUser.name
-      });
-      showNotification(`Pengajuan ${item.nama} ditolak.`, "info");
+        catatan: reason,
+        rejectedAt: new Date().toISOString(),
+        rejectedBy: currentUser?.name || currentUser?.displayName || 'Admin',
+        isFinalized: false
+      };
+      
+      batch.update(vRef, updateData);
+
+      // If it was already approved, we need to mark the main data as "not verified" anymore
+      if (isAlreadyApproved) {
+        const citizenDocId = item.targetDocId || `${tenantId}_${item.nik}`;
+        const wargaRef = doc(db, 'data_warga', citizenDocId);
+        batch.update(wargaRef, {
+          terverifikasi: false,
+          keteranganVerifikasi: `Persetujuan dibatalkan: ${reason}`,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      await batch.commit();
+      
+      showNotification(`Pengajuan ${item.nama} telah ${isAlreadyApproved ? 'dibatalkan & ditolak' : 'ditolak'}.`, "info");
       setSelectedItem(null);
       setCatatan('');
     } catch (err) {
+      console.error("Reject Error:", err);
       handleFirestoreError(err, 'update', 'verifikasi_warga');
+      showNotification("Terjadi kesalahan saat memproses penolakan.", "error");
     } finally {
       setIsLoadingDB(false);
     }
@@ -7370,6 +7517,49 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
     'Menunggu Persetujuan': 'bg-yellow-100 text-yellow-700',
     'Disetujui': 'bg-green-100 text-green-700',
     'Ditolak': 'bg-red-100 text-red-700'
+  };
+
+  const handleMassSync = async () => {
+    const approvedNotSynced = verifikasiData.filter(v => v.status === 'Disetujui' && !v.isFinalized);
+    if (approvedNotSynced.length === 0) {
+      showNotification("Semua data terverifikasi sudah sinkron.", "info");
+      return;
+    }
+
+    if (!confirm(`Sinkronkan ${approvedNotSynced.length} data verifikasi baru ke database warga utama?`)) return;
+
+    setIsLoadingDB(true);
+    let successCount = 0;
+    try {
+      const batch = writeBatch(db);
+      for (const item of approvedNotSynced) {
+        const targetDocId = `${tenantId}_${item.nik}`;
+        const wargaRef = doc(db, 'data_warga', targetDocId);
+        const vRef = doc(db, 'verifikasi_warga', item.id);
+        
+        batch.set(wargaRef, {
+          nama: item.nama || "",
+          nik: item.nik,
+          kk: item.kk || "",
+          hp: item.hp || "",
+          blok: item.blok || item.alamat || "",
+          rt: item.rt || "01",
+          rw: item.rw || "05",
+          terverifikasi: true,
+          tenantId: tenantId,
+          lastSyncedAt: new Date().toISOString()
+        }, { merge: true });
+
+        batch.update(vRef, { isFinalized: true, finalizedAt: new Date().toISOString() });
+        successCount++;
+      }
+      await batch.commit();
+      showNotification(`Berhasil menyinkronkan ${successCount} data ke warga utama.`, "success");
+    } catch (err) {
+      handleFirestoreError(err, 'update', 'mass_sync');
+    } finally {
+      setIsLoadingDB(false);
+    }
   };
 
   return (
@@ -7384,6 +7574,15 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
         </div>
         
         <div className="flex items-center gap-2">
+          <button 
+            onClick={handleMassSync}
+            disabled={!verifikasiData.some(v => v.status === 'Disetujui' && !v.isFinalized)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:grayscale"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Sinkronkan
+          </button>
+          <div className="h-4 w-px bg-slate-200 mx-1" />
           {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => (
             <button
               key={f}
@@ -7421,48 +7620,79 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredData.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-bold">Tidak ada pengajuan data.</td>
+              {filteredData.length === 0 ? (
+                <tr key="empty-verifikasi">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold">Tidak ada pengajuan data.</td>
                 </tr>
+              ) : (
+                filteredData.map((item: any) => (
+                  <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
+                          {item.ktpUrl ? <img src={item.ktpUrl} alt="KTP" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-slate-400" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">{item.nama}</p>
+                          <p className="text-[10px] font-medium text-slate-400">NIK: {item.nik}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-bold text-slate-500">
+                      {item.agama || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${statusColors[item.status]}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-slate-500 text-xs text-slate-400">
+                      {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-slate-500 text-xs">
+                      {item.approvedBy || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {(!item.isFinalized && (item.status === 'Menunggu Persetujuan' || item.status === 'Disetujui')) && (
+                          <>
+                            {item.status === 'Menunggu Persetujuan' && (
+                              <button 
+                                onClick={() => {
+                                  if (confirm(`Setujui perbaikan data untuk ${item.nama}?`)) {
+                                    handleApprove(item);
+                                  }
+                                }}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-100"
+                                title="Setujui"
+                              >
+                                <CheckCircle className="w-5 h-5" />
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => handleReject(item)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                              title={item.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
+                            >
+                              <XCircle className="w-5 h-5" />
+                            </button>
+                          </>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setCatatan('');
+                            setSelectedItem(item);
+                          }}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors"
+                          title="Detail"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-              {filteredData.map((item: any) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
-                        {item.ktpUrl ? <img src={item.ktpUrl} alt="KTP" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-slate-400" />}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">{item.nama}</p>
-                        <p className="text-[10px] font-medium text-slate-400">NIK: {item.nik}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-bold text-slate-500">
-                    {item.agama || '-'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${statusColors[item.status]}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-bold text-slate-500 text-xs text-slate-400">
-                    {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                  </td>
-                  <td className="px-6 py-4 font-bold text-slate-500 text-xs">
-                    {item.approvedBy || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => setSelectedItem(item)}
-                      className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>
@@ -7483,7 +7713,7 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
             >
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Detail Verifikasi: {selectedItem.nama}</h2>
-                <button onClick={() => setSelectedItem(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                <button onClick={() => { setSelectedItem(null); setCatatan(''); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
               </div>
 
               <div className="p-8 overflow-y-auto flex-1">
@@ -7558,18 +7788,24 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
 
                     <div className="flex gap-3 pt-4">
                       <button 
-                        onClick={() => handleApprove(selectedItem)}
+                        onClick={() => {
+                          if (confirm(`Setujui perbaikan data untuk ${selectedItem.nama}?`)) {
+                            handleApprove(selectedItem);
+                          }
+                        }}
                         disabled={selectedItem.status === 'Disetujui'}
-                        className="flex-1 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50"
+                        className="flex-1 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
+                        <CheckCircle className="w-5 h-5" />
                         Setujui Data
                       </button>
                       <button 
                         onClick={() => handleReject(selectedItem)}
-                        disabled={selectedItem.status === 'Ditolak' || selectedItem.status === 'Disetujui'}
-                        className="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl border border-red-100 hover:bg-red-100 disabled:opacity-50"
+                        disabled={selectedItem.status === 'Ditolak' || selectedItem.isFinalized}
+                        className="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl border border-red-100 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
-                        Tolak
+                        <XCircle className="w-5 h-5" />
+                        {selectedItem.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
                       </button>
                     </div>
                   </div>
@@ -7671,6 +7907,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
       const payload = {
         tenantId,
         id: suratId,
+        authUid: auth.currentUser?.uid || "",
         tanggal: formattedDate,
         submittedAt: now.toISOString(),
         pemohon: wargaData.nama,
@@ -8199,7 +8436,7 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
                   className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  Kirim Pengajuan Surat
+                  Ajukan Surat Sekarang
                 </button>
               </form>
             </div>
@@ -8344,80 +8581,214 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [loginMode, setLoginMode] = useState<'admin' | 'warga'>('admin');
+  const [loginMode, setLoginMode] = useState<'admin' | 'warga'>('warga'); // Default to warga for easier access
   const [nik, setNik] = useState('');
   const [kodeKeluarga, setKodeKeluarga] = useState('');
+
+  // Trigger anonymous sign-in to allow fetching public/citizen data
+  useEffect(() => {
+    if (loginMode === 'warga' && !auth.currentUser) {
+      console.log("Pre-authenticating anonymously for citizen lookup...");
+      signInAnonymously(auth).catch(err => console.warn("Anonymous sign-in failed", err));
+    }
+  }, [loginMode]);
 
   const handleWargaLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
+    // Ensure we have some data or at least tried to sync
     if (wargaData.length === 0 && isLoadingDB) {
       setTimeout(() => {
         setError('Sistem sedang menyinkronkan data. Silakan tunggu beberapa detik dan coba lagi.');
         setIsLoading(false);
-      }, 500);
+      }, 1500);
       return;
     }
 
-    // Identitas: NIK / Nama / HP
-    const cleanId = nik.trim().toLowerCase();
-    // Kunci: KK / HP
-    const cleanPass = kodeKeluarga.trim();
+    // Identitas: NIK / Nama / No HP
+    const cleanId = String(nik || '').trim();
+    const cleanIdLower = cleanId.toLowerCase();
     
-    // Search in wargaData
+    // Kunci: KK / HP
+    const cleanPass = String(kodeKeluarga || '').trim().toLowerCase();
+    
+    // 1. SEARCH IN MEMORY (Current Context)
     let found = wargaData.find(w => {
-      const cNik = String(w.nik || '').trim();
-      const cNama = String(w.nama || '').toLowerCase().trim();
-      const cHp = String(w.hp || '').trim();
-      const cKK = String(w.kk || '').trim();
+      const cNik = String(w.nik || '').trim().toLowerCase();
+      const cNama = String(w.nama || '').trim().toLowerCase();
+      const cHp = String(w.hp || '').trim().toLowerCase();
+      const cKK = String(w.kk || w.kodeKeluarga || '').trim().toLowerCase();
 
-      const idMatch = cNik === cleanId || cNama === cleanId || cHp === cleanId;
-      const secretMatch = cKK === cleanPass || cHp === cleanPass;
+      const idMatch = cNik === cleanIdLower || cNama === cleanIdLower || cHp === cleanIdLower;
+      const secretMatch = cKK === cleanPass || cHp === cleanPass || cNik === cleanPass;
       return idMatch && secretMatch;
     });
 
-    // Sync check with verifikasi_warga data if not found in data_warga
+    // 2. DIRECT DISCOVERY (Across Tenants via Firestore)
     if (!found) {
-      // Find in verifikasi_warga data - helpful for users who just corrected their data
-      // or are pending but want to see their progress? Usually only for approved or pending
-      const fromVerifikasi = verifikasiWargaData.find((v: any) => {
-         const vNik = String(v.nik || '').trim();
-         const vNama = String(v.nama || '').toLowerCase().trim();
-         const vHp = String(v.hp || '').trim();
-         const vKK = String(v.kk || '').trim();
+       try {
+          // A. Try direct Document ID lookup (NIK is standard docId, sometimes prefixed)
+          const potentialIds = [cleanId, cleanPass].filter(k => k.length >= 6); 
+          for (const idCandidate of potentialIds) {
+             if (found) break;
+             
+             // Try common docId patterns (raw, and with default tenant prefix)
+             const candidateRefs = [
+                doc(db, 'data_warga', idCandidate),
+                doc(db, 'data_warga', `RW26_SMART_${idCandidate}`),
+                doc(db, 'verifikasi_warga', idCandidate)
+             ];
 
-         const idMatch = vNik === cleanId || vNama === cleanId || vHp === cleanId;
-         const secretMatch = vKK === cleanPass || vHp === cleanPass;
-         return idMatch && secretMatch;
-      });
-      
-      if (fromVerifikasi) {
-        found = fromVerifikasi;
-      }
+             for (const dRef of candidateRefs) {
+                const dSnap = await getDoc(dRef);
+                if (dSnap.exists()) {
+                   const candidate = { docId: dSnap.id, ...dSnap.data() } as any;
+                   const cNik = String(candidate.nik || '').trim().toLowerCase();
+                   const cNama = String(candidate.nama || '').trim().toLowerCase();
+                   const cHp = String(candidate.hp || '').trim().toLowerCase();
+                   const cKK = String(candidate.kk || candidate.kodeKeluarga || '').trim().toLowerCase();
+                   
+                   const otherInp = idCandidate === cleanId ? cleanPass : cleanIdLower;
+                   const matches = cNik === otherInp || cNama === otherInp || cHp === otherInp || cKK === otherInp;
+                   if (matches) {
+                      found = candidate;
+                      break;
+                   }
+                }
+             }
+          }
+
+          // B. Query Discovery (as fallback) - Search for all fields that match cleanId or cleanPass
+          if (!found) {
+             const tokens = [cleanId, cleanPass].filter(k => k.length >= 3);
+             
+             for (const token of tokens) {
+               if (found) break;
+               const isNumeric = /^\d+$/.test(token);
+               const searchFields = ['nik', 'hp', 'nama'];
+               
+               for (const field of searchFields) {
+                 if (found) break;
+                 
+                 const variants: any[] = [];
+                 if (field === 'nama') {
+                    const titleCase = token.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    variants.push(token, token.toUpperCase(), token.toLowerCase(), titleCase);
+                 } else if (isNumeric) {
+                    variants.push(token, Number(token));
+                 } else {
+                    variants.push(token);
+                 }
+                 
+                 for (const value of variants) {
+                   if (found) break;
+                   const q = query(collection(db, 'data_warga'), 
+                        where(field, '==', value), 
+                        limit(5));
+                   const snap = await getDocs(q);
+                   
+                   if (!snap.empty) {
+                     for (const d of snap.docs) {
+                        const cand = { docId: d.id, ...d.data() } as any;
+                        const otherVal = token === cleanId ? cleanPass : cleanIdLower;
+                        
+                        const cNik = String(cand.nik || '').trim().toLowerCase();
+                        const cNama = String(cand.nama || '').trim().toLowerCase();
+                        const cHp = String(cand.hp || '').trim().toLowerCase();
+                        const cKK = String(cand.kk || cand.kodeKeluarga || '').trim().toLowerCase();
+                        
+                        const matches = cNik === otherVal || cNama === otherVal || cHp === otherVal || cKK === otherVal;
+                        if (matches) {
+                          found = cand;
+                          break;
+                        }
+                     }
+                   }
+                 }
+               }
+             }
+          }
+          
+          // C. Try Verifikasi Warga (Discovery)
+          if (!found) {
+             const tokens = [cleanId, cleanPass].filter(k => k.length >= 3);
+             for (const token of tokens) {
+               if (found) break;
+               const isNumeric = /^\d+$/.test(token);
+               const searchFields = ['nik', 'hp', 'nama'];
+               for (const field of searchFields) {
+                 if (found) break;
+                 const variants: any[] = [];
+                 if (field === 'nama') {
+                    const titleCase = token.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    variants.push(token, token.toUpperCase(), token.toLowerCase(), titleCase);
+                 } else if (isNumeric) {
+                    variants.push(token, Number(token));
+                 } else {
+                    variants.push(token);
+                 }
+
+                 for (const value of variants) {
+                   if (found) break;
+                   const q = query(collection(db, 'verifikasi_warga'), 
+                        where(field, '==', value),
+                        limit(5));
+                   const snap = await getDocs(q);
+                   if (!snap.empty) {
+                      for (const d of snap.docs) {
+                         const cand = { docId: d.id, ...d.data() } as any;
+                         const otherVal = token === cleanId ? cleanPass : cleanIdLower;
+                         const cNik = String(cand.nik || '').trim().toLowerCase();
+                         const cNama = String(cand.nama || '').trim().toLowerCase();
+                         const cHp = String(cand.hp || '').trim().toLowerCase();
+                         const cKK = String(cand.kk || cand.kodeKeluarga || '').trim().toLowerCase();
+                         if (cNik === otherVal || cNama === otherVal || cHp === otherVal || cKK === otherVal) {
+                           found = cand;
+                           break;
+                         }
+                      }
+                   }
+                 }
+               }
+             }
+          }
+       } catch (err) {
+          console.warn("Direct discovery failed:", err);
+       }
     }
+
 
     if (found) {
       try {
         // Sign in anonymously and link the UID to this citizen's document
-        console.log("Logging in anonymously for citizen:", found.id || found.nik);
-        const userCredential = await signInAnonymously(auth);
-        const uid = userCredential.user.uid;
+        console.log("Processing login for citizen:", found.id || found.nik);
+        let uid = auth.currentUser?.uid;
+        if (!uid) {
+           const userCredential = await signInAnonymously(auth);
+           uid = userCredential.user.uid;
+        }
         
         // Update the document with authUid for security rules
-        const docId = found.id || found.nik;
+        const docId = found.docId || found.id || found.nik;
         const vRef = doc(db, 'verifikasi_warga', docId);                
         await setDoc(vRef, { 
           authUid: uid,
           nik: found.nik,
           kk: found.kk || found.kodeKeluarga || "",
           nama: found.nama,
-          tenantId: found.tenantId || "RW26_SMART"
+          status: found.status === 'Disetujui' || found.terverifikasi ? 'Disetujui' : 'Menunggu Persetujuan',
+          tenantId: found.tenantId || "RW26_SMART",
+          lastLogin: new Date().toISOString()
         }, { merge: true });
         
         // Find other family members
-        const familyMembers = wargaData.filter(w => String(w.kk).trim() === String(found.kk || found.kodeKeluarga).trim());
+        const currentKK = String(found.kk || found.kodeKeluarga || '').trim();
+        const familyMembers = currentKK ? wargaData.filter(w => 
+          String(w.kk || '').trim() === currentKK || 
+          String(w.kodeKeluarga || '').trim() === currentKK
+        ) : [];
         const wargaAuthData = { ...found, authUid: uid, listWargaInKK: familyMembers };
         
         setTimeout(() => {
@@ -8431,7 +8802,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       }
     } else {
       setTimeout(() => {
-        setError('Data tidak ditemukan. Pastikan NIK/Nama dan Kode Rahasia (KK/HP) sudah sesuai. Gunakan fitur "Verifikasi Mandiri" jika data Anda belum terdaftar.');
+        setError('Data tidak ditemukan. Pastikan (NIK/Nama/HP) dan (Kunci KK/HP) sudah sesuai. Gunakan fitur "Verifikasi Mandiri" jika data Anda belum terdaftar.');
         setIsLoading(false);
       }, 500);
     }
@@ -8546,9 +8917,9 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-white shadow-xl shadow-brand-blue/20 mb-6 relative group isolate">
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue to-cyan-400 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity -z-10"></div>
-            <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-12 h-12 relative z-10" referrerPolicy="no-referrer" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-white shadow-2xl shadow-brand-blue/20 mb-8 relative group isolate">
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/10 to-brand-pink/10 rounded-[2.5rem] animate-pulse"></div>
+            <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-16 h-16 relative z-10" referrerPolicy="no-referrer" />
           </div>
           <h1 className="text-4xl font-black tracking-tight text-slate-800 uppercase leading-none font-elegant">
             RW26 <span className="text-brand-pink">BERJUANG</span>
@@ -8666,7 +9037,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
             ) : (
               <form onSubmit={handleWargaLogin} className="space-y-6">
                 <div>
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Identitas Warga (NIK / Nama Lengkap / HP)</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Identitas Warga (NIK / Nama / No. HP)</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                       <User className="w-6 h-6 text-slate-400 group-focus-within:text-brand-pink transition-colors" />
@@ -8677,12 +9048,12 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       value={nik}
                       onChange={(e) => setNik(e.target.value)}
                       className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-bold text-base tracking-tight"
-                      placeholder="Masukkan NIK atau Nama atau No. HP"
+                      placeholder="NIK atau Nama atau No. HP"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Kunci Verifikasi (No. KK / No. HP)</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Kunci Verifikasi (No. KK / HP / NIK)</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                       <Lock className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
@@ -8693,7 +9064,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       value={kodeKeluarga}
                       onChange={(e) => setKodeKeluarga(e.target.value)}
                       className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base tracking-widest font-mono"
-                      placeholder="Masukkan No. KK atau HP"
+                      placeholder="No. KK / HP / NIK"
                     />
                   </div>
                 </div>
@@ -8702,7 +9073,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                     <ShieldCheck className="w-6 h-6 text-brand-pink" />
                   </div>
                   <p className="text-xs text-slate-600 font-bold leading-relaxed pt-1">
-                    Masuk dengan NIK/Nama dan KK/HP. Jika data tidak muncul, gunakan fitur verifikasi mandiri untuk pendaftaran baru.
+                    Masuk dengan kombinasi (Nama/NIK/HP) dan (KK/HP/NIK). Gunakan verifikasi mandiri jika data belum terdaftar.
                   </p>
                 </div>
                 <button
