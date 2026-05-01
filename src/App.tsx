@@ -100,15 +100,19 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
         <div class="print-container">
           <!-- Kop Surat -->
           <div class="flex items-center relative py-1">
-               ${surat.show_logo !== 'no' && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-24 h-24 object-contain ml-12 mr-2" />` : '<div class="w-24 ml-12 mr-2"></div>'}
-               <div class="flex-1 text-center">
-                   <h2 class="text-lg font-bold uppercase">${kop.nama_rt || `RUKUN TETANGGA ${kop.rt || '...'} / RUKUN WARGA ${kop.rw || '...'}`}</h2>
-                   <p class="text-sm">KELURAHAN ${kop.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kop.kecamatan?.toUpperCase() || '...'}</p>
-                   <p class="text-sm font-bold">${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KABUPATEN') || (kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase()}</p>
-                   <p class="text-[10px]">Sekretariat : ${kop.alamat || '...'} | Email: ${kop.email || '...'} | Instagram: ${kop.instagram || '...'}</p>
-               </div>
-               <div class="w-24 ml-2 mr-12"></div>
-          </div>
+                <div class="flex items-center w-48">
+                    ${surat.show_logo !== 'no' && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-[90px] h-[90px] object-contain mr-4 ml-4" />` : ''}
+                </div>
+                <div class="flex-1 text-center px-4 flex flex-col justify-center items-center">
+                    <h2 class="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">${kop.nama_rt || `RUKUN TETANGGA ${kop.rt || '...'} / RUKUN WARGA ${kop.rw || '...'}`}</h2>
+                    <p class="font-['Arial'] text-[16px] leading-[24.8571px] font-bold w-[398.875px] h-[23.9792px]">KELURAHAN ${kop.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kop.kecamatan?.toUpperCase() || '...'}</p>
+                    <p class="font-['Arial'] text-[16px] leading-[20px] font-bold">${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KABUPATEN') || (kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase()}</p>
+                    <p class="w-[347.242px] h-[23.2461px] text-[8px] leading-[11.14px]">Sekretariat : ${kop.alamat || '...'} | Email: ${kop.email || '...'} | Instagram: ${kop.instagram || '...'}</p>
+                </div>
+                <div class="flex items-center justify-start w-48">
+                    ${surat.show_logo !== 'no' && kop.logo_rw_url ? `<img src="${kop.logo_rw_url}" alt="Logo RW" class="w-[100px] h-[95px] object-contain ml-4" />` : ''}
+                </div>
+           </div>
           <div class="border-b-4 border-black mt-2"></div>
           <div class="border-b-2 border-black mt-0.5"></div>
           
@@ -7630,39 +7634,43 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
   };
 
   return (
-    <div className="p-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-            <ShieldCheck className="w-8 h-8 text-blue-600" />
+    <div className="p-4 md:p-8 w-full max-w-full overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 w-full">
+        <div className="w-full">
+          <h1 className="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">
+            <ShieldCheck className="w-8 h-8 text-blue-600 shrink-0" />
             Verifikasi Data Mandiri
           </h1>
-          <p className="text-sm text-slate-500 font-medium">Kelola pengajuan perbaikan data dari warga secara mandiri.</p>
+          <p className="text-xs md:text-sm text-slate-500 font-medium">Kelola pengajuan perbaikan data dari warga secara mandiri.</p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
           <button 
             onClick={handleMassSync}
             disabled={!verifikasiData.some(v => v.status === 'Disetujui' && !v.isFinalized)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:grayscale"
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Sinkronkan
           </button>
-          <div className="h-4 w-px bg-slate-200 mx-1" />
-          {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${filter === f ? 'bg-orange-400 text-white shadow-lg shadow-orange-100' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
-            >
-              {f}
-            </button>
-          ))}
+          
+          <div className="hidden sm:block h-4 w-px bg-slate-200 mx-1 shrink-0" />
+          
+          <div className="flex overflow-x-auto gap-2 w-full sm:w-auto pb-2 sm:pb-0 scrollbar-hide">
+            {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${filter === f ? 'bg-orange-400 text-white shadow-lg shadow-orange-100' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-100 overflow-hidden w-full">
         <div className="p-4 border-b border-slate-50 flex items-center gap-3">
           <Search className="w-5 h-5 text-slate-400" />
           <input 
@@ -9085,7 +9093,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out"></div>
                       {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : (
                         <div className="flex items-center gap-2">
-                           <span className="relative z-10">Aktifkan dan tambahkan notifikasi</span>
+                           <span className="relative z-10">Masuk</span>
                         </div>
                       )}
                     </button>

@@ -3,15 +3,19 @@ import React from 'react';
 export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, settings: any }) => {
     return (
         <div className="w-[210mm] min-h-[297mm] p-[15mm] bg-white text-black shadow-lg mx-auto text-sm font-serif">
-             <div className="flex items-center gap-4 relative">
-                {surat?.show_logo !== 'no' && kop?.logo_url ? <img src={kop.logo_url} alt="Logo" className="w-20 h-20 object-contain" /> : <div className="w-20"></div>}
-                <div className="flex-1 text-center">
-                    <h2 className="text-lg font-bold uppercase">{kop?.nama_rt || `RUKUN TETANGGA ${kop?.rt || '...'} / RUKUN WARGA ${kop?.rw || '...'}`}</h2>
-                    <p className="text-sm">KELURAHAN {kop?.kelurahan?.toUpperCase() || '...'} - KECAMATAN {kop?.kecamatan?.toUpperCase() || '...'}</p>
-                    <p className="text-sm font-bold">{kop?.kabupaten?.toUpperCase().includes('KABUPATEN') || kop?.kabupaten?.toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}{kop?.kabupaten?.toUpperCase() || 'BEKASI'}</p>
-                    <p className="text-[10px]">Sekretariat : {kop?.alamat || '...'} | Email: {kop?.email || '...'} | Instagram: {kop?.instagram || '...'}</p>
+             <div className="flex items-center relative">
+                <div className="flex items-center w-48">
+                    {surat?.show_logo !== 'no' && kop?.logo_url && <img src={kop.logo_url} alt="Logo" className="w-[90px] h-[90px] object-contain mr-4 ml-4" />}
                 </div>
-                <div className="w-20"></div>
+                <div className="flex-1 text-center px-4 flex flex-col justify-center items-center">
+                    <h2 className="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">{kop?.nama_rt || `RUKUN TETANGGA ${kop?.rt || '...'} / RUKUN WARGA ${kop?.rw || '...'}`}</h2>
+                    <p className="font-['Arial'] text-[16px] leading-[24.8571px] font-bold w-[398.875px] h-[23.9792px]">KELURAHAN {kop?.kelurahan?.toUpperCase() || '...'} - KECAMATAN {kop?.kecamatan?.toUpperCase() || '...'}</p>
+                    <p className="font-['Arial'] text-[16px] leading-[20px] font-bold">{kop?.kabupaten?.toUpperCase().includes('KABUPATEN') || kop?.kabupaten?.toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}{kop?.kabupaten?.toUpperCase() || 'BEKASI'}</p>
+                    <p className="w-[347.242px] h-[23.2461px] text-[8px] leading-[11.14px]">Sekretariat : {kop?.alamat || '...'} | Email: {kop?.email || '...'} | Instagram: {kop?.instagram || '...'}</p>
+                </div>
+                <div className="flex items-center justify-start w-48">
+                    {surat?.show_logo !== 'no' && kop?.logo_rw_url && <img src={kop.logo_rw_url} alt="Logo RW" className="w-[100px] h-[95px] object-contain ml-4" />}
+                </div>
             </div>
             <div className="border-b-4 border-black mt-2"></div>
             <div className="border-b-2 border-black mt-0.5"></div>

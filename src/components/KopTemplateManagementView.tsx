@@ -118,6 +118,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     kabupaten: settings?.kabupaten || ''
   });
   const [logoUrl, setLogoUrl] = useState('');
+  const [logoRwUrl, setLogoRwUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -248,6 +249,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
             kabupaten: data.kabupaten || ''
         });
         setLogoUrl(data.logo_url || '');
+        setLogoRwUrl(data.logo_rw_url || '');
       }
     });
     return unsub;
@@ -260,7 +262,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     }));
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'logoRw' = 'logo') => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
 
@@ -306,8 +308,10 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         setUploadProgress(80);
         
         try {
-          await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: dataUrl }, { merge: true });
-          setLogoUrl(dataUrl);
+          const update = type === 'logo' ? { logo_url: dataUrl } : { logo_rw_url: dataUrl };
+          await setDoc(doc(db, 'tenant_settings', tenantId), update, { merge: true });
+          if (type === 'logo') setLogoUrl(dataUrl);
+          else setLogoRwUrl(dataUrl);
           showNotification("Logo berhasil disimpan", 'success');
         } catch (error: any) {
           console.error(error);
@@ -325,12 +329,14 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     e.target.value = ''; // Reset input
   };
 
-  const handleRemoveLogo = async () => {
+  const handleRemoveLogo = async (type: 'logo' | 'logoRw' = 'logo') => {
     if (!confirm("Hapus logo ini?")) return;
     setUploading(true);
     try {
-      await setDoc(doc(db, 'tenant_settings', tenantId), { logo_url: '' }, { merge: true });
-      setLogoUrl('');
+      const update = type === 'logo' ? { logo_url: '' } : { logo_rw_url: '' };
+      await setDoc(doc(db, 'tenant_settings', tenantId), update, { merge: true });
+      if (type === 'logo') setLogoUrl('');
+      else setLogoRwUrl('');
       showNotification("Logo berhasil dihapus", 'success');
     } catch (error) {
       console.error(error);
@@ -344,7 +350,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
   const handleSaveBranding = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, 'tenant_settings', tenantId), { ...formData, logo_url: logoUrl, tenantId }, { merge: true });
+      await setDoc(doc(db, 'tenant_settings', tenantId), { ...formData, logo_url: logoUrl, logo_rw_url: logoRwUrl, tenantId }, { merge: true });
       showNotification("Branding berhasil disimpan", 'success');
     } catch (error) {
       console.error(error);
@@ -359,16 +365,16 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h3 className="text-lg font-semibold mb-4">Pengaturan Branding RT/RW</h3>
+        <h3 className="text-lg font-semibold mb-4">SETING KOP SURAT</h3>
         
         <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Logo RT/RW</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Logo Kelurahan</label>
             <p className="text-[10px] text-slate-500 mb-2">Logo akan muncul otomatis di pojok kiri atas kop surat.</p>
             {logoUrl ? (
               <div className="flex items-center gap-4 mb-3">
                 <img src={logoUrl} alt="Logo" className="w-20 h-20 object-contain border rounded p-1 bg-white" />
                 <button 
-                  onClick={handleRemoveLogo}
+                  onClick={() => handleRemoveLogo('logo')}
                   className="text-xs text-red-600 font-bold hover:underline"
                   disabled={uploading}
                 >
@@ -380,7 +386,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
                 <Upload size={20} />
               </div>
             )}
-            <input type="file" accept="image/*" onChange={handleLogoUpload} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" disabled={uploading} />
+            <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'logo')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" disabled={uploading} />
             {uploading && (
               <div className="mt-2">
                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
@@ -400,6 +406,39 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
                  className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
               />
               <p className="text-[10px] text-slate-400 mt-1 italic">Gunakan link langsung ke gambar bersumber dari web (Akhiri .png/.jpg). Sesudah isi klik 'Simpan Branding'</p>
+            </div>
+        </div>
+
+        <div className="mb-4 pt-4 border-t border-slate-100">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Logo RW/RT</label>
+            <p className="text-[10px] text-slate-500 mb-2">Logo tambahan (misal: logo RW atau logo khusus RT).</p>
+            {logoRwUrl ? (
+              <div className="flex items-center gap-4 mb-3">
+                <img src={logoRwUrl} alt="Logo RW" className="w-20 h-20 object-contain border rounded p-1 bg-white" />
+                <button 
+                  onClick={() => handleRemoveLogo('logoRw')}
+                  className="text-xs text-red-600 font-bold hover:underline"
+                  disabled={uploading}
+                >
+                  Hapus Logo
+                </button>
+              </div>
+            ) : (
+              <div className="w-20 h-20 border-2 border-dashed border-slate-200 rounded flex items-center justify-center text-slate-400 mb-2">
+                <Upload size={20} />
+              </div>
+            )}
+            <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'logoRw')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" disabled={uploading} />
+            
+            <div className="mt-4">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Atau Gunakan Link / URL Gambar</label>
+              <input 
+                 type="text" 
+                 value={logoRwUrl} 
+                 onChange={(e) => setLogoRwUrl(e.target.value)} 
+                 placeholder="https://..." 
+                 className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+              />
             </div>
         </div>
 
@@ -476,7 +515,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         <h3 className="text-lg font-semibold mb-4 text-slate-700">Live Preview</h3>
         <div ref={previewRef} className="p-4 bg-white overflow-x-auto">
           {/* Note: Dummy surat object for preview */}
-          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR', show_logo: 'yes' }} kop={{ ...formData, logo_url: logoUrl }} settings={settings} />
+          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR', show_logo: 'yes' }} kop={{ ...formData, logo_url: logoUrl, logo_rw_url: logoRwUrl }} settings={settings} />
         </div>
       </div>
     </div>
