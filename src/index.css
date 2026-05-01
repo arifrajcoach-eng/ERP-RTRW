@@ -33,6 +33,12 @@
   --animate-bounce-slow: bounce-slow 3s infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-scan: scan 4s ease-in-out infinite;
+  --animate-spin-slow: spin-slow 12s linear infinite;
+  
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
   
   @keyframes scan {
     0%, 100% { top: 0%; opacity: 0.2; }

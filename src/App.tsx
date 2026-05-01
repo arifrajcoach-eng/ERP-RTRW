@@ -666,7 +666,7 @@ export default function App() {
         onDataLoaded();
       },
       (err) => {
-        handleFirestoreError(err, 'list', 'warga');
+        handleFirestoreError(err, 'list', 'data_warga');
         onDataLoaded();
       }
     );
@@ -924,9 +924,21 @@ export default function App() {
       (err) => { handleFirestoreError(err, 'list', 'toko_products'); onDataLoaded(); }
     );
 
-    const unsubTokoOrders = onSnapshot(query(collection(db, 'toko_orders'), where('tenantId', '==', tId)), 
+    const getTokoOrdersQuery = () => {
+      const base = collection(db, 'toko_orders');
+      const constraints = [where('tenantId', '==', tId)];
+      
+      // Citizens can only list their own orders to avoid permission errors
+      if (isCitizen) {
+        constraints.push(where('customerId', '==', auth.currentUser?.uid || 'NONE'));
+      }
+      
+      return query(base, ...constraints);
+    };
+
+    const unsubTokoOrders = onSnapshot(getTokoOrdersQuery(), 
       (snap) => {
-        setTokoOrders(snap.docs.map(doc => ({ ...doc.data() })));
+        setTokoOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'toko_orders'); onDataLoaded(); }
@@ -1195,7 +1207,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="relative">
           <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
-          <img src="/logo_rw.png?v=5" alt="Loading" className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[120%] animate-pulse" referrerPolicy="no-referrer" />
+          <img src="/logo_rw.png?v=5" alt="Loading" className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" referrerPolicy="no-referrer" />
         </div>
         <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
@@ -1256,14 +1268,19 @@ export default function App() {
       </AnimatePresence>
 
       {isLoadingDB && (
-        <div className="fixed inset-0 z-[9999] bg-white/80  flex flex-col items-center justify-center p-6 text-center">
-          <div className="relative mb-6">
-            <div className="w-20 h-20 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-            <img src="/logo_rw.png?v=5" alt="Logo" className="w-10 h-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" referrerPolicy="no-referrer" />
+        <div className="fixed inset-0 z-[9999] bg-white/95 flex flex-col items-center justify-center p-6 text-center select-none backdrop-blur-md">
+          <div className="absolute inset-0 bg-mesh opacity-50 -z-10 animate-pulse"></div>
+          <div className="relative mb-8 pt-4">
+            <div className="w-24 h-24 border-8 border-brand-blue/10 border-t-brand-blue border-r-brand-pink rounded-full animate-spin"></div>
+            <img src="/logo_rw.png?v=5" alt="Logo" className="w-12 h-12 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" referrerPolicy="no-referrer" />
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-3 py-0.5 rounded-full shadow-sm border border-slate-100 text-[10px] font-bold text-brand-blue animate-bounce">LOADING</div>
           </div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight font-elegant mb-2 uppercase">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
-          <h2 className="text-lg font-bold text-slate-700 mb-2">Sinkronisasi Database</h2>
-          <p className="text-slate-500 max-w-xs mx-auto font-medium">Mohon tunggu sebentar, sistem sedang memproses data untuk Anda...</p>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tighter mb-1 uppercase font-elegant">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
+          <p className="text-sm font-bold text-slate-400 tracking-widest uppercase mb-6">Berdampak & Memberdayakan</p>
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg font-bold text-slate-700 font-elegant tracking-tight">Powered by Nexapps</h3>
+            <p className="text-slate-500 max-w-xs mx-auto font-medium text-sm leading-relaxed">Mohon tunggu sebentar, kami sedang menyiapkan lingkungan yang ceria untuk Anda...</p>
+          </div>
         </div>
       )}
 
@@ -1276,22 +1293,21 @@ export default function App() {
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white/90  border-r border-slate-200 flex flex-col h-full print:hidden transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'}`}>
-        <div className="p-6 border-b border-slate-100 flex-shrink-0 flex items-center justify-between bg-white relative overflow-hidden group">
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-all"></div>
-          <div className="relative z-10">
-            <h1 className="text-xl font-black tracking-tight text-brand-blue flex items-center gap-3 font-elegant">
-              <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-10 h-10 drop-shadow-sm" referrerPolicy="no-referrer" />
-              RW26 <span className="text-brand-pink">BERJUANG</span>
-            </h1>
-            <div className="mt-1 flex flex-col items-start pl-10">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Berdampak & Memberdayakan</p>
-              <p className="text-[8px] text-slate-400/80 font-bold tracking-widest mt-0.5 ml-6">Powered by Nexapps</p>
+      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white border-r border-slate-100 flex flex-col h-full print:hidden transition-all duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'} rounded-r-[2.5rem] md:rounded-none`}>
+        <div className="p-8 border-b border-slate-50 flex-shrink-0 flex items-center justify-between bg-white relative overflow-hidden group rounded-tr-[2.5rem] md:rounded-none">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-pink/10 transition-all duration-700"></div>
+          <div className="relative z-10 flex flex-col items-center w-full">
+            <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+              <img src="/logo_rw.png?v=5" alt="RW 26" className="w-12 h-12" referrerPolicy="no-referrer" />
             </div>
+            <h1 className="text-xl font-black tracking-tighter text-slate-800 flex items-center justify-center gap-1 leading-none font-elegant uppercase">
+              <span className="text-brand-blue">RW26</span>
+              <span className="text-brand-pink">BERJUANG</span>
+            </h1>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(false)}
-            className="p-2 text-slate-400 hover:text-red-500 md:hidden bg-slate-50 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-red-500 md:hidden bg-slate-50 rounded-lg transition-colors absolute top-4 right-4"
           >
             <X className="w-6 h-6" />
           </button>
@@ -1299,7 +1315,7 @@ export default function App() {
         <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 border-b border-slate-100">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-brand-green  shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sistem Pintar Aktif</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI ACTIVE</p>
           </div>
           <div className="p-2 bg-soft-blue rounded-xl border border-blue-100">
             <p className="text-[9px] text-brand-blue font-bold uppercase tracking-tight">ID Klien:</p>
@@ -1311,16 +1327,16 @@ export default function App() {
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
             { id: 'buku-tamu', label: 'Buku Tamu', icon: BookCopy },
-            { id: 'verifikasi', label: 'Verifikasi Mandiri', icon: ShieldCheck },
+            { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck },
             { id: 'keuangan', label: 'Keuangan', icon: CreditCard },
-            { id: 'posyandu', label: 'Kesehatan Warga', icon: Baby },
+            { id: 'posyandu', label: 'Kesehatan', icon: Baby },
             { id: 'bank-sampah', label: 'Bank Sampah', icon: Recycle },
-            { id: 'etoko', label: 'E-Toko', icon: ShoppingBag },
+            { id: 'etoko', label: 'E-LAPAK26', icon: ShoppingBag },
             { id: 'voting', label: 'E-Pemilu', icon: Vote },
-            { id: 'inventaris', label: 'Aset & Inventaris', icon: Package },
-            { id: 'surat', label: 'Surat Pengantar', icon: FileText },
+            { id: 'inventaris', label: 'Inventaris', icon: Package },
+            { id: 'surat', label: 'Surat', icon: FileText },
             { id: 'kop-template', label: 'KOP & Template', icon: FileSpreadsheet },
-            { id: 'users', label: 'Manajemen User', icon: User },
+            { id: 'users', label: 'Manage User', icon: User },
             { id: 'super-admin', label: 'Super Admin', icon: Shield },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
           ].filter(item => {
@@ -1342,23 +1358,26 @@ export default function App() {
               key={item.id}
               onClick={() => {
                 setActiveTab(item.id);
-                setIsSidebarOpen(false); // Close sidebar on mobile after selection
+                setIsSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative overflow-hidden ${
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-300 relative group overflow-hidden ${
                 activeTab === item.id 
-                  ? 'bg-soft-blue text-brand-blue font-black shadow-sm' 
-                  : 'text-slate-500 hover:bg-slate-50'
+                  ? 'bg-brand-blue text-white shadow-xl shadow-brand-blue/30 scale-[1.02]' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand-blue'
               }`}
             >
-              <div className={`transition-all duration-300 ${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'}`}>
-                <item.icon className={`w-6 h-6 ${activeTab === item.id ? 'text-brand-blue' : 'text-slate-400 group-hover:text-brand-blue'}`} />
+              {activeTab === item.id && (
+                <motion.div 
+                  layoutId="activeIndicator"
+                  className="absolute left-0 w-1.5 h-6 bg-brand-yellow rounded-r-full"
+                />
+              )}
+              <div className={`transition-all duration-300 ${activeTab === item.id ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>
+                <item.icon className="w-5 h-5" />
               </div>
-              <span className={`text-sm font-bold tracking-tight ${activeTab === item.id ? 'translate-x-1' : 'group-hover:translate-x-1'} transition-transform uppercase`}>
+              <span className="font-black text-xs tracking-[0.1em] uppercase font-sans">
                 {item.label}
               </span>
-              {activeTab === item.id && (
-                <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-brand-blue rounded-l-full"></div>
-              )}
             </button>
           ))}
         </nav>
@@ -1367,40 +1386,51 @@ export default function App() {
       {/* Main Workspace */}
       <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 print:hidden">
-          <div className="flex items-center space-x-3">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30">
+          <div className="flex items-center space-x-4">
              <button 
                onClick={() => setIsSidebarOpen(true)}
-               className="p-2.5 -ml-2 text-slate-500 hover:text-blue-600 md:hidden bg-slate-50 rounded-xl transition-all active:scale-95 shadow-sm border border-slate-200/50"
+               className="p-3 -ml-2 text-slate-500 hover:text-brand-blue md:hidden bg-slate-50 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100"
              >
                <Menu className="w-6 h-6" />
              </button>
-             <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded border border-slate-200 uppercase font-mono tracking-wider hidden sm:inline-block">
-               GAS-DB-V4
-             </span>
-             <div className="flex items-center gap-1.5 bg-green-50 text-green-600 text-[10px] px-2 py-1 rounded border border-green-100 uppercase font-bold tracking-wider ">
-               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-               Live Sync Active
+             <div className="hidden sm:flex items-center gap-2">
+               <span className="bg-soft-yellow text-amber-600 text-[10px] px-2.5 py-1 rounded-full border border-amber-100 uppercase font-black tracking-widest shadow-sm">
+                 V4.0 Active
+               </span>
+               <div className="flex items-center gap-2 bg-soft-green text-brand-green text-[10px] px-3 py-1 rounded-full border border-brand-green/20 uppercase font-black tracking-widest shadow-sm">
+                 <div className="w-2 h-2 bg-brand-green rounded-full animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
+                 Connected
+               </div>
              </div>
-             <h2 className="text-sm font-semibold text-slate-500 capitalize">{activeTab.replace('-', ' ')}</h2>
+             <div className="h-6 w-px bg-slate-100 mx-2 hidden md:block"></div>
+             <h2 className="text-xl font-black text-slate-800 capitalize tracking-tight hidden md:block">
+               {activeTab.replace('-', ' ')}
+             </h2>
           </div>
-          <div className="flex items-center space-x-2 md:space-x-4">
-             <div className="flex items-center space-x-2 md:space-x-3 pl-4 border-l border-slate-200">
-               <div className="text-right hidden lg:block">
-                 <p className="text-sm font-bold leading-none text-slate-800 flex items-center justify-end gap-1.5">
+          <div className="flex items-center space-x-3 md:space-x-6">
+             <div className="flex items-center space-x-3 md:space-x-4 pl-4 border-l border-slate-100">
+               <div className="text-right hidden sm:block">
+                 <p className="text-sm font-black leading-none text-slate-800 flex items-center justify-end gap-2 mb-1">
                    {currentUser.name}
-                   {currentUser.isSuperAdmin && <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />}
+                   {currentUser.isSuperAdmin && <ShieldCheck className="w-4 h-4 text-brand-blue" />}
                  </p>
-                 <span className={`text-[10px] uppercase font-bold mt-1 px-1.5 py-0.5 rounded border inline-block ${currentUser.isSuperAdmin ? 'bg-slate-900 text-white border-slate-900' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                 <span className={`text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border shadow-sm inline-block ${
+                   currentUser.isSuperAdmin 
+                     ? 'bg-slate-900 text-white border-slate-900' 
+                     : 'bg-brand-blue/10 text-brand-blue border-brand-blue/20'
+                 }`}>
                    {currentUser.isSuperAdmin ? 'SUPER ADMIN' : currentUser.role}
                  </span>
                </div>
-               <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-100 border border-blue-400 overflow-hidden">
-                 {userPhoto ? (
-                   <img src={userPhoto} alt={currentUser.name} className="w-full h-full object-cover" />
-                 ) : (
-                   currentUser.name.charAt(0)
-                 )}
+               <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-brand-blue p-0.5 shadow-xl shadow-brand-blue/20 border-2 border-white ring-1 ring-slate-100 overflow-hidden group hover:scale-105 transition-transform duration-300 cursor-pointer">
+                 <div className="w-full h-full rounded-[0.9rem] overflow-hidden flex items-center justify-center text-white text-lg font-black bg-gradient-to-tr from-brand-blue to-cyan-400">
+                   {userPhoto ? (
+                     <img src={userPhoto} alt={currentUser.name} className="w-full h-full object-cover" />
+                   ) : (
+                     currentUser.name.charAt(0)
+                   )}
+                 </div>
                </div>
                <button 
                 onClick={handleLogout}
@@ -3264,13 +3294,14 @@ function DashboardView({
         {[
           { id: 'sos', label: 'SOS', icon: Siren, color: 'brand-pink', bg: 'soft-pink', action: handleTriggerSOS },
           { id: 'warga', label: 'WARGA', icon: Users, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('warga') },
+          { id: 'buku-tamu', label: 'TAMU', icon: BookCopy, color: 'teal-500', bg: 'teal-50', action: () => setActiveTab('buku-tamu') },
           { id: 'keuangan', label: 'KEUANGAN', icon: CreditCard, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('keuangan') },
           { id: 'sampah', label: 'SAMPAH', icon: Recycle, color: 'brand-green', bg: 'soft-green', action: () => setActiveTab('bank-sampah') },
           { id: 'kesehatan', label: 'KESEHATAN', icon: Baby, color: 'brand-pink', bg: 'soft-pink', action: () => setActiveTab('posyandu') },
-          { id: 'inventaris', label: 'ASET', icon: Package, color: 'brand-purple', bg: 'soft-purple', action: () => setActiveTab('inventaris') },
+          { id: 'inventaris', label: 'INVENTARIS', icon: Package, color: 'brand-purple', bg: 'soft-purple', action: () => setActiveTab('inventaris') },
           { id: 'surat', label: 'SURAT', icon: FileText, color: 'cyan-500', bg: 'cyan-50', action: () => setActiveTab('surat') },
-          { id: 'voting', label: 'PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting') },
-          { id: 'toko', label: 'TOKO', icon: ShoppingBag, color: 'orange-500', bg: 'orange-50', action: () => setActiveTab('etoko') },
+          { id: 'voting', label: 'E-PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting') },
+          { id: 'toko', label: 'E-LAPAK26', icon: ShoppingBag, color: 'orange-500', bg: 'orange-50', action: () => setActiveTab('etoko') },
           { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck, color: 'emerald-500', bg: 'soft-green', action: () => setActiveTab('verifikasi') },
         ].map(item => (
           <button 
@@ -3286,24 +3317,59 @@ function DashboardView({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Warga</p>
-          <p className="text-2xl font-black text-slate-800 flex items-baseline gap-2">
-            {totalWarga} <span className="text-[11px] font-normal text-slate-400">Kepala Keluarga: {kepalaKeluarga}</span>
-          </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
+          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-blue/10 transition-colors flex items-center justify-center">
+            <img src="/logo_rw.png?v=5" alt="" className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500" />
+          </div>
+          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-soft-blue flex items-center justify-center">
+              <Users className="w-6 h-6 text-brand-blue" />
+            </div>
+            <div>
+              <p className="text-3xl font-black text-slate-800 leading-none mb-1">
+                {totalWarga}
+              </p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">KK: {kepalaKeluarga} Terdaftar</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Saldo Kas</p>
-          <p className="text-2xl font-black text-green-600 flex items-baseline gap-2">
-            Rp {formatRupiah(saldoTotal)} <span className="text-[11px] font-normal text-slate-400">+ Sinkron Otomatis</span>
-          </p>
+        
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
+          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-green/5 rounded-full blur-2xl group-hover:bg-brand-green/10 transition-colors flex items-center justify-center">
+            <img src="/logo_rw.png?v=5" alt="" className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500" />
+          </div>
+          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-soft-green flex items-center justify-center">
+              <CreditCard className="w-6 h-6 text-brand-green" />
+            </div>
+            <div>
+              <p className="text-2xl font-black text-slate-800 leading-none mb-1">
+                Rp {formatRupiah(saldoTotal)}
+              </p>
+              <p className="text-[10px] font-bold text-brand-green uppercase tracking-tighter animate-pulse">Sinkronisasi Realtime</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Surat Pending</p>
-          <p className="text-2xl font-black text-orange-500 flex items-baseline gap-2">
-            {suratPending} <span className="text-[11px] font-normal text-slate-400">Pengajuan</span>
-          </p>
+
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
+          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-pink/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-colors flex items-center justify-center">
+            <img src="/logo_rw.png?v=5" alt="" className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500" />
+          </div>
+          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-soft-pink flex items-center justify-center">
+              <FileText className="w-6 h-6 text-brand-pink" />
+            </div>
+            <div>
+              <p className="text-3xl font-black text-slate-800 leading-none mb-1">
+                {suratPending}
+              </p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Butuh Persetujuan</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -4657,116 +4723,117 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative print:border-none print:shadow-none print:overflow-visible">
-      <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:justify-between lg:items-center bg-white print:hidden gap-4">
-        <h3 className="text-sm font-bold text-slate-800 flex items-center">
-          <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-          Data Warga
-        </h3>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col relative print:border-none print:shadow-none print:overflow-visible">
+      <div className="p-6 border-b border-slate-50 flex flex-col lg:flex-row lg:justify-between lg:items-center bg-white print:hidden gap-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-soft-blue flex items-center justify-center shadow-inner">
+            <Users className="w-5 h-5 text-brand-blue" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-slate-800 leading-none">Data Warga</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Kelola Informasi Komunitas</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           {/* Kolom Pencarian */}
-          <div className="relative w-full sm:w-auto">
-            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-              <Search className="h-3.5 w-3.5 text-slate-400" />
+          <div className="relative flex-1 sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
             </div>
             <input
               type="text"
               placeholder="Cari Nama/NIK/KK/HP..."
               value={searchQuery}
               onChange={handleFilterChange(setSearchQuery)}
-              className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full sm:w-48 transition-all"
+              className="pl-11 pr-4 py-3 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-blue/10 w-full transition-all"
             />
           </div>
           
-            {/* Filter Dropdowns & Actions */}
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-slate-500 font-bold uppercase">Filter:</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100">
               <select 
                 value={filterRW}
                 onChange={handleFilterChange(setFilterRW)}
-                className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                className="px-3 py-2 bg-white rounded-xl text-xs font-black text-slate-700 border border-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 cursor-pointer uppercase"
               >
                 {uniqueRWs.map(rw => <option key={`rw-${rw}`} value={rw}>{rw === 'Semua' ? 'RW' : 'RW ' + rw}</option>)}
               </select>
               <select 
                 value={filterRT}
                 onChange={handleFilterChange(setFilterRT)}
-                className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                className="px-3 py-2 bg-white rounded-xl text-xs font-black text-slate-700 border border-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 cursor-pointer uppercase"
               >
                 {uniqueRTs.map(rt => <option key={`rt-${rt}`} value={rt}>{rt === 'Semua' ? 'RT' : 'RT ' + rt}</option>)}
               </select>
-              <select 
-                value={filterKategoriUmur}
-                onChange={handleFilterChange(setFilterKategoriUmur)}
-                className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-              >
-                <option value="Semua">Usia</option>
-                <option value="Balita">Balita (0-5)</option>
-                <option value="Remaja">Remaja (6-17)</option>
-                <option value="Dewasa">Dewasa (18-59)</option>
-                <option value="Lansia">Lansia ({'>'}= 60)</option>
-              </select>
             </div>
 
-            <div className="flex items-center gap-2 ml-auto">
-              <button onClick={handleExportPDF} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm" title="Download PDF">
-                <Download className="w-3.5 h-3.5 text-red-500" />
-                <span className="hidden xl:inline">PDF</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => { resetForm(); setShowAddForm(true); }}
+                className="flex items-center gap-2 bg-brand-yellow hover:bg-yellow-400 text-slate-900 px-5 py-3 rounded-2xl text-xs font-black transition-all shadow-lg shadow-brand-yellow/30 active:scale-95 uppercase tracking-wider"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Tambah</span>
               </button>
-              <button onClick={handleExportExcel} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm" title="Download Excel">
-                <Download className="w-3.5 h-3.5 text-green-600" />
-                <span className="hidden xl:inline">Excel</span>
-              </button>
-              {userRole !== 'Viewer' && (
-                <>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()} 
-                    className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
-                    title="Upload Data"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-blue-500" />
-                    <span className="hidden xl:inline">Upload</span>
-                  </button>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleImportFile} 
-                    accept=".csv, .xlsx, .xls" 
-                    className="hidden" 
-                  />
-                  {selectedWargaIds.length > 0 && (
-                    <button 
-                      onClick={handleBulkDelete}
-                      disabled={isDeletingWarga}
-                      className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95  ring-2 ring-red-400 ring-offset-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>{isDeletingWarga ? 'Menghapus...' : `Hapus (${selectedWargaIds.length} item)`}</span>
-                    </button>
-                  )}
-                  {docsToDelete.length > 0 && (
-                    <button 
-                      onClick={handleCleanupDuplicates}
-                      disabled={isCleaning}
-                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
-                      title={`Ada ${docsToDelete.length} data ganda`}
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>{isCleaning ? 'Membersihkan...' : `Bersihkan (${docsToDelete.length})`}</span>
-                    </button>
-                  )}
-                  <button 
-                    onClick={() => { resetForm(); setShowAddForm(true); }}
-                    className="flex items-center gap-1.5 bg-amber-200 hover:bg-amber-300 text-slate-800 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>Tambah</span>
-                  </button>
-                </>
-              )}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 print:hidden">
+        <div className="flex items-center gap-3">
+          <select 
+            value={filterKategoriUmur}
+            onChange={handleFilterChange(setFilterKategoriUmur)}
+            className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 focus:outline-none transition-all cursor-pointer"
+          >
+            <option value="Semua">Semua Usia</option>
+            <option value="Balita">Balita (0-5)</option>
+            <option value="Remaja">Remaja (6-17)</option>
+            <option value="Dewasa">Dewasa (18-59)</option>
+            <option value="Lansia">Lansia (60+)</option>
+          </select>
+          <div className="h-4 w-px bg-slate-200"></div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none bg-white px-3 py-1 rounded-full border border-slate-100">
+            {filteredWargaData.length} Warga Ditemukan
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button onClick={handleExportPDF} className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-pink hover:text-brand-pink text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95" title="Download PDF">
+            <Download className="w-4 h-4" />
+            <span className="hidden lg:inline">PDF</span>
+          </button>
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-green hover:text-brand-green text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95" title="Download Excel">
+            <Download className="w-4 h-4" />
+            <span className="hidden lg:inline">EXCEL</span>
+          </button>
+          
+          {userRole !== 'Viewer' && (
+            <>
+              <button 
+                onClick={() => fileInputRef.current?.click()} 
+                className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-blue hover:text-brand-blue text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95"
+                title="Upload Data"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden lg:inline">UPLOAD</span>
+              </button>
+              <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".csv, .xlsx, .xls" className="hidden" />
+              
+              {selectedWargaIds.length > 0 && (
+                <button 
+                  onClick={handleBulkDelete}
+                  disabled={isDeletingWarga}
+                  className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 animate-pulse"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>HAPUS ({selectedWargaIds.length})</span>
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
       {/* Header Khusus Print */}
@@ -8626,6 +8693,16 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       return idMatch && secretMatch;
     });
 
+    // Pre-authenticate anonymously if needed to allow discovery queries
+    if (!auth.currentUser) {
+      try {
+        console.log("Ensuring anonymous authentication for citizen lookup...");
+        await signInAnonymously(auth);
+      } catch (err) {
+        console.warn("Pre-auth failed:", err);
+      }
+    }
+    
     // 2. DIRECT DISCOVERY (Across Tenants via Firestore)
     if (!found) {
        try {
@@ -8909,7 +8986,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row lg:gap-16 items-center justify-center p-4 sm:p-8 relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-brand-pink/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 "></div>
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-brand-blue/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 " style={{ animationDelay: '2s' }}></div>
@@ -8917,22 +8994,22 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-white shadow-2xl shadow-brand-blue/20 mb-8 relative group isolate">
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/10 to-brand-pink/10 rounded-[2.5rem] animate-pulse"></div>
-            <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-16 h-16 relative z-10" referrerPolicy="no-referrer" />
+          <div className="inline-flex items-center justify-center w-28 h-28 rounded-[3rem] bg-white shadow-2xl shadow-brand-blue/20 mb-8 relative group isolate overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/20 via-brand-yellow/20 to-brand-pink/20 animate-spin-slow"></div>
+            <div className="absolute inset-0.5 bg-white rounded-[2.9rem] -z-10"></div>
+            <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-18 h-18 relative z-10 transition-transform group-hover:scale-110 duration-500" referrerPolicy="no-referrer" />
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-800 uppercase leading-none font-elegant">
+          <h1 className="text-5xl font-black tracking-tighter text-slate-800 uppercase leading-none mb-2 font-elegant">
             RW26 <span className="text-brand-pink">BERJUANG</span>
           </h1>
-          <div className="mt-3 flex justify-center w-full">
-            <div className="flex flex-col items-center">
-              <p className="text-slate-500 font-bold text-sm tracking-tighter uppercase text-center w-full">Keluarga Hebat, Lingkungan Cerdas</p>
-              <p className="text-slate-400/80 font-bold text-xs tracking-widest mt-1 text-center">Powered by Nexapps</p>
-            </div>
+          <p className="text-brand-blue font-bold tracking-[0.2em] text-sm uppercase">BERDAMPAK &amp; MEMBERDAYAKAN</p>
+          <div className="mt-2 flex flex-col items-center">
+            <p className="text-slate-400/80 font-bold text-xs tracking-widest mt-0.5 text-center">Powered by Nexapps</p>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white/90  rounded-[2.5rem] shadow-2xl shadow-slate-300/50 border border-white overflow-hidden">
+        <div className="w-full max-w-md bg-white/90 rounded-[2.5rem] shadow-2xl shadow-slate-300/50 border border-white overflow-hidden relative z-10">
           <div className="flex border-b border-slate-100/50 bg-white/50 ">
             <button 
               onClick={() => setLoginMode('admin')}
@@ -8949,7 +9026,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
           </div>
           <div className="p-8">
             <h2 className="text-xl font-black text-slate-800 mb-6 font-elegant tracking-tight text-center">
-              {loginMode === 'admin' ? 'LOGIN' : 'Verifikasi Data Warga Utama'}
+              {loginMode === 'admin' ? 'LOGIN' : 'Verifikasi Data'}
             </h2>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
@@ -8962,7 +9039,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
               <>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Email/Username Pengelola</label>
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">EMAIL/ USERNAME</label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                         <User className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
@@ -9000,13 +9077,18 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       </button>
                     </div>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-brand-blue hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base tracking-wide"
-                  >
-                    {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Ayo Masuk!'}
-                  </button>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-brand-blue hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_30px_rgba(59,130,246,0.8)] transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base tracking-wide relative overflow-hidden group"
+                    >
+                      <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out"></div>
+                      {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : (
+                        <div className="flex items-center gap-2">
+                           <span className="relative z-10">Aktifkan dan tambahkan notifikasi</span>
+                        </div>
+                      )}
+                    </button>
                 </form>
 
                 <div className="mt-8">
@@ -9037,7 +9119,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
             ) : (
               <form onSubmit={handleWargaLogin} className="space-y-6">
                 <div>
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Identitas Warga (NIK / Nama / No. HP)</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">ID WARGA (NIK/ NAMA/ NO. HP)</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                       <User className="w-6 h-6 text-slate-400 group-focus-within:text-brand-pink transition-colors" />
@@ -9053,7 +9135,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Kunci Verifikasi (No. KK / HP / NIK)</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">KEYWORD</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                       <Lock className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
@@ -9064,7 +9146,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       value={kodeKeluarga}
                       onChange={(e) => setKodeKeluarga(e.target.value)}
                       className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base tracking-widest font-mono"
-                      placeholder="No. KK / HP / NIK"
+                      placeholder="NO. KK / NO. HP"
                     />
                   </div>
                 </div>
@@ -9073,15 +9155,22 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                     <ShieldCheck className="w-6 h-6 text-brand-pink" />
                   </div>
                   <p className="text-xs text-slate-600 font-bold leading-relaxed pt-1">
-                    Masuk dengan kombinasi (Nama/NIK/HP) dan (KK/HP/NIK). Gunakan verifikasi mandiri jika data belum terdaftar.
+                    Masukan (NAMA / NIK / HP) &amp; (NO. KK / NO. HP)<br />
+                    Gunakan Verifikasi Mandiri (Link dibawah)<br />
+                    Jika Anda Belum Terdaftar.
                   </p>
                 </div>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-brand-pink hover:bg-pink-500 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-pink-500/20 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base tracking-wide"
+                  className="w-full bg-brand-pink hover:bg-pink-500 text-white font-black py-5 rounded-[1.5rem] shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:shadow-[0_0_30px_rgba(236,72,153,0.8)] transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base tracking-wide relative overflow-hidden group"
                 >
-                  {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Masuk Ke Profil'}
+                  <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out"></div>
+                  {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : (
+                    <div className="flex items-center gap-2">
+                       <span className="relative z-10">Aktifkan & Masuk Profil!</span>
+                    </div>
+                  )}
                 </button>
                 <div className="flex flex-col gap-2 mt-4">
                   <button
@@ -9107,16 +9196,10 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                </div>
              )}
           </div>
-          <div className="p-6 bg-white/50  border-t-2 border-white flex justify-center items-center">
-            <p className="text-center text-[10px] font-bold text-slate-400 flex items-center gap-2 uppercase tracking-widest">
-              <Baby className="w-4 h-4 text-brand-pink" /> 100% Ramah Anak & Keluarga
-            </p>
-          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void }) {
   const [editingUser, setEditingUser] = useState<any>(null);

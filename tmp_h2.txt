@@ -1,0 +1,18 @@
+105:                   <h2 class="text-lg font-bold uppercase">${kop.nama_rt || `RUKUN TETANGGA ${kop.rt || '...'} / RUKUN WARGA ${kop.rw || '...'}`}</h2>
+1212:        <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
+1278:          <h2 className="text-3xl font-black text-slate-800 tracking-tighter mb-1 uppercase font-sans">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
+1407:             <h2 className="text-xl font-black text-slate-800 capitalize tracking-tight hidden md:block">
+1594:              <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4">Kirimi Sinyal Darurat?</h2>
+2006:          <h2 className="text-4xl font-black text-slate-800 tracking-tighter">E-Toko RW 26</h2>
+2713:            <h2 className="text-4xl font-black text-slate-800 tracking-tighter">E-Pemilu RW 26</h2>
+4840:        <h2 className="text-xl font-bold text-slate-900">DATA WARGA RW 26 BERJUANG</h2>
+5269:                    <h2 className="text-xl font-black text-slate-900 leading-tight">{viewWarga.nama}</h2>
+7781:                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Detail Verifikasi: {selectedItem.nama}</h2>
+8607:        <h2 className="text-xl font-bold mb-4">Pendaftaran Warga</h2>
+8632:        <h2 className="text-xl font-bold mb-4">Pendaftaran Tenant</h2>
+9030:            <h2 className="text-xl font-black text-slate-800 mb-6 font-elegant tracking-tight text-center">
+10288:            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Kesehatan Warga</h2>
+10741:                  <h2 className="text-xl font-black text-slate-800">{selectedBalita.nama}</h2>
+10829:                  <h2 className="text-xl font-black text-slate-800">{selectedIbuHamil.nama}</h2>
+12009:                  <h2 className="text-xl font-black text-slate-800">{selectedNasabah.nama}</h2>
+12676:          <h2 className="text-xl font-bold text-slate-800 flex items-center">
