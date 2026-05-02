@@ -23,6 +23,26 @@ import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase
 import { auth, storage } from './firebase';
 import KopTemplateManagementView from './components/KopTemplateManagementView';
 
+const APP_LOGO = "/logo_rw.png";
+
+const AppLogo = ({ className, size = 12 }: { className?: string, size?: number }) => {
+  const [hasError, setHasError] = useState(false);
+  return !hasError ? (
+    <img 
+      src={APP_LOGO} 
+      alt="Logo" 
+      className={className || `w-${size} h-${size}`}
+      onError={() => setHasError(true)}
+      referrerPolicy="no-referrer"
+      draggable={false}
+    />
+  ) : (
+    <div className={`${className || `w-${size} h-${size}`} bg-brand-blue/10 rounded-xl flex items-center justify-center p-2`}>
+      <Shield className="w-full h-full text-brand-blue" />
+    </div>
+  );
+};
+
 // --- INITIAL DUMMY DATA ---
 const INITIAL_WARGA_DATA = [
   { nama: "Bpk. Ahmad Suhendar", nik: "3271012345670001", kk: "3271012345678881", rt: "01", rw: "05", blok: "A/01", status: "Warga Tetap", hp: "081234567890", posisi: "Ketua RT", profesi: "Guru", jk: "Laki-Laki", tglLahir: "1980-05-15", tglDaftar: "2024-01-10" },
@@ -1257,7 +1277,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="relative">
           <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
-          <img src="/logo_rw.png?v=5" alt="Loading" className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" referrerPolicy="no-referrer" />
+          <AppLogo size={8} className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
@@ -1370,7 +1390,9 @@ export default function App() {
           <div className="absolute inset-0 bg-mesh opacity-50 -z-10 animate-pulse"></div>
           <div className="relative mb-8 pt-4">
             <div className="w-24 h-24 border-8 border-brand-blue/10 border-t-brand-blue border-r-brand-pink rounded-full animate-spin"></div>
-            <img src="/logo_rw.png?v=5" alt="Logo" className="w-12 h-12 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" referrerPolicy="no-referrer" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+              <AppLogo size={12} className="w-12 h-12 drop-shadow-lg" />
+            </div>
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-3 py-0.5 rounded-full shadow-sm border border-slate-100 text-[10px] font-bold text-brand-blue animate-bounce">LOADING</div>
           </div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tighter mb-1 uppercase font-elegant">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
@@ -1396,7 +1418,7 @@ export default function App() {
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-pink/10 transition-all duration-700"></div>
           <div className="relative z-10 flex flex-col items-center w-full">
             <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
-              <img src="/logo_rw.png?v=5" alt="RW 26" className="w-12 h-12" referrerPolicy="no-referrer" />
+              <AppLogo size={12} className="w-12 h-12" />
             </div>
             <h1 className="text-xl font-black tracking-tighter text-slate-800 flex items-center justify-center gap-1 leading-none font-elegant uppercase">
               <span className="text-brand-blue">RW26</span>
@@ -2006,7 +2028,8 @@ function ETokoView({
   wargaAuth, 
   handleFirestoreError,
   handleFileUpload,
-  showNotification 
+  showNotification,
+  accessMode
 }: { 
   userRole: string, 
   tenantId: string, 
@@ -2016,7 +2039,8 @@ function ETokoView({
   wargaAuth: any,
   handleFirestoreError: any,
   handleFileUpload: (file: File, folder: string) => Promise<string>,
-  showNotification: any
+  showNotification: any,
+  accessMode?: "LIHAT" | "JUAL" | "PRIORITAS" | boolean
 }) {
   const [view, setView] = useState<'buyer' | 'seller'>('buyer');
   const [activeTab, setActiveTab] = useState<'shop' | 'orders'>('shop');
@@ -3634,8 +3658,10 @@ function DashboardView({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
-          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-blue/10 transition-colors flex items-center justify-center">
-            <img src="/logo_rw.png?v=5" alt="" className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500" />
+          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-blue/10 transition-colors flex items-center justify-center text-white">
+            <div className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500">
+              <AppLogo size={10} className="w-full h-full" />
+            </div>
           </div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
           <div className="flex items-center gap-4">
@@ -3652,8 +3678,10 @@ function DashboardView({
         </div>
         
         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
-          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-green/5 rounded-full blur-2xl group-hover:bg-brand-green/10 transition-colors flex items-center justify-center">
-            <img src="/logo_rw.png?v=5" alt="" className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500" />
+          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-green/5 rounded-full blur-2xl group-hover:bg-brand-green/10 transition-colors flex items-center justify-center text-white">
+            <div className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500">
+              <AppLogo size={10} className="w-full h-full" />
+            </div>
           </div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
           <div className="flex items-center gap-4">
@@ -3670,8 +3698,10 @@ function DashboardView({
         </div>
 
         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
-          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-pink/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-colors flex items-center justify-center">
-            <img src="/logo_rw.png?v=5" alt="" className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500" />
+          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-pink/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-colors flex items-center justify-center text-white">
+            <div className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500">
+              <AppLogo size={10} className="w-full h-full" />
+            </div>
           </div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
           <div className="flex items-center gap-4">
@@ -4065,7 +4095,7 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, currentUser, tenantId, ha
             <BookCopy className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight uppercase">Sistem Buku Tamu</h1>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight uppercase">Buku Tamu Digital</h1>
             <p className="text-slate-400 font-bold text-[10px] tracking-[0.2em] uppercase">Intelligence Security Monitor v2.0</p>
           </div>
         </div>
@@ -9788,7 +9818,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
           <div className="inline-flex items-center justify-center w-28 h-28 rounded-[3rem] bg-white shadow-2xl shadow-brand-blue/20 mb-8 relative group isolate overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/20 via-brand-yellow/20 to-brand-pink/20 animate-spin-slow"></div>
             <div className="absolute inset-0.5 bg-white rounded-[2.9rem] -z-10"></div>
-            <img src="/logo_rw.png?v=5" alt="Logo RW 26" className="w-18 h-18 relative z-10 transition-transform group-hover:scale-110 duration-500" referrerPolicy="no-referrer" />
+            <AppLogo size={18} className="w-18 h-18 relative z-10 transition-transform group-hover:scale-110 duration-500" />
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 uppercase leading-none mb-2 font-elegant">
             RW26 <span className="text-brand-pink">BERJUANG</span>
