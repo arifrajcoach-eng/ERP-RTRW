@@ -32,17 +32,7 @@ service cloud.firestore {
       );
     }
 
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // --- Helper Functions (Legacy, to be removed) ---
-    function getUser(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data;
-    }
-    function isOwner(resourceData) { return isSignedIn() && request.auth.uid == resourceData.authUid; }
-
+    // --- Specific collection rules ---
     match /test/{docId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -195,16 +185,16 @@ service cloud.firestore {
       allow delete: if isPengurus();
     }
 
-    match /toko_products/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isPengurus();
+    match /toko_products/{allPaths=**} {
+      allow read, write: if true;
+    }
+    match /toko_orders/{allPaths=**} {
+      allow read, write: if true;
     }
 
-    match /toko_orders/{docId} {
-      allow read: if isSignedIn() && (resource == null || resource.data.customerId == request.auth.uid || isPengurus());
-      allow create: if isSignedIn();
-      allow update: if isPengurus();
-      allow delete: if isPengurus();
+    // Default deny (Must be last)
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

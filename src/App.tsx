@@ -65,6 +65,42 @@ const INITIAL_INVENTARIS_DATA = [
   { id: "INV-BRG-003", nama_barang: "Sound System Portable", kategori: "Elektronik", jumlah: 1, kondisi: "Rusak Ringan", lokasi: "Pos Kamling", tanggal_pengadaan: "2022-11-20", keterangan: "Mic kadang putus" },
 ];
 
+const PLAN_FEATURES = {
+  TRIAL: {
+    maxWarga: 50,
+    keuangan: "DASAR",
+    surat: "STANDAR",
+    bankSampah: false,
+    kesehatan: false,
+    eLapak: "LIHAT",
+    ePemilu: false,
+    sos: true,
+    inventaris: true,
+  },
+  BASIC: {
+    maxWarga: 200,
+    keuangan: "FULL",
+    surat: "CUSTOM",
+    bankSampah: true,
+    kesehatan: "DASAR",
+    eLapak: "JUAL",
+    ePemilu: "BASIC",
+    sos: true,
+    inventaris: true,
+  },
+  PRO: {
+    maxWarga: 1000,
+    keuangan: "FULL",
+    surat: "FULL_CUSTOM",
+    bankSampah: true,
+    kesehatan: "FULL",
+    eLapak: "PRIORITAS",
+    ePemilu: "UNLIMITED",
+    sos: true,
+    inventaris: true,
+  }
+};
+
 // Shared Helper for Document Generation
 const generateSuratHTML = (surat: any, kop: any, settings: any) => {
   return `
@@ -454,6 +490,7 @@ export default function App() {
 
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [currentTenant, setCurrentTenant] = useState<any>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const activeEmergency = emergenciesData.find(e => e.status === 'ACTIVE' && e.id !== hiddenEmergencyId);
@@ -579,6 +616,8 @@ export default function App() {
         userName: currentUser.name,
         userLocation: userLocation,
         userAddress: addressStr,
+        rt: linkedWarga?.rt || '-',
+        rw: linkedWarga?.rw || '-',
         userPhone: userPhone,
         userEmail: userEmail,
         userPhoto: userPhoto,
@@ -640,6 +679,14 @@ export default function App() {
     const unsubSettings = onSnapshot(doc(db, 'settings', tId), (snap) => {
       if (snap.exists()) {
         setSettings(snap.data());
+      }
+    });
+
+    const unsubCurrentTenant = onSnapshot(doc(db, 'tenants', tId), (snap) => {
+      if (snap.exists()) {
+        setCurrentTenant(snap.data());
+      } else {
+        setCurrentTenant(null);
       }
     });
 
@@ -1052,6 +1099,7 @@ export default function App() {
       unsubUsers();
       unsubTenants();
       unsubSettings();
+      unsubCurrentTenant();
       unsubKopSettings();
     };
   }, [currentUser, wargaAuth]);
@@ -1390,19 +1438,27 @@ export default function App() {
             { id: 'super-admin', label: 'Super Admin', icon: Shield },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
           ].filter(item => {
-            if (currentUser?.role === 'Viewer') {
-              return ['dashboard', 'warga'].includes(item.id);
-            }
-            if (currentUser?.role === 'BENDAHARA') {
-              return ['dashboard', 'keuangan', 'bank-sampah'].includes(item.id);
-            }
-            if (['RT', 'RW'].includes(currentUser?.role || '')) {
-              return ['dashboard', 'warga', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'inventaris', 'surat', 'kop-template', 'users'].includes(item.id);
-            }
-            if (item.id === 'users' && !['ADMIN', 'RT', 'RW'].includes(currentUser?.role) && !currentUser?.isSuperAdmin) return false;
-            if (item.id === 'pengaturan' && currentUser?.role !== 'ADMIN' && !currentUser?.isSuperAdmin) return false;
-            if (item.id === 'super-admin' && !currentUser?.isSuperAdmin) return false;
-            return true;
+            const role = currentUser?.role || 'TAMU';
+            const isSuperAdmin = !!currentUser?.isSuperAdmin;
+
+            if (isSuperAdmin) return true;
+
+            const rolePermissions: { [key: string]: string[] } = {
+              'SUPER_ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'super-admin', 'pengaturan'],
+              'ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'pengaturan'],
+              'RW': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users'],
+              'RT': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users'],
+              'SEKRETARIS': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'inventaris', 'surat', 'kop-template'],
+              'BENDAHARA': ['dashboard', 'keuangan', 'bank-sampah'],
+              'SATPAM': ['dashboard', 'buku-tamu'],
+              'KADER': ['dashboard', 'posyandu', 'bank-sampah'],
+              'WARGA': ['dashboard', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'surat'],
+              'TAMU': ['dashboard', 'etoko'],
+              'Viewer': ['dashboard', 'etoko']
+            };
+
+            const allowed = rolePermissions[role] || ['dashboard'];
+            return allowed.includes(item.id);
           }).map((item: any) => (
             <button
               key={item.id}
@@ -1455,7 +1511,7 @@ export default function App() {
              </div>
              <div className="h-6 w-px bg-slate-100 mx-2 hidden md:block"></div>
              <h2 className="text-xl font-black text-slate-800 capitalize tracking-tight hidden md:block">
-               {activeTab.replace('-', ' ')}
+               {activeTab === 'etoko' ? 'E-LAPAK26' : (activeTab === 'posyandu' ? 'Kesehatan' : activeTab.replace('-', ' '))}
              </h2>
           </div>
           <div className="flex items-center space-x-3 md:space-x-6">
@@ -1517,7 +1573,7 @@ export default function App() {
               handleLinkToWarga={handleLinkToWarga}
             />
           )}
-          {activeTab === 'warga' && <WargaView wargaData={wargaData} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'warga' && <WargaView wargaData={wargaData} currentTenant={currentTenant} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
           {activeTab === 'buku-tamu' && (
             <BukuTamuView 
               bukuTamuData={bukuTamuData} 
@@ -1528,7 +1584,7 @@ export default function App() {
               showNotification={showNotification}
             />
           )}
-          {activeTab === 'verifikasi' && <VerifikasiAdminView verifikasiData={verifikasiWargaData} wargaData={wargaData} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} showNotification={showNotification} handleFirestoreError={handleFirestoreError} currentUser={currentUser} />}
+          {activeTab === 'verifikasi' && <VerifikasiAdminView verifikasiData={verifikasiWargaData} wargaData={wargaData} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} showNotification={showNotification} handleFirestoreError={handleFirestoreError} currentUser={currentUser} />}
           {activeTab === 'keuangan' && (
             <FinansialDashboardView 
               iuranData={iuranData} setIuranData={setIuranData} 
@@ -1545,29 +1601,49 @@ export default function App() {
             />
           )}
           { activeTab === 'posyandu' && (
-            <PosyanduView 
-              balitaData={balitaData} setBalitaData={setBalitaData}
-              ibuHamilData={ibuHamilData} setIbuHamilData={setIbuHamilData}
-              posyanduKegiatanData={posyanduKegiatanData} setPosyanduKegiatanData={setPosyanduKegiatanData}
-              posbinduKegiatanData={posbinduKegiatanData} setPosbinduKegiatanData={setPosbinduKegiatanData}
-              pemeriksaanBalitaData={pemeriksaanBalitaData} setPemeriksaanBalitaData={setPemeriksaanBalitaData}
-              pemeriksaanPosbinduData={pemeriksaanPosbinduData} setPemeriksaanPosbinduData={setPemeriksaanPosbinduData}
-              imunisasiData={imunisasiData} setImunisasiData={setImunisasiData}
-              wargaData={wargaData} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'}
-              setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification}
-            />
+            PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].kesehatan ? (
+              <PosyanduView 
+                balitaData={balitaData} setBalitaData={setBalitaData}
+                ibuHamilData={ibuHamilData} setIbuHamilData={setIbuHamilData}
+                posyanduKegiatanData={posyanduKegiatanData} setPosyanduKegiatanData={setPosyanduKegiatanData}
+                posbinduKegiatanData={posbinduKegiatanData} setPosbinduKegiatanData={setPosbinduKegiatanData}
+                pemeriksaanBalitaData={pemeriksaanBalitaData} setPemeriksaanBalitaData={setPemeriksaanBalitaData}
+                pemeriksaanPosbinduData={pemeriksaanPosbinduData} setPemeriksaanPosbinduData={setPemeriksaanPosbinduData}
+                imunisasiData={imunisasiData} setImunisasiData={setImunisasiData}
+                wargaData={wargaData} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'}
+                setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification}
+              />
+            ) : (
+              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
+                <p className="text-slate-500 mt-2">Fitur Kesehatan/Posyandu hanya tersedia untuk paket BASIC atau PRO. Silakan hubungi admin untuk upgrade.</p>
+              </div>
+            )
           )}
           { activeTab === 'bank-sampah' && (
-            <BankSampahView 
-              sampahKategoriData={sampahKategoriData}
-              sampahSetoranData={sampahSetoranData}
-              sampahTarikSaldoData={sampahTarikSaldoData}
-              wargaData={wargaData}
-              currentUser={currentUser}
-              tenantId={currentUser.tenantId || 'RW26_SMART'}
-              handleFirestoreError={handleFirestoreError}
-              showNotification={showNotification}
-            />
+            PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].bankSampah ? (
+              <BankSampahView 
+                sampahKategoriData={sampahKategoriData}
+                sampahSetoranData={sampahSetoranData}
+                sampahTarikSaldoData={sampahTarikSaldoData}
+                wargaData={wargaData}
+                currentUser={currentUser}
+                tenantId={currentUser.tenantId || 'RW26_SMART'}
+                handleFirestoreError={handleFirestoreError}
+                showNotification={showNotification}
+              />
+            ) : (
+              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
+                <p className="text-slate-500 mt-2">Fitur Bank Sampah hanya tersedia untuk paket BASIC atau PRO. Silakan hubungi admin untuk upgrade.</p>
+              </div>
+            )
           )}
           {activeTab === 'inventaris' && <InventarisView 
              inventarisData={inventarisData} setInventarisData={setInventarisData} 
@@ -1583,19 +1659,31 @@ export default function App() {
 
           {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
-          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
-          {activeTab === 'voting' && <EVotingView 
-            userRole={currentUser.role} 
-            tenantId={currentUser.tenantId || 'RW26_SMART'}
-            candidates={votingCandidates}
-            config={votingConfig}
-            userVotes={userVotes}
-            currentUser={currentUser}
-            wargaAuth={wargaAuth}
-            handleFirestoreError={handleFirestoreError}
-            handleFileUpload={handleFileUpload}
-            showNotification={showNotification}
-          />}
+          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} currentTenant={currentTenant} wargaData={wargaData} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          { activeTab === 'voting' && (
+            PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].ePemilu ? (
+              <EVotingView 
+                userRole={currentUser.role} 
+                tenantId={currentUser.tenantId || 'RW26_SMART'}
+                candidates={votingCandidates}
+                config={votingConfig}
+                userVotes={userVotes}
+                currentUser={currentUser}
+                wargaAuth={wargaAuth}
+                handleFirestoreError={handleFirestoreError}
+                handleFileUpload={handleFileUpload}
+                showNotification={showNotification}
+              />
+            ) : (
+              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
+                <p className="text-slate-500 mt-2">Fitur E-Voting hanya tersedia untuk paket BASIC atau PRO. Silakan hubungi admin untuk upgrade.</p>
+              </div>
+            )
+          )}
           {activeTab === 'etoko' && <ETokoView 
             userRole={currentUser.role} 
             tenantId={currentUser.tenantId || 'RW26_SMART'}
@@ -1606,6 +1694,7 @@ export default function App() {
             handleFirestoreError={handleFirestoreError}
             handleFileUpload={handleFileUpload}
             showNotification={showNotification}
+            accessMode={PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].eLapak}
           />}
         </div>
       </main>
@@ -1836,9 +1925,14 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
                       <p className="text-sm font-bold truncate">{emergency.userLocation}</p>
                     )}
                     {emergency.userAddress && (
-                      <p className="text-sm font-black bg-white/20 px-2 py-1 rounded inline-block w-fit uppercase tracking-tight">
-                        {emergency.userAddress}
-                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <p className="text-sm font-black bg-white/20 px-3 py-1.5 rounded-xl inline-block w-fit uppercase tracking-tight">
+                          {emergency.userAddress}
+                        </p>
+                        <p className="text-sm font-black bg-white/30 px-3 py-1.5 rounded-xl inline-block w-fit uppercase tracking-tight">
+                          RT: {emergency.rt || '-'} / RW: {emergency.rw || '-'}
+                        </p>
+                      </div>
                     )}
                   </div>
                </div>
@@ -1930,10 +2024,15 @@ function ETokoView({
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [selectedRT, setSelectedRT] = useState('Semua');
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editProdFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'TRANSFER'>('COD');
+  
   // Admin states
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -1947,12 +2046,27 @@ function ETokoView({
   });
 
   const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'RW' || userRole === 'RT';
-  const categories = ['Semua', 'Sembako', 'Elektronik', 'Kesehatan', 'Kebutuhan Rumah', 'Lainnya'];
+  const categories = [
+    'Semua', 
+    'Sembako', 
+    'Rumah tangga', 
+    'Makanan & minuman', 
+    'Fashion', 
+    'Elektronik', 
+    'ATK & lainnya',
+    '🔧 Servis (AC, listrik, bangunan)',
+    '🧺 Laundry & kebersihan',
+    '🚚 Transport / kurir',
+    '🎓 Les & jasa profesional'
+  ];
+
+  const rtOptions = ['Semua', ...Array.from(new Set(products.map(p => p.rtId).filter(Boolean)))];
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'Semua' || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesRT = selectedRT === 'Semua' || p.rtId === selectedRT;
+    return matchesSearch && matchesCategory && matchesRT;
   });
 
   const addToCart = (product: any) => {
@@ -2001,6 +2115,7 @@ function ETokoView({
         customerId: voterId,
         phone: wargaAuth?.telepon || '-',
         address: wargaAuth?.alamat || '-',
+        paymentMethod: paymentMethod,
         status: 'PENDING',
         timestamp: new Date().toISOString()
       });
@@ -2074,7 +2189,7 @@ function ETokoView({
     <div className="max-w-6xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h2 className="text-4xl font-black text-slate-800 tracking-tighter">E-Toko RW 26</h2>
+          <h2 className="text-4xl font-black text-slate-800 tracking-tighter">E-LAPAK26</h2>
           <p className="text-slate-500 font-medium">Beli kebutuhan harian lebih mudah & dukung UMKM warga</p>
         </div>
 
@@ -2146,6 +2261,13 @@ function ETokoView({
                   />
                 </div>
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                  <select 
+                    value={selectedRT}
+                    onChange={(e) => setSelectedRT(e.target.value)}
+                    className="px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-white text-slate-700 border border-slate-200 outline-none focus:border-brand-blue"
+                  >
+                    {rtOptions.map(rt => <option key={rt} value={rt}>{rt === 'Semua' ? 'Semua RT' : `RT ${rt}`}</option>)}
+                  </select>
                   {categories.map(c => (
                     <button
                       key={c}
@@ -2166,14 +2288,16 @@ function ETokoView({
                     key={p.id} 
                     className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-xl transition-all flex flex-col"
                   >
-                    <div className="relative h-48 bg-slate-50">
+                    <div className="relative h-48 bg-slate-50 cursor-pointer" onClick={() => { setSelectedProduct(p); setShowProductModal(true); }}>
                       <img src={p.image || 'https://via.placeholder.com/300?text=Produk'} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                      <div className="absolute top-4 left-4 bg-white/90  px-3 py-1 rounded-full border border-slate-100">
+                      <div className="absolute top-4 left-4 bg-white/90  px-3 py-1 rounded-full border border-slate-100 flex items-center gap-1">
                         <span className="text-[10px] font-black text-brand-blue uppercase">{p.category}</span>
+                        <span className="text-[10px] font-bold text-slate-400">|</span>
+                        <span className="text-[10px] font-bold text-slate-700">{p.rtId || 'RT?'}</span>
                       </div>
                     </div>
-                    <div className="p-6 flex-1 flex flex-col">
-                      <h3 className="text-lg font-black text-slate-800 mb-1">{p.name}</h3>
+                    <div className="p-6 flex-1 flex flex-col" onClick={() => { setSelectedProduct(p); setShowProductModal(true); }}>
+                      <h3 className="text-lg font-black text-slate-800 mb-1 cursor-pointer">{p.name}</h3>
                       <p className="text-xs text-slate-400 font-medium mb-4 line-clamp-2">{p.description || 'Kualitas terjamin untuk warga RW 26.'}</p>
                       
                       <div className="mt-auto space-y-4">
@@ -2190,7 +2314,7 @@ function ETokoView({
                         
                         <button 
                           disabled={p.stock <= 0}
-                          onClick={() => addToCart(p)}
+                          onClick={(e) => { e.stopPropagation(); addToCart(p); }}
                           className={`w-full py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 ${p.stock <= 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'}`}
                         >
                           {p.stock <= 0 ? 'Stok Habis' : <><ShoppingBag className="w-4 h-4" /> Tambah Keranjang</>}
@@ -2425,6 +2549,13 @@ function ETokoView({
               </div>
 
               <div className="p-8 border-t border-slate-100 bg-slate-50 space-y-6">
+                <div className="space-y-2">
+                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Metode Pembayaran</p>
+                   <div className="grid grid-cols-2 gap-2">
+                     <button onClick={() => setPaymentMethod('COD')} className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === 'COD' ? 'border-brand-blue bg-blue-50 text-brand-blue' : 'border-slate-200 bg-white'}`}>COD</button>
+                     <button onClick={() => setPaymentMethod('TRANSFER')} className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === 'TRANSFER' ? 'border-brand-blue bg-blue-50 text-brand-blue' : 'border-slate-200 bg-white'}`}>Transfer</button>
+                   </div>
+                </div>
                 <div className="flex justify-between items-end">
                   <div>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Pembayaran</p>
@@ -2438,6 +2569,47 @@ function ETokoView({
                 >
                   {isLoading ? 'Memproses...' : <><CreditCard className="w-5 h-5" /> Checkout Sekarang</>}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Product Detail Modal */}
+      <AnimatePresence>
+        {showProductModal && selectedProduct && (
+          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowProductModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full overflow-hidden z-10"
+            >
+              <div className="relative h-64">
+                <img src={selectedProduct.image || 'https://via.placeholder.com/600'} alt={selectedProduct.name} className="w-full h-full object-cover" />
+                <button onClick={() => setShowProductModal(false)} className="absolute top-4 right-4 p-2 bg-slate-900/50 backdrop-blur-md rounded-full text-white hover:bg-slate-900/70 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-8">
+                <h2 className="text-3xl font-black text-slate-800 mb-2">{selectedProduct.name}</h2>
+                <p className="text-xl font-black text-brand-blue mb-4">Rp {selectedProduct.price.toLocaleString()}</p>
+                <p className="text-slate-600 mb-6">{selectedProduct.description || 'Tidak ada deskripsi tersedia.'}</p>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => { addToCart(selectedProduct); setShowProductModal(false); }}
+                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                  >
+                    Tambah Ke Keranjang
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -2642,7 +2814,7 @@ function EVotingView({
 
   const handleVote = async (candidateId: string) => {
     if (!voterId) {
-      showNotification("Silakan login untuk dapat memilih", "error");
+      showNotification("Silakan login (via Google atau NIK/KK) untuk dapat memberikan suara.", "error");
       return;
     }
     if (hasVoted) {
@@ -3329,7 +3501,7 @@ function DashboardView({
       dateObj: new Date(v.timestamp || 0)
     })),
     ...tokoOrders.slice(-10).map(o => ({
-      title: 'Pesanan E-Toko',
+      title: 'Pesanan E-LAPAK26',
       desc: `${o.customerName} memesan ${o.items.length} item`,
       date: o.timestamp ? new Date(o.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
       amount: o.total,
@@ -3439,8 +3611,8 @@ function DashboardView({
           { id: 'warga', label: 'WARGA', icon: Users, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('warga') },
           { id: 'buku-tamu', label: 'TAMU', icon: BookCopy, color: 'teal-500', bg: 'teal-50', action: () => setActiveTab('buku-tamu') },
           { id: 'keuangan', label: 'KEUANGAN', icon: CreditCard, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('keuangan') },
-          { id: 'sampah', label: 'SAMPAH', icon: Recycle, color: 'brand-green', bg: 'soft-green', action: () => setActiveTab('bank-sampah') },
-          { id: 'kesehatan', label: 'KESEHATAN', icon: Baby, color: 'brand-pink', bg: 'soft-pink', action: () => setActiveTab('posyandu') },
+          { id: 'sampah', label: 'BANK SAMPAH', icon: Recycle, color: 'brand-green', bg: 'soft-green', action: () => setActiveTab('bank-sampah') },
+          { id: 'kesehatan', label: 'Kesehatan', icon: Baby, color: 'brand-pink', bg: 'soft-pink', action: () => setActiveTab('posyandu') },
           { id: 'inventaris', label: 'INVENTARIS', icon: Package, color: 'brand-purple', bg: 'soft-purple', action: () => setActiveTab('inventaris') },
           { id: 'surat', label: 'SURAT', icon: FileText, color: 'cyan-500', bg: 'cyan-50', action: () => setActiveTab('surat') },
           { id: 'voting', label: 'E-PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting') },
@@ -4356,7 +4528,7 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, currentUser, tenantId, ha
   );
 }
 
-function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { wargaData: any[], setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { wargaData: any[], currentTenant?: any, setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
@@ -4514,6 +4686,14 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
       return;
     }
 
+    if (currentTenant) {
+      const maxWarga = currentTenant.maxWarga || 50;
+      if (wargaData.length + validData.length > maxWarga) {
+        showNotification(`Batas slot warga tercapai. Anda mencoba menambahkan ${validData.length} data, tetapi sisa slot hanya ${Math.max(0, maxWarga - wargaData.length)}. Silakan upgrade paket.`, "error");
+        return;
+      }
+    }
+
     const newData = validData.map((row: any) => ({
       tenantId: tenantId,
       nama: (row['Nama Lengkap'] || row['nama'] || "").toString(),
@@ -4591,6 +4771,14 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     if (formData.nik && formData.nik.length !== 16) {
       showNotification("NIK harus terdiri dari tepat 16 digit angka.", 'error');
       return;
+    }
+
+    if (currentTenant) {
+      const maxWarga = currentTenant.maxWarga || 50;
+      if (wargaData.length >= maxWarga) {
+        showNotification(`Batas slot warga tercapai (Maks: ${maxWarga}). Silakan upgrade paket langganan Anda.`, 'error');
+        return;
+      }
     }
     
     const newWarga = { ...formData, tenantId: tenantId || 'RW26_SMART', tglDaftar: new Date().toISOString().split('T')[0] };
@@ -4865,8 +5053,29 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
     }
   };
 
+  const currentMaxWarga = currentTenant?.maxWarga || 50;
+  const isNearLimit = wargaData.length >= currentMaxWarga * 0.8;
+  const isAtLimit = wargaData.length >= currentMaxWarga;
+
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col relative print:border-none print:shadow-none print:overflow-visible">
+    <div className="space-y-6">
+      {(isNearLimit || isAtLimit) && (
+        <div className={`p-4 rounded-2xl border-l-4 ${isAtLimit ? 'bg-red-50 border-red-500' : 'bg-orange-50 border-orange-500'} flex items-start gap-4 shadow-sm`}>
+          <AlertTriangle className={`w-6 h-6 ${isAtLimit ? 'text-red-500' : 'text-orange-500'} flex-shrink-0 mt-1`} />
+          <div>
+            <h4 className={`text-base font-black ${isAtLimit ? 'text-red-800' : 'text-orange-800'}`}>
+              {isAtLimit ? 'Batas Slot Warga Tercapai' : 'Slot Warga Hampir Penuh'}
+            </h4>
+            <p className={`text-sm ${isAtLimit ? 'text-red-700' : 'text-orange-700'} mt-1 font-medium`}>
+              Anda telah menggunakan {wargaData.length} dari {currentMaxWarga} slot warga pada paket ini. 
+              {isAtLimit ? ' Anda tidak dapat menambahkan data warga. ' : ' Anda dapat menambahkan beberapa data lagi. '} 
+              Hubungi Admin Utama / Super Admin untuk upgrade agar kapasitas bertambah.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col relative print:border-none print:shadow-none print:overflow-visible">
       <div className="p-6 border-b border-slate-50 flex flex-col lg:flex-row lg:justify-between lg:items-center bg-white print:hidden gap-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-soft-blue flex items-center justify-center shadow-inner">
@@ -5507,10 +5716,9 @@ function WargaView({ wargaData, setWargaData, userRole, tenantId, setIsLoadingDB
         )}
       </AnimatePresence>
     </div>
+    </div>
   );
 }
-
-
 
 function FinansialDashboardView(f_params) {
   const { iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification, currentUser, getSetting } = f_params;
@@ -6270,7 +6478,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
   );
 }
 
-function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, currentUser, getSetting, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, currentUser, getSetting, rtId, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, rtId?: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -6514,8 +6722,10 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
 
   // Processing data with balance calculation
   let balance = 0;
-  // Deduplicate before processing to avoid React key errors if DB has duplicates
-  const uniqueKasData = Array.from(new Map(kasData.map(item => [item.id, item])).values());
+  // Deduplicate and filter by RT if provided (and user is not RW/Admin)
+  const uniqueKasData = Array.from(new Map(kasData.map(item => [item.id, item])).values())
+    .filter(item => !rtId || item.rtId === rtId); // Apply RT filtering
+  
   const allProcessedData = [...uniqueKasData].sort((a, b) => {
     const dateA = new Date(a.tanggal);
     const dateB = new Date(b.tanggal);
@@ -6756,7 +6966,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
                       </button>
                       <button 
                         onClick={() => setKasToDelete(trx)} 
-                        className="p-1 text-red-500 hover:bg-red-50 rounded transition-all" 
+                        className="p-1 text-red-500 hover:bg-red-100 rounded transition-all border border-red-100 hover:border-red-200" 
                         title="Hapus Transaksi"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -7070,7 +7280,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
   );
 }
 
-function PengaturanView({ tenantId, settings, userRole, handleFileUpload, showNotification }: { tenantId: string, settings: any, userRole: string, handleFileUpload: any, showNotification: any }) {
+function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole, handleFileUpload, showNotification }: { tenantId: string, currentTenant?: any, wargaData?: any[], settings: any, userRole: string, handleFileUpload: any, showNotification: any }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -7283,6 +7493,38 @@ function PengaturanView({ tenantId, settings, userRole, handleFileUpload, showNo
 
   return (
     <div className="space-y-6">
+      {/* Package Summary */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden p-6 relative">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -z-0 opacity-50"></div>
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
+              <Database className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800 tracking-tight">Paket: {currentTenant?.status || 'Trial'}</h3>
+              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Langganan Anda Saat Ini</p>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex gap-8 items-center min-w-[250px]">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Penggunaan Warga</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-slate-800 leading-none">{wargaData?.length || 0}</span>
+                <span className="text-sm font-bold text-slate-500">/ {currentTenant?.maxWarga || 50} Limit</span>
+              </div>
+            </div>
+            <div>
+              <div className="w-12 h-12 rounded-full overflow-hidden flex" style={{ background: `conic-gradient(#3b82f6 ${((wargaData?.length || 0) / (currentTenant?.maxWarga || 50)) * 100}%, #e2e8f0 0)` }}>
+                <div className="w-9 h-9 m-auto bg-slate-50 rounded-full flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-slate-700">{Math.round(((wargaData?.length || 0) / (currentTenant?.maxWarga || 50)) * 100)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Pengaturan Utama */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
@@ -7522,23 +7764,24 @@ function PengaturanView({ tenantId, settings, userRole, handleFileUpload, showNo
 
         <button 
           onClick={generateDummyData} 
-          disabled={isGenerating}
-          className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-all shadow-md disabled:bg-orange-300 flex items-center gap-2"
+          disabled={isGenerating || ((wargaData?.length || 0) + 20 > (currentTenant?.maxWarga || 50))}
+          className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-all shadow-md disabled:bg-orange-300 flex items-center gap-2 disabled:cursor-not-allowed"
+          title={((wargaData?.length || 0) + 20 > (currentTenant?.maxWarga || 50)) ? `Sisa slot paket tidak cukup (Butuh 20 slot)` : undefined}
         >
           {isGenerating ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div> : <Database className="w-4 h-4" />}
           {isGenerating ? 'Memproses...' : 'Generate 120 Data Dummy'}
         </button>
       </div>
-
     </div>
   );
 }
 
-function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoadingDB, showNotification, handleFirestoreError, currentUser }: { verifikasiData: any[], wargaData: any[], tenantId: string, setIsLoadingDB: any, showNotification: any, handleFirestoreError: any, currentUser: any }) {
+function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, isLoadingDB: globalLoading, setIsLoadingDB, showNotification, handleFirestoreError, currentUser }: { verifikasiData: any[], wargaData: any[], tenantId: string, isLoadingDB: boolean, setIsLoadingDB: any, showNotification: any, handleFirestoreError: any, currentUser: any }) {
   const [filter, setFilter] = useState<'All' | 'Menunggu Persetujuan' | 'Disetujui' | 'Ditolak'>('Menunggu Persetujuan');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [catatan, setCatatan] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Sync selectedItem with latest verifikasiData to prevent stale state in modal
   useEffect(() => {
@@ -7583,21 +7826,32 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
   }, [verifikasiData, filter, searchQuery]);
 
   const handleApprove = async (item: any) => {
-    setIsLoadingDB(true);
+    if (actionLoading) return;
+    
+    // Safety check for NIK
+    if (!item.nik) {
+      showNotification("NIK tidak valid. Data tidak bisa disetujui.", "error");
+      return;
+    }
+
+    setActionLoading(true);
+    // Remove global setIsLoadingDB(true) to avoid full-screen overlay covering the modal
     try {
       const batch = writeBatch(db);
-      
+      const docId = item.id;
+      if (!docId) throw new Error("ID data verifikasi tidak ditemukan.");
+
       // 1. Update status in verifikasi_warga
-      const vRef = doc(db, 'verifikasi_warga', item.id);
+      const vRef = doc(db, 'verifikasi_warga', docId);
+      const approveNote = catatan.trim() || 'Disetujui oleh admin';
       batch.update(vRef, {
         status: 'Disetujui',
         approvedAt: new Date().toISOString(),
-        approvedBy: currentUser.name,
-        catatan: 'Disetujui oleh admin'
+        approvedBy: currentUser.name || currentUser.displayName || 'Admin',
+        catatan: approveNote
       });
 
       // 2. Update main warga record
-      // Standardize docId to tenantId_nik (consistent with import and add)
       const standardDocId = `${tenantId}_${item.nik}`;
       const targetRef = doc(db, 'data_warga', standardDocId);
       const targetSnap = await getDoc(targetRef);
@@ -7625,83 +7879,79 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
         posisi: item.posisi || targetSnap.data()?.posisi || legacyData?.posisi || "",
         kewarganegaraan: item.kewarganegaraan || targetSnap.data()?.kewarganegaraan || legacyData?.kewarganegaraan || "WNI",
         terverifikasi: true,
+        keteranganVerifikasi: approveNote,
         updatedAt: new Date().toISOString()
       };
 
-      // Always write to standardRef
       batch.set(targetRef, {
         tenantId: tenantId,
         status: 'Warga Tetap',
         ...updatedData
       }, { merge: true });
 
-      // Clean up legacy record if it exists and is different
       if (legacySnap?.exists() && standardDocId !== item.nik) {
         batch.delete(legacyRef);
       }
 
       await batch.commit();
-      showNotification(`Data ${item.nama} telah disetujui dan diperbarui.`, "success");
+      showNotification(`Data ${item.nama} telah disetujui.`, "success");
       setSelectedItem(null);
+      setCatatan('');
     } catch (err) {
-      handleFirestoreError(err, 'update', 'verifikasi_warga/data_warga');
+      console.error("Approve Error:", err);
+      handleFirestoreError(err, 'update', 'verifikasi_warga');
       showNotification("Gagal memproses persetujuan.", "error");
     } finally {
-      setIsLoadingDB(false);
+      setActionLoading(false);
     }
   };
 
   const handleReject = async (item: any) => {
-    // 1. Determine if this is an "Undo Approval" situation
+    if (actionLoading) return;
+    
     const isAlreadyApproved = item.status === 'Disetujui';
-    const isSelected = selectedItem && selectedItem.id === item.id;
+    const isModalOpen = selectedItem && selectedItem.id === item.id;
+    let reason = isModalOpen ? catatan.trim() : "";
     
-    // 2. Identify the Reason
-    // If the modal is open (isSelected) and user typed something, use that.
-    // Otherwise, we'll prompt.
-    let reason = isSelected ? catatan.trim() : "";
-    
-    if (!reason || isAlreadyApproved) {
+    if (!reason) {
+      if (isModalOpen) {
+        showNotification("Harap isi Catatan Verifikasi di atas untuk alasan penolakan.", "warning");
+        return;
+      }
+      
       const promptTitle = isAlreadyApproved 
-        ? `ALASAN BATALKAN PERSETUJUAN & TOLAK (${item.nama}):` 
+        ? `ALASAN BATALKAN PERSETUJUAN (${item.nama}):` 
         : `ALASAN PENOLAKAN (${item.nama}):`;
       
-      const promptReason = prompt(promptTitle, reason);
-      if (!promptReason || promptReason.trim().length === 0) {
-        showNotification("Alasan wajib diisi.", "warning");
+      const promptReason = prompt(promptTitle, "");
+      if (promptReason === null) return; // User cancelled
+      if (promptReason.trim().length === 0) {
+        showNotification("Alasan penolakan wajib diisi.", "warning");
         return;
       }
       reason = promptReason.trim();
     }
 
     const confirmMsg = isAlreadyApproved 
-      ? `PERINGATAN: Membatalkan persetujuan akan menolak pengajuan ini.\n\nLanjutkan pembatalan & penolakan untuk: ${item.nama}?` 
-      : `Konfirmasi penolakan pengajuan: ${item.nama}?`;
+      ? `Batalkan persetujuan dan tolak pengajuan ${item.nama}?` 
+      : `Tolak pengajuan data ${item.nama}?`;
 
-    if (!confirm(confirmMsg)) return;
-
-    setIsLoadingDB(true);
+    // Removed confirm for faster workflow as requested
+    
+    setActionLoading(true);
     try {
       const batch = writeBatch(db);
-      const docId = item.id || item.docId; // Support both naming conventions
-      if (!docId) throw new Error("ID Dokumen tidak ditemukan");
-
-      const vRef = doc(db, 'verifikasi_warga', docId);
+      const vRef = doc(db, 'verifikasi_warga', item.id);
       
-      // Update the verification log
-      const updateData: any = {
+      batch.update(vRef, {
         status: 'Ditolak',
         catatan: reason,
         rejectedAt: new Date().toISOString(),
-        rejectedBy: currentUser?.name || currentUser?.displayName || 'Admin',
-        isFinalized: false
-      };
-      
-      batch.update(vRef, updateData);
+        rejectedBy: currentUser?.name || currentUser?.displayName || 'Admin'
+      });
 
-      // If it was already approved, we need to mark the main data as "not verified" anymore
       if (isAlreadyApproved) {
-        const citizenDocId = item.targetDocId || `${tenantId}_${item.nik}`;
+        const citizenDocId = `${tenantId}_${item.nik}`;
         const wargaRef = doc(db, 'data_warga', citizenDocId);
         batch.update(wargaRef, {
           terverifikasi: false,
@@ -7711,16 +7961,31 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
       }
 
       await batch.commit();
-      
-      showNotification(`Pengajuan ${item.nama} telah ${isAlreadyApproved ? 'dibatalkan & ditolak' : 'ditolak'}.`, "info");
+      showNotification(`Pengajuan ${item.nama} telah ditolak.`, "info");
       setSelectedItem(null);
       setCatatan('');
     } catch (err) {
       console.error("Reject Error:", err);
       handleFirestoreError(err, 'update', 'verifikasi_warga');
-      showNotification("Terjadi kesalahan saat memproses penolakan.", "error");
+      showNotification("Gagal memproses penolakan.", "error");
     } finally {
-      setIsLoadingDB(false);
+      setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async (itemId: string) => {
+    if (actionLoading) return;
+    if (!confirm("Hapus data verifikasi ini secara permanen?")) return;
+
+    setActionLoading(true);
+    try {
+      await deleteDoc(doc(db, 'verifikasi_warga', itemId));
+      showNotification("Data verifikasi berhasil dihapus permanen.", "success");
+      if (selectedItem?.id === itemId) setSelectedItem(null);
+    } catch (err) {
+      handleFirestoreError(err, 'delete', 'verifikasi_warga');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -7736,8 +8001,6 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
       showNotification("Semua data terverifikasi sudah sinkron.", "info");
       return;
     }
-
-    if (!confirm(`Sinkronkan ${approvedNotSynced.length} data verifikasi baru ke database warga utama?`)) return;
 
     setIsLoadingDB(true);
     let successCount = 0;
@@ -7873,36 +8136,42 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
                           <>
                             {item.status === 'Menunggu Persetujuan' && (
                               <button 
-                                onClick={() => {
-                                  if (confirm(`Setujui perbaikan data untuk ${item.nama}?`)) {
-                                    handleApprove(item);
-                                  }
-                                }}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-100"
+                                onClick={() => handleApprove(item)}
+                                disabled={actionLoading}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-100 disabled:opacity-50"
                                 title="Setujui"
                               >
-                                <CheckCircle className="w-5 h-5" />
+                                {actionLoading ? <div className="w-5 h-5 border-2 border-green-200 border-t-green-600 rounded-full animate-spin"></div> : <CheckCircle className="w-5 h-5" />}
                               </button>
                             )}
                             <button 
                               onClick={() => handleReject(item)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                              disabled={actionLoading}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 disabled:opacity-50"
                               title={item.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
                             >
-                              <XCircle className="w-5 h-5" />
+                              {actionLoading ? <div className="w-5 h-5 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></div> : <XCircle className="w-5 h-5" />}
                             </button>
                           </>
                         )}
-                        <button 
-                          onClick={() => {
-                            setCatatan('');
-                            setSelectedItem(item);
-                          }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors"
-                          title="Detail"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </button>
+                          <button 
+                            onClick={() => {
+                              setCatatan('');
+                              setSelectedItem(item);
+                            }}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors"
+                            title="Detail"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(item.id)}
+                            disabled={actionLoading}
+                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent disabled:opacity-50"
+                            title="Hapus Permanen"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
                       </div>
                     </td>
                   </tr>
@@ -7928,7 +8197,17 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
             >
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Detail Verifikasi: {selectedItem.nama}</h2>
-                <button onClick={() => { setSelectedItem(null); setCatatan(''); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleDelete(selectedItem.id)}
+                    disabled={actionLoading}
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                    title="Hapus Permanen"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => { setSelectedItem(null); setCatatan(''); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                </div>
               </div>
 
               <div className="p-8 overflow-y-auto flex-1">
@@ -8003,24 +8282,28 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, setIsLoading
 
                     <div className="flex gap-3 pt-4">
                       <button 
-                        onClick={() => {
-                          if (confirm(`Setujui perbaikan data untuk ${selectedItem.nama}?`)) {
-                            handleApprove(selectedItem);
-                          }
-                        }}
-                        disabled={selectedItem.status === 'Disetujui'}
-                        className="flex-1 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                        onClick={() => handleApprove(selectedItem)}
+                        disabled={actionLoading || selectedItem.status === 'Disetujui'}
+                        className="flex-1 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                       >
-                        <CheckCircle className="w-5 h-5" />
-                        Setujui Data
+                        {actionLoading ? (
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                          <CheckCircle className="w-5 h-5" />
+                        )}
+                        {actionLoading ? 'Memproses...' : 'Setujui Data'}
                       </button>
                       <button 
                         onClick={() => handleReject(selectedItem)}
-                        disabled={selectedItem.status === 'Ditolak' || selectedItem.isFinalized}
-                        className="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl border border-red-100 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-2"
+                        disabled={actionLoading || selectedItem.status === 'Ditolak' || selectedItem.isFinalized}
+                        className="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl border border-red-100 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                       >
-                        <XCircle className="w-5 h-5" />
-                        {selectedItem.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
+                        {actionLoading ? (
+                          <div className="w-5 h-5 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></div>
+                        ) : (
+                          <XCircle className="w-5 h-5" />
+                        )}
+                        {actionLoading ? 'Memproses...' : (selectedItem.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak')}
                       </button>
                     </div>
                   </div>
@@ -9156,20 +9439,26 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
 
     // Identitas: NIK / Nama / No HP
     const cleanId = String(nik || '').trim();
+    const idDigits = cleanId.replace(/\D/g, '');
     const cleanIdLower = cleanId.toLowerCase();
     
     // Kunci: KK / HP
-    const cleanPass = String(kodeKeluarga || '').trim().toLowerCase();
+    const cleanPass = String(kodeKeluarga || '').trim();
+    const passDigits = cleanPass.replace(/\D/g, '');
+    const cleanPassLower = cleanPass.toLowerCase();
     
     // 1. SEARCH IN MEMORY (Current Context)
     let found = wargaData.find(w => {
       const cNik = String(w.nik || '').trim().toLowerCase();
+      const cNikDigits = cNik.replace(/\D/g, '');
       const cNama = String(w.nama || '').trim().toLowerCase();
       const cHp = String(w.hp || '').trim().toLowerCase();
-      const cKK = String(w.kk || w.kodeKeluarga || '').trim().toLowerCase();
+      const cHpDigits = cHp.replace(/\D/g, '');
+      const cKK = String(w.kk || w.no_kk || w.nomor_kk || w.kodeKeluarga || '').trim().toLowerCase();
+      const cKKDigits = cKK.replace(/\D/g, '');
 
-      const idMatch = cNik === cleanIdLower || cNama === cleanIdLower || cHp === cleanIdLower;
-      const secretMatch = cKK === cleanPass || cHp === cleanPass || cNik === cleanPass;
+      const idMatch = cNik === cleanIdLower || (idDigits && cNikDigits === idDigits) || cNama === cleanIdLower || cHp === cleanIdLower || (idDigits && cHpDigits === idDigits);
+      const secretMatch = cKK === cleanPassLower || (passDigits && cKKDigits === passDigits) || cHp === cleanPassLower || (passDigits && cHpDigits === passDigits) || cNik === cleanPassLower || (passDigits && cNikDigits === passDigits);
       return idMatch && secretMatch;
     });
 
@@ -9207,8 +9496,8 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                    const cHp = String(candidate.hp || '').trim().toLowerCase();
                    const cKK = String(candidate.kk || candidate.kodeKeluarga || '').trim().toLowerCase();
                    
-                   const otherInp = idCandidate === cleanId ? cleanPass : cleanIdLower;
-                   const matches = cNik === otherInp || cNama === otherInp || cHp === otherInp || cKK === otherInp;
+                   const otherInp = idCandidate === cleanId ? cleanPassLower : cleanIdLower;
+                   const matches = cNik === otherInp || (otherInp.replace(/\D/g, '') && cNik.replace(/\D/g, '') === otherInp.replace(/\D/g, '')) || cNama === otherInp || cHp === otherInp || cKK === otherInp || (otherInp.replace(/\D/g, '') && cKK.replace(/\D/g, '') === otherInp.replace(/\D/g, ''));
                    if (matches) {
                       found = candidate;
                       break;
@@ -9296,7 +9585,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                    if (!snap.empty) {
                       for (const d of snap.docs) {
                          const cand = { docId: d.id, ...d.data() } as any;
-                         const otherVal = token === cleanId ? cleanPass : cleanIdLower;
+                         const otherVal = token === cleanId ? cleanPassLower : cleanIdLower;
                          const cNik = String(cand.nik || '').trim().toLowerCase();
                          const cNama = String(cand.nama || '').trim().toLowerCase();
                          const cHp = String(cand.hp || '').trim().toLowerCase();
@@ -9359,7 +9648,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       }
     } else {
       setTimeout(() => {
-        setError('Data tidak ditemukan. Pastikan (NIK/Nama/HP) dan (Kunci KK/HP) sudah sesuai. Gunakan fitur "Verifikasi Mandiri" jika data Anda belum terdaftar.');
+        setError('Data tidak ditemukan! Jika Anda adalah warga baru atau belum terdaftar di sistem RW26, silakan klik tombol "DAFTAR MANDIRI" di bawah untuk mendaftarkan data Anda.');
         setIsLoading(false);
       }, 500);
     }
@@ -9435,10 +9724,6 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      // Check if user entry exists in users collection
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      
       const isArif = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
       let tenantId = 'RW26_SMART';
       if (user.email?.startsWith('trihprw26')) {
@@ -9446,13 +9731,39 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       } else if (isArif) {
         tenantId = 'MASTER';
       }
+
+      // 1. Check if user entry exists by standard UID
+      const userRef = doc(db, 'users', user.uid);
+      let userDoc = await getDoc(userRef);
+      
+      let preRegisteredRole = 'Viewer';
+      let preRegisteredTenant = tenantId;
+      
+      // 2. If standard UID document doesn't exist, search if Super Admin pre-registered this email
+      if (!userDoc.exists() && user.email) {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', user.email));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const matchedUser = querySnapshot.docs[0];
+          const matchedData = matchedUser.data();
+          preRegisteredRole = matchedData.role || 'Viewer';
+          preRegisteredTenant = matchedData.tenantId || tenantId;
+          
+          // Delete the old pre-registered dummy doc to prevent duplicates, since we will use the actual auth UID
+          if (matchedUser.id !== user.uid) {
+            await deleteDoc(doc(db, 'users', matchedUser.id));
+          }
+        }
+      }
       
       const userData = {
         email: user.email,
-        role: isArif ? 'SUPER_ADMIN' : (userDoc.exists() ? userDoc.data()?.role || 'Viewer' : 'Viewer'),
+        role: isArif ? 'SUPER_ADMIN' : (userDoc.exists() ? userDoc.data()?.role : preRegisteredRole),
         isSuperAdmin: isArif,
-        name: isArif ? 'Bpk. Arif (Super Admin)' : (user.displayName || 'User'),
-        tenantId: userDoc.exists() ? userDoc.data()?.tenantId || tenantId : tenantId,
+        name: isArif ? 'Bpk. Arif (Super Admin)' : (userDoc.exists() ? userDoc.data()?.name : (user.displayName || 'User')),
+        tenantId: userDoc.exists() ? userDoc.data()?.tenantId || preRegisteredTenant : preRegisteredTenant,
         createdAt: userDoc.exists() ? userDoc.data()?.createdAt || new Date().toISOString() : new Date().toISOString()
       };
 
@@ -9493,26 +9804,40 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
           <div className="flex border-b border-slate-100/50 bg-white/50 ">
             <button 
               onClick={() => { setLoginMode('admin'); setError(''); }}
-              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'admin' ? 'text-brand-blue bg-white border-b-2 border-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
+              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === 'admin' ? 'text-brand-blue bg-white border-b-2 border-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
             >
               Pengurus
             </button>
             <button 
               onClick={() => { setLoginMode('warga'); setError(''); }}
-              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'warga' ? 'text-brand-green bg-white border-b-2 border-brand-green shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
+              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === 'warga' ? 'text-brand-green bg-white border-b-2 border-brand-green shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
             >
-              Warga
+              <span className="relative">
+                Warga
+                <span className="absolute -top-3 -right-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded-full text-[6px] animate-pulse">GOOGLE</span>
+              </span>
             </button>
             <button 
               onClick={() => { setLoginMode('verifikasi'); setError(''); }}
-              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'verifikasi' ? 'text-brand-pink bg-white border-b-2 border-brand-pink shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
+              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === 'verifikasi' ? 'text-brand-pink bg-white border-b-2 border-brand-pink shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
             >
-              Verifikasi
+              <span className="relative">
+                NIK & KK
+                <span className="absolute -top-3 -right-2 px-1.5 py-0.5 bg-brand-pink text-white rounded-full text-[6px]">PROFIL</span>
+              </span>
             </button>
           </div>
           <div className="p-8">
+            <div className="mb-6 bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-center gap-3">
+              <div className="w-8 h-8 bg-brand-blue rounded-full flex items-center justify-center shrink-0">
+                <Info className="w-4 h-4 text-white" />
+              </div>
+              <p className="text-[10px] font-bold text-brand-blue uppercase tracking-tight leading-tight">
+                {loginMode === 'warga' ? 'KHUSUS AKUN GOOGLE. Jika ingin masuk pakai NIK & KK, silakan pilih tab "NIK & KK" di atas.' : (loginMode === 'verifikasi' ? 'MASUK VIA NIK (Tanpa Google). Masukkan NIK sebagai ID dan Nomor KK sebagai Kunci.' : 'Akses khusus pengurus RT/RW yang telah terdaftar.')}
+              </p>
+            </div>
             <h2 className="text-xl font-black text-slate-800 mb-6 font-elegant tracking-tight text-center">
-              {loginMode === 'admin' ? 'LOGIN PENGURUS' : (loginMode === 'warga' ? 'MASUK WARGA' : 'VERIFIKASI DATA')}
+              {loginMode === 'admin' ? 'LOGIN PENGURUS' : (loginMode === 'warga' ? 'MASUK GOOGLE' : 'MASUK VIA NIK & KK')}
             </h2>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
@@ -9582,7 +9907,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       <p className="text-sm font-black text-emerald-800">Akses Cepat & Aman</p>
                    </div>
                    <p className="text-xs text-emerald-600 font-medium leading-relaxed">
-                      Gunakan Google Login untuk akses penuh fitur warga: E-Toko, Surat Digital, Keuangan, dan Pengaduan.
+                      Gunakan Google Login untuk akses penuh fitur warga: E-LAPAK26, Surat Digital, Keuangan, dan Pengaduan.
                    </p>
                 </div>
                 <button 
@@ -9887,11 +10212,15 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                       <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Peran (Role)</label>
                       <select name="role" defaultValue={editingUser?.role || 'RT'} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
                          <option value="SUPER_ADMIN">SUPER ADMIN</option>
-                         <option value="ADMIN">ADMIN</option>
+                         <option value="ADMIN">ADMIN (RT/RW)</option>
                          <option value="RW">RW</option>
                          <option value="RT">RT</option>
                          <option value="BENDAHARA">BENDAHARA</option>
                          <option value="SEKRETARIS">SEKRETARIS</option>
+                         <option value="SATPAM">SATPAM</option>
+                         <option value="KADER">KADER</option>
+                         <option value="WARGA">WARGA</option>
+                         <option value="TAMU">TAMU / GUEST</option>
                       </select>
                     </div>
 
@@ -10792,7 +11121,7 @@ function PosyanduView({
             <Baby className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Kesehatan Warga</h2>
+            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Kesehatan</h2>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Manajemen Kesehatan Ibu & Anak</p>
           </div>
         </div>
@@ -10843,13 +11172,27 @@ function PosyanduView({
                   <span className="text-brand-pink font-black text-lg">{stats.balitaStunting}</span>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-2 mt-5">
+                <button 
+                  onClick={() => setActiveSubTab('balita')}
+                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100"
+                >
+                  Lihat Daftar
+                </button>
+                <button 
+                  onClick={() => { setEditingItem(null); setShowBalitaForm(true); }}
+                  className="py-2.5 bg-brand-blue/10 text-brand-blue rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all"
+                >
+                  Tambah Data
+                </button>
+              </div>
             </div>
             
             <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-pink-100/20 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <HeartPulse className="w-20 h-20 text-brand-pink" />
               </div>
-              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Ibu Hamil</p>
+              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Total Ibu Hamil</p>
               <p className="text-4xl font-black text-slate-800 mb-5">{stats.totalIbuHamil}</p>
               <div className="p-4 bg-soft-pink rounded-2xl border border-pink-100">
                 <div className="flex items-center justify-between">
@@ -10857,13 +11200,27 @@ function PosyanduView({
                   <span className="text-brand-pink font-black text-2xl">{stats.ibuHamilRisiko}</span>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-2 mt-5">
+                <button 
+                  onClick={() => setActiveSubTab('ibuhamil')}
+                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-50 hover:text-pink-600 transition-all border border-slate-100"
+                >
+                  Lihat Daftar
+                </button>
+                <button 
+                  onClick={() => { setEditingItem(null); setShowIbuHamilForm(true); }}
+                  className="py-2.5 bg-brand-pink/10 text-brand-pink rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-pink hover:text-white transition-all"
+                >
+                  Tambah Data
+                </button>
+              </div>
             </div>
 
             <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-purple-100/20 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <Activity className="w-20 h-20 text-brand-purple" />
               </div>
-              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Warga Lansia</p>
+              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Total Lansia</p>
               <p className="text-4xl font-black text-slate-800 mb-5">{stats.totalLansia}</p>
               <div className="p-4 bg-soft-purple rounded-2xl border border-purple-100">
                 <p className="text-xs font-black text-brand-purple uppercase tracking-widest">Monitoring Rutin</p>
@@ -10885,6 +11242,20 @@ function PosyanduView({
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">Gula Darah</p>
                   <p className="text-xl font-black text-brand-blue">{stats.posbinduGulaDarah}</p>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-5">
+                <button 
+                  onClick={() => setActiveSubTab('posbindu')}
+                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-50 hover:text-purple-600 transition-all border border-slate-100"
+                >
+                  Lihat Daftar
+                </button>
+                <button 
+                  onClick={() => { setEditingPosbinduItem(null); setShowPosbinduForm(true); }}
+                  className="py-2.5 bg-brand-purple/10 text-brand-purple rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-purple hover:text-white transition-all"
+                >
+                  Tambah Data
+                </button>
               </div>
             </div>
           </div>
@@ -11022,7 +11393,10 @@ function PosyanduView({
                     <td className="px-6 py-3">{item.tekananDarah}</td>
                     <td className="px-6 py-3">{item.gulaDarah} mg/dL</td>
                     <td className="px-6 py-3">
-                      <button onClick={() => { setEditingPosbinduItem(item); setShowPosbinduForm(true); }} className="text-blue-600 hover:text-blue-800 font-bold">Edit</button>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditingPosbinduItem(item); setShowPosbinduForm(true); }} className="p-1 px-2 text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 font-bold transition-all">Edit</button>
+                        <button onClick={() => deleteItem('pemeriksaan_posbindu', item.id)} className="p-1.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -12219,7 +12593,7 @@ function BankSampahView({
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
             <Recycle className="w-8 h-8 text-emerald-600" />
-            Bank Sampah Mandiri
+            Bank Sampah
           </h1>
           <p className="text-slate-500 text-sm font-medium">Ubah sampah menjadi tabungan bermanfaat</p>
         </div>

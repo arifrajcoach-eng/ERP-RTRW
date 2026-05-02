@@ -5,7 +5,8 @@
       "description": "Data kependudukan warga RT/RW",
       "type": "object",
       "properties": {
-        "tenantId": { "type": "string", "description": "ID Penyewa (Multi-tenancy)" },
+        "tenantId": { "type": "string", "description": "ID Penyewa (RW)" },
+        "rtId": { "type": "string", "description": "ID RT (Unit Privat)" },
         "nik": { "type": "string", "description": "Nomor Induk Kependudukan (Unique ID)" },
         "kk": { "type": "string" },
         "nama": { "type": "string" },
@@ -39,10 +40,62 @@
         "transaksi": { "type": "string" },
         "nama": { "type": "string" },
         "keterangan": { "type": "string" },
+        "rtId": { "type": "string" },
         "debit": { "type": "number" },
         "kredit": { "type": "number" }
       },
-      "required": ["id", "tanggal", "tipe", "tenantId"]
+      "required": ["id", "tanggal", "tipe", "tenantId", "rtId"]
+    },
+    "Inventaris": {
+      "title": "Inventaris",
+      "description": "Daftar inventaris RT",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "rtId": { "type": "string" },
+        "id": { "type": "string" },
+        "nama_barang": { "type": "string" },
+        "kategori": { "type": "string" },
+        "jumlah": { "type": "number" },
+        "kondisi": { "type": "string" },
+        "lokasi": { "type": "string" },
+        "tanggal_pengadaan": { "type": "string" },
+        "keterangan": { "type": "string" }
+      },
+      "required": ["id", "nama_barang", "tenantId", "rtId"]
+    },
+    "Review": {
+      "title": "Review Produk",
+      "description": "Rating dan ulasan pembeli",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "productId", "userId", "rating", "timestamp"]
+    },
+    "Produk": {
+      "title": "Produk Toko",
+      "description": "Produk yang dijual RT",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "rtId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "sellerName": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "tenantId", "rtId"]
     },
     "Surat": {
       "title": "Surat",
@@ -100,8 +153,10 @@
         "tenantId": { "type": "string" },
         "email": { "type": "string" },
         "name": { "type": "string" },
+        "rtId": { "type": "string", "description": "Unit RT assigned to this user" },
         "role": { "type": "string", "enum": ["Admin", "Operator", "Viewer"] },
         "isSuperAdmin": { "type": "boolean" },
+        "isVerifiedSeller": { "type": "boolean", "description": "Status validasi penjual" },
         "unitMapping": { 
           "type": "array", 
           "items": { "type": "string" },
@@ -260,6 +315,7 @@
       "type": "object",
       "properties": {
         "tenantId": { "type": "string" },
+        "rtId": { "type": "string" },
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "userName": { "type": "string" },
@@ -421,9 +477,10 @@
         "category": { "type": "string" },
         "description": { "type": "string" },
         "image": { "type": "string" },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "rtId": { "type": "string" }
       },
-      "required": ["id", "name", "price", "stock", "tenantId"]
+      "required": ["id", "name", "price", "stock", "tenantId", "rtId"]
     },
     "TokoOrder": {
       "title": "Pesanan E-Toko",
@@ -449,9 +506,17 @@
       "schema": "TokoProduct",
       "description": "Koleksi produk e-toko"
     },
+    "/toko_products_seller/{id}": {
+      "schema": "Produk",
+      "description": "Koleksi produk toko RT (seller view)"
+    },
     "/toko_orders/{id}": {
       "schema": "TokoOrder",
       "description": "Koleksi pesanan e-toko"
+    },
+    "/toko_reviews/{id}": {
+      "schema": "Review",
+      "description": "Koleksi ulasan produk"
     },
     "/voting_candidates/{id}": {
       "schema": "VotingCandidate",
@@ -508,6 +573,10 @@
     "/iuran/{id}": {
       "schema": "Iuran",
       "description": "Koleksi catatan iuran"
+    },
+    "/inventaris/{id}": {
+      "schema": "Inventaris",
+      "description": "Koleksi inventaris RT"
     },
     "/balita/{id}": {
       "schema": "Balita",
