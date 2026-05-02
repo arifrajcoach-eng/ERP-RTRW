@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight, Smartphone, Zap, Droplets, Train } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -96,9 +96,22 @@ const PLAN_FEATURES = {
     ePemilu: false,
     sos: true,
     inventaris: true,
+    description: "Cocok untuk uji coba sistem di lingkungan RT kecil."
+  },
+  RT: {
+    maxWarga: 200,
+    keuangan: "BASIC",
+    surat: "STANDAR",
+    bankSampah: true,
+    kesehatan: "BASIC",
+    eLapak: false,
+    ePemilu: "BASIC",
+    sos: true,
+    inventaris: true,
+    description: "Khusus untuk lingkup RT dengan kapasitas warga dinamis."
   },
   BASIC: {
-    maxWarga: 200,
+    maxWarga: 500,
     keuangan: "FULL",
     surat: "CUSTOM",
     bankSampah: true,
@@ -107,9 +120,10 @@ const PLAN_FEATURES = {
     ePemilu: "BASIC",
     sos: true,
     inventaris: true,
+    description: "Ideal untuk RW dengan populasi menengah."
   },
   PRO: {
-    maxWarga: 1000,
+    maxWarga: 2000,
     keuangan: "FULL",
     surat: "FULL_CUSTOM",
     bankSampah: true,
@@ -118,6 +132,19 @@ const PLAN_FEATURES = {
     ePemilu: "UNLIMITED",
     sos: true,
     inventaris: true,
+    description: "Solusi lengkap untuk RW besar dengan fitur penuh."
+  },
+  ENTERPRISE: {
+    maxWarga: 10000,
+    keuangan: "FULL",
+    surat: "FULL_CUSTOM",
+    bankSampah: true,
+    kesehatan: "FULL+AI",
+    eLapak: "WHITELABEL",
+    ePemilu: "UNLIMITED",
+    sos: true,
+    inventaris: true,
+    description: "Kapasitas raksasa untuk integrasi se-Kelurahan atau Kecamatan."
   }
 };
 
@@ -471,6 +498,7 @@ export default function App() {
   });
 
   const [iuranData, setIuranData] = useState<any[]>([]);
+  const [ppobData, setPpobData] = useState<any[]>([]);
 
   const [inventarisData, setInventarisData] = useState(() => {
     const saved = localStorage.getItem('rw26_inventarisData');
@@ -702,13 +730,23 @@ export default function App() {
       }
     });
 
-    const unsubCurrentTenant = onSnapshot(doc(db, 'tenants', tId), (snap) => {
-      if (snap.exists()) {
-        setCurrentTenant(snap.data());
-      } else {
-        setCurrentTenant(null);
-      }
-    });
+    const unsubCurrentTenant = tId === 'MASTER' 
+      ? (() => {
+          setCurrentTenant({ 
+            id: 'MASTER', 
+            name: 'SUPER ADMIN RW26', 
+            status: 'ENTERPRISE', 
+            maxWarga: 999999 
+          });
+          return () => {};
+        })()
+      : onSnapshot(doc(db, 'tenants', tId), (snap) => {
+          if (snap.exists()) {
+            setCurrentTenant(snap.data());
+          } else {
+            setCurrentTenant(null);
+          }
+        });
 
     // 0.5 Kop Settings Listener
     const unsubKopSettings = onSnapshot(doc(db, 'tenant_settings', tId), (snap) => {
@@ -757,7 +795,7 @@ export default function App() {
 
       unsubKas = onSnapshot(getKasQuery(), 
         (snap) => {
-          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setKasData(data);
           onDataLoaded();
         },
@@ -773,7 +811,7 @@ export default function App() {
     if (hasFullAccess) {
       unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId)), 
         (snap) => {
-          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           const filtered = currentUser?.role === 'RT' 
             ? data.filter((s: any) => s.rt === currentUser.rt)
             : data;
@@ -791,7 +829,7 @@ export default function App() {
       if (uid) {
         unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId), where('authUid', '==', uid)), 
           (snap) => {
-            const data = snap.docs.map(doc => ({ ...doc.data() }));
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setSuratData(data);
             onDataLoaded();
           },
@@ -810,7 +848,7 @@ export default function App() {
     if (hasFullAccess) {
       unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', tId)), 
         (snap) => {
-          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           const filtered = currentUser?.role === 'RT'
             ? data.filter((i: any) => i.rt === currentUser.rt)
             : data;
@@ -822,6 +860,49 @@ export default function App() {
           onDataLoaded();
         }
       );
+    } else if (isCitizen && (wargaAuth || currentUser?.role === 'Warga')) {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', tId), where('userId', '==', uid)), 
+          (snap) => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setIuranData(data);
+            onDataLoaded();
+          },
+          (err) => {
+            handleFirestoreError(err, 'list', 'iuran');
+            onDataLoaded();
+          }
+        );
+      }
+    }
+
+    // 4.6 PPOB Listener
+    let unsubPpob = () => {};
+    if (hasFullAccess) {
+      unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', '==', tId)), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const filtered = currentUser?.role === 'RT'
+            ? data.filter((i: any) => i.rt === currentUser.rt)
+            : data;
+          setPpobData(filtered);
+          onDataLoaded();
+        },
+        (err) => { handleFirestoreError(err, 'list', 'ppob_trx'); onDataLoaded(); }
+      );
+    } else if (isCitizen && (wargaAuth || currentUser?.role === 'Warga')) {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', '==', tId), where('userId', '==', uid)), 
+          (snap) => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setPpobData(data);
+            onDataLoaded();
+          },
+          (err) => { handleFirestoreError(err, 'list', 'ppob_trx'); onDataLoaded(); }
+        );
+      }
     }
 
     // 4.5 Inventaris Listener
@@ -832,7 +913,16 @@ export default function App() {
     let unsubInventarisSupplier = () => {};
 
     if (hasFullAccess) {
-      unsubInventaris = onSnapshot(query(collection(db, 'inventaris'), where('tenantId', '==', tId)), 
+      const getInventarisQuery = () => {
+        const base = collection(db, 'inventaris');
+        const constraints = [where('tenantId', '==', tId)];
+        if (currentUser?.role === 'RT') {
+          constraints.push(where('rt', '==', currentUser.rt || '01'));
+        }
+        return query(base, ...constraints);
+      };
+
+      unsubInventaris = onSnapshot(getInventarisQuery(), 
         (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setInventarisData(data);
@@ -845,7 +935,16 @@ export default function App() {
       );
 
       // 4.6 Inventaris Logs Listener
-      unsubInventarisLogs = onSnapshot(query(collection(db, 'inventaris_logs'), where('tenantId', '==', tId)), 
+      const getInventarisLogsQuery = () => {
+        const base = collection(db, 'inventaris_logs');
+        const constraints = [where('tenantId', '==', tId)];
+        if (currentUser?.role === 'RT') {
+          constraints.push(where('rt', '==', currentUser.rt || '01'));
+        }
+        return query(base, ...constraints);
+      };
+
+      unsubInventarisLogs = onSnapshot(getInventarisLogsQuery(), 
         (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setInventarisLogs(data);
@@ -877,51 +976,60 @@ export default function App() {
     let unsubImunisasi = () => {};
 
     if (hasFullAccess) {
-      unsubBalita = onSnapshot(query(collection(db, 'balita'), where('tenantId', '==', tId)), 
+      const getRTFilter = (coll: string) => {
+        const base = collection(db, coll);
+        const constraints = [where('tenantId', '==', tId)];
+        if (currentUser?.role === 'RT') {
+          constraints.push(where('rt', '==', currentUser.rt || '01'));
+        }
+        return query(base, ...constraints);
+      };
+
+      unsubBalita = onSnapshot(getRTFilter('balita'), 
         (snap) => {
-          setBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
+          setBalitaData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'balita'); onDataLoaded(); }
       );
-      unsubIbuHamil = onSnapshot(query(collection(db, 'ibu_hamil'), where('tenantId', '==', tId)), 
+      unsubIbuHamil = onSnapshot(getRTFilter('ibu_hamil'), 
         (snap) => {
-          setIbuHamilData(snap.docs.map(doc => ({ ...doc.data() })));
+          setIbuHamilData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'ibu_hamil'); onDataLoaded(); }
       );
-      unsubPosyanduKegiatan = onSnapshot(query(collection(db, 'posyandu_kegiatan'), where('tenantId', '==', tId)), 
+      unsubPosyanduKegiatan = onSnapshot(getRTFilter('posyandu_kegiatan'), 
         (snap) => {
-          setPosyanduKegiatanData(snap.docs.map(doc => ({ ...doc.data() })));
+          setPosyanduKegiatanData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'posyandu_kegiatan'); onDataLoaded(); }
       );
-      unsubPosbinduKegiatan = onSnapshot(query(collection(db, 'posbindu_kegiatan'), where('tenantId', '==', tId)), 
+      unsubPosbinduKegiatan = onSnapshot(getRTFilter('posbindu_kegiatan'), 
         (snap) => {
-          setPosbinduKegiatanData(snap.docs.map(doc => ({ ...doc.data() })));
+          setPosbinduKegiatanData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'posbindu_kegiatan'); onDataLoaded(); }
       );
-      unsubPemeriksaanBalita = onSnapshot(query(collection(db, 'pemeriksaan_balita'), where('tenantId', '==', tId)), 
+      unsubPemeriksaanBalita = onSnapshot(getRTFilter('pemeriksaan_balita'), 
         (snap) => {
-          setPemeriksaanBalitaData(snap.docs.map(doc => ({ ...doc.data() })));
+          setPemeriksaanBalitaData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'pemeriksaan_balita'); onDataLoaded(); }
       );
-      unsubPemeriksaanPosbindu = onSnapshot(query(collection(db, 'pemeriksaan_posbindu'), where('tenantId', '==', tId)), 
+      unsubPemeriksaanPosbindu = onSnapshot(getRTFilter('pemeriksaan_posbindu'), 
         (snap) => {
-          setPemeriksaanPosbinduData(snap.docs.map(doc => ({ ...doc.data() })));
+          setPemeriksaanPosbinduData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'pemeriksaan_posbindu'); onDataLoaded(); }
       );
-      unsubImunisasi = onSnapshot(query(collection(db, 'imunisasi'), where('tenantId', '==', tId)), 
+      unsubImunisasi = onSnapshot(getRTFilter('imunisasi'), 
         (snap) => {
-          setImunisasiData(snap.docs.map(doc => ({ ...doc.data() })));
+          setImunisasiData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'imunisasi'); onDataLoaded(); }
@@ -933,23 +1041,32 @@ export default function App() {
     let unsubSampahSetoran = () => {};
     let unsubSampahTarikSaldo = () => {};
     if (hasFullAccess) {
-      unsubSampahKategori = onSnapshot(query(collection(db, 'sampah_kategori'), where('tenantId', '==', tId)), 
+      const getRTFilter = (coll: string) => {
+        const base = collection(db, coll);
+        const constraints = [where('tenantId', '==', tId)];
+        if (currentUser?.role === 'RT') {
+          constraints.push(where('rt', '==', currentUser.rt || '01'));
+        }
+        return query(base, ...constraints);
+      };
+
+      unsubSampahKategori = onSnapshot(getRTFilter('sampah_kategori'), 
         (snap) => {
-          setSampahKategoriData(snap.docs.map(doc => ({ ...doc.data() })));
+          setSampahKategoriData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'sampah_kategori'); onDataLoaded(); }
       );
-      unsubSampahSetoran = onSnapshot(query(collection(db, 'sampah_setoran'), where('tenantId', '==', tId)), 
+      unsubSampahSetoran = onSnapshot(getRTFilter('sampah_setoran'), 
         (snap) => {
-          setSampahSetoranData(snap.docs.map(doc => ({ ...doc.data() })));
+          setSampahSetoranData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'sampah_setoran'); onDataLoaded(); }
       );
-      unsubSampahTarikSaldo = onSnapshot(query(collection(db, 'sampah_tarik_saldo'), where('tenantId', '==', tId)), 
+      unsubSampahTarikSaldo = onSnapshot(getRTFilter('sampah_tarik_saldo'), 
         (snap) => {
-          setSampahTarikSaldoData(snap.docs.map(doc => ({ ...doc.data() })));
+          setSampahTarikSaldoData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           onDataLoaded();
         },
         (err) => { handleFirestoreError(err, 'list', 'sampah_tarik_saldo'); onDataLoaded(); }
@@ -958,7 +1075,7 @@ export default function App() {
 
     const unsubEmergencies = onSnapshot(query(collection(db, 'emergencies'), where('tenantId', '==', tId)), 
       (snap) => {
-        setEmergenciesData(snap.docs.map(doc => ({ ...doc.data() })));
+        setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         onDataLoaded();
       },
       (err) => { handleFirestoreError(err, 'list', 'emergencies'); onDataLoaded(); }
@@ -1078,7 +1195,7 @@ export default function App() {
     if (currentUser?.isSuperAdmin) {
       unsubTenants = onSnapshot(collection(db, 'tenants'), 
         (snap) => {
-          const data = snap.docs.map(doc => ({ ...doc.data() }));
+          const data = snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() }));
           setTenantsData(data);
           onDataLoaded();
         },
@@ -1094,6 +1211,7 @@ export default function App() {
       unsubKas();
       unsubSurat();
       unsubIuran();
+      unsubPpob();
       unsubInventaris();
       unsubInventarisLogs();
       unsubInventarisKategori();
@@ -1457,7 +1575,7 @@ export default function App() {
             { id: 'surat', label: 'Surat', icon: FileText },
             { id: 'kop-template', label: 'KOP & Template', icon: FileSpreadsheet },
             { id: 'users', label: 'Manage User', icon: User },
-            { id: 'super-admin', label: 'Super Admin', icon: Shield },
+            { id: 'super-admin', label: 'Manajemen Tenant', icon: Shield },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
           ].filter(item => {
             const role = currentUser?.role || 'TAMU';
@@ -1609,6 +1727,7 @@ export default function App() {
           {activeTab === 'verifikasi' && <VerifikasiAdminView verifikasiData={verifikasiWargaData} wargaData={wargaData} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} showNotification={showNotification} handleFirestoreError={handleFirestoreError} currentUser={currentUser} />}
           {activeTab === 'keuangan' && (
             <FinansialDashboardView 
+              ppobData={ppobData} setPpobData={setPpobData}
               iuranData={iuranData} setIuranData={setIuranData} 
               kasData={kasData} setKasData={setKasData} 
               wargaData={wargaData} 
@@ -1681,7 +1800,7 @@ export default function App() {
 
           {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
-          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} currentTenant={currentTenant} wargaData={wargaData} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} currentTenant={currentTenant} wargaData={wargaData} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} currentUser={currentUser} setActiveTab={setActiveTab} />}
           { activeTab === 'voting' && (
             PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].ePemilu ? (
               <EVotingView 
@@ -2810,6 +2929,7 @@ function EVotingView({
   handleFileUpload: (file: File, folder: string) => Promise<string>,
   showNotification: any
 }) {
+  const [electionScope, setElectionScope] = useState<'RW' | 'RT'>('RW');
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
   const [newCandidateName, setNewCandidateName] = useState('');
   const [newCandidateDesc, setNewCandidateDesc] = useState('');
@@ -2821,47 +2941,71 @@ function EVotingView({
   const [editProfile, setEditProfile] = useState('');
   const [editPhoto, setEditPhoto] = useState('');
   const [isEditingAturan, setIsEditingAturan] = useState(false);
-  const [tempAturan, setTempAturan] = useState(config.aturan || '');
+  
+  // Scope Scaffolding
+  const userRt = wargaAuth?.rt || currentUser?.rt || '01';
+  const scopeId = electionScope === 'RW' ? `CONFIG-RW` : `CONFIG-RT-${userRt}`;
+  
+  const currentAturan = config?.[scopeId]?.aturan || (electionScope === 'RW' ? config.aturan : '');
+  const currentStatus = config?.[scopeId]?.status || (electionScope === 'RW' ? config.status : 'CLOSED');
+
+  const [tempAturan, setTempAturan] = useState(currentAturan);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setTempAturan(config.aturan || '');
-  }, [config.aturan]);
+    setTempAturan(currentAturan);
+  }, [currentAturan]);
+
+  // Data Filtering
+  const filteredCandidates = candidates.filter(c => {
+    if (electionScope === 'RW') return c.type === 'RW' || !c.type;
+    return c.type === 'RT' && c.rt === userRt;
+  });
+
+  const filteredVotes = userVotes.filter(v => {
+    const candidate = candidates.find(c => c.id === v.candidateId);
+    if (!candidate) return false;
+    if (electionScope === 'RW') return candidate.type === 'RW' || !candidate.type;
+    return candidate.type === 'RT' && candidate.rt === userRt;
+  });
 
   const voterId = wargaAuth?.nik || currentUser?.uid;
-  const hasVoted = userVotes.some(v => v.voterId === voterId);
-  const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'RW' || userRole === 'RT';
+  const hasVoted = filteredVotes.some(v => v.voterId === voterId);
+  const isAtLeastRW = userRole === 'ADMIN' || userRole === 'RW' || userRole === 'SUPER_ADMIN' || tenantId === 'MASTER';
+  const canManage = electionScope === 'RW' ? isAtLeastRW : (isAtLeastRW || (userRole === 'RT' && userRt === (wargaAuth?.rt || currentUser?.rt)));
 
-  const totalVotes = userVotes.length;
+  const totalFilteredVotes = filteredVotes.length;
 
   const handleVote = async (candidateId: string) => {
     if (!voterId) {
-      showNotification("Silakan login (via Google atau NIK/KK) untuk dapat memberikan suara.", "error");
+      showNotification("Silakan login untuk dapat memberikan suara.", "error");
       return;
     }
     if (hasVoted) {
-      showNotification("Anda sudah memberikan suara", "error");
+      showNotification(`Anda sudah memberikan suara untuk Pemilu ${electionScope}`, "error");
       return;
     }
-    if (config.status !== 'OPEN') {
+    if (currentStatus !== 'OPEN') {
       showNotification("Voting sedang ditutup", "error");
       return;
     }
 
     setIsLoading(true);
     try {
-      const voteId = `VOTE-${Date.now()}-${voterId}`;
+      const voteId = `VOTE-${electionScope}-${Date.now()}-${voterId}`;
       await setDoc(doc(db, 'voting_votes', voteId), {
         id: voteId,
         candidateId,
         voterId,
         tenantId,
+        scope: electionScope,
+        rt: electionScope === 'RT' ? userRt : null,
         timestamp: new Date().toISOString(),
         voterName: wargaAuth?.nama || currentUser?.name || 'Warga'
       });
-      showNotification("Suara Anda berhasil dikirim!", "success");
+      showNotification(`Suara Anda untuk Pemilu ${electionScope} berhasil dikirim!`, "success");
       setShowConfirm(null);
     } catch (err) {
       handleFirestoreError(err, 'create', 'voting_votes');
@@ -2878,6 +3022,8 @@ function EVotingView({
       await setDoc(doc(db, 'voting_candidates', id), {
         id,
         tenantId,
+        type: electionScope,
+        rt: electionScope === 'RT' ? userRt : null,
         name: newCandidateName,
         description: newCandidateDesc || 'Calon baru.',
         profile: newCandidateProfile || 'Belum ada profil.',
@@ -2887,7 +3033,7 @@ function EVotingView({
       setNewCandidateDesc('');
       setNewCandidateProfile('');
       setNewCandidatePhoto('');
-      showNotification("Calon berhasil ditambahkan", "success");
+      showNotification(`Kandidat ${electionScope} berhasil ditambahkan`, "success");
     } catch (err) {
       handleFirestoreError(err, 'create', 'voting_candidates');
     } finally {
@@ -2931,74 +3077,98 @@ function EVotingView({
   const saveAturan = async () => {
     try {
       await setDoc(doc(db, 'voting_config', tenantId), {
-        aturan: tempAturan,
-        tenantId
+        [scopeId]: {
+          aturan: tempAturan,
+          status: currentStatus,
+          updatedAt: new Date().toISOString()
+        }
       }, { merge: true });
       setIsEditingAturan(false);
-      showNotification("Aturan voting diperbarui", "success");
+      showNotification(`Aturan Pemilu ${electionScope} diperbarui`, "success");
     } catch (err) {
       handleFirestoreError(err, 'update', 'voting_config');
     }
   };
 
   const toggleVotingStatus = async () => {
-    const nextStatus = config.status === 'OPEN' ? 'CLOSED' : 'OPEN';
+    const nextStatus = currentStatus === 'OPEN' ? 'CLOSED' : 'OPEN';
     try {
       await setDoc(doc(db, 'voting_config', tenantId), {
-        status: nextStatus,
-        tenantId
+        [scopeId]: {
+          status: nextStatus,
+          aturan: currentAturan
+        }
       }, { merge: true });
-      showNotification(`Voting ${nextStatus === 'OPEN' ? 'Dibuka' : 'Ditutup'}`, "success");
+      showNotification(`Pemilu ${electionScope} ${nextStatus === 'OPEN' ? 'Dibuka' : 'Ditutup'}`, "success");
     } catch (err) {
       handleFirestoreError(err, 'update', 'voting_config');
     }
   };
 
   const resetVotes = async () => {
-    if (!confirm("Hapus SEMUA suara yang masuk? Tindakan ini tidak dapat dibatalkan.")) return;
+    if (!confirm(`Hapus SEMUA suara pada Pemilu ${electionScope}? Tindakan ini tidak dapat dibatalkan.`)) return;
     try {
       const batch = writeBatch(db);
-      userVotes.forEach(v => {
+      filteredVotes.forEach(v => {
         batch.delete(doc(db, 'voting_votes', v.id));
       });
       await batch.commit();
-      showNotification("Semua suara berhasil direset", "success");
+      showNotification(`Semua suara Pemilu ${electionScope} berhasil direset`, "success");
     } catch (err) {
       handleFirestoreError(err, 'delete', 'voting_votes_reset');
     }
   };
 
   const getCandidateVotes = (id: string) => {
-    return userVotes.filter(v => v.candidateId === id).length;
+    return filteredVotes.filter(v => v.candidateId === id).length;
   };
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-4xl mx-auto">
+        
+        {/* Scope Selector */}
+        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 mb-8 shadow-sm max-w-sm">
+          <button 
+            onClick={() => setElectionScope('RW')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${electionScope === 'RW' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            Pemilu RW
+          </button>
+          <button 
+            onClick={() => setElectionScope('RT')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${electionScope === 'RT' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            Pemilu RT {userRt}
+          </button>
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h2 className="text-4xl font-black text-slate-800 tracking-tighter">E-Pemilu RW 26</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <div className={`w-2 h-2 rounded-full ${config.status === 'OPEN' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+            <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">
+              E-PEMILU <span className="text-brand-blue">{electionScope}</span>
+            </h2>
+            <div className="flex items-center gap-2 mt-2">
+              <div className={`w-2 h-2 rounded-full ${currentStatus === 'OPEN' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                Status: {config.status === 'OPEN' ? 'Voting Berlangsung' : 'Voting Ditutup'}
+                Status: {currentStatus === 'OPEN' ? 'Voting Berlangsung' : 'Voting Ditutup'}
               </p>
             </div>
           </div>
 
-          {isAdmin && (
+          {canManage && (
             <div className="flex gap-2">
               <button 
                 onClick={toggleVotingStatus}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${config.status === 'OPEN' ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-green-100 text-green-600 border border-green-200'}`}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentStatus === 'OPEN' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}
               >
-                {config.status === 'OPEN' ? 'Tutup Voting' : 'Buka Voting'}
+                {currentStatus === 'OPEN' ? 'Tutup Voting' : 'Buka Voting'}
               </button>
               <button 
                 onClick={resetVotes}
-                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest border border-slate-800"
+                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200"
               >
-                Reset Suara
+                Reset
               </button>
             </div>
           )}
@@ -3006,20 +3176,20 @@ function EVotingView({
         
         {/* Aturan Main Section */}
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 mb-8 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-brand-blue" />
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-blue" />
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Aturan Main & Ketentuan</h3>
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ketentuan Pemilihan {electionScope}</h3>
             </div>
-            {isAdmin && (
+            {canManage && (
               <button 
                 onClick={() => isEditingAturan ? saveAturan() : setIsEditingAturan(true)}
-                className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all ${isEditingAturan ? 'bg-green-600 text-white border-green-700' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all ${isEditingAturan ? 'bg-brand-blue text-white border-brand-blue' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
               >
-                {isEditingAturan ? 'Simpan' : 'Edit Aturan'}
+                {isEditingAturan ? 'Simpan' : 'Edit'}
               </button>
             )}
           </div>
@@ -3027,23 +3197,23 @@ function EVotingView({
             <textarea 
               value={tempAturan}
               onChange={(e) => setTempAturan(e.target.value)}
-              className="w-full h-40 p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm text-slate-700 focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-medium"
-              placeholder="Tuliskan aturan pemilihan di sini..."
+              className="w-full h-40 p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm text-slate-700 focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-medium leading-relaxed shadow-inner"
+              placeholder={`Tuliskan aturan pemilihan ${electionScope} di sini...`}
             />
           ) : (
             <div className="prose prose-slate max-w-none">
-              <pre className="text-slate-600 text-sm whitespace-pre-wrap font-sans leading-relaxed">{config.aturan || 'Belum ada aturan yang ditetapkan.'}</pre>
+              <pre className="text-slate-600 text-sm whitespace-pre-wrap font-sans leading-relaxed">{currentAturan || 'Belum ada aturan yang ditetapkan.'}</pre>
             </div>
           )}
         </div>
         
-        {isAdmin && (
+        {canManage && (
           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 mb-8">
-            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2">
-              <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight mb-8 flex items-center gap-3">
+              <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
                 <PlusCircle className="w-5 h-5" />
               </div>
-              Tambah Calon Kandidat
+              Tambah Kandidat {electionScope}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -3157,196 +3327,144 @@ function EVotingView({
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {candidates.map(c => {
-             const votesCount = getCandidateVotes(c.id);
-             const percentage = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
-             
-             return (
-              <div key={c.id} className={`group bg-white rounded-[2.5rem] shadow-xl border-2 transition-all relative overflow-hidden flex flex-col ${hasVoted && userVotes.find(v => v.voterId === voterId)?.candidateId === c.id ? 'border-brand-blue' : 'border-transparent'}`}>
-                {hasVoted && userVotes.find(v => v.voterId === voterId)?.candidateId === c.id && (
-                  <div className="absolute top-4 right-4 bg-brand-blue text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 z-10 shadow-lg">
-                    <CheckCircle className="w-3 h-3" /> Pilihan Anda
-                  </div>
-                )}
-                
-                <div className="relative h-64 overflow-hidden">
-                  <img src={c.photo || 'https://via.placeholder.com/300?text=Kandidat'} alt={c.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-6 left-8 right-8">
-                    <h3 className="text-2xl font-black text-white tracking-tight">{c.name}</h3>
-                    <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">{c.description}</p>
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredCandidates.map((candidate, idx) => {
+            const votes = getCandidateVotes(candidate.id);
+            const percentage = totalFilteredVotes > 0 ? (votes / totalFilteredVotes) * 100 : 0;
+            
+            return (
+              <motion.div 
+                key={candidate.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden group hover:shadow-2xl hover:shadow-brand-blue/5 transition-all duration-500 relative flex flex-col"
+              >
+                <div className="aspect-[4/5] relative overflow-hidden">
+                  <img src={candidate.photo || 'https://via.placeholder.com/400'} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                  
+                  {/* Result Overlay */}
+                  {(hasVoted || canManage) && (
+                    <div className="absolute top-6 right-6">
+                      <div className="bg-white/95 backdrop-blur-sm px-4 py-3 rounded-2xl shadow-xl flex flex-col items-center border border-white/20">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Suara</span>
+                        <span className="text-2xl font-black text-brand-blue leading-none mt-1">{votes}</span>
+                      </div>
+                    </div>
+                  )}
 
-                <div className="p-8 flex-1 flex flex-col">
-                  <div className="bg-slate-50 p-4 rounded-2xl mb-6 flex-1">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5 opacity-60">
-                      <FileText className="w-3 h-3" /> Visi & Misi
+                  <div className="absolute bottom-6 left-6 right-6">
+                    <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em] mb-1.5 flex items-center gap-2">
+                       Kandidat Nomor {idx + 1}
                     </p>
-                    <p className="text-sm text-slate-600 font-medium leading-relaxed italic">"{c.profile}"</p>
+                    <h4 className="text-2xl font-black text-white leading-tight mb-1 uppercase tracking-tight">{candidate.name}</h4>
+                    <p className="text-xs font-medium text-white/80 line-clamp-2 italic">{candidate.description}</p>
                   </div>
+                </div>
 
-                  <div className="mt-auto space-y-4">
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Perolehan Suara</p>
-                        <p className="text-2xl font-black text-slate-800">{votesCount} <span className="text-sm font-bold text-slate-400 tracking-normal">Warga</span></p>
+                <div className="p-8 space-y-6 flex-1 flex flex-col">
+                  {/* Stats bar if voted */}
+                  {hasVoted && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-end">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Persentase Suara</span>
+                        <span className="text-sm font-black text-brand-blue">{percentage.toFixed(1)}%</span>
                       </div>
-                      <div className="text-right">
-                         <p className="text-2xl font-black text-brand-blue">{percentage}%</p>
+                      <div className="h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                        <motion.div 
+                          className="h-full bg-brand-blue rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                        />
                       </div>
                     </div>
-                    
-                    <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="absolute inset-y-0 left-0 bg-brand-blue rounded-full shadow-inner transition-all duration-1000" 
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
+                  )}
 
-                    {!hasVoted && config.status === 'OPEN' && (
-                      <button 
-                        onClick={() => setShowConfirm(c.id)}
-                        className="w-full py-4 mt-2 bg-slate-900 border border-slate-800 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200"
-                      >
-                        Pilih Kandidat Ini
-                      </button>
-                    )}
+                  <div className="flex flex-col gap-3 mt-auto">
+                    <button 
+                      onClick={() => setShowConfirm(candidate.id)}
+                      disabled={hasVoted || currentStatus !== 'OPEN'}
+                      className={`w-full py-4.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+                        hasVoted 
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed font-bold' 
+                          : currentStatus !== 'OPEN'
+                          ? 'bg-red-50 text-red-300 border border-red-50 cursor-not-allowed font-bold'
+                          : 'bg-brand-blue text-white shadow-xl shadow-brand-blue/20 hover:scale-[1.03] active:scale-95 font-bold'
+                      }`}
+                    >
+                      {hasVoted ? 'Sudah Memilih' : currentStatus !== 'OPEN' ? 'Voting Ditutup' : 'Pilih Kandidat'}
+                    </button>
                     
-                    {isAdmin && (
-                      <div className="flex gap-2 pt-2">
-                        <button onClick={() => startEditCandidate(c)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">Edit</button>
-                        <button onClick={() => deleteCandidate(c.id)} className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all"><Trash2 className="w-4 h-4" /></button>
+                    {canManage && (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => startEditCandidate(candidate)}
+                          className="flex-1 py-3 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-100 transition-all font-bold"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => deleteCandidate(candidate.id)}
+                          className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100 hover:bg-red-100 transition-all font-bold"
+                        >
+                          Hapus
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
-
-                {editingCandidate === c.id && (
-                  <div className="absolute inset-0 bg-white/95  p-8 z-20 flex flex-col gap-4 overflow-y-auto">
-                    <h4 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                      <Edit className="w-5 h-5 text-brand-blue" /> Edit Data Kandidat
-                    </h4>
-                    <div className="space-y-4">
-                      <input value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" placeholder="Nama"/>
-                      <input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" placeholder="Deskripsi"/>
-                      <textarea value={editProfile} onChange={(e) => setEditProfile(e.target.value)} className="w-full h-32 p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" placeholder="Profil"/>
-                      <div className="flex flex-col">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Foto / Berkas Kandidat</label>
-                        <div className="flex gap-4 items-center">
-                          <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-dashed border-slate-200 flex items-center justify-center group relative">
-                            {editPhoto ? (
-                              <>
-                                {editPhoto.toLowerCase().endsWith('.pdf') ? (
-                                  <FileText className="w-8 h-8 text-brand-blue" />
-                                ) : (
-                                  <img src={editPhoto} className="w-full h-full object-cover" />
-                                )}
-                                <button 
-                                  type="button"
-                                  onClick={() => setEditPhoto('')}
-                                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </>
-                            ) : (
-                              <Camera className="w-6 h-6 text-slate-300" />
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <input 
-                              type="file"
-                              ref={editFileInputRef}
-                              className="hidden"
-                              accept="image/*,.pdf,.doc,.docx"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  setIsLoading(true);
-                                  try {
-                                    const url = await handleFileUpload(file, 'voting_candidates');
-                                    setEditPhoto(url);
-                                    showNotification("Berkas berhasil diupload", "success");
-                                  } catch (err) {
-                                    console.error("Upload error in component:", err);
-                                  } finally {
-                                    setIsLoading(false);
-                                    if (e.target) e.target.value = '';
-                                  }
-                                }
-                              }}
-                            />
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                if (editFileInputRef.current) {
-                                  editFileInputRef.current.value = '';
-                                  editFileInputRef.current.click();
-                                }
-                              }}
-                              disabled={isLoading}
-                              className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-blue/30 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
-                            >
-                              {isLoading ? (
-                                <span className="flex items-center gap-2">
-                                  <Clock className="w-4 h-4 animate-spin" /> Mengupload...
-                                </span>
-                              ) : (
-                                <><Upload className="w-4 h-4" /> Ubah Foto / Berkas</>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 mt-auto">
-                      <button onClick={() => setEditingCandidate(null)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest">Batal</button>
-                      <button onClick={() => saveEditCandidate(c.id)} className="flex-2 py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-200">Simpan Perubahan</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
+              </motion.div>
+            )
           })}
         </div>
 
-        {candidates.length === 0 && (
-          <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
-            <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-4">
-              <Users className="w-10 h-10 opacity-20" />
+        {filteredCandidates.length === 0 && (
+          <div className="p-20 text-center bg-white rounded-[3rem] border border-slate-200 shadow-sm">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Users className="w-10 h-10 text-slate-200" />
             </div>
-            <p className="text-sm font-black uppercase tracking-widest">Belum ada kandidat</p>
-            <p className="text-xs mt-1 italic">Silakan hubungi admin untuk mendaftarkan kandidat PEMILU.</p>
+            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Belum Ada Kandidat</h3>
+            <p className="text-slate-400 mt-2 max-w-xs mx-auto text-sm font-medium">Panitia belum mendaftarkan calon kandidat untuk Pemilu {electionScope}.</p>
           </div>
         )}
       </div>
 
+      {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-           <div className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full text-center shadow-2xl scale-110">
-              <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-10 h-10" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-800 mb-2">Konfirmasi Pilihan</h3>
-              <p className="text-slate-500 text-sm font-medium mb-8">Apakah Anda yakin memilih <span className="text-slate-800 font-bold">{candidates.find(c => c.id === showConfirm)?.name}</span>? Pilihan tidak dapat diubah kembali.</p>
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => handleVote(showConfirm)}
-                  disabled={isLoading}
-                  className="w-full py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-200"
-                >
-                  {isLoading ? 'Mengirim Suara...' : 'Ya, Saya Yakin'}
-                </button>
-                <button 
-                  onClick={() => setShowConfirm(null)}
-                  className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest"
-                >
-                  Batal
-                </button>
-              </div>
-           </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xl" onClick={() => setShowConfirm(null)} />
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-[3rem] p-10 max-w-md w-full shadow-2xl relative z-10 border border-white/20"
+          >
+            <div className="w-20 h-20 bg-brand-blue/10 rounded-full flex items-center justify-center mx-auto mb-8">
+              <Vote className="w-10 h-10 text-brand-blue" />
+            </div>
+            <h3 className="text-3xl font-black text-slate-800 text-center uppercase tracking-tighter mb-4 leading-none">Konfirmasi Suara</h3>
+            <p className="text-center text-slate-500 text-base font-medium mb-10 px-4">
+              Apakah Anda yakin ingin memberikan suara untuk <span className="text-brand-blue font-bold">{candidates.find(c => c.id === showConfirm)?.name}</span> pada Pemilu {electionScope}?
+            </p>
+            <div className="flex flex-col gap-4">
+              <button 
+                onClick={() => handleVote(showConfirm)}
+                disabled={isLoading}
+                className="w-full py-5 bg-brand-blue text-white rounded-2.5xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-brand-blue/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 font-bold"
+              >
+                {isLoading ? <Clock className="w-5 h-5 animate-spin mx-auto" /> : 'Ya, Saya Yakin'}
+              </button>
+              <button 
+                onClick={() => setShowConfirm(null)}
+                className="w-full py-5 bg-slate-50 text-slate-600 rounded-2.5xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all font-bold"
+              >
+                Mungkin Nanti
+              </button>
+            </div>
+            <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-8 flex items-center justify-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5" /> Pilihan Anda bersifat Rahasia & Anonim
+            </p>
+          </motion.div>
         </div>
       )}
     </div>
@@ -3830,7 +3948,7 @@ function DashboardView({
           Aktivitas Terbaru
         </h3>
         <div className="space-y-3">
-          {recentActivities.map((act: any, idx) => (
+          {recentActivities.length > 0 ? recentActivities.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()).slice(0, 8).map((act: any, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${
@@ -3870,7 +3988,13 @@ function DashboardView({
                 <p className="text-[10px] text-slate-400 mt-0.5">{act.date}</p>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+              <History className="w-10 h-10 text-slate-200 mb-3" />
+              <p className="text-slate-500 font-bold text-sm">Belum ada aktivitas</p>
+              <p className="text-slate-400 text-xs mt-1">Aktivitas terbaru akan muncul di sini</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -5083,9 +5207,10 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
     }
   };
 
-  const currentMaxWarga = currentTenant?.maxWarga || 50;
-  const isNearLimit = wargaData.length >= currentMaxWarga * 0.8;
-  const isAtLimit = wargaData.length >= currentMaxWarga;
+  const isMaster = tenantId === 'MASTER';
+  const currentMaxWarga = isMaster ? 999999 : (currentTenant?.maxWarga || 50);
+  const isNearLimit = !isMaster && wargaData.length >= currentMaxWarga * 0.8;
+  const isAtLimit = !isMaster && wargaData.length >= currentMaxWarga;
 
   return (
     <div className="space-y-6">
@@ -5750,13 +5875,705 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
   );
 }
 
-function FinansialDashboardView(f_params) {
-  const { iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification, currentUser, getSetting } = f_params;
+function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, currentUser, getSetting, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: any) {
+  const [activeSubTab, setActiveSubTab] = useState<'pembayaran' | 'rekap'>('pembayaran');
+  const [showForm, setShowForm] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [buktiUrl, setBuktiUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [jenisPembayaran, setJenisPembayaran] = useState('Iuran Warga');
+  
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const years = [2024, 2025, 2026, 2027];
+
+  const canApprove = userRole === 'Admin' || userRole === 'RW' || userRole === 'RT' || userRole === 'Bendahara' || currentUser?.isSuperAdmin;
+  const isPengurus = canApprove;
+  
+  const myTransactions = isPengurus ? iuranData : iuranData.filter((i: any) => i.nik === currentUser.nik || i.userId === currentUser.uid || i.userId === currentUser.id_user);
+  
+  const filteredTransactions = myTransactions.filter((i: any) => {
+    if (selectedMonth === -1) return new Date(i.tanggal).getFullYear() === selectedYear;
+    const d = new Date(i.tanggal);
+    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+  });
+
+  const handleCreatePayment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const id = `IURAN-${Date.now()}`;
+    const dateInput = formData.get('tanggal') as string;
+    const dateObj = dateInput ? new Date(dateInput) : new Date();
+    const nominal = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
+    const keterangan = formData.get('keterangan') as string;
+    
+    let nik = currentUser.nik || '-';
+    let nama = currentUser.nama || currentUser.name || "Anonim";
+    let alamat = wargaData.find((w:any) => w.nik === nik)?.alamat || "-";
+    
+    if (isPengurus) {
+      const selectedWargaId = formData.get('wargaId') as string;
+      const w = wargaData.find((warga:any) => warga.id === selectedWargaId);
+      if (w) {
+        nik = w.nik || '-';
+        nama = w.nama;
+        alamat = w.alamat || "-";
+      } else {
+        const inputNama = formData.get('namaPenyetor') as string;
+        if (inputNama) nama = inputNama;
+      }
+    }
+
+    const payload = {
+      id,
+      tenantId,
+      rt: currentUser.rt || '01',
+      tanggal: dateObj.toISOString(),
+      jenis: jenisPembayaran,
+      nominal,
+      keterangan,
+      nik,
+      namaPenyetor: nama,
+      alamat,
+      buktiUrl,
+      status: isPengurus ? 'Lunas' : 'Menunggu Verifikasi',
+      userId: currentUser.uid || currentUser.id_user || null,
+    };
+
+    setIsLoadingDB(true);
+    try {
+      await setDoc(doc(db, 'iuran', id), payload);
+      setIuranData((prev: any) => {
+        if (prev.some((i: any) => i.id === id)) return prev;
+        return [payload, ...prev];
+      });
+      
+      // Auto create Kas if status is Lunas
+      if (payload.status === 'Lunas') {
+        const kasId = `TRX-${Date.now()}`;
+        const kasPayload = {
+          id: kasId,
+          tenantId,
+          rt: payload.rt,
+          tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+          tipe: 'Masuk',
+          transaksi: payload.jenis,
+          nama: payload.namaPenyetor,
+          keterangan: payload.keterangan || `Pembayaran ${payload.jenis}`,
+          debit: payload.nominal,
+          kredit: 0,
+          strukUrl: payload.buktiUrl,
+          iuranId: id
+        };
+        await setDoc(doc(db, 'kas', kasId), kasPayload);
+        setKasData((prev: any) => {
+          if (prev.some((k:any) => k.id === kasId)) return prev;
+          return [kasPayload, ...prev];
+        });
+      }
+      
+      showNotification('Pembayaran berhasil dicatat', 'success');
+      setShowForm(false);
+      setBuktiUrl('');
+      setJenisPembayaran('Iuran Warga');
+    } catch (e: any) {
+      handleFirestoreError(e, 'create', 'iuran');
+      showNotification('Gagal mencatat pembayaran', 'error');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleApprove = async (trx: any) => {
+    if (!window.confirm("Verifikasi dan terima pembayaran ini?")) return;
+    setIsLoadingDB(true);
+    try {
+      await updateDoc(doc(db, 'iuran', trx.id), { status: 'Lunas', verifiedBy: currentUser.nama || currentUser.name, verifiedAt: new Date().toISOString() });
+      setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Lunas' } : t));
+      
+      const kasId = `TRX-${Date.now()}`;
+      const kasPayload = {
+        id: kasId,
+        tenantId,
+        rt: trx.rt || '01',
+        tanggal: new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        tipe: 'Masuk',
+        transaksi: trx.jenis,
+        nama: trx.namaPenyetor,
+        keterangan: trx.keterangan || `Pembayaran ${trx.jenis}`,
+        debit: trx.nominal,
+        kredit: 0,
+        strukUrl: trx.buktiUrl,
+        iuranId: trx.id
+      };
+      await setDoc(doc(db, 'kas', kasId), kasPayload);
+      setKasData((prev: any) => {
+        if (prev.some((k:any) => k.id === kasId)) return prev;
+        return [kasPayload, ...prev];
+      });
+      
+      showNotification('Pembayaran diverifikasi dan dicatat ke kas', 'success');
+    } catch (err: any) {
+      handleFirestoreError(err, 'update', 'iuran');
+      showNotification('Gagal verifikasi', 'error');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+  
+  const handleReject = async (trx: any) => {
+    if (!window.confirm("Tolak pembayaran ini?")) return;
+    setIsLoadingDB(true);
+    try {
+      await updateDoc(doc(db, 'iuran', trx.id), { status: 'Ditolak' });
+      setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Ditolak' } : t));
+      showNotification('Pembayaran ditolak', 'success');
+    } catch (err: any) {
+      handleFirestoreError(err, 'update', 'iuran');
+      showNotification('Gagal menolak pembayaran', 'error');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit">
+        <button
+          onClick={() => setActiveSubTab('pembayaran')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span className="uppercase">Riwayat Pembayaran</span>
+        </button>
+        {isPengurus && (
+          <button
+            onClick={() => setActiveSubTab('rekap')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeSubTab === 'rekap' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <Users className="w-4 h-4" />
+            <span className="uppercase">Rekap Iuran Warga</span>
+          </button>
+        )}
+      </div>
+
+      {activeSubTab === 'pembayaran' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              <span className="bg-blue-600 w-1.5 h-4 rounded-full"></span>
+              {isPengurus ? "Semua Transaksi Masuk" : "Riwayat Pembayaran Saya"}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value={-1}>Semua Bulan</option>
+                {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              </select>
+              <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-700 shadow-sm">
+                <PlusCircle className="w-3.5 h-3.5" /> Buat Pembayaran
+              </button>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-white text-slate-400 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100">
+                <tr>
+                  <th className="px-5 py-4">Tanggal</th>
+                  <th className="px-5 py-4">Penyetor</th>
+                  <th className="px-5 py-4">Jenis Pembayaran</th>
+                  <th className="px-5 py-4 text-right">Nominal</th>
+                  <th className="px-5 py-4 text-center">Status</th>
+                  <th className="px-5 py-4 text-center">Bukti</th>
+                  <th className="px-5 py-4 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+                {filteredTransactions.length === 0 && (
+                  <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Tidak ada data.</td></tr>
+                )}
+                {filteredTransactions.map((trx: any) => (
+                  <tr key={trx.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-5 py-3 text-xs">{new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td className="px-5 py-3">
+                      <div className="font-bold text-slate-800">{trx.namaPenyetor}</div>
+                      <div className="text-[10px] text-slate-400 max-w-[150px] truncate" title={trx.alamat}>{trx.alamat}</div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="font-bold text-blue-600">{trx.jenis}</div>
+                      <div className="text-[10px] text-slate-400 italic max-w-[200px] truncate" title={trx.keterangan}>{trx.keterangan || '-'}</div>
+                    </td>
+                    <td className="px-5 py-3 text-right font-black">
+                      Rp {new Intl.NumberFormat('id-ID').format(trx.nominal)}
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <span className={`px-2 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${trx.status === 'Lunas' ? 'bg-green-100 text-green-700' : trx.status === 'Ditolak' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {trx.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      {trx.buktiUrl ? (
+                        <a href={trx.buktiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded px-2 py-1 hover:bg-slate-200 transition-colors text-[10px] font-bold" title="Lihat Bukti">
+                          <Image className="w-3 h-3" />
+                        </a>
+                      ) : '-'}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      {isPengurus && trx.status === 'Menunggu Verifikasi' && (
+                        <div className="flex gap-1 justify-end">
+                          <button onClick={() => handleApprove(trx)} className="p-1.5 px-3 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white rounded-lg border border-green-100 transition-colors font-bold text-xs" title="Terima">
+                            <CheckCircle2 className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => handleReject(trx)} className="p-1.5 px-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg border border-red-100 transition-colors font-bold text-xs" title="Tolak">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'rekap' && isPengurus && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h3 className="font-bold text-slate-800 mb-2">Rekapitulasi Iuran Wajib Warga</h3>
+          <p className="text-xs text-slate-500 mb-6 font-medium">Tabel di bawah menunjukkan status pembayaran iuran wajib bulanan untuk warga (Kepala Keluarga) di tahun {selectedYear}.</p>
+          
+          <div className="overflow-x-auto min-h-[400px]">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
+                <tr>
+                  <th className="px-4 py-3 border border-slate-100 sticky left-0 bg-slate-50 z-10 w-48 shadow-[1px_0_0_#f1f5f9]">Data Kepala Keluarga</th>
+                  {months.map((m, i) => (
+                    <th key={i} className="px-2 py-3 border border-slate-100 text-center min-w-[60px]">{m.substring(0, 3)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="font-medium text-slate-600 text-xs">
+                {wargaData.filter((w:any) => w.posisi === 'Kepala Keluarga' || !w.posisi).map((w: any) => (
+                  <tr key={w.id} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-4 py-3 border border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50/10 z-10 shadow-[1px_0_0_#f1f5f9]">
+                      <div className="font-bold text-slate-800">{w.nama}</div>
+                      <div className="text-[9px] text-slate-400 truncate max-w-[180px]">{w.alamat}</div>
+                    </td>
+                    {months.map((m, i) => {
+                      const paid = iuranData.some((trx: any) => {
+                        if (trx.jenis !== 'Iuran Warga' || trx.status !== 'Lunas') return false;
+                        if (trx.nik !== w.nik && trx.namaPenyetor !== w.nama) return false;
+                        const d = new Date(trx.tanggal);
+                        return d.getMonth() === i && d.getFullYear() === selectedYear;
+                      });
+                      return (
+                        <td key={i} className={`px-2 py-2 border border-slate-100 text-center ${paid ? 'bg-green-50/50' : 'bg-slate-50/30'}`}>
+                          {paid ? (
+                            <div className="w-5 h-5 rounded-md bg-green-500 text-white flex items-center justify-center mx-auto shadow-sm shadow-green-200">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </div>
+                          ) : (
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200 mx-auto"></div>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[100] p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          >
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+              <h3 className="font-black text-slate-800 flex items-center gap-2">
+                <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><PlusCircle className="w-4 h-4" /></span>
+                Buat Pembayaran Baru
+              </h3>
+              <button onClick={() => setShowForm(false)} className="bg-white p-1.5 border border-slate-200 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+            </div>
+            
+            <form onSubmit={handleCreatePayment} className="p-6 overflow-y-auto space-y-5">
+              {isPengurus && (
+                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
+                  <label className="block text-xs font-black text-blue-800 uppercase tracking-widest">Identitas Penyetor (Admin Mode)</label>
+                  <select name="wargaId" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">-- Bukan warga terdaftar --</option>
+                    {wargaData.map((w:any) => <option key={w.id} value={w.id}>{w.nama} ({w.nik})</option>)}
+                  </select>
+                  <input type="text" name="namaPenyetor" placeholder="Tulis manual nama penyetor (jika luar warga)" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tanggal Bayar</label>
+                  <input name="tanggal" required type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Nominal (Rp)</label>
+                  <input name="nominal" required type="text" placeholder="Contoh: 50000" className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Jenis Pembayaran & Peruntukkan</label>
+                <select value={jenisPembayaran} onChange={(e) => setJenisPembayaran(e.target.value)} name="jenis" className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
+                  <option value="Iuran Warga">Iuran Wajib Bulanan Warga</option>
+                  <option value="Retribusi Sampah / Keamanan">Retribusi Sampah / Keamanan</option>
+                  <option value="Pajak Bumi Bangunan">Pembayaran Pajak (PBB)</option>
+                  <option value="Listrik, Air & Fasum">Biaya Listrik, Air & Fasilititas Umum</option>
+                  <option value="Donasi / ZIS / Qurban">Donasi / Zakat / Qurban</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Keterangan Detail (Opsional)</label>
+                <input name="keterangan" type="text" placeholder="Misal: Bayar Iuran Warga bulan Mei 2026 via QRIS" className="w-full px-4 py-3 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between items-center">
+                  <span>Bukti Pembayaran / Struk (Wajib U/Warga)</span>
+                </label>
+                {buktiUrl ? (
+                  <div className="relative w-full aspect-video bg-slate-100 rounded-xl overflow-hidden border-2 border-slate-200 shadow-inner group">
+                    <img src={buktiUrl} alt="Bukti" className="w-full h-full object-contain" />
+                    <button type="button" onClick={() => setBuktiUrl('')} className="absolute top-3 right-3 p-2 bg-red-600/90 text-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <div className="w-full">
+                    <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={async (e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setUploading(true);
+                        const url = await handleFileUpload(e.target.files[0], 'iuran_bukti');
+                        if (url) setBuktiUrl(url);
+                        setUploading(false);
+                      }
+                    }} />
+                    <button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className="w-full py-6 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all flex flex-col items-center justify-center gap-3 bg-slate-50/50 outline-none group focus:ring-2 disabled:opacity-50 disabled:cursor-wait">
+                      {uploading ? (
+                        <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div>
+                      ) : (
+                        <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-200 group-hover:border-blue-200 group-hover:shadow-blue-100 transition-all">
+                          <Upload className="w-5 h-5 text-blue-500" />
+                        </div>
+                      )}
+                      
+                      <div className="text-center">
+                        <span className="text-xs font-black block">{uploading ? 'Sedang Mengunggah...' : 'Upload/Foto Bukti Transaksi'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 mt-0.5 max-w-[200px] leading-tight block">Format Gambar (JPG/PNG). Bisa foto dari kamera HP.</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-6 flex gap-3">
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batalkan</button>
+                <button type="submit" disabled={uploading} className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" /> Simpan Pembayaran
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PPOBView({ ppobData, setPpobData, kasData, setKasData, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification, isPengurus }: any) {
+  const [selectedLayanan, setSelectedLayanan] = useState<string>('Pulsa');
+  const [showSimulasiForm, setShowSimulasiForm] = useState(false);
+  const [nominal, setNominal] = useState("");
+  const [tujuan, setTujuan] = useState("");
+  const adminFee = selectedLayanan === 'Tiket Kereta' ? 5000 : selectedLayanan === 'PLN' ? 2500 : selectedLayanan === 'PDAM' ? 2500 : selectedLayanan === 'BPJS' ? 2500 : 1500;
+  
+  const layanans = [
+    { id: 'Pulsa', name: 'Pulsa & Paket Data', desc: 'Isi ulang pulsa All Operator', icon: <Smartphone className="w-5 h-5 text-blue-500" /> },
+    { id: 'PLN', name: 'Token Listrik / PLN', desc: 'Beli token atau bayar tagihan', icon: <Zap className="w-5 h-5 text-yellow-500" /> },
+    { id: 'PDAM', name: 'Air PDAM', desc: 'Bayar tagihan air', icon: <Droplets className="w-5 h-5 text-cyan-500" /> },
+    { id: 'Tiket Kereta', name: 'Tiket Kereta Api', desc: 'Pesan KAI', icon: <Train className="w-5 h-5 text-orange-500" /> },
+    { id: 'BPJS', name: 'BPJS Kesehatan', desc: 'Bayar iuran BPJS', icon: <ShieldAlert className="w-5 h-5 text-green-500" /> },
+  ];
+
+  const handleSimulasiBayar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nominal || !tujuan) {
+      showNotification('Harap isi nomor tujuan dan nominal', 'error');
+      return;
+    }
+    
+    // Skema Keuntungan: 
+    // 80% dari Biaya Admin dikumpulkan sebagai Total Komisi yang bisa dibagikan
+    const totalKomisiPool = Math.floor(adminFee * 0.8); 
+    
+    // Pemilik Aplikasi mendapatkan 15% dari Total Komisi tersebut
+    const komisiOwner = Math.floor(totalKomisiPool * 0.15);
+    
+    // RT/RW mendapatkan sisanya (85% dari Total Komisi tersebut)
+    const komisiRT = totalKomisiPool - komisiOwner;
+    
+    const trxId = `PPOB-${Date.now()}`;
+    const payload = {
+      id: trxId,
+      tenantId,
+      rt: currentUser?.rt || '01',
+      tanggal: new Date().toISOString(),
+      layanan: selectedLayanan,
+      tujuan,
+      nominal: parseInt(nominal.replace(/\D/g, '') || "0"),
+      adminFee,
+      komisiOwner, // Keuntungan untuk Anda
+      komisiRT,    // Keuntungan untuk RT/RW
+      totalBayar: parseInt(nominal.replace(/\D/g, '') || "0") + adminFee,
+      status: 'Berhasil',
+      userId: currentUser?.uid || currentUser?.id_user || null,
+      namaPembeli: currentUser?.nama || currentUser?.name || 'Warga'
+    };
+
+    setIsLoadingDB(true);
+    try {
+      // 1. Simpan PPOB trx
+      await setDoc(doc(db, 'ppob_trx', trxId), payload);
+      setPpobData((prev: any) => [payload, ...prev]);
+
+      // 2. Tambahkan komisi kas RT (Hanya bagian RT yang masuk ke buku kas RT)
+      const kasId = `TRX-${Date.now()}`;
+      const kasPayload = {
+        id: kasId,
+        tenantId,
+        rt: payload.rt,
+        tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        tipe: 'Masuk',
+        transaksi: 'PPOB Komisi',
+        nama: 'Aplikasi',
+        keterangan: `Komisi Trx ${selectedLayanan} - ${payload.tujuan} (${payload.namaPembeli})`,
+        debit: komisiRT,
+        kredit: 0,
+        strukUrl: '',
+        ppobId: trxId
+      };
+      await setDoc(doc(db, 'kas', kasId), kasPayload);
+      setKasData((prev: any) => [kasPayload, ...prev]);
+
+      showNotification('Transaksi Berhasil! Kas RT bertambah dari komisi.', 'success');
+      setShowSimulasiForm(false);
+      setNominal("");
+      setTujuan("");
+    } catch (err: any) {
+      handleFirestoreError(err, 'create', 'ppob_trx');
+      showNotification('Transaksi Gagal', 'error');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const myPPOB = isPengurus ? ppobData : ppobData.filter((i: any) => i.userId === currentUser?.uid || i.userId === currentUser?.id_user);
 
   return (
     <div className="space-y-6">
+      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 md:p-8 rounded-[2rem] shadow-xl text-white relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="absolute top-0 right-0 p-8 opacity-10">
+          <CreditCard className="w-32 h-32 transform rotate-12" />
+        </div>
+        <div className="relative z-10 max-w-2xl">
+          <h2 className="text-2xl font-black mb-2 flex items-center gap-2"><Smartphone className="w-6 h-6" /> Layanan PPOB & Tiketing</h2>
+          <p className="text-blue-100 text-sm font-medium">Beli pulsa, token listrik, bayar tagihan hingga tiket kereta dari aplikasi warga. Setiap transaksi akan memberikan keuntungan otomatis (komisi) yang masuk ke Saldo Kas RT/RW!</p>
+        </div>
+        <button onClick={() => setShowSimulasiForm(true)} className="relative z-10 bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors shadow-lg active:scale-95 whitespace-nowrap">
+          Lakukan Transaksi
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <span className="bg-green-500 w-1.5 h-4 rounded-full"></span>
+            Riwayat Transaksi PPOB
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-white text-slate-400 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100">
+              <tr>
+                <th className="px-5 py-4">Waktu</th>
+                <th className="px-5 py-4">Pembeli</th>
+                <th className="px-5 py-4">Layanan</th>
+                <th className="px-5 py-4">Tujuan</th>
+                <th className="px-5 py-4 text-right">Nilai Trx</th>
+                {isPengurus && (
+                  <>
+                    <th className="px-5 py-4 text-right text-green-600">Komisi RT</th>
+                    <th className="px-5 py-4 text-right text-indigo-600">Profit Pemilik</th>
+                  </>
+                )}
+                <th className="px-5 py-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+              {myPPOB.length === 0 && (
+                <tr><td colSpan={isPengurus ? 8 : 6} className="px-5 py-12 text-center text-slate-400 italic font-bold">Belum ada transaksi.</td></tr>
+              )}
+              {myPPOB.map((trx: any) => (
+                <tr key={trx.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-3 text-xs">{new Date(trx.tanggal).toLocaleString('id-ID', {day: '2-digit', month: 'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                  <td className="px-5 py-3 font-bold text-slate-800">{trx.namaPembeli}</td>
+                  <td className="px-5 py-3 font-bold text-blue-600">{trx.layanan}</td>
+                  <td className="px-5 py-3 text-xs">{trx.tujuan}</td>
+                  <td className="px-5 py-3 text-right font-black">Rp {new Intl.NumberFormat('id-ID').format(trx.nominal)}</td>
+                  {isPengurus && (
+                    <>
+                      <td className="px-5 py-3 text-right font-black text-green-600">Rp {new Intl.NumberFormat('id-ID').format(trx.komisiRT || 0)}</td>
+                      <td className="px-5 py-3 text-right font-black text-indigo-600">Rp {new Intl.NumberFormat('id-ID').format(trx.komisiOwner || 0)}</td>
+                    </>
+                  )}
+                  <td className="px-5 py-3 text-center">
+                    <span className="px-2 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest bg-green-100 text-green-700">
+                      {trx.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showSimulasiForm && (
+        <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[100] p-4">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+              <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+                Transaksi PPOB & Tiket
+              </h3>
+              <button type="button" onClick={() => setShowSimulasiForm(false)} className="bg-white p-1.5 border border-slate-200 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+            </div>
+            
+            <form onSubmit={handleSimulasiBayar} className="p-6 overflow-y-auto space-y-5">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                {layanans.map(l => (
+                  <button type="button" key={l.id} onClick={() => setSelectedLayanan(l.id)} className={`p-4 border rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${selectedLayanan === l.id ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50'}`}>
+                    <div className={`p-2 rounded-xl ${selectedLayanan === l.id ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                      {l.icon}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-700 text-center">{l.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
+                  Target / Nomor Tujuan
+                  <span className="text-blue-500">Cth: Nomor HP, No.Meter, dll.</span>
+                </label>
+                <input required type="text" value={tujuan} onChange={e => setTujuan(e.target.value)} placeholder="08xxxxxxxx / 1234xxxx" className="w-full px-4 py-3 border border-slate-200 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
+                  Nominal Transaksi (Rp)
+                  <span className="text-blue-500">Nilai sebelum admin</span>
+                </label>
+                <input required type="text" value={nominal} onChange={e => setNominal(e.target.value.replace(/\D/g, ''))} placeholder="100000" className="w-full px-4 py-3 border border-slate-200 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+              </div>
+
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                <div className="flex justify-between items-center text-sm mb-1">
+                  <span className="font-bold text-slate-600">Harga Layanan</span>
+                  <span className="font-bold text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseInt(nominal || '0'))}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="font-bold text-slate-600">Biaya Admin Platform</span>
+                  <span className="font-bold text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(adminFee)}</span>
+                </div>
+                <div className="border-t border-indigo-200 my-2"></div>
+                <div className="flex justify-between items-center">
+                  <span className="font-black text-slate-800 uppercase text-xs">Total Bayar</span>
+                  <span className="font-black text-indigo-700 text-lg flex items-center gap-1">
+                    Rp {new Intl.NumberFormat('id-ID').format(parseInt(nominal || '0') + adminFee)}
+                  </span>
+                </div>
+                <p className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest mt-2 flex flex-col gap-1">
+                  <span className="flex items-center gap-1"><Info className="w-3 h-3"/> Komisi RT/RW: Rp {new Intl.NumberFormat('id-ID').format(Math.floor(adminFee * 0.8 * 0.85))}</span>
+                  <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-indigo-600"/> Profit Pemilik (Anda): Rp {new Intl.NumberFormat('id-ID').format(Math.floor(adminFee * 0.8 * 0.15))}</span>
+                </p>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button type="button" onClick={() => setShowSimulasiForm(false)} className="py-3 px-6 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batalkan</button>
+                <button type="submit" className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] flex items-center justify-center gap-2">
+                  <CreditCard className="w-4 h-4" /> Bayar Sekarang
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FinansialDashboardView(f_params: any) {
+  const { ppobData, setPpobData, iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification, currentUser, getSetting } = f_params;
+  const [activeTabId, setActiveTabId] = useState<'kas' | 'iuran' | 'ppob'>('iuran');
+
+  const canApprove = userRole === 'Admin' || userRole === 'RW' || userRole === 'RT' || userRole === 'Bendahara' || currentUser?.isSuperAdmin;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit flex-wrap gap-1">
+        <button
+          onClick={() => setActiveTabId('iuran')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeTabId === 'iuran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span className="uppercase tracking-widest hidden sm:inline">Pembayaran & Iuran Warga</span>
+          <span className="uppercase tracking-widest sm:hidden">Iuran</span>
+        </button>
+        <button
+          onClick={() => setActiveTabId('kas')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeTabId === 'kas' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <Wallet className="w-4 h-4" />
+          <span className="uppercase tracking-widest hidden sm:inline">Buku Kas RT/RW</span>
+          <span className="uppercase tracking-widest sm:hidden">Kas</span>
+        </button>
+        <button
+          onClick={() => setActiveTabId('ppob')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeTabId === 'ppob' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <Smartphone className="w-4 h-4" />
+          <span className="uppercase tracking-widest hidden sm:inline">Layanan Digital / PPOB</span>
+          <span className="uppercase tracking-widest sm:hidden">PPOB</span>
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 gap-6">
-        <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={userRole} currentUser={currentUser} getSetting={getSetting} tenantId={tenantId} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />
+        {activeTabId === 'kas' && (
+          <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={userRole} currentUser={currentUser} getSetting={getSetting} tenantId={tenantId} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />
+        )}
+        {activeTabId === 'iuran' && (
+           <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={userRole} currentUser={currentUser} getSetting={getSetting} tenantId={tenantId} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />
+        )}
+        {activeTabId === 'ppob' && (
+           <PPOBView ppobData={ppobData} setPpobData={setPpobData} kasData={kasData} setKasData={setKasData} currentUser={currentUser} tenantId={tenantId} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} isPengurus={canApprove} />
+        )}
       </div>
     </div>
   );
@@ -6093,8 +6910,8 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
   const completedCount = suratData.filter(s => s.status === 'Selesai').length;
 
   const monthMap: Record<string, string> = {
-    "Jan": "0", "Feb": "1", "Mar": "2", "Apr": "3", "May": "4", "Jun": "5",
-    "Jul": "6", "Aug": "7", "Sep": "8", "Oct": "9", "Nov": "10", "Dec": "11"
+    "Jan": "0", "Feb": "1", "Mar": "2", "Apr": "3", "May": "4", "Mei": "4", "Jun": "5",
+    "Jul": "6", "Aug": "7", "Agt": "7", "Sep": "8", "Oct": "9", "Okt": "9", "Nov": "10", "Dec": "11", "Des": "11"
   };
 
   const filteredSurat = suratData.filter(s => {
@@ -6259,7 +7076,12 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                              <FileText className="w-3.5 h-3.5" />
                            </a>
                          )}
-                        <button disabled={isLoadingDB} onClick={() => handleDelete(surat.id)} className="bg-slate-50 hover:bg-red-50 text-slate-300 hover:text-red-500 p-2 rounded-lg border border-slate-100 transition-all disabled:opacity-50 disabled:cursor-wait" title="Hapus Permanen">
+                        <button 
+                          disabled={isLoadingDB} 
+                          onClick={() => handleDelete(surat.id)} 
+                          className="bg-red-50 hover:bg-red-600 text-red-400 hover:text-white p-2 rounded-lg border border-red-100 transition-all disabled:opacity-50 disabled:cursor-wait active:scale-95 shadow-sm" 
+                          title="Hapus Permanen"
+                        >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -6709,6 +7531,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
     
     const newTrx = {
       tenantId: tenantId,
+      rt: currentUser?.rt || '01',
       id: newId,
       tanggal: editingKas ? editingKas.tanggal : formattedDate,
       tipe: trxType,
@@ -6754,12 +7577,29 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
   let balance = 0;
   // Deduplicate and filter by RT if provided (and user is not RW/Admin)
   const uniqueKasData = Array.from(new Map(kasData.map(item => [item.id, item])).values())
-    .filter(item => !rtId || item.rtId === rtId); // Apply RT filtering
+    .filter(item => {
+      // If user is RT, they only see their RT data
+      if (currentUser?.role === 'RT') {
+        return item.rt === currentUser.rt;
+      }
+      // If it's a specific rtId filter from props
+      if (rtId) return item.rt === rtId;
+      return true;
+    });
   
+  const parseDateKas = (dString: string) => {
+    if (!dString) return 0;
+    const parts = dString.split(" ");
+    if (parts.length === 3) {
+       const mId = { jan:0, feb:1, mar:2, apr:3, mei:4, may:4, jun:5, jul:6, agt:7, aug:7, sep:8, okt:9, oct:9, nov:10, des:11, dec:11 };
+       const m = parts[1].toLowerCase().replace(/[^a-z]/g, '');
+       return new Date(parseInt(parts[2]), mId[m as keyof typeof mId] ?? 0, parseInt(parts[0])).getTime();
+    }
+    return new Date(dString).getTime() || 0;
+  };
+
   const allProcessedData = [...uniqueKasData].sort((a, b) => {
-    const dateA = new Date(a.tanggal);
-    const dateB = new Date(b.tanggal);
-    return dateA.getTime() - dateB.getTime();
+    return parseDateKas(a.tanggal) - parseDateKas(b.tanggal);
   }).map(trx => {
     balance = balance + trx.debit - trx.kredit;
     return { ...trx, saldoAkhir: balance };
@@ -6767,7 +7607,8 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
 
   // Filter based on selected month and year
   const filteredData = allProcessedData.filter(trx => {
-    const date = new Date(trx.tanggal);
+    const dTime = parseDateKas(trx.tanggal);
+    const date = new Date(dTime);
     const mMatch = selectedMonth === -1 || date.getMonth() === selectedMonth;
     return mMatch && date.getFullYear() === selectedYear;
   }).reverse();
@@ -6921,10 +7762,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
               </>
             )}
             <button onClick={() => { setTrxType('Masuk'); setShowMasukForm(true); }} className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all hover:bg-green-700 shadow-sm">
-              <PlusCircle className="w-3.5 h-3.5" /> Catat Masuk
-            </button>
-            <button onClick={() => { setTrxType('Keluar'); setShowMasukForm(true); }} className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all hover:bg-red-700 shadow-sm">
-              <MinusCircle className="w-3.5 h-3.5" /> Catat Keluar
+              <PlusCircle className="w-3.5 h-3.5" /> Catat Transaksi
             </button>
           </div>
         </div>
@@ -7310,7 +8148,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
   );
 }
 
-function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole, handleFileUpload, showNotification }: { tenantId: string, currentTenant?: any, wargaData?: any[], settings: any, userRole: string, handleFileUpload: any, showNotification: any }) {
+function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole, handleFileUpload, showNotification, currentUser, setActiveTab }: { tenantId: string, currentTenant?: any, wargaData?: any[], settings: any, userRole: string, handleFileUpload: any, showNotification: any, currentUser: any, setActiveTab: any }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -7534,6 +8372,14 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
             <div>
               <h3 className="text-xl font-black text-slate-800 tracking-tight">Paket: {currentTenant?.status || 'Trial'}</h3>
               <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Langganan Anda Saat Ini</p>
+              {currentUser?.isSuperAdmin && (
+                <button 
+                  onClick={() => setActiveTab('super-admin')}
+                  className="mt-2 text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  <Shield className="w-3 h-3" /> Kelola (Tambah Slot) di Manajemen Tenant
+                </button>
+              )}
             </div>
           </div>
           <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex gap-8 items-center min-w-[250px]">
@@ -10044,6 +10890,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
 function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void }) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -10091,17 +10938,19 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
     }
   };
 
-  const handleDeleteUser = async (user: any) => {
-    if (!window.confirm(`Hapus pengguna ${user.nama || user.name}?`)) return;
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
 
     setIsLoadingDB(true);
     try {
-      await deleteDoc(doc(db, 'users', user.uid || user.id_user));
+      await deleteDoc(doc(db, 'users', userToDelete.uid || userToDelete.id_user));
       showNotification("User berhasil dihapus.", 'success');
     } catch (error: any) {
-      handleFirestoreError(error, 'delete', `/users/${user.uid || user.id_user}`);
+      handleFirestoreError(error, 'delete', `/users/${userToDelete.uid || userToDelete.id_user}`);
+      showNotification("Gagal menghapus user.", 'error');
     } finally {
       setIsLoadingDB(false);
+      setUserToDelete(null);
     }
   };
 
@@ -10180,7 +11029,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button 
-                          onClick={() => handleDeleteUser(user)}
+                          onClick={() => setUserToDelete(user)}
                           className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
                           title="Hapus"
                         >
@@ -10194,6 +11043,21 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
            </table>
          </div>
        </div>
+
+      <AnimatePresence>
+        {userToDelete && (
+          <ConfirmModal 
+            isOpen={true}
+            title="Hapus Pengguna"
+            message={`Apakah Anda yakin ingin menghapus pengguna "${userToDelete.nama || userToDelete.name}"?`}
+            onConfirm={handleDeleteUser}
+            onCancel={() => setUserToDelete(null)}
+            confirmText="Hapus"
+            cancelText="Batal"
+          />
+        )}
+      </AnimatePresence>
+
 
        {showForm && (
          <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
@@ -10296,6 +11160,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
 function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestoreError, showNotification }: { tenantsData: any[], isLoadingDB: boolean, setIsLoadingDB: any, handleFirestoreError: any, showNotification: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
+  const [tenantToDelete, setTenantToDelete] = useState<any>(null);
 
   const handleSaveTenant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -10307,6 +11172,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
     const phone = formData.get('adminPhone') as string;
     const paket = formData.get('status') as string;
     const rtCount = parseInt(formData.get('rtCount') as string || "1");
+    const isActive = formData.get('isActive') === 'true';
 
     if (!editingTenant && (!password || password.length < 6)) {
       showNotification("Password admin minimal 6 karakter.", "error");
@@ -10314,9 +11180,13 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
     }
 
     // Limit calculation based on package
-    let maxWarga = 50;
-    if (paket === 'Active') maxWarga = 200; // Basic
-    if (paket === 'Pro') maxWarga = 1000;
+    const planKey = paket.toUpperCase() === 'TRIAL' ? 'TRIAL' : 
+                   paket === 'RT' ? 'RT' :
+                   paket === 'Active' ? 'BASIC' : 
+                   paket === 'Pro' ? 'PRO' : 
+                   paket === 'Enterprise' ? 'ENTERPRISE' : 'TRIAL';
+    
+    let maxWarga = (PLAN_FEATURES as any)[planKey]?.maxWarga || 50;
 
     const tenant = {
       id: tenantId,
@@ -10324,6 +11194,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
       address: formData.get('address') as string,
       adminEmail: email,
       status: paket,
+      isActive: isActive,
       maxWarga,
       rtTarget: rtCount,
       createdAt: editingTenant ? editingTenant.createdAt : new Date().toISOString()
@@ -10378,15 +11249,18 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
     }
   };
 
-  const handleDeleteTenant = async (id: string) => {
-    if (!confirm("Hapus tenant ini? Semua data terkait di rules akan terputus.")) return;
+  const handleDeleteTenant = async () => {
+    if (!tenantToDelete) return;
     setIsLoadingDB(true);
     try {
-      await deleteDoc(doc(db, 'tenants', id));
+      await deleteDoc(doc(db, 'tenants', tenantToDelete.id || tenantToDelete.docId));
+      showNotification(`Tenant ${tenantToDelete.name || tenantToDelete.id} berhasil dihapus.`, "success");
     } catch (error: any) {
-      handleFirestoreError(error, 'delete', `/tenants/${id}`);
+      handleFirestoreError(error, 'delete', `/tenants/${tenantToDelete.id || tenantToDelete.docId}`);
+      showNotification("Gagal menghapus tenant.", "error");
     } finally {
       setIsLoadingDB(false);
+      setTenantToDelete(null);
     }
   };
 
@@ -10418,46 +11292,66 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                <tr className="bg-slate-50 border-b border-slate-100">
                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Detail Tenant</th>
                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Admin Utama</th>
-                 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
+                 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Paket</th>
+                 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status Akses</th>
                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Aksi</th>
                </tr>
              </thead>
              <tbody className="divide-y divide-slate-50">
                 {tenantsData.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-slate-400 italic text-sm">Belum ada tenant terdaftar.</td>
+                    <td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic text-sm">Belum ada tenant terdaftar.</td>
                   </tr>
                 )}
                 {tenantsData.map((tenant) => (
-                  <tr key={tenant.id} className="hover:bg-blue-50/20 transition-colors">
+                  <tr key={tenant.id} className={`hover:bg-blue-50/20 transition-colors ${tenant.isActive === false ? 'bg-slate-50/50 grayscale-[0.5]' : ''}`}>
                     <td className="px-6 py-4">
                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tenant.isActive === false ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-400'}`}>
                              <Database className="w-5 h-5" />
                           </div>
                           <div>
-                             <p className="text-sm font-bold text-slate-800">{tenant.name}</p>
+                             <p className={`text-sm font-bold ${tenant.isActive === false ? 'text-slate-400' : 'text-slate-800'}`}>{tenant.name}</p>
                              <p className="text-[10px] font-mono text-blue-600 font-bold bg-blue-50 px-1 rounded inline-block">ID: {tenant.id}</p>
+                             {(tenant.maxWarga || tenant.citizenLimit) && (
+                               <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-fit">
+                                 <Users className="w-3 h-3" /> Max {tenant.maxWarga || tenant.citizenLimit} Warga
+                               </div>
+                             )}
                           </div>
                        </div>
                     </td>
                     <td className="px-6 py-4">
-                       <p className="text-xs text-slate-600 font-bold">{tenant.adminEmail || '-'}</p>
+                       <p className={`text-xs font-bold ${tenant.isActive === false ? 'text-slate-400' : 'text-slate-600'}`}>{tenant.adminEmail || '-'}</p>
                        <p className="text-[10px] text-slate-400 truncate max-w-[200px]">{tenant.address || '-'}</p>
                     </td>
                     <td className="px-6 py-4 text-center">
                        <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter border ${
                          tenant.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' :
+                         tenant.status === 'RT' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
                          tenant.status === 'Trial' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                         tenant.status === 'Pro' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                         tenant.status === 'Enterprise' ? 'bg-orange-50 text-orange-700 border-orange-100' :
                          'bg-slate-50 text-slate-700 border-slate-200'
                        }`}>
                          {tenant.status}
                        </span>
                     </td>
+                    <td className="px-6 py-4 text-center">
+                       <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
+                         tenant.isActive !== false ? 'bg-emerald-50 text-emerald-600 border-emerald-200 shadow-sm' : 'bg-rose-50 text-rose-600 border-rose-200 opacity-60'
+                       }`}>
+                         {tenant.isActive !== false ? 'Aktif' : 'Nonaktif'}
+                       </span>
+                    </td>
                     <td className="px-6 py-4 text-right">
                        <div className="flex justify-end gap-2 text-[10px] uppercase font-black tracking-widest">
-                          <button onClick={() => { setEditingTenant(tenant); setShowAddForm(true); }} className="px-3 py-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100">Edit</button>
-                          <button onClick={() => handleDeleteTenant(tenant.id)} className="px-3 py-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-100">Hapus</button>
+                          <button onClick={() => { setEditingTenant(tenant); setShowAddForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 font-bold active:scale-95 shadow-sm">
+                             <Edit className="w-3.5 h-3.5" />
+                             <span>Edit</span></button>
+                          <button onClick={() => setTenantToDelete(tenant)} className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 font-bold active:scale-95 shadow-sm">
+                             <Trash2 className="w-3.5 h-3.5" />
+                             <span>Hapus</span></button>
                        </div>
                     </td>
                   </tr>
@@ -10527,8 +11421,10 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                     <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Paket Sistem</label>
                     <select name="status" defaultValue={editingTenant?.status || 'Trial'} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700">
                        <option value="Trial">Trial (Max 50 Warga)</option>
-                       <option value="Active">Basic (Max 200 Warga)</option>
-                       <option value="Pro">Professional (Max 1000 Warga)</option>
+                       <option value="RT">RT (Max 200 Warga)</option>
+                       <option value="Active">Basic (Max 500 Warga)</option>
+                       <option value="Pro">Professional (Max 2000 Warga)</option>
+                       <option value="Enterprise">Enterprise (Max 10000 Warga)</option>
                     </select>
                   </div>
 
@@ -10542,6 +11438,14 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                     <textarea name="address" defaultValue={editingTenant?.address} rows={2} placeholder="Alamat lengkap organisasi..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
                   </div>
 
+                  <div className="col-span-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Status Akses</label>
+                    <select name="isActive" defaultValue={editingTenant?.isActive !== false ? 'true' : 'false'} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700">
+                       <option value="true">Aktif</option>
+                       <option value="false">Tidak Aktif (Suspended)</option>
+                    </select>
+                  </div>
+
                   <div className="col-span-2 flex gap-4 mt-2">
                      <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50 transition-all border border-slate-200">Batal</button>
                      <button type="submit" disabled={isLoadingDB} className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300">
@@ -10552,6 +11456,125 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
             </motion.div>
          </div>
        )}
+
+       {/* Benefits Comparison Guide Section */}
+       <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group mt-6">
+         <div className="absolute top-0 right-0 p-12 opacity-[0.02] group-hover:opacity-[0.05] transition-all duration-700 pointer-events-none">
+           <Shield className="w-48 h-48 rotate-12 group-hover:rotate-0" />
+         </div>
+         
+         <div className="relative z-10">
+           <div className="flex items-center gap-3 mb-8">
+             <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center">
+               <Info className="w-5 h-5 text-blue-600" />
+             </div>
+             <div>
+               <h4 className="text-lg font-black text-slate-800 uppercase tracking-tighter leading-none">Panduan Paket & Benefits</h4>
+               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Struktur Kapasitas & Fitur Nexapps</p>
+             </div>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+             {Object.entries(PLAN_FEATURES).map(([key, features]: [string, any]) => (
+               <div key={key} className={`p-6 rounded-[2rem] border transition-all hover:scale-[1.02] duration-500 flex flex-col ${
+                 key === 'ENTERPRISE' ? 'bg-orange-50/20 border-orange-100 shadow-lg shadow-orange-100/10' : 
+                 key === 'PRO' ? 'bg-purple-50/20 border-purple-100 shadow-lg shadow-purple-100/10' : 
+                 key === 'RT' ? 'bg-cyan-50/20 border-cyan-100 shadow-lg shadow-cyan-100/10' :
+                 key === 'BASIC' ? 'bg-blue-50/20 border-blue-100' :
+                 'bg-slate-50/50 border-slate-100'
+               }`}>
+                 <div className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${
+                   key === 'ENTERPRISE' ? 'text-orange-500' : 
+                   key === 'PRO' ? 'text-purple-500' : 
+                   key === 'RT' ? 'text-cyan-500' :
+                   'text-blue-500'
+                 }`}>{key === 'TRIAL' ? 'ACTIVE' : (key === 'RT' ? 'LITE' : (key === 'BASIC' ? 'FLASH' : key))}</div>
+                 
+                 <div className="flex items-baseline gap-1 mb-2">
+                   <h5 className="font-black text-slate-800 text-3xl tracking-tighter leading-none">{features.maxWarga}</h5>
+                   <span className="text-[10px] text-slate-400 font-bold uppercase">Warga</span>
+                 </div>
+                 
+                 <p className="text-[11px] text-slate-500 mb-6 leading-relaxed font-medium min-h-[44px]">
+                   {features.description}
+                 </p>
+
+                 <div className="space-y-4 mt-auto">
+                   <div className="flex items-start gap-2.5">
+                     <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                       <CheckCircle2 className="w-3 h-3 text-green-500" />
+                     </div>
+                     <div className="flex flex-col">
+                       <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Keuangan</span>
+                       <span className="text-[10px] text-slate-500 font-medium">{features.keuangan === 'FULL' ? 'Laporan Kas & Iuran Lengkap' : 'Pencatatan Dasar'}</span>
+                     </div>
+                   </div>
+                   
+                   <div className="flex items-start gap-2.5">
+                     <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                       <CheckCircle2 className="w-3 h-3 text-green-500" />
+                     </div>
+                     <div className="flex flex-col">
+                       <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Layanan Surat</span>
+                       <span className="text-[10px] text-slate-500 font-medium">{features.surat === 'STANDAR' ? 'Template RT/RW Standar' : 'Full Custom Kop & TTD'}</span>
+                     </div>
+                   </div>
+
+                   {features.bankSampah && (
+                     <div className="flex items-start gap-2.5">
+                       <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                         <CheckCircle2 className="w-3 h-3 text-green-500" />
+                       </div>
+                       <div className="flex flex-col">
+                         <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Bank Sampah</span>
+                         <span className="text-[10px] text-slate-500 font-medium">Tabungan & Transaksi Sampah</span>
+                       </div>
+                     </div>
+                   )}
+
+                   {features.kesehatan && (
+                     <div className="flex items-start gap-2.5">
+                       <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                         <CheckCircle2 className="w-3 h-3 text-green-500" />
+                       </div>
+                       <div className="flex flex-col">
+                         <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Posyandu</span>
+                         <span className="text-[10px] text-slate-500 font-medium">{features.kesehatan === 'FULL+AI' ? 'Analisis Gizi & Prediksi AI' : 'Pencatatan Dasar'}</span>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             ))}
+           </div>
+
+           <div className="mt-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4 text-blue-600" />
+              </div>
+              <p className="text-[11px] text-blue-800 font-medium leading-relaxed">
+                <strong className="block mb-1">Informasi Hak Akses:</strong>
+                Sebagai Super Admin, Anda memiliki otorisasi penuh untuk melakukan upgrade atau downgrade paket tenant kapanpun. 
+                Setiap perubahan paket akan langsung mengubah <strong>Citizen Limit</strong> dan membuka akses ke modul fitur tambahan yang terkunci sebelumnya bagi pengurus wilayah (Client) tersebut.
+              </p>
+           </div>
+         </div>
+       </div>
+
+      <AnimatePresence>
+        {tenantToDelete && (
+          <ConfirmModal 
+            isOpen={true}
+            title="Hapus Tenant"
+            message={`Apakah Anda yakin ingin menghapus infrastruktur tenant "${tenantToDelete.name || tenantToDelete.id}"? Semua data organisasi akan terputus dan tidak dapat dikembalikan.`}
+            onConfirm={handleDeleteTenant}
+            onCancel={() => setTenantToDelete(null)}
+            confirmText="Hapus Permanen"
+            cancelText="Batal"
+            isLoading={isLoadingDB}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -12806,17 +13829,17 @@ function BankSampahView({
                                 showNotification("Data nasabah tidak ditemukan", "error");
                               }
                             }} 
-                            className="text-slate-400 hover:text-slate-600 transition-colors" 
+                            className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm active:scale-95" 
                             title="Lihat Detail Nasabah"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
                           {canEdit && (
                             <>
-                              <button onClick={() => { setEditingItem(item); setShowSetoranForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" title="Edit">
+                              <button onClick={() => { setEditingItem(item); setShowSetoranForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit">
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => deleteItem('sampah_setoran', item.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Hapus Transaksi">
+                              <button onClick={() => deleteItem('sampah_setoran', item.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus Transaksi">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </>
@@ -12883,17 +13906,17 @@ function BankSampahView({
                                 showNotification("Data nasabah tidak ditemukan", "error");
                               }
                             }} 
-                            className="text-slate-400 hover:text-slate-600 transition-colors" 
+                            className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm active:scale-95" 
                             title="Lihat Detail Nasabah"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
                           {canEdit && (
                             <div className="flex gap-2">
-                              <button onClick={() => { setEditingItem(item); setShowTarikForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" title="Edit">
+                              <button onClick={() => { setEditingItem(item); setShowTarikForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit">
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => deleteItem('sampah_tarik_saldo', item.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Hapus Penarikan">
+                              <button onClick={() => deleteItem('sampah_tarik_saldo', item.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus Penarikan">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -13071,21 +14094,21 @@ function BankSampahView({
                             <div className="flex justify-end gap-1.5 transition-all">
                               <button 
                                 onClick={() => { setSelectedNasabahId(n.nik); setActiveSubTab('nasabah_detail'); }} 
-                                className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-200" 
+                                className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm active:scale-95" 
                                 title="Lihat/Mata"
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
                               <button 
                                 onClick={() => { setEditingItem(n); setShowNasabahForm(true); }} 
-                                className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" 
+                                className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" 
                                 title="Edit Nasabah"
                               >
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
                               <button 
                                 onClick={() => deleteItemsByNasabah(n.nik)} 
-                                className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" 
+                                className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" 
                                 title="Hapus Semua Riwayat"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -13121,8 +14144,8 @@ function BankSampahView({
                   </div>
                   {canEdit && (
                     <div className="flex gap-2">
-                       <button onClick={() => { setEditingItem(kat); setShowKategoriForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-100" title="Edit"><Edit className="w-4 h-4" /></button>
-                       <button onClick={() => deleteItem('sampah_kategori', kat.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                       <button onClick={() => { setEditingItem(kat); setShowKategoriForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit"><Edit className="w-4 h-4" /></button>
+                       <button onClick={() => deleteItem('sampah_kategori', kat.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
@@ -13392,7 +14415,8 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
         tanggal_perolehan: formData.get('tanggal_perolehan') as string,
         harga_perolehan: parseInt(formData.get('harga_perolehan') as string) || 0,
         foto_url: fotoUrl,
-        tenantId
+        tenantId,
+        rt: currentUser?.rt || '01'
       };
       // Auto-save Kategori & Lokasi ke Master Data jika belum ada
       if (itemData.kategori) {
@@ -13459,7 +14483,8 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
       aktivitas: txType,
       pencatat: currentUser.name,
       tanggal,
-      tenantId
+      tenantId,
+      rt: currentUser?.rt || '01'
     };
 
     const itemUpdate: any = {};

@@ -78,7 +78,9 @@ service cloud.firestore {
     }
 
     match /iuran/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId);
+      allow read: if isTenantMember(resource.data.tenantId) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isTenantMember(resource.data.tenantId);
     }
 
     match /sampah_tarik_saldo/{docId} {
