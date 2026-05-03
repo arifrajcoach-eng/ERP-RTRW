@@ -22,6 +22,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { auth, storage } from './firebase';
 import KopTemplateManagementView from './components/KopTemplateManagementView';
+import { RTRegistrationForm } from './components/RTRegistrationForm';
 
 const APP_LOGO = "/logo_rw.png";
 
@@ -84,6 +85,10 @@ const INITIAL_INVENTARIS_DATA = [
   { id: "INV-BRG-002", nama_barang: "Tenda 3x4 Meter", kategori: "Aset Tenda & Kursi", jumlah: 2, kondisi: "Baik", lokasi: "Gudang RW", tanggal_pengadaan: "2023-05-15", keterangan: "Bantuan Desa" },
   { id: "INV-BRG-003", nama_barang: "Sound System Portable", kategori: "Elektronik", jumlah: 1, kondisi: "Rusak Ringan", lokasi: "Pos Kamling", tanggal_pengadaan: "2022-11-20", keterangan: "Mic kadang putus" },
 ];
+
+// NOTE: Kategori Inventaris dikelola secara dinamis melalui Firestore (koleksi: inventaris_kategori).
+// Anda dapat menambahkannya melalui fitur "Kategori" pada menu Inventaris di aplikasi.
+
 
 const PLAN_FEATURES = {
   TRIAL: {
@@ -781,8 +786,9 @@ export default function App() {
     // 1. Warga Listener
     const getWargaQuery = () => {
       const base = collection(db, 'data_warga');
-      if (currentUser?.isSuperAdmin) return query(base);
       
+      // Jika Super Admin, tapi ingin melihat data spesifik tenant, atau hanya data MASTER
+      // Jika di Dashboard utama (MASTER), kita ambil hanya data yang berlabel MASTER atau tenantId yang aktif
       const constraints = [where('tenantId', 'in', tIds)];
       
       if (currentUser?.role === 'RT') {
@@ -1502,6 +1508,7 @@ export default function App() {
         setSuratData={setSuratData}
         setWargaAuth={setWargaAuth} 
         tenantId={wargaAuth.tenantId || 'RW26_SMART'} 
+        isLoadingDB={isLoadingDB}
         setIsLoadingDB={setIsLoadingDB} 
         handleFileUpload={handleFileUpload} 
         showNotification={showNotification} 
@@ -1647,7 +1654,7 @@ export default function App() {
               <div className={`transition-all duration-300 ${activeTab === item.id ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>
                 <item.icon className="w-5 h-5" />
               </div>
-              <span className="font-black text-xs tracking-[0.1em] uppercase font-sans">
+              <span className="font-black text-[14px] tracking-[0.1em] uppercase font-sans">
                 {item.label}
               </span>
             </button>
@@ -1744,6 +1751,7 @@ export default function App() {
             <BukuTamuView 
               bukuTamuData={bukuTamuData} 
               setBukuTamuData={setBukuTamuData}
+              wargaData={wargaData}
               currentUser={currentUser}
               tenantId={currentUser?.tenantId && currentUser.tenantId !== 'unknown' ? currentUser.tenantId : 'RW26_SMART'}
               handleFirestoreError={handleFirestoreError}
@@ -2435,11 +2443,11 @@ function ETokoView({
                     onChange={(e) => setSelectedRT(e.target.value)}
                     className="px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-white text-slate-700 border border-slate-200 outline-none focus:border-brand-blue"
                   >
-                    {rtOptions.map(rt => <option key={rt} value={rt}>{rt === 'Semua' ? 'Semua RT' : `RT ${rt}`}</option>)}
+                    {rtOptions.map((rt, i) => <option key={`toko-rt-${rt}-${i}`} value={rt}>{rt === 'Semua' ? 'Semua RT' : `RT ${rt}`}</option>)}
                   </select>
-                  {categories.map(c => (
+                  {categories.map((c, i) => (
                     <button
-                      key={c}
+                      key={`toko-cat-${c}-${i}`}
                       onClick={() => setSelectedCategory(c)}
                       className={`px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedCategory === c ? 'bg-brand-blue text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                     >
@@ -3975,7 +3983,7 @@ function DashboardView({
         </h3>
         <div className="space-y-3">
           {recentActivities.length > 0 ? recentActivities.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()).slice(0, 8).map((act: any, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
+            <div key={`recent-act-${act.type}-${act.date}-${idx}`} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${
                   ['in', 'sampah_in'].includes(act.type) ? 'bg-green-50 text-green-600' : 
@@ -4101,7 +4109,7 @@ function ConfirmModal({
   );
 }
 
-function BukuTamuView({ bukuTamuData, setBukuTamuData, currentUser, tenantId, handleFirestoreError, showNotification }: { bukuTamuData: any[], setBukuTamuData: any, currentUser: any, tenantId: string, handleFirestoreError: any, showNotification: any }) {
+function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUser, tenantId, handleFirestoreError, showNotification }: { bukuTamuData: any[], setBukuTamuData: any, wargaData: any[], currentUser: any, tenantId: string, handleFirestoreError: any, showNotification: any }) {
   const [activeSubTab, setActiveSubTab] = useState<'monitor' | 'registrasi' | 'log'>('monitor');
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -4376,6 +4384,29 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, currentUser, tenantId, ha
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Pilih Warga (Auto-fill)</label>
+                        <select 
+                          className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl px-6 py-4 text-sm font-bold transition-all shadow-inner outline-none cursor-pointer"
+                          onChange={(e) => {
+                            const selectedWarga = wargaData.find(w => w.id === e.target.value);
+                            if (selectedWarga) {
+                                setFormData({
+                                    ...formData,
+                                    nama: selectedWarga.nama || '',
+                                    noHp: selectedWarga.hp || '',
+                                    alamat: selectedWarga.blok || ''
+                                });
+                            }
+                          }}
+                        >
+                            <option value="">-- Pilih Warga --</option>
+                            {wargaData.map(w => (
+                                <option key={w.id} value={w.id}>{w.nama} - {w.blok}</option>
+                            ))}
+                        </select>
+                      </div>
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nama Lengkap</label>
@@ -4804,6 +4835,7 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
           }
         });
         await batch.commit();
+        await new Promise(r => setTimeout(r, 400));
       }
 
       setSelectedWargaIds([]);
@@ -4875,7 +4907,7 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
     }
 
     const newData = validData.map((row: any) => ({
-      tenantId: tenantId,
+      tenantId: (row['Tenant ID'] || row['tenantId'] || row['TenantId'] || (currentTenant?.id === 'MASTER' ? null : currentTenant?.id) || tenantId === 'MASTER' ? 'RW26_SMART' : tenantId).toString(),
       nama: (row['Nama Lengkap'] || row['nama'] || "").toString(),
       nik: (row['NIK'] || row['nik'] || "").toString(),
       kk: (row['No. KK'] || row['no_kk'] || row['kk'] || "").toString(),
@@ -4904,19 +4936,21 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
 
     try {
       // 2. Use batch to write data efficiently
-      const batchSize = 400; // Firestore limit is 500, use 400 for safety
+      const batchSize = 100; // Dikurangi dari 400 ke 100 untuk mencegah timeout pada koneksi lambat
       
       console.log("Batching items:", newData.length);
       for (let i = 0; i < newData.length; i += batchSize) {
         const chunk = newData.slice(i, i + batchSize);
         const batch = writeBatch(db);
-        chunk.forEach(item => {
+        chunk.forEach((item: any) => {
           // Use tenantId prefix to ensure uniqueness across multi-tenant environment
-          const docId = `${tenantId}_${item.nik}`;
+          const docId = `${item.tenantId}_${item.nik}`;
           const docRef = doc(db, 'data_warga', docId);
           batch.set(docRef, item);
         });
         await batch.commit();
+        // Beri jeda 500ms antar batch agar tidak memberatkan server/koneksi
+        await new Promise(r => setTimeout(r, 500));
       }
       console.log("Batch committed successfully");
 
@@ -4928,8 +4962,8 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
   };
 
   // Form State for Adding/Editing
-  const [formData, setFormData] = useState({
-    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI", agama: "Islam"
+  const [formData, setFormData] = useState<any>({
+    nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI", agama: "Islam", targetTenant: tenantId === 'MASTER' ? 'RW_BERJUANG' : tenantId
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -4961,11 +4995,12 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
       }
     }
     
-    const newWarga = { ...formData, tenantId: tenantId || 'RW26_SMART', tglDaftar: new Date().toISOString().split('T')[0] };
+    const selectedTenantInfo = formData.targetTenant || (tenantId === 'MASTER' ? 'RW_BERJUANG' : tenantId) || 'RW26_SMART';
+    const newWarga = { ...formData, targetTenant: undefined, tenantId: selectedTenantInfo, tglDaftar: new Date().toISOString().split('T')[0] };
     
     setIsLoadingDB(true);
     try {
-      const docId = `${tenantId}_${newWarga.nik}`;
+      const docId = `${selectedTenantInfo}_${newWarga.nik}`;
       await setDoc(doc(db, 'data_warga', docId), newWarga);
       setShowAddForm(false);
       resetForm();
@@ -4988,15 +5023,18 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
 
     setIsLoadingDB(true);
     try {
-      const originalId = editingWarga.docId || `${tenantId}_${editingWarga.nik}`;
-      const newId = `${tenantId}_${formData.nik}`;
+      const selectedTenantInfo = formData.targetTenant || editingWarga.tenantId || (tenantId === 'MASTER' ? 'RW_BERJUANG' : tenantId);
+      const originalId = editingWarga.docId || `${editingWarga.tenantId || tenantId}_${editingWarga.nik}`;
+      const newId = `${selectedTenantInfo}_${formData.nik}`;
+
+      const dataToSave = { ...formData, targetTenant: undefined, tenantId: selectedTenantInfo };
 
       if (originalId !== newId) {
         // Jika ID berubah (atau sebelumnya menggunakan auto-id), pindahkan data ke ID NIK yang benar
-        await setDoc(doc(db, 'data_warga', newId), { ...formData, tenantId: tenantId });
+        await setDoc(doc(db, 'data_warga', newId), dataToSave);
         await deleteDoc(doc(db, 'data_warga', originalId));
       } else {
-        await updateDoc(doc(db, 'data_warga', originalId), { ...formData, tenantId: tenantId });
+        await updateDoc(doc(db, 'data_warga', originalId), dataToSave);
       }
 
       setShowEditForm(false);
@@ -5037,7 +5075,7 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
 
   const resetForm = () => {
     setFormData({
-      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI", agama: "Islam"
+      nama: "", nik: "", kk: "", rt: "01", rw: "05", blok: "", kelurahan: "", kecamatan: "", kota_kab: "", status: "Warga Tetap", hp: "", email: "", foto: "", ktpUrl: "", posisi: "", profesi: "", pendidikanTerakhir: "", jk: "Laki-Laki", tglLahir: "", tempatLahir: "", kawin: "Belum Kawin", kewarganegaraan: "WNI", agama: "Islam", targetTenant: tenantId === 'MASTER' ? 'RW_BERJUANG' : tenantId
     });
   };
 
@@ -5472,7 +5510,7 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
-                      {(userRole === 'ADMIN' || userRole === 'RT' || userRole === 'Admin') && (
+                      {(userRole === 'ADMIN' || userRole === 'RT' || userRole === 'Admin' || userRole === 'SUPER_ADMIN') && (
                         <button 
                           onClick={() => setWargaToDelete(warga)}
                           className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors" title="Hapus"
@@ -5757,6 +5795,17 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
                   </div>
                 </div>
               </div>
+
+              {isMaster && (
+                <div className="pt-4 border-t border-slate-100">
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Pilih Tenant (Khusus Super Admin)</label>
+                  <select name="targetTenant" value={formData.targetTenant} onChange={handleInputChange} className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm text-slate-700 bg-blue-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold">
+                    <option value="RW26_SMART">RW26 SMART (Default)</option>
+                    <option value="RW_BERJUANG">RW_BERJUANG (Tri)</option>
+                    <option value="trihprw26">trihprw26</option>
+                  </select>
+                </div>
+              )}
 
               <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
                 <button type="button" onClick={() => { setShowAddForm(false); setShowEditForm(false); resetForm(); }} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
@@ -6611,10 +6660,14 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
   const [activeView, setActiveView] = useState<'manajemen' | 'arsip'>('manajemen');
   const [showSuratForm, setShowSuratForm] = useState(false);
   const [editingSurat, setEditingSurat] = useState<any | null>(null);
+  const [suratToDelete, setSuratToDelete] = useState<any | null>(null);
+  const [suratToReject, setSuratToReject] = useState<any | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
   const [filterMonth, setFilterMonth] = useState("-1");
+  const [showNik, setShowNik] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const toRoman = (num: number) => {
@@ -6672,32 +6725,37 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
 
     setVal('pemohon', warga.nama);
     setVal('nik', warga.nik);
+    setVal('kk', warga.kk);
     setVal('ttl', `${warga.tempatLahir}, ${warga.tglLahir}`);
     setVal('jk', warga.jk);
+    setVal('kewarganegaraan', warga.kewarganegaraan || 'WNI');
     setVal('agama', warga.agama || 'Islam');
     setVal('pekerjaan', warga.profesi);
     setVal('statusKawin', warga.kawin);
-    setVal('alamat', `${warga.blok}, RT ${warga.rt} / RW ${warga.rw}`);
+    setVal('alamat', warga.blok);
     setVal('rt', warga.rt);
     setVal('rw', warga.rw);
-    setVal('kelurahan', warga.kelurahan);
-    setVal('kecamatan', warga.kecamatan);
-    setVal('kota_kab', warga.kota_kab);
-    setVal('kk', warga.kk);
-    setVal('kewarganegaraan', warga.kewarganegaraan || 'WNI');
-    setVal('nomor_surat', nomorOtomatis);
+    setVal('kelurahan', warga.kelurahan || 'Sukamaju');
+    setVal('kecamatan', warga.kecamatan || 'Sukajaya');
     setVal('ketua', ketuaRT);
-    setVal('ketua_rw_nama', ketuaRW); // Temporary field to pass RW name
+    setVal('ketua_rw_nama', ketuaRW);
+    setVal('nomor_surat', nomorOtomatis);
+    setVal('umur', warga.tglLahir ? Math.floor((new Date().getTime() - new Date(warga.tglLahir).getTime()) / (365.25 * 24 * 60 * 60 * 1000)).toString() : '');
     
     setSearchTerm("");
     setSearchResults([]);
   };
 
   const handleSetujui = async (id: string) => {
+    const s = suratData.find(x => x.id === id);
+    if (!s) return;
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'surat', id), { status: "Selesai", tenantId: tenantId });
-      setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Selesai" } : s));
+      await updateDoc(doc(db, 'surat', id), { 
+        status: "Disetujui",
+        updatedAt: new Date().toISOString(),
+        approvedBy: currentUser?.nama || currentUser?.name || 'Admin'
+      });
       showNotification("Pengajuan surat telah disetujui.", 'success');
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/surat/${id}`);
@@ -6707,38 +6765,57 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
     }
   };
 
-  const handleTolak = async (id: string) => {
-    if (!id) return;
-    const reason = prompt("Masukkan alasan penolakan surat:");
-    if (reason === null) return; // User cancelled
-
+  const handleSelesaikan = async (id: string) => {
     setIsLoadingDB(true);
     try {
       await updateDoc(doc(db, 'surat', id), { 
-        status: "Ditolak", 
-        catatanAlasan: reason,
-        updatedAt: new Date().toISOString(),
-        rejectedBy: currentUser?.name || 'Admin'
+        status: "Selesai",
+        updatedAt: new Date().toISOString()
       });
-      setSuratData((prev: any[]) => prev.map(s => s.id === id ? { ...s, status: "Ditolak", catatanAlasan: reason } : s));
-      showNotification("Pengajuan surat telah ditolak dengan alasan.", 'info');
+      showNotification("Surat telah ditandai sebagai Selesai.", 'info');
     } catch (error: any) {
       handleFirestoreError(error, 'update', `/surat/${id}`);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleTolak = async () => {
+    if (!suratToReject) return;
+    if (!rejectReason.trim()) {
+      showNotification("Sertakan alasan penolakan.", "error");
+      return;
+    }
+
+    setIsLoadingDB(true);
+    try {
+      await updateDoc(doc(db, 'surat', suratToReject.id), { 
+        status: "Ditolak", 
+        catatanAlasan: rejectReason,
+        updatedAt: new Date().toISOString(),
+        rejectedBy: currentUser?.nama || currentUser?.name || 'Admin'
+      });
+      showNotification("Pengajuan surat telah ditolak.", 'info');
+      setSuratToReject(null);
+      setRejectReason("");
+    } catch (error: any) {
+      handleFirestoreError(error, 'update', `/surat/${suratToReject.id}`);
       showNotification("Gagal menolak pengajuan surat.", 'error');
     } finally {
       setIsLoadingDB(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus pengajuan surat ini?")) return;
+  const handleDelete = async () => {
+    if (!suratToDelete) return;
     setIsLoadingDB(true);
     try {
-      await deleteDoc(doc(db, 'surat', id));
-      setSuratData((prev: any[]) => prev.filter(s => s.id !== id));
+      await deleteDoc(doc(db, 'surat', suratToDelete.id));
+      setSuratData((prev: any[]) => prev.filter(s => s.id !== suratToDelete.id));
       showNotification("Pengajuan surat berhasil dihapus.", 'success');
+      setSuratToDelete(null);
     } catch (error: any) {
-      handleFirestoreError(error, 'delete', `/surat/${id}`);
+      handleFirestoreError(error, 'delete', `/surat/${suratToDelete.id}`);
       showNotification("Gagal menghapus pengajuan surat.", 'error');
     } finally {
       setIsLoadingDB(false);
@@ -6841,7 +6918,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
     showNotification('Data Surat berhasil diekspor ke Excel');
   };
 
-  const handleAddSurat = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveSurat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
@@ -7023,7 +7100,9 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                   className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500"
                 >
                   <option value="-1">Semua Bulan</option>
-                  {Object.entries(monthMap).map(([name, idx]) => <option key={idx} value={idx}>{name}</option>)}
+                  {Object.entries(monthMap).map(([name, idx], i) => (
+                    <option key={`${name}-${idx}-${i}`} value={idx}>{name}</option>
+                  ))}
                 </select>
               </>
             )}
@@ -7057,7 +7136,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col gap-1.5">
                        <span className={`w-fit px-2 py-0.5 text-[8px] uppercase font-black rounded border ${
-                        surat.status === 'Selesai' ? 'border-green-200 bg-green-50 text-green-700' : 
+                        ['Selesai', 'Disetujui'].includes(surat.status) ? 'border-green-200 bg-green-50 text-green-700' : 
                         surat.status === 'Ditolak' ? 'border-red-200 bg-red-50 text-red-700' :
                         'border-orange-200 bg-orange-50 text-orange-700'
                       }`}>
@@ -7081,12 +7160,16 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                       {userRole !== 'Viewer' && surat.status === 'Diajukan' && (
                         <>
                           <button disabled={isLoadingDB} onClick={() => handleSetujui(surat.id)} className="text-[10px] font-black uppercase text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 hover:bg-green-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Setujui</button>
-                          <button disabled={isLoadingDB} onClick={() => handleTolak(surat.id)} className="text-[10px] font-black uppercase text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Tolak</button>
+                          <button disabled={isLoadingDB} onClick={() => setSuratToReject(surat)} className="text-[10px] font-black uppercase text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Tolak</button>
                         </>
                       )}
+
+                      {userRole !== 'Viewer' && surat.status === 'Disetujui' && (
+                        <button disabled={isLoadingDB} onClick={() => handleSelesaikan(surat.id)} className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all active:scale-95 disabled:opacity-50">Selesaikan</button>
+                      )}
                       
-                      <div className="flex gap-1 group-hover:opacity-100 opacity-60 transition-opacity">
-                        {surat.status === 'Selesai' && (
+                      <div className="flex gap-1">
+                        {['Selesai', 'Disetujui'].includes(surat.status) && (
                           <button onClick={() => handleCetak(surat.id)} className="bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 p-2 rounded-lg border border-slate-100 transition-all" title="Cetak Surat (PDF)">
                             <Printer className="w-3.5 h-3.5" />
                           </button>
@@ -7103,8 +7186,8 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                            </a>
                          )}
                         <button 
-                          disabled={isLoadingDB} 
-                          onClick={() => handleDelete(surat.id)} 
+                          disabled={isLoadingDB || userRole === 'Viewer'} 
+                          onClick={() => setSuratToDelete(surat)} 
                           className="bg-red-50 hover:bg-red-600 text-red-400 hover:text-white p-2 rounded-lg border border-red-100 transition-all disabled:opacity-50 disabled:cursor-wait active:scale-95 shadow-sm" 
                           title="Hapus Permanen"
                         >
@@ -7148,11 +7231,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
-            {showSuratForm && (
-              <></>
-            )}
-            <form ref={formRef} onSubmit={handleAddSurat} className="p-5 overflow-y-auto space-y-5">
+            <form className="p-6 space-y-4 overflow-y-auto" onSubmit={handleSaveSurat} ref={formRef}>
               {/* Seksi 1: Identitas Pribadi */}
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
                 <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5 mb-1">
@@ -7194,7 +7273,16 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor NIK</label>
-                    <input name="nik" type="text" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="NIK" />
+                    <div className="relative">
+                      <input name="nik" type={showNik ? "text" : "password"} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="NIK" />
+                      <button 
+                        type="button"
+                        onClick={() => setShowNik(!showNik)}
+                        className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showNik ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor KK</label>
@@ -7301,12 +7389,31 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">Jenis Surat</label>
                     <select name="jenisSurat" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-bold cursor-pointer">
-                      <option value="SURAT PENGANTAR">SURAT PENGANTAR</option>
+                      <option value="SURAT PENGANTAR (Umum)">SURAT PENGANTAR (Umum)</option>
+                      <option value="SURAT PENGANTAR KTP (BARU / PERPANJANGAN)">SURAT PENGANTAR KTP (BARU / PERPANJANGAN)</option>
+                      <option value="SURAT PENGANTAR KK (BARU / PERUBAHAN)">SURAT PENGANTAR KK (BARU / PERUBAHAN)</option>
+                      <option value="SURAT PENGANTAR PINDAH DOMISILI">SURAT PENGANTAR PINDAH DOMISILI</option>
                       <option value="SURAT KETERANGAN DOMISILI">SURAT KETERANGAN DOMISILI</option>
-                      <option value="SURAT PENGANTAR SKCK">SURAT PENGANTAR SKCK</option>
-                      <option value="SURAT KETERANGAN USAHA">SURAT KETERANGAN USAHA</option>
+                      <option value="SURAT KETERANGAN TEMPAT TINGGAL">SURAT KETERANGAN TEMPAT TINGGAL</option>
+                      <option value="SURAT KETERANGAN KELAHIRAN">SURAT KETERANGAN KELAHIRAN</option>
+                      <option value="SURAT KETERANGAN KEMATIAN">SURAT KETERANGAN KEMATIAN</option>
+                      <option value="SURAT PENGANTAR NIKAH">SURAT PENGANTAR NIKAH</option>
+                      <option value="SURAT PENGANTAR CERAI">SURAT PENGANTAR CERAI</option>
                       <option value="SURAT KETERANGAN TIDAK MAMPU (SKTM)">SURAT KETERANGAN TIDAK MAMPU (SKTM)</option>
-                      <option value="LAINNYA">LAINNYA...</option>
+                      <option value="SURAT PENGANTAR BANTUAN SOSIAL (BANSOS)">SURAT PENGANTAR BANTUAN SOSIAL (BANSOS)</option>
+                      <option value="SURAT KETERANGAN PENGHASILAN">SURAT KETERANGAN PENGHASILAN</option>
+                      <option value="SURAT KETERANGAN USAHA (SKU)">SURAT KETERANGAN USAHA (SKU)</option>
+                      <option value="SURAT DOMISILI USAHA">SURAT DOMISILI USAHA</option>
+                      <option value="SURAT PENGANTAR IZIN USAHA MIKRO">SURAT PENGANTAR IZIN USAHA MIKRO</option>
+                      <option value="SURAT PENGANTAR SKCK">SURAT PENGANTAR SKCK</option>
+                      <option value="SURAT IZIN KERAMAIAN">SURAT IZIN KERAMAIAN</option>
+                      <option value="SURAT KETERANGAN DOMISILI SEKOLAH">SURAT KETERANGAN DOMISILI SEKOLAH</option>
+                      <option value="SURAT PENGANTAR KERJA">SURAT PENGANTAR KERJA</option>
+                      <option value="SURAT KETERANGAN MAGANG">SURAT KETERANGAN MAGANG</option>
+                      <option value="SURAT PENGANTAR TAMU / LAPOR TAMU">SURAT PENGANTAR TAMU / LAPOR TAMU</option>
+                      <option value="SURAT KETERANGAN KEPEMILIKAN RUMAH (NON-SERTIFIKAT)">SURAT KETERANGAN KEPEMILIKAN RUMAH (NON-SERTIFIKAT)</option>
+                      <option value="SURAT PENGANTAR BANK / KREDIT">SURAT PENGANTAR BANK / KREDIT</option>
+                      <option value="SURAT REKOMENDASI RT/RW (UMUM)">SURAT REKOMENDASI RT/RW (UMUM)</option>
                     </select>
                   </div>
                 </div>
@@ -7352,6 +7459,60 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {suratToDelete && (
+          <ConfirmModal 
+            isOpen={true}
+            title="Hapus Pengajuan Surat"
+            message={`Apakah Anda yakin ingin menghapus pengajuan surat oleh "${suratToDelete.pemohon}"?`}
+            onConfirm={handleDelete}
+            onCancel={() => setSuratToDelete(null)}
+            confirmText="Hapus Permanen"
+            cancelText="Batal"
+            isLoading={isLoadingDB}
+          />
+        )}
+
+        {suratToReject && (
+          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
+            <motion.div 
+               initial={{opacity:0, scale:0.95, y:20}} 
+               animate={{opacity:1, scale:1, y:0}} 
+               exit={{opacity:0, scale:0.95, y:20}}
+               className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 space-y-6 border border-slate-200"
+            >
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="w-16 h-16 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black text-slate-800 tracking-tighter leading-none">Tolak Pengajuan</h3>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Berikan alasan tindak lanjut</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Alasan Penolakan</label>
+                <textarea 
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Contoh: Berkas persyaratan tidak lengkap / Data tidak valid..."
+                  className="w-full h-32 border border-slate-200 rounded-2xl p-4 text-sm text-slate-700 font-medium focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50/50 transition-all bg-slate-50"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => {setSuratToReject(null); setRejectReason("");}} className="flex-1 py-3 text-slate-400 font-black uppercase text-[10px] tracking-widest bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">Batal</button>
+                <button onClick={handleTolak} disabled={isLoadingDB} className="flex-1 py-3 bg-red-600 text-white font-black uppercase text-[10px] tracking-widest rounded-2xl shadow-xl shadow-red-100 hover:bg-red-700 transition-all active:scale-95 disabled:bg-slate-300">
+                  {isLoadingDB ? 'Memproses...' : 'Tolak Surat'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -7938,7 +8099,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Pembayar / Penerima</label>
                 <input name="nama" list="wargaListKas" required defaultValue={editingKas?.nama} placeholder="Ketik Nama..." className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500" />
                 <datalist id="wargaListKas">
-                  {wargaData.map(w => <option key={w.nik} value={w.nama} />)}
+                  {wargaData.map((w, idx) => <option key={w.nik || `kas-warga-${idx}`} value={w.nama} />)}
                 </datalist>
               </div>
 
@@ -8046,12 +8207,6 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
           </div>
         </div>
       )}
-
-      <datalist id="wargaListKas">
-        {wargaData && wargaData.map((w, idx) => (
-          <option key={idx} value={w.nama} />
-        ))}
-      </datalist>
 
       {/* Transaction Detail Modal */}
       {viewingKas && (
@@ -9069,7 +9224,7 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, isLoadingDB:
                           <button 
                             onClick={() => handleDelete(item.id)}
                             disabled={actionLoading}
-                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent disabled:opacity-50"
+                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent disabled:opacity-50"
                             title="Hapus Permanen"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -9262,7 +9417,7 @@ function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, isLoadingDB:
   );
 }
 
-function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratData, setWargaAuth, tenantId, setIsLoadingDB, handleFileUpload, showNotification, handleFirestoreError, kopSettings, getSetting, usersData, generateSuratHTML, settings }: { wargaData: any, verifikasiData: any[], suratData?: any[], setSuratData: any, setWargaAuth: any, tenantId: string, setIsLoadingDB: any, handleFileUpload: any, showNotification: any, handleFirestoreError: any, kopSettings: any, getSetting: any, usersData: any[], generateSuratHTML: any, settings: any }) {
+function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratData, setWargaAuth, tenantId, isLoadingDB, setIsLoadingDB, handleFileUpload, showNotification, handleFirestoreError, kopSettings, getSetting, usersData, generateSuratHTML, settings }: { wargaData: any, verifikasiData: any[], suratData?: any[], setSuratData: any, setWargaAuth: any, tenantId: string, isLoadingDB: boolean, setIsLoadingDB: any, handleFileUpload: any, showNotification: any, handleFirestoreError: any, kopSettings: any, getSetting: any, usersData: any[], generateSuratHTML: any, settings: any }) {
   const [activeCitizenTab, setActiveCitizenTab] = useState<'profil' | 'layanan' | 'riwayat'>('profil');
   const [uploadPct, setUploadPct] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -9459,9 +9614,10 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
         catatan: 'Konfirmasi Data Mandiri (Tidak ada perubahan)'
       };
       await setDoc(doc(db, 'verifikasi_warga', id), submission, { merge: true });
-      showNotification("Terima kasih! Data Anda telah diverifikasi sukses.", "success");
+      showNotification("Terima kasih! Konfirmasi data Anda telah dikirim ke admin untuk diverifikasi.", "success");
     } catch (err) {
       handleFirestoreError(err, 'create', 'verifikasi_warga');
+      showNotification("Gagal mengirim konfirmasi data. Silakan coba lagi.", "error");
     } finally {
       setIsLoadingDB(false);
     }
@@ -9599,16 +9755,16 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
                 <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
                   <button 
                     onClick={handleDataSudahBenar}
-                    disabled={currentStatus === 'Disetujui' || currentStatus === 'Menunggu Persetujuan'}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                    disabled={isLoadingDB || currentStatus === 'Disetujui'}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale active:scale-95"
                   >
                     <CheckCircle className="w-5 h-5" />
                     Data Sudah Benar
                   </button>
                   <button 
                     onClick={() => setIsEditing(true)}
-                    disabled={currentStatus === 'Menunggu Persetujuan'}
-                    className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-3.5 px-6 rounded-2xl transition-all border border-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                    disabled={isLoadingDB || currentStatus === 'Disetujui'}
+                    className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-3.5 px-6 rounded-2xl transition-all border border-blue-100 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
                   >
                     <Edit className="w-5 h-5" />
                     Ajukan Perbaikan
@@ -9832,11 +9988,31 @@ function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratD
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Jenis Surat yang Dibutuhkan</label>
                   <select name="jenisSurat" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold text-slate-700">
-                    <option value="SURAT PENGANTAR">SURAT PENGANTAR (Umum)</option>
+                    <option value="SURAT PENGANTAR (Umum)">SURAT PENGANTAR (Umum)</option>
+                    <option value="SURAT PENGANTAR KTP (BARU / PERPANJANGAN)">SURAT PENGANTAR KTP (BARU / PERPANJANGAN)</option>
+                    <option value="SURAT PENGANTAR KK (BARU / PERUBAHAN)">SURAT PENGANTAR KK (BARU / PERUBAHAN)</option>
+                    <option value="SURAT PENGANTAR PINDAH DOMISILI">SURAT PENGANTAR PINDAH DOMISILI</option>
                     <option value="SURAT KETERANGAN DOMISILI">SURAT KETERANGAN DOMISILI</option>
-                    <option value="SURAT PENGANTAR SKCK">SURAT PENGANTAR SKCK</option>
-                    <option value="SURAT KETERANGAN USAHA">SURAT KETERANGAN USAHA</option>
+                    <option value="SURAT KETERANGAN TEMPAT TINGGAL">SURAT KETERANGAN TEMPAT TINGGAL</option>
+                    <option value="SURAT KETERANGAN KELAHIRAN">SURAT KETERANGAN KELAHIRAN</option>
+                    <option value="SURAT KETERANGAN KEMATIAN">SURAT KETERANGAN KEMATIAN</option>
+                    <option value="SURAT PENGANTAR NIKAH">SURAT PENGANTAR NIKAH</option>
+                    <option value="SURAT PENGANTAR CERAI">SURAT PENGANTAR CERAI</option>
                     <option value="SURAT KETERANGAN TIDAK MAMPU (SKTM)">SURAT KETERANGAN TIDAK MAMPU (SKTM)</option>
+                    <option value="SURAT PENGANTAR BANTUAN SOSIAL (BANSOS)">SURAT PENGANTAR BANTUAN SOSIAL (BANSOS)</option>
+                    <option value="SURAT KETERANGAN PENGHASILAN">SURAT KETERANGAN PENGHASILAN</option>
+                    <option value="SURAT KETERANGAN USAHA (SKU)">SURAT KETERANGAN USAHA (SKU)</option>
+                    <option value="SURAT DOMISILI USAHA">SURAT DOMISILI USAHA</option>
+                    <option value="SURAT PENGANTAR IZIN USAHA MIKRO">SURAT PENGANTAR IZIN USAHA MIKRO</option>
+                    <option value="SURAT PENGANTAR SKCK">SURAT PENGANTAR SKCK</option>
+                    <option value="SURAT IZIN KERAMAIAN">SURAT IZIN KERAMAIAN</option>
+                    <option value="SURAT KETERANGAN DOMISILI SEKOLAH">SURAT KETERANGAN DOMISILI SEKOLAH</option>
+                    <option value="SURAT PENGANTAR KERJA">SURAT PENGANTAR KERJA</option>
+                    <option value="SURAT KETERANGAN MAGANG">SURAT KETERANGAN MAGANG</option>
+                    <option value="SURAT PENGANTAR TAMU / LAPOR TAMU">SURAT PENGANTAR TAMU / LAPOR TAMU</option>
+                    <option value="SURAT KETERANGAN KEPEMILIKAN RUMAH (NON-SERTIFIKAT)">SURAT KETERANGAN KEPEMILIKAN RUMAH (NON-SERTIFIKAT)</option>
+                    <option value="SURAT PENGANTAR BANK / KREDIT">SURAT PENGANTAR BANK / KREDIT</option>
+                    <option value="SURAT REKOMENDASI RT/RW (UMUM)">SURAT REKOMENDASI RT/RW (UMUM)</option>
                   </select>
                 </div>
 
@@ -10311,6 +10487,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showKK, setShowKK] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<'admin' | 'warga' | 'verifikasi'>('admin'); // Default to admin for easier access
@@ -10864,13 +11041,20 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                         <Lock className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
                       </div>
                       <input
-                        type="password"
+                        type={showKK ? "text" : "password"}
                         required
                         value={kodeKeluarga}
                         onChange={(e) => setKodeKeluarga(e.target.value)}
-                        className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base"
+                        className="w-full pl-14 pr-14 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base"
                         placeholder="Nomor KK atau No. HP"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowKK(!showKK)}
+                        className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {showKK ? <EyeOff className="w-5 h-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
                   <button
@@ -10903,10 +11087,11 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
              {loginMode === 'admin' && (
                <div className="mt-8 pt-8 border-t-2 border-slate-100 border-dashed">
                  <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Awal Cepat Uji Coba</p>
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                    <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'arifrajcoach@gmail.com', '4R1f080162a3')} className="w-full bg-slate-50 hover:bg-brand-blue hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Super</button>
                    <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'admin@rw26.com', 'admin123')} className="w-full bg-slate-50 hover:bg-brand-pink hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Admin</button>
                    <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'operator@rw26.com', 'operator123')} className="w-full bg-slate-50 hover:bg-brand-yellow hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Kader</button>
+                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'rt01@rw26.com', 'rt01123')} className="w-full bg-slate-50 hover:bg-purple-600 hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">RT01</button>
                    <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'warga@rw26.com', 'warga123')} className="w-full bg-slate-50 hover:bg-brand-green hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Warga</button>
                  </div>
                </div>
@@ -10920,6 +11105,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
 function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification, settings }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void, settings: any }) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showRTForm, setShowRTForm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -10992,13 +11178,22 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
               <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
               Manajemen Pengguna & Pemetaan Unit
             </h3>
-            <button 
-              onClick={() => { setEditingUser(null); setShowForm(true); }}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Tambah User
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => { setEditingUser(null); setShowForm(true); }}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Tambah User
+              </button>
+              <button 
+                onClick={() => setShowRTForm(true)}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                <UserPlus className="w-4 h-4" />
+                Daftar RT
+              </button>
+            </div>
          </div>
          
          <div className="overflow-x-auto border border-slate-100 rounded-lg">
@@ -11021,7 +11216,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                  </tr>
                )}
                {usersData.map((user) => (
-                 <tr key={user.uid || user.id_user} className="hover:bg-slate-50/50 transition-colors">
+                 <tr key={user.uid || user.id_user || user.nik || `user-${user.username}`} className="hover:bg-slate-50/50 transition-colors">
                    <td className="px-4 py-3">
                      <p className="text-xs font-bold text-slate-700">{user.nama || user.name}</p>
                    </td>
@@ -11084,6 +11279,17 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
             onCancel={() => setUserToDelete(null)}
             confirmText="Hapus"
             cancelText="Batal"
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showRTForm && (
+          <RTRegistrationForm 
+            onClose={() => setShowRTForm(false)} 
+            onSave={() => {}} 
+            showNotification={showNotification} 
+            handleFirestoreError={handleFirestoreError} 
           />
         )}
       </AnimatePresence>
@@ -11337,8 +11543,8 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                     <td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic text-sm">Belum ada tenant terdaftar.</td>
                   </tr>
                 )}
-                {tenantsData.map((tenant) => (
-                  <tr key={tenant.id} className={`hover:bg-blue-50/20 transition-colors ${tenant.isActive === false ? 'bg-slate-50/50 grayscale-[0.5]' : ''}`}>
+                {tenantsData.map((tenant, idx) => (
+                  <tr key={tenant.id || `tenant-${idx}`} className={`hover:bg-blue-50/20 transition-colors ${tenant.isActive === false ? 'bg-slate-50/50 grayscale-[0.5]' : ''}`}>
                     <td className="px-6 py-4">
                        <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tenant.isActive === false ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-400'}`}>
@@ -13061,7 +13267,7 @@ function PosyanduView({
                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Orang Tua (Pilih dari Data Warga)</label>
                        <input type="text" name="orangTuaId" list="wargaList" required defaultValue={editingItem?.orangTuaId} placeholder="Ketik NIK atau Nama Orang Tua..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-pink-500" />
                        <datalist id="wargaList">
-                          {wargaData.map((w: any) => <option key={w.nik} value={w.nik}>{w.nama} - RT {w.rt}</option>)}
+                          {wargaData.map((w: any, idx: number) => <option key={`${w.nik || 'w'}-${idx}`} value={w.nik}>{w.nama} - RT {w.rt}</option>)}
                        </datalist>
                     </div>
                     <div className="col-span-1">
@@ -14036,8 +14242,8 @@ function BankSampahView({
                     {[
                       ...sampahSetoranData.filter((s: any) => s.nasabahId === selectedNasabah.nik).map(s => ({ ...s, type: 'setoran' })),
                       ...sampahTarikSaldoData.filter((t: any) => t.nasabahId === selectedNasabah.nik).map(t => ({ ...t, type: 'tarik' }))
-                    ].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()).map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:shadow-md transition-all shadow-sm">
+                    ].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()).map((item: any, idx) => (
+                      <div key={`sampah-detail-hist-${item.id || idx}-${item.type}`} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:shadow-md transition-all shadow-sm">
                          <div className="flex items-center gap-4">
                             <div className={`p-2 rounded-lg ${item.type === 'setoran' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                                {item.type === 'setoran' ? <TrendingUp className="w-4 h-4" /> : <HandCoins className="w-4 h-4" />}

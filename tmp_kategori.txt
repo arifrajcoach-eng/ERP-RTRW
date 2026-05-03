@@ -1,0 +1,28 @@
+83:  { id: "INV-BRG-001", nama_barang: "Kursi Lipat Merek Chitose", kategori: "Aset Tenda & Kursi", jumlah: 50, kondisi: "Baik", lokasi: "Gudang RT 01", tanggal_pengadaan: "2024-01-10", keterangan: "Pengadaan Mandiri" },
+84:  { id: "INV-BRG-002", nama_barang: "Tenda 3x4 Meter", kategori: "Aset Tenda & Kursi", jumlah: 2, kondisi: "Baik", lokasi: "Gudang RW", tanggal_pengadaan: "2023-05-15", keterangan: "Bantuan Desa" },
+85:  { id: "INV-BRG-003", nama_barang: "Sound System Portable", kategori: "Elektronik", jumlah: 1, kondisi: "Rusak Ringan", lokasi: "Pos Kamling", tanggal_pengadaan: "2022-11-20", keterangan: "Mic kadang putus" },
+982:      unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', 'in', tIds)), 
+1077:      unsubSampahKategori = onSnapshot(getRTFilter('sampah_kategori'), 
+1082:        (err) => { handleFirestoreError(err, 'list', 'sampah_kategori'); onDataLoaded(); }
+13406:  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'setoran' | 'tarik' | 'nasabah' | 'kategori' | 'nasabah_detail'>('dashboard');
+13443:              namaKategori: row.Kategori || row.kategori || 'Impor Masal',
+13504:      await setDoc(doc(db, 'sampah_kategori', data.id), data);
+13509:      handleFirestoreError(err, 'create', 'sampah_kategori');
+13516:    const katId = formData.get('kategoriId') as string;
+13517:    const kategori = sampahKategoriData.find((k: any) => k.id === katId);
+13522:    const harga = kategori?.hargaBeli || 0;
+13530:      kategoriId: katId,
+13531:      namaKategori: kategori?.nama || 'Unknown',
+13858:            { id: 'kategori', label: 'Kategori', icon: Settings },
+14326:      {activeSubTab === 'kategori' && (
+14347:                       <button onClick={() => deleteItem('sampah_kategori', kat.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+14418:                      <select name="kategoriId" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500">
+14582:    item.kategori?.toLowerCase().includes(searchQuery.toLowerCase())
+14605:        kategori: formData.get('kategori') as string,
+14621:      if (itemData.kategori) {
+14622:        const kExists = inventarisKategori.find(k => k.nama_kategori?.toLowerCase() === itemData.kategori?.toLowerCase());
+14625:          await setDoc(doc(db, 'inventaris_kategori', kId), { id: kId, nama_kategori: itemData.kategori, tenantId });
+14890:                      <p className="text-[11px] font-bold text-slate-700">{item.kategori || '-'}</p>
+14982:                   <input type="text" name="kategori" list="kategoriList" required defaultValue={editingItem?.kategori} placeholder="Pilih / Ketik Kategori..." className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-blue-500 outline-none font-bold text-slate-600" />
+14983:                   <datalist id="kategoriList">
+14984:                      {inventarisKategori.map(k => <option key={k.id} value={k.nama_kategori} />)}

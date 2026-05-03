@@ -1,0 +1,167 @@
+331:  const [currentUser, setCurrentUser] = useState<{name: string, role: string, email?: string, tenantId?: string, isSuperAdmin?: boolean} | null>(null);
+367:            // Fix missing or wrong tenantId for known client
+368:            if (isTrihUser && userData.tenantId !== 'RW_BERJUANG') {
+369:              userData.tenantId = 'RW_BERJUANG';
+376:              const isAdminStatusWrong = userData.role !== 'SUPER_ADMIN' || !userData.isSuperAdmin || userData.tenantId !== 'MASTER';
+380:              userData.tenantId = 'MASTER';
+394:                    tenantId: userData.tenantId
+408:              tenantId: overrideAdmin ? "MASTER" : "RW26_SMART",
+418:            // Set default tenantId based on username or email
+419:            let tenantId = 'RW26_SMART';
+421:              tenantId = 'RW_BERJUANG';
+423:              // Extract potential tenantId from email if it's a custom domain or structured
+426:                tenantId = domain.replace(/\./g, '_');
+435:              tenantId = 'MASTER'; // Super Admin sees overall or master data
+445:              tenantId: tenantId, 
+672:        tenantId: currentUser.tenantId || 'RW26_SMART',
+720:    const tId = currentUser?.tenantId || wargaAuth?.tenantId || 'RW26_SMART';
+790:      // Jika di Dashboard utama (MASTER), kita ambil hanya data yang berlabel MASTER atau tenantId yang aktif
+791:      const constraints = [where('tenantId', 'in', tIds)];
+817:        const constraints = [where('tenantId', 'in', tIds)];
+840:      unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', 'in', tIds)), 
+858:        unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', 'in', tIds), where('authUid', '==', uid)), 
+877:      unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', 'in', tIds)), 
+894:        unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', 'in', tIds), where('userId', '==', uid)), 
+911:      unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', 'in', tIds)), 
+925:        unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', 'in', tIds), where('userId', '==', uid)), 
+946:        const constraints = [where('tenantId', 'in', tIds)];
+968:        const constraints = [where('tenantId', 'in', tIds)];
+986:      unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', 'in', tIds)), 
+989:      unsubInventarisLokasi = onSnapshot(query(collection(db, 'inventaris_lokasi'), where('tenantId', 'in', tIds)), 
+992:      unsubInventarisSupplier = onSnapshot(query(collection(db, 'inventaris_supplier'), where('tenantId', 'in', tIds)), 
+1009:        const constraints = [where('tenantId', 'in', tIds)];
+1074:        const constraints = [where('tenantId', 'in', tIds)];
+1104:    const unsubEmergencies = onSnapshot(query(collection(db, 'emergencies'), where('tenantId', 'in', tIds)), 
+1112:    const unsubVotingCandidates = onSnapshot(query(collection(db, 'voting_candidates'), where('tenantId', 'in', tIds)), 
+1128:    const unsubUserVotes = onSnapshot(query(collection(db, 'voting_votes'), where('tenantId', 'in', tIds)), 
+1136:    const unsubTokoProducts = onSnapshot(query(collection(db, 'toko_products'), where('tenantId', 'in', tIds)), 
+1146:      const constraints = [where('tenantId', 'in', tIds)];
+1183:      const constraints = [where('tenantId', 'in', tIds)];
+1204:        : (currentUser.tenantId === 'RW_BERJUANG' 
+1205:            ? query(collection(db, 'users'), where('tenantId', 'in', ['RW_BERJUANG', 'trihprw26']))
+1206:            : query(collection(db, 'users'), where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'))
+1330:        tenantId: currentUser?.tenantId || 'unknown',
+1440:        tenantId={currentUser?.tenantId || 'RW26_SMART'}
+1509:        tenantId={wargaAuth.tenantId || 'RW26_SMART'} 
+1592:            <p className="text-[10px] text-slate-700 font-mono font-bold truncate">{currentUser.tenantId || 'RW26_SMART'}</p>
+1748:          {activeTab === 'warga' && <WargaView wargaData={wargaData} currentTenant={currentTenant} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+1755:              tenantId={currentUser?.tenantId && currentUser.tenantId !== 'unknown' ? currentUser.tenantId : 'RW26_SMART'}
+1760:          {activeTab === 'verifikasi' && <VerifikasiAdminView verifikasiData={verifikasiWargaData} wargaData={wargaData} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} showNotification={showNotification} handleFirestoreError={handleFirestoreError} currentUser={currentUser} />}
+1770:              tenantId={currentUser.tenantId || 'RW26_SMART'} 
+1787:                wargaData={wargaData} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'}
+1808:                tenantId={currentUser.tenantId || 'RW26_SMART'}
+1826:             userRole={currentUser.role} currentUser={currentUser} tenantId={currentUser.tenantId || 'RW26_SMART'} 
+1830:          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} />}
+1834:          {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} settings={settings} />}
+1836:          {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} currentTenant={currentTenant} wargaData={wargaData} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} currentUser={currentUser} setActiveTab={setActiveTab} />}
+1841:                tenantId={currentUser.tenantId || 'RW26_SMART'}
+1863:            tenantId={currentUser.tenantId || 'RW26_SMART'}
+2176:  tenantId, 
+2187:  tenantId: string, 
+2287:        tenantId,
+2330:        tenantId,
+2944:  tenantId, 
+2955:  tenantId: string, 
+3009:  const isAtLeastRW = userRole === 'ADMIN' || userRole === 'RW' || userRole === 'SUPER_ADMIN' || tenantId === 'MASTER';
+3035:        tenantId,
+3057:        tenantId,
+3112:      await setDoc(doc(db, 'voting_config', tenantId), {
+3129:      await setDoc(doc(db, 'voting_config', tenantId), {
+4111:function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUser, tenantId, handleFirestoreError, showNotification }: { bukuTamuData: any[], setBukuTamuData: any, wargaData: any[], currentUser: any, tenantId: string, handleFirestoreError: any, showNotification: any }) {
+4129:    const q = query(collection(db, 'buku_tamu'), where('tenantId', '==', tenantId));
+4135:  }, [tenantId]);
+4158:        tenantId,
+4205:    XLSX.writeFile(wb, `Buku_Tamu_${tenantId}_${new Date().toLocaleDateString()}.xlsx`);
+4211:    doc.text(`Log Buku Tamu - ${tenantId}`, 14, 15);
+4233:    doc.save(`Buku_Tamu_${tenantId}.pdf`);
+4741:function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { wargaData: any[], currentTenant?: any, setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+4908:      tenantId: currentTenant?.id || tenantId,
+4944:          // Use tenantId prefix to ensure uniqueness across multi-tenant environment
+4945:          const docId = `${tenantId}_${item.nik}`;
+4994:    const newWarga = { ...formData, tenantId: tenantId || 'RW26_SMART', tglDaftar: new Date().toISOString().split('T')[0] };
+4998:      const docId = `${tenantId}_${newWarga.nik}`;
+5021:      const originalId = editingWarga.docId || `${tenantId}_${editingWarga.nik}`;
+5022:      const newId = `${tenantId}_${formData.nik}`;
+5026:        await setDoc(doc(db, 'data_warga', newId), { ...formData, tenantId: tenantId });
+5029:        await updateDoc(doc(db, 'data_warga', originalId), { ...formData, tenantId: tenantId });
+5162:    link.setAttribute("download", `Data_Warga_Lengkap_${tenantId}.csv`);
+5181:      doc.text(`RW26 BERJUANG - ${tenantId}`, pageWidth / 2, 26, { align: 'center' });
+5235:    doc.save(`Biodata_Warga_Lengkap_${tenantId}.pdf`);
+5266:  const isMaster = tenantId === 'MASTER';
+5934:function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, currentUser, getSetting, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: any) {
+5985:      tenantId,
+6012:          tenantId,
+6053:        tenantId,
+6356:function PPOBView({ ppobData, setPpobData, kasData, setKasData, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification, isPengurus }: any) {
+6391:      tenantId,
+6416:        tenantId,
+6589:  const { ppobData, setPpobData, iuranData, setIuranData, kasData, setKasData, wargaData = [], userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification, currentUser, getSetting } = f_params;
+6625:          <KasView kasData={kasData} setKasData={setKasData} iuranData={iuranData} setIuranData={setIuranData} wargaData={wargaData} userRole={userRole} currentUser={currentUser} getSetting={getSetting} tenantId={tenantId} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />
+6628:           <IuranView iuranData={iuranData} setIuranData={setIuranData} kasData={kasData} setKasData={setKasData} wargaData={wargaData} userRole={userRole} currentUser={currentUser} getSetting={getSetting} tenantId={tenantId} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />
+6631:           <PPOBView ppobData={ppobData} setPpobData={setPpobData} kasData={kasData} setKasData={setKasData} currentUser={currentUser} tenantId={tenantId} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} isPengurus={canApprove} />
+6640:function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], userRole, currentUser, getSetting, kopSettings, tenantId, isLoadingDB, setIsLoadingDB, handleFirestoreError, showNotification, settings, handleFileUpload }: { suratData: any[], setSuratData: any, wargaData?: any[], usersData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, kopSettings: any, tenantId: string, isLoadingDB: boolean, setIsLoadingDB: any, handleFirestoreError: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, settings: any, handleFileUpload: any }) {
+6898:    XLSX.writeFile(workbook, `Data_Surat_${tenantId}.xlsx`);
+6923:      tenantId: tenantId,
+7501:function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [], userRole, currentUser, getSetting, rtId, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { kasData: any[], setKasData: any, iuranData: any[], setIuranData: any, wargaData?: any[], userRole: string, currentUser: any, getSetting: (k: string) => any, rtId?: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+7572:        tenantId: tenantId,
+7701:      tenantId: tenantId,
+8313:function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole, handleFileUpload, showNotification, currentUser, setActiveTab }: { tenantId: string, currentTenant?: any, wargaData?: any[], settings: any, userRole: string, handleFileUpload: any, showNotification: any, currentUser: any, setActiveTab: any }) {
+8333:      await setDoc(doc(db, 'settings', tenantId), newSettings, { merge: true });
+8374:            tenantId: tenantId,
+8431:            tenantId: tenantId,
+8450:            tenantId: tenantId,
+8465:            tenantId: tenantId,
+8497:          tenantId: tenantId,
+8817:function VerifikasiAdminView({ verifikasiData, wargaData, tenantId, isLoadingDB: globalLoading, setIsLoadingDB, showNotification, handleFirestoreError, currentUser }: { verifikasiData: any[], wargaData: any[], tenantId: string, isLoadingDB: boolean, setIsLoadingDB: any, showNotification: any, handleFirestoreError: any, currentUser: any }) {
+8893:      const standardDocId = `${tenantId}_${item.nik}`;
+8925:        tenantId: tenantId,
+8992:        const citizenDocId = `${tenantId}_${item.nik}`;
+9048:        const targetDocId = `${tenantId}_${item.nik}`;
+9061:          tenantId: tenantId,
+9401:function WargaProfileView({ wargaData, verifikasiData, suratData = [], setSuratData, setWargaAuth, tenantId, isLoadingDB, setIsLoadingDB, handleFileUpload, showNotification, handleFirestoreError, kopSettings, getSetting, usersData, generateSuratHTML, settings }: { wargaData: any, verifikasiData: any[], suratData?: any[], setSuratData: any, setWargaAuth: any, tenantId: string, isLoadingDB: boolean, setIsLoadingDB: any, handleFileUpload: any, showNotification: any, handleFirestoreError: any, kopSettings: any, getSetting: any, usersData: any[], generateSuratHTML: any, settings: any }) {
+9444:        tenantId,
+9564:        tenantId,
+9591:        tenantId,
+10086:function SelfRegistrationView({ tenantId, onClose, handleFileUpload, showNotification, handleFirestoreError }: { tenantId: string, onClose: () => void, handleFileUpload: any, showNotification: any, handleFirestoreError: any }) {
+10160:        tenantId: tenantId || 'RW26_SMART', 
+10688:          tenantId: found.tenantId || "RW26_SMART",
+10792:      let tenantId = 'RW26_SMART';
+10794:        tenantId = 'RW_BERJUANG';
+10796:        tenantId = 'MASTER';
+10804:      let preRegisteredTenant = tenantId;
+10816:          preRegisteredTenant = matchedData.tenantId || tenantId;
+10830:        tenantId: userDoc.exists() ? userDoc.data()?.tenantId || preRegisteredTenant : preRegisteredTenant,
+11085:function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification, settings }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void, settings: any }) {
+11108:      tenantId,
+11363:    const tenantId = formData.get('id') as string;
+11388:      id: tenantId,
+11418:          tenantId: tenantId,
+11426:        batch.set(doc(db, 'settings', tenantId), {
+11801:  wargaData, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification 
+11841:              tenantId,
+11898:              tenantId,
+11935:    doc.text(`Tenant: ${tenantId}`, 14, 30);
+12128:      tenantId,
+12160:      tenantId,
+12186:      id, tenantId,
+12214:      id, tenantId,
+12240:      id, tenantId,
+12311:    doc.text(`Tenant: ${tenantId}`, 14, 30);
+12357:    doc.text(`Tenant: ${tenantId}`, 14, 30);
+12681:                tenantId,
+13414:  tenantId, 
+13452:              tenantId,
+13508:      tenantId,
+13538:      tenantId,
+13570:      tenantId,
+13615:          tenantId,
+13712:    doc.text(`Tenant: ${tenantId}`, 14, 30);
+13827:    doc.text(`Tenant: ${tenantId}`, 14, 30);
+14569:function InventarisView({ inventarisData, setInventarisData, inventarisLogs, setInventarisLogs, inventarisKategori, inventarisLokasi, inventarisSupplier, userRole, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification, handleFileUpload }: any) {
+14629:        tenantId,
+14637:          await setDoc(doc(db, 'inventaris_kategori', kId), { id: kId, nama_kategori: itemData.kategori, tenantId });
+14644:          await setDoc(doc(db, 'inventaris_lokasi', lId), { id: lId, nama_lokasi: itemData.lokasi, tenantId });
+14656:             tenantId 
+14697:      tenantId,
+14742:          await setDoc(doc(db, 'inventaris_supplier', sId), { id: sId, nama: logData.supplier, kontak: '', alamat: '', tenantId });
+14749:          await setDoc(doc(db, 'inventaris_lokasi', lId), { id: lId, nama_lokasi: logData.ke_lokasi, tenantId });

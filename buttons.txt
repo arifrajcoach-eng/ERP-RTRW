@@ -1,0 +1,288 @@
+1578:          <button 
+1635:            <button
+1669:             <button 
+1713:               <button 
+1933:                 <button 
+1939:                 <button 
+2133:           <button 
+2144:            <button 
+2156:              <button 
+2375:              <button 
+2381:              <button 
+2391:            <button 
+2410:            <button 
+2417:            <button 
+2448:                    <button
+2491:                        <button 
+2603:                         <button 
+2609:                         <button 
+2629:              <button 
+2652:                    <button 
+2662:                    <button 
+2695:                <button onClick={() => setShowCart(false)} className="p-2 bg-slate-100 rounded-xl"><X className="w-6 h-6" /></button>
+2710:                          <button onClick={() => updateCartQty(item.id, -1)} className="p-2 hover:bg-slate-200 transition-all"><Minus className="w-3 h-3" /></button>
+2712:                          <button onClick={() => updateCartQty(item.id, 1)} className="p-2 hover:bg-slate-200 transition-all"><Plus className="w-3 h-3" /></button>
+2714:                        <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-600 transition-all"><Trash2 className="w-4 h-4" /></button>
+2731:                     <button onClick={() => setPaymentMethod('COD')} className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === 'COD' ? 'border-brand-blue bg-blue-50 text-brand-blue' : 'border-slate-200 bg-white'}`}>COD</button>
+2732:                     <button onClick={() => setPaymentMethod('TRANSFER')} className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === 'TRANSFER' ? 'border-brand-blue bg-blue-50 text-brand-blue' : 'border-slate-200 bg-white'}`}>Transfer</button>
+2741:                <button 
+2773:                <button onClick={() => setShowProductModal(false)} className="absolute top-4 right-4 p-2 bg-slate-900/50 backdrop-blur-md rounded-full text-white hover:bg-slate-900/70 transition-colors">
+2782:                  <button 
+2867:                          <button 
+2902:                       <button 
+2928:                  <button type="button" onClick={() => setIsAddingProduct(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest">Batal</button>
+2929:                  <button type="submit" disabled={isLoading} className="flex-[2] py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-200">
+3165:          <button 
+3171:          <button 
+3194:              <button 
+3200:              <button 
+3221:              <button 
+3282:                          <button 
+3317:                      <button 
+3351:                <button 
+3418:                    <button 
+3434:                        <button 
+3440:                        <button 
+3483:              <button 
+3490:              <button 
+3767:                  <button 
+3797:          <button 
+3881:              <button 
+3891:                <button
+4082:          <button 
+4089:          <button 
+4266:            <button
+4468:                      <button 
+4505:                          <button 
+4517:                          <button 
+4524:                          <button 
+4582:                       <button 
+4589:                      <button 
+4666:                              <button 
+4728:             <button 
+5335:              <button 
+5367:          <button onClick={handleExportPDF} className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-pink hover:text-brand-pink text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95" title="Download PDF">
+5371:          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-green hover:text-brand-green text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95" title="Download Excel">
+5378:              <button 
+5389:                <button 
+5493:                       <button 
+5499:                      <button 
+5506:                        <button 
+5546:           <button 
+5553:           <button 
+5569:              <button onClick={() => { setShowAddForm(false); setShowEditForm(false); resetForm(); }} className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
+5792:                <button type="button" onClick={() => { setShowAddForm(false); setShowEditForm(false); resetForm(); }} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+5795:                <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+5818:                <button onClick={() => setViewWarga(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
+6100:        <button
+6108:          <button
+6133:              <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-700 shadow-sm">
+6185:                          <button onClick={() => handleApprove(trx)} className="p-1.5 px-3 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white rounded-lg border border-green-100 transition-colors font-bold text-xs" title="Terima">
+6188:                          <button onClick={() => handleReject(trx)} className="p-1.5 px-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg border border-red-100 transition-colors font-bold text-xs" title="Tolak">
+6262:              <button onClick={() => setShowForm(false)} className="bg-white p-1.5 border border-slate-200 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+6312:                    <button type="button" onClick={() => setBuktiUrl('')} className="absolute top-3 right-3 p-2 bg-red-600/90 text-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"><X className="w-4 h-4" /></button>
+6324:                    <button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className="w-full py-6 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all flex flex-col items-center justify-center gap-3 bg-slate-50/50 outline-none group focus:ring-2 disabled:opacity-50 disabled:cursor-wait">
+6343:                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batalkan</button>
+6344:                <button type="submit" disabled={uploading} className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2">
+6455:        <button onClick={() => setShowSimulasiForm(true)} className="relative z-10 bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors shadow-lg active:scale-95 whitespace-nowrap">
+6521:              <button type="button" onClick={() => setShowSimulasiForm(false)} className="bg-white p-1.5 border border-slate-200 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+6527:                  <button type="button" key={l.id} onClick={() => setSelectedLayanan(l.id)} className={`p-4 border rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${selectedLayanan === l.id ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50'}`}>
+6575:                <button type="button" onClick={() => setShowSimulasiForm(false)} className="py-3 px-6 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batalkan</button>
+6576:                <button type="submit" className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] flex items-center justify-center gap-2">
+6597:        <button
+6605:        <button
+6613:        <button
+7051:            <button 
+7057:            <button 
+7092:                <button onClick={exportSuratExcel} className="p-2 bg-white border border-slate-200 text-brand-blue rounded-xl hover:bg-blue-50 transition-all active:scale-90" title="Export Excel">
+7095:                <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
+7143:                          <button disabled={isLoadingDB} onClick={() => handleSetujui(surat.id)} className="text-[10px] font-black uppercase text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 hover:bg-green-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Setujui</button>
+7144:                          <button disabled={isLoadingDB} onClick={() => setSuratToReject(surat)} className="text-[10px] font-black uppercase text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Tolak</button>
+7149:                        <button disabled={isLoadingDB} onClick={() => handleSelesaikan(surat.id)} className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all active:scale-95 disabled:opacity-50">Selesaikan</button>
+7154:                          <button onClick={() => handleCetak(surat.id)} className="bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 p-2 rounded-lg border border-slate-100 transition-all" title="Cetak Surat (PDF)">
+7158:                        <button disabled={isLoadingDB} onClick={() => handleEdit(surat)} className="bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 p-2 rounded-lg border border-slate-100 transition-all disabled:opacity-50 disabled:cursor-wait" title="Edit Data">
+7169:                        <button 
+7211:              <button onClick={() => {setShowSuratForm(false); setEditingSurat(null);}} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
+7234:                        <button
+7259:                      <button 
+7432:                <button type="button" onClick={() => setShowSuratForm(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+7435:                <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+7488:                <button onClick={() => {setSuratToReject(null); setRejectReason("");}} className="flex-1 py-3 text-slate-400 font-black uppercase text-[10px] tracking-widest bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">Batal</button>
+7489:                <button onClick={handleTolak} disabled={isLoadingDB} className="flex-1 py-3 bg-red-600 text-white font-black uppercase text-[10px] tracking-widest rounded-2xl shadow-xl shadow-red-100 hover:bg-red-700 transition-all active:scale-95 disabled:bg-slate-300">
+7897:            <button onClick={handleExportExcelKas} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors shadow-sm">
+7900:            <button onClick={handleExportPDFKas} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors shadow-sm">
+7923:                <button 
+7932:            <button onClick={() => { setTrxType('Masuk'); setShowMasukForm(true); }} className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all hover:bg-green-700 shadow-sm">
+7977:                      <button 
+7984:                      <button 
+7991:                      <button 
+8003:                      <button 
+8035:              <button 
+8049:                <button 
+8056:                <button 
+8157:                      <button 
+8170:                <button 
+8180:                <button 
+8201:              <button 
+8265:              <button 
+8271:              <button 
+8292:                 <button 
+8298:                 <button 
+8538:                <button 
+8663:            <button 
+8677:        <button 
+8753:          <button className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg text-sm font-bold transition-colors">
+8756:          <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95">
+8803:        <button 
+9089:          <button 
+9102:              <button
+9176:                              <button 
+9185:                            <button 
+9195:                          <button 
+9205:                          <button 
+9239:                  <button 
+9247:                  <button onClick={() => { setSelectedItem(null); setCatatan(''); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+9322:                      <button 
+9334:                      <button 
+9621:          <button 
+9665:             <button
+9737:                  <button 
+9745:                  <button 
+9934:                  <button 
+9949:                  <button 
+10011:                <button 
+10053:                             <button 
+10203:              <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+10421:              <button type="button" disabled={uploading} onClick={onClose} className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">Batal</button>
+10422:              <button 
+10460:          <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">Kirim</button>
+10869:            <button 
+10875:            <button 
+10884:            <button 
+10945:                    <button
+10954:                <button
+10977:                <button 
+11032:                      <button
+11041:                  <button
+11059:                <button 
+11072:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'arifrajcoach@gmail.com', '4R1f080162a3')} className="w-full bg-slate-50 hover:bg-brand-blue hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Super</button>
+11073:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'admin@rw26.com', 'admin123')} className="w-full bg-slate-50 hover:bg-brand-pink hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Admin</button>
+11074:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'operator@rw26.com', 'operator123')} className="w-full bg-slate-50 hover:bg-brand-yellow hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Kader</button>
+11075:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'warga@rw26.com', 'warga123')} className="w-full bg-slate-50 hover:bg-brand-green hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Warga</button>
+11160:            <button 
+11219:                        <button 
+11226:                        <button 
+11271:                  <button onClick={() => setShowForm(false)} className="p-1.5 hover:text-red-500 rounded-lg bg-white border border-slate-200 transition-colors"><X className="w-4 h-4" /></button>
+11294:                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+11344:                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 text-slate-500 font-black uppercase text-[10px] tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+11345:                    <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">Simpan Pengguna</button>
+11478:          <button 
+11555:                          <button onClick={() => { setEditingTenant(tenant); setShowAddForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 font-bold active:scale-95 shadow-sm">
+11558:                          <button onClick={() => setTenantToDelete(tenant)} className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 font-bold active:scale-95 shadow-sm">
+11579:                  <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+11661:                     <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50 transition-all border border-slate-200">Batal</button>
+11662:                     <button type="submit" disabled={isLoadingDB} className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300">
+12400:            <button
+12440:                <button 
+12446:                <button 
+12468:                <button 
+12474:                <button 
+12511:                <button 
+12517:                <button 
+12599:                  <button onClick={() => fileInputRef.current?.click()} className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90" title="Impor Data">
+12602:                  <button 
+12617:                  <button 
+12631:              <button 
+12661:                        <button onClick={() => { setEditingPosbinduItem(item); setShowPosbinduForm(true); }} className="p-1 px-2 text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 font-bold transition-all">Edit</button>
+12662:                        <button onClick={() => deleteItem('pemeriksaan_posbindu', item.id)} className="p-1.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+12745:                <button type="button" onClick={() => setShowPosbinduForm(false)} className="flex-1 p-3 border rounded-xl">Batal</button>
+12746:                <button type="submit" className="flex-1 p-3 bg-blue-600 text-white rounded-xl">Simpan</button>
+12775:                <button 
+12782:                <button 
+12789:                <button 
+12798:            <button 
+12845:                           <button 
+12851:                           <button 
+12857:                           <button 
+12863:                           <button onClick={() => deleteItem('balita', balita.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100" title="Hapus">
+12894:                <button 
+12901:                <button 
+12919:                    <button 
+12934:                      <button 
+12941:                      <button 
+12982:                 <button 
+12989:                <button 
+13007:                    <button 
+13067:                <button 
+13074:                <button 
+13081:                <button 
+13090:            <button 
+13127:                          <button 
+13134:                          <button 
+13141:                          <button onClick={() => { setEditingItem(mil); setShowIbuHamilForm(true); }} className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-100 transition-colors" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
+13142:                          <button onClick={() => deleteItem('ibu_hamil', mil.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100 transition-colors" title="Hapus"><Trash2 className="w-3.5 h-3.5" /></button>
+13159:                 <button onClick={exportKegiatanPDF} className="p-2 bg-white border border-slate-200 text-brand-pink rounded-xl hover:bg-pink-50 transition-all active:scale-90" title="Export PDF">
+13162:                 <button onClick={exportKegiatanExcel} className="p-2 bg-white border border-slate-200 text-brand-blue rounded-xl hover:bg-blue-50 transition-all active:scale-90" title="Export Excel">
+13167:             <button 
+13183:                    <button onClick={() => { setEditingItem(kgt); setShowKegiatanForm(true); }} className="p-1 text-blue-600 hover:bg-white rounded border border-transparent hover:border-blue-100"><Edit className="w-3 h-3" /></button>
+13184:                    <button onClick={() => deleteItem('posyandu_kegiatan', kgt.id)} className="p-1 text-red-600 hover:bg-white rounded border border-transparent hover:border-red-100"><Trash2 className="w-3 h-3" /></button>
+13206:                 <button onClick={() => setShowBalitaForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13242:                    <button type="button" onClick={() => setShowBalitaForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13243:                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
+13259:                 <button onClick={() => setShowPemeriksaanForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13281:                    <button type="button" onClick={() => setShowPemeriksaanForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13282:                    <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-95">Simpan Hasil</button>
+13298:                 <button onClick={() => setShowImunisasiForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13326:                    <button type="button" onClick={() => setShowImunisasiForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13327:                    <button type="submit" className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100 transition-all active:scale-95">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
+13343:                 <button onClick={() => setShowKegiatanForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13361:                    <button type="button" onClick={() => setShowKegiatanForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13362:                    <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-95">Simpan Agenda</button>
+13375:                 <button onClick={() => setShowIbuHamilForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13397:                    <button type="button" onClick={() => setShowIbuHamilForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+13398:                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all active:scale-95">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
+13872:            <button
+14000:                <button 
+14033:                          <button 
+14050:                              <button onClick={() => { setEditingItem(item); setShowSetoranForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit">
+14053:                              <button onClick={() => deleteItem('sampah_setoran', item.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus Transaksi">
+14081:                <button 
+14110:                          <button 
+14127:                              <button onClick={() => { setEditingItem(item); setShowTarikForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit">
+14130:                              <button onClick={() => deleteItem('sampah_tarik_saldo', item.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus Penarikan">
+14159:                <button 
+14165:                <button 
+14253:                    <button 
+14262:                  <button 
+14269:                  <button onClick={exportNasabahSummaryPDF} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Export PDF Semua Nasabah">
+14272:                  <button onClick={exportNasabahSummaryExcel} className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100" title="Export Excel Semua Nasabah">
+14306:                              <button 
+14313:                              <button 
+14320:                              <button 
+14343:               <button onClick={() => setShowKategoriForm(true)} className="p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center gap-2">
+14358:                       <button onClick={() => { setEditingItem(kat); setShowKategoriForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit"><Edit className="w-4 h-4" /></button>
+14359:                       <button onClick={() => deleteItem('sampah_kategori', kat.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+14380:                <button onClick={() => { setShowKategoriForm(false); setEditingItem(null); }} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+14402:                   <button type="button" onClick={() => { setShowKategoriForm(false); setEditingItem(null); }} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14403:                   <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all">Simpan Kategori</button>
+14415:                <button onClick={() => setShowSetoranForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+14451:                   <button type="button" onClick={() => setShowSetoranForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14452:                   <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all">Simpan Setoran</button>
+14464:                <button onClick={() => { setShowTarikForm(false); setEditingItem(null); }} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+14489:                   <button type="button" onClick={() => { setShowTarikForm(false); setEditingItem(null); }} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14490:                   <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transform active:scale-95 transition-all">{editingItem ? 'Simpan Perubahan' : 'Konfirmasi Tarik'}</button>
+14502:                <button onClick={() => setShowNasabahForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+14546:                   <button type="button" onClick={() => setShowNasabahForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14547:                   <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all">{editingItem ? 'Simpan Perubahan' : 'Tambah Nasabah'}</button>
+14839:             <button 
+14911:                        <button 
+14919:                        <button 
+14927:                          <button onClick={() => { setEditingItem(item); setShowAddForm(true); }} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100" title="Edit Aset">
+14952:               <button onClick={() => setShowAddForm(false)} className="p-1.5 hover:text-red-500 bg-white border border-slate-200 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+15044:                 <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+15045:                 <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95">Simpan Aset</button>
+15061:               <button onClick={() => setShowLogForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+15178:                 <button type="button" onClick={() => setShowLogForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+15179:                 <button type="submit" className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100">Simpan Catatan</button>
+15195:               <button onClick={() => setShowLogHistory(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+15256:                <button onClick={() => setShowLogHistory(false)} className="px-6 py-2 bg-white border border-slate-200 text-slate-600 font-bold text-xs rounded-lg uppercase tracking-widest">Tutup</button>

@@ -1,0 +1,2675 @@
+1573-            <h1 className="text-xl font-black tracking-tighter text-slate-800 flex items-center justify-center gap-1 leading-none font-elegant uppercase">
+1574-              <span className="text-brand-blue">RW26</span>
+1575-              <span className="text-brand-pink">BERJUANG</span>
+1576-            </h1>
+1577-          </div>
+1578:          <button 
+1579-            onClick={() => setIsSidebarOpen(false)}
+1580-            className="p-2 text-slate-400 hover:text-red-500 md:hidden bg-slate-50 rounded-lg transition-colors absolute top-4 right-4"
+1581-          >
+1582-            <X className="w-6 h-6" />
+1583-          </button>
+--
+1630-            };
+1631-
+1632-            const allowed = rolePermissions[role] || ['dashboard'];
+1633-            return allowed.includes(item.id);
+1634-          }).map((item: any) => (
+1635:            <button
+1636-              key={item.id}
+1637-              onClick={() => {
+1638-                setActiveTab(item.id);
+1639-                setIsSidebarOpen(false);
+1640-              }}
+--
+1664-      {/* Main Workspace */}
+1665-      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full">
+1666-        {/* Header */}
+1667-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30">
+1668-          <div className="flex items-center space-x-4">
+1669:             <button 
+1670-               onClick={() => setIsSidebarOpen(true)}
+1671-               className="p-3 -ml-2 text-slate-500 hover:text-brand-blue md:hidden bg-slate-50 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100"
+1672-             >
+1673-               <Menu className="w-6 h-6" />
+1674-             </button>
+--
+1708-                   ) : (
+1709-                     currentUser.name.charAt(0)
+1710-                   )}
+1711-                 </div>
+1712-               </div>
+1713:               <button 
+1714-                onClick={handleLogout}
+1715-                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all ml-1 md:ml-2"
+1716-                title="Keluar"
+1717-               >
+1718-                 <LogOut className="w-5 h-5" />
+--
+1928-              <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4">Kirimi Sinyal Darurat?</h2>
+1929-              <p className="text-slate-600 text-base font-medium leading-relaxed mb-8 px-2">
+1930-                Tindakan ini akan memberitahukan seluruh pengurus dan warga RW26 secara instan. Gunakan hanya untuk keadaan mendesak.
+1931-              </p>
+1932-              <div className="flex flex-col gap-4">
+1933:                 <button 
+1934-                   onClick={confirmSOS}
+1935-                   className="w-full py-5 bg-red-600 text-white rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-xl shadow-red-200"
+1936-                 >
+1937-                   Ya, Kirim SOS Sekarang
+1938-                 </button>
+1939:                 <button 
+1940-                   onClick={() => setIsSOSConfirmOpen(false)}
+1941-                   className="w-full py-5 bg-slate-100 text-slate-600 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+1942-                 >
+1943-                   Batal
+1944-                 </button>
+--
+2128-           Membutuhkan Pertolongan Segera!
+2129-         </p>
+2130-
+2131-         {/* Maps Navigation Button */}
+2132-         {emergency.latitude && emergency.longitude && (
+2133:           <button 
+2134-             onClick={() => window.open(`https://www.google.com/maps?q=${emergency.latitude},${emergency.longitude}`, '_blank')}
+2135-             className="px-10 py-5 bg-white text-red-600 border-2 border-red-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-red-50 transition-all active:scale-95 shadow-2xl mb-4 flex items-center justify-center gap-2"
+2136-           >
+2137-             <MapPin className="w-6 h-6" />
+2138-             CEK LOKASI KEJADIAN
+2139-           </button>
+2140-         )}
+2141-
+2142-         {/* Global Resolve Button */}
+2143-         {canResolve && (
+2144:            <button 
+2145-              onClick={() => onResolve(emergency.id)}
+2146-              className="px-10 py-5 bg-white text-red-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-slate-100 transition-all active:scale-95 shadow-2xl mb-4 flex items-center justify-center gap-2"
+2147-            >
+2148-              <CheckCircle className="w-6 h-6 border-2 border-red-600 rounded-full" />
+2149-              STOP SOS & KEMBALI KE MENU UTAMA
+--
+2151-         )}
+2152-
+2153-         {/* Local actions: Mute and Hide */}
+2154-         <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-2">
+2155-           {!isMuted && (
+2156:              <button 
+2157-                onClick={() => setIsMuted(true)}
+2158-                className="px-6 py-4 bg-red-700/50  border border-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+2159-              >
+2160-                <BellOff className="w-5 h-5" /> Stop Suara/Getar
+2161-              </button>
+--
+2370-        </div>
+2371-
+2372-        <div className="flex items-center gap-3 w-full md:w-auto">
+2373-          {isAdmin && (
+2374-            <div className="bg-slate-100 p-1 rounded-2xl flex border border-slate-200">
+2375:              <button 
+2376-                onClick={() => setView('buyer')} 
+2377-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'buyer' ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-500'}`}
+2378-              >
+2379-                Pembeli
+2380-              </button>
+2381:              <button 
+2382-                onClick={() => setView('seller')} 
+2383-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'seller' ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-500'}`}
+2384-              >
+2385-                Penjual
+2386-              </button>
+2387-            </div>
+2388-          )}
+2389-          
+2390-          {view === 'buyer' && (
+2391:            <button 
+2392-              onClick={() => setShowCart(true)}
+2393-              className="relative p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all"
+2394-            >
+2395-              <ShoppingCart className="w-6 h-6 text-slate-700" />
+2396-              {cart.length > 0 && (
+--
+2405-
+2406-      {view === 'buyer' ? (
+2407-        <div className="space-y-8">
+2408-          {/* Navigation Tab */}
+2409-          <div className="flex border-b border-slate-200 gap-8">
+2410:            <button 
+2411-              onClick={() => setActiveTab('shop')}
+2412-              className={`pb-4 text-sm font-black uppercase tracking-widest transition-all relative ${activeTab === 'shop' ? 'text-brand-blue' : 'text-slate-400'}`}
+2413-            >
+2414-              Belanja Umum
+2415-              {activeTab === 'shop' && <motion.div layoutId="tokotab" className="absolute bottom-0 left-0 right-0 h-1 bg-brand-blue rounded-full" />}
+2416-            </button>
+2417:            <button 
+2418-              onClick={() => setActiveTab('orders')}
+2419-              className={`pb-4 text-sm font-black uppercase tracking-widest transition-all relative ${activeTab === 'orders' ? 'text-brand-blue' : 'text-slate-400'}`}
+2420-            >
+2421-              Pesanan Saya
+2422-              {activeTab === 'orders' && <motion.div layoutId="tokotab" className="absolute bottom-0 left-0 right-0 h-1 bg-brand-blue rounded-full" />}
+--
+2443-                    className="px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-white text-slate-700 border border-slate-200 outline-none focus:border-brand-blue"
+2444-                  >
+2445-                    {rtOptions.map((rt, i) => <option key={`toko-rt-${rt}-${i}`} value={rt}>{rt === 'Semua' ? 'Semua RT' : `RT ${rt}`}</option>)}
+2446-                  </select>
+2447-                  {categories.map((c, i) => (
+2448:                    <button
+2449-                      key={`toko-cat-${c}-${i}`}
+2450-                      onClick={() => setSelectedCategory(c)}
+2451-                      className={`px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedCategory === c ? 'bg-brand-blue text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+2452-                    >
+2453-                      {c}
+--
+2486-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stok</p>
+2487-                             <p className={`text-sm font-black ${p.stock <= 5 ? 'text-red-500' : 'text-slate-800'}`}>{p.stock}</p>
+2488-                          </div>
+2489-                        </div>
+2490-                        
+2491:                        <button 
+2492-                          disabled={p.stock <= 0}
+2493-                          onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+2494-                          className={`w-full py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 ${p.stock <= 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'}`}
+2495-                        >
+2496-                          {p.stock <= 0 ? 'Stok Habis' : <><ShoppingBag className="w-4 h-4" /> Tambah Keranjang</>}
+--
+2598-                        <div className="flex items-center gap-1"><Phone className="w-3 h-3" /> {order.phone}</div>
+2599-                        <div className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {order.address}</div>
+2600-                     </div>
+2601-                     {order.status === 'PENDING' && (
+2602-                       <div className="flex gap-2">
+2603:                         <button 
+2604-                           onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+2605-                           className="px-4 py-2 text-red-600 font-bold text-xs hover:bg-red-50 rounded-xl transition-all"
+2606-                         >
+2607-                           Tolak
+2608-                         </button>
+2609:                         <button 
+2610-                           onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
+2611-                           className="px-6 py-2 bg-green-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-green-100 hover:bg-green-700 active:scale-95"
+2612-                         >
+2613-                           Selesaikan
+2614-                         </button>
+--
+2624-          <div className="space-y-6">
+2625-            <div className="flex justify-between items-center mb-4">
+2626-              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+2627-                <LayoutGrid className="w-6 h-6 text-brand-blue" /> Inventaris
+2628-              </h3>
+2629:              <button 
+2630-                onClick={() => {
+2631-                  setIsAddingProduct(true);
+2632-                  setEditingProduct(null);
+2633-                  setProductForm({ name: '', price: 0, stock: 0, category: 'Sembako', description: '', image: '' });
+2634-                }}
+--
+2647-                  <div className="flex-1 min-w-0">
+2648-                    <h4 className="font-bold text-slate-800 truncate">{p.name}</h4>
+2649-                    <p className="text-[10px] font-black text-brand-blue uppercase">{p.price?.toLocaleString()} • Stok: {p.stock}</p>
+2650-                  </div>
+2651-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+2652:                    <button 
+2653-                      onClick={() => {
+2654-                        setEditingProduct(p);
+2655-                        setIsAddingProduct(true);
+2656-                        setProductForm({ ...p });
+2657-                      }}
+2658-                      className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
+2659-                    >
+2660-                      <Edit className="w-4 h-4" />
+2661-                    </button>
+2662:                    <button 
+2663-                      onClick={() => deleteProduct(p.id)}
+2664-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+2665-                    >
+2666-                      <Trash2 className="w-4 h-4" />
+2667-                    </button>
+--
+2690-              exit={{ x: '100%' }}
+2691-              className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col"
+2692-            >
+2693-              <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+2694-                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Keranjang Belanja</h3>
+2695:                <button onClick={() => setShowCart(false)} className="p-2 bg-slate-100 rounded-xl"><X className="w-6 h-6" /></button>
+2696-              </div>
+2697-
+2698-              <div className="flex-1 overflow-auto p-8 space-y-6">
+2699-                {cart.map(item => (
+2700-                  <div key={item.id} className="flex gap-4">
+--
+2705-                      <h4 className="font-bold text-slate-800 leading-tight">{item.name}</h4>
+2706-                      <p className="text-sm font-black text-brand-blue mb-2">Rp {item.price?.toLocaleString()}</p>
+2707-                      
+2708-                      <div className="flex items-center gap-3">
+2709-                        <div className="flex items-center bg-slate-100 rounded-xl border border-slate-200 overflow-hidden">
+2710:                          <button onClick={() => updateCartQty(item.id, -1)} className="p-2 hover:bg-slate-200 transition-all"><Minus className="w-3 h-3" /></button>
+2711-                          <span className="w-8 text-center text-xs font-black">{item.qty}</span>
+2712:                          <button onClick={() => updateCartQty(item.id, 1)} className="p-2 hover:bg-slate-200 transition-all"><Plus className="w-3 h-3" /></button>
+2713-                        </div>
+2714:                        <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-600 transition-all"><Trash2 className="w-4 h-4" /></button>
+2715-                      </div>
+2716-                    </div>
+2717-                  </div>
+2718-                ))}
+2719-                {cart.length === 0 && (
+--
+2726-
+2727-              <div className="p-8 border-t border-slate-100 bg-slate-50 space-y-6">
+2728-                <div className="space-y-2">
+2729-                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Metode Pembayaran</p>
+2730-                   <div className="grid grid-cols-2 gap-2">
+2731:                     <button onClick={() => setPaymentMethod('COD')} className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === 'COD' ? 'border-brand-blue bg-blue-50 text-brand-blue' : 'border-slate-200 bg-white'}`}>COD</button>
+2732:                     <button onClick={() => setPaymentMethod('TRANSFER')} className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === 'TRANSFER' ? 'border-brand-blue bg-blue-50 text-brand-blue' : 'border-slate-200 bg-white'}`}>Transfer</button>
+2733-                   </div>
+2734-                </div>
+2735-                <div className="flex justify-between items-end">
+2736-                  <div>
+2737-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Pembayaran</p>
+2738-                    <p className="text-3xl font-black text-slate-800">Rp {cartTotal.toLocaleString()}</p>
+2739-                  </div>
+2740-                </div>
+2741:                <button 
+2742-                  disabled={cart.length === 0 || isLoading}
+2743-                  onClick={handleCheckout}
+2744-                  className="w-full py-5 bg-brand-blue text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-600 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+2745-                >
+2746-                  {isLoading ? 'Memproses...' : <><CreditCard className="w-5 h-5" /> Checkout Sekarang</>}
+--
+2768-              exit={{ scale: 0.9, opacity: 0 }}
+2769-              className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full overflow-hidden z-10"
+2770-            >
+2771-              <div className="relative h-64">
+2772-                <img src={selectedProduct.image || 'https://via.placeholder.com/600'} alt={selectedProduct.name} className="w-full h-full object-cover" />
+2773:                <button onClick={() => setShowProductModal(false)} className="absolute top-4 right-4 p-2 bg-slate-900/50 backdrop-blur-md rounded-full text-white hover:bg-slate-900/70 transition-colors">
+2774-                  <X className="w-5 h-5" />
+2775-                </button>
+2776-              </div>
+2777-              <div className="p-8">
+2778-                <h2 className="text-3xl font-black text-slate-800 mb-2">{selectedProduct.name}</h2>
+2779-                <p className="text-xl font-black text-brand-blue mb-4">Rp {selectedProduct.price.toLocaleString()}</p>
+2780-                <p className="text-slate-600 mb-6">{selectedProduct.description || 'Tidak ada deskripsi tersedia.'}</p>
+2781-                <div className="flex gap-4">
+2782:                  <button 
+2783-                    onClick={() => { addToCart(selectedProduct); setShowProductModal(false); }}
+2784-                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+2785-                  >
+2786-                    Tambah Ke Keranjang
+2787-                  </button>
+--
+2862-                          {productForm.image.toLowerCase().endsWith('.pdf') ? (
+2863-                            <FileText className="w-8 h-8 text-brand-blue" />
+2864-                          ) : (
+2865-                            <img src={productForm.image} className="w-full h-full object-cover" />
+2866-                          )}
+2867:                          <button 
+2868-                            type="button"
+2869-                            onClick={() => setProductForm({...productForm, image: ''})}
+2870-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+2871-                          >
+2872-                            <X className="w-3 h-3" />
+--
+2897-                               if (e.target) e.target.value = '';
+2898-                             }
+2899-                           }
+2900-                         }}
+2901-                       />
+2902:                       <button 
+2903-                         type="button"
+2904-                         disabled={isLoading}
+2905-                         onClick={() => {
+2906-                           if (fileInputRef.current) {
+2907-                             fileInputRef.current.value = '';
+--
+2923-                    className="w-full h-32 p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold resize-none"
+2924-                    placeholder="Tuliskan spesifikasi produk..."
+2925-                  />
+2926-                </div>
+2927-                <div className="flex gap-4 pt-4">
+2928:                  <button type="button" onClick={() => setIsAddingProduct(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest">Batal</button>
+2929:                  <button type="submit" disabled={isLoading} className="flex-[2] py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-200">
+2930-                    {isLoading ? 'Menyimpan...' : (editingProduct ? 'Simpan Perubahan' : 'Posting Produk')}
+2931-                  </button>
+2932-                </div>
+2933-              </div>
+2934-            </form>
+--
+3160-    <div className="p-6 bg-slate-50 min-h-screen">
+3161-      <div className="max-w-4xl mx-auto">
+3162-        
+3163-        {/* Scope Selector */}
+3164-        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 mb-8 shadow-sm max-w-sm">
+3165:          <button 
+3166-            onClick={() => setElectionScope('RW')}
+3167-            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${electionScope === 'RW' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-500 hover:bg-slate-50'}`}
+3168-          >
+3169-            Pemilu RW
+3170-          </button>
+3171:          <button 
+3172-            onClick={() => setElectionScope('RT')}
+3173-            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${electionScope === 'RT' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-500 hover:bg-slate-50'}`}
+3174-          >
+3175-            Pemilu RT {userRt}
+3176-          </button>
+--
+3189-            </div>
+3190-          </div>
+3191-
+3192-          {canManage && (
+3193-            <div className="flex gap-2">
+3194:              <button 
+3195-                onClick={toggleVotingStatus}
+3196-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentStatus === 'OPEN' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}
+3197-              >
+3198-                {currentStatus === 'OPEN' ? 'Tutup Voting' : 'Buka Voting'}
+3199-              </button>
+3200:              <button 
+3201-                onClick={resetVotes}
+3202-                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200"
+3203-              >
+3204-                Reset
+3205-              </button>
+--
+3216-                <ShieldCheck className="w-5 h-5" />
+3217-              </div>
+3218-              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ketentuan Pemilihan {electionScope}</h3>
+3219-            </div>
+3220-            {canManage && (
+3221:              <button 
+3222-                onClick={() => isEditingAturan ? saveAturan() : setIsEditingAturan(true)}
+3223-                className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all ${isEditingAturan ? 'bg-brand-blue text-white border-brand-blue' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+3224-              >
+3225-                {isEditingAturan ? 'Simpan' : 'Edit'}
+3226-              </button>
+--
+3277-                          {newCandidatePhoto.toLowerCase().endsWith('.pdf') ? (
+3278-                            <FileText className="w-8 h-8 text-brand-blue" />
+3279-                          ) : (
+3280-                            <img src={newCandidatePhoto} className="w-full h-full object-cover" />
+3281-                          )}
+3282:                          <button 
+3283-                            type="button"
+3284-                            onClick={() => setNewCandidatePhoto('')}
+3285-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+3286-                          >
+3287-                            <X className="w-3 h-3" />
+--
+3312-                              if (e.target) e.target.value = '';
+3313-                            }
+3314-                          }
+3315-                        }}
+3316-                      />
+3317:                      <button 
+3318-                        type="button"
+3319-                        onClick={() => {
+3320-                          if (fileInputRef.current) {
+3321-                            fileInputRef.current.value = '';
+3322-                            fileInputRef.current.click();
+--
+3346-                    onChange={(e) => setNewCandidateProfile(e.target.value)}
+3347-                    placeholder="Tuliskan pengalaman dan rencana kerja kandidat..."
+3348-                    className="w-full h-[180px] p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold"
+3349-                  />
+3350-                </div>
+3351:                <button 
+3352-                  onClick={addCandidate} 
+3353-                  disabled={isLoading}
+3354-                  className="w-full py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+3355-                >
+3356-                  {isLoading ? 'Memproses...' : <><PlusCircle className="w-5 h-5" /> Daftarkan Calon</>}
+--
+3413-                      </div>
+3414-                    </div>
+3415-                  )}
+3416-
+3417-                  <div className="flex flex-col gap-3 mt-auto">
+3418:                    <button 
+3419-                      onClick={() => setShowConfirm(candidate.id)}
+3420-                      disabled={hasVoted || currentStatus !== 'OPEN'}
+3421-                      className={`w-full py-4.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+3422-                        hasVoted 
+3423-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed font-bold' 
+--
+3429-                      {hasVoted ? 'Sudah Memilih' : currentStatus !== 'OPEN' ? 'Voting Ditutup' : 'Pilih Kandidat'}
+3430-                    </button>
+3431-                    
+3432-                    {canManage && (
+3433-                      <div className="flex gap-2">
+3434:                        <button 
+3435-                          onClick={() => startEditCandidate(candidate)}
+3436-                          className="flex-1 py-3 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-100 transition-all font-bold"
+3437-                        >
+3438-                          Edit
+3439-                        </button>
+3440:                        <button 
+3441-                          onClick={() => deleteCandidate(candidate.id)}
+3442-                          className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100 hover:bg-red-100 transition-all font-bold"
+3443-                        >
+3444-                          Hapus
+3445-                        </button>
+--
+3478-            <h3 className="text-3xl font-black text-slate-800 text-center uppercase tracking-tighter mb-4 leading-none">Konfirmasi Suara</h3>
+3479-            <p className="text-center text-slate-500 text-base font-medium mb-10 px-4">
+3480-              Apakah Anda yakin ingin memberikan suara untuk <span className="text-brand-blue font-bold">{candidates.find(c => c.id === showConfirm)?.name}</span> pada Pemilu {electionScope}?
+3481-            </p>
+3482-            <div className="flex flex-col gap-4">
+3483:              <button 
+3484-                onClick={() => handleVote(showConfirm)}
+3485-                disabled={isLoading}
+3486-                className="w-full py-5 bg-brand-blue text-white rounded-2.5xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-brand-blue/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 font-bold"
+3487-              >
+3488-                {isLoading ? <Clock className="w-5 h-5 animate-spin mx-auto" /> : 'Ya, Saya Yakin'}
+3489-              </button>
+3490:              <button 
+3491-                onClick={() => setShowConfirm(null)}
+3492-                className="w-full py-5 bg-slate-50 text-slate-600 rounded-2.5xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all font-bold"
+3493-              >
+3494-                Mungkin Nanti
+3495-              </button>
+--
+3762-                        placeholder="••••••••"
+3763-                        className="w-full pl-12 pr-6 py-5 bg-white/10 border border-white/10 rounded-2xl text-white placeholder-white/30 focus:bg-white/20 focus:border-white/40 outline-none transition-all font-bold text-base"
+3764-                      />
+3765-                    </div>
+3766-                  </div>
+3767:                  <button 
+3768-                    onClick={() => handleLinkToWarga(linkForm.nik, linkForm.pin)}
+3769-                    className="w-full py-5 bg-brand-yellow text-slate-900 rounded-[1.5rem] font-black uppercase text-sm tracking-widest shadow-2xl hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 group"
+3770-                  >
+3771-                    <span>Tautkan & Aktifkan Fitur!</span>
+3772-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+--
+3792-          { id: 'surat', label: 'SURAT', icon: FileText, color: 'cyan-500', bg: 'cyan-50', action: () => setActiveTab('surat') },
+3793-          { id: 'voting', label: 'E-PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting') },
+3794-          { id: 'toko', label: 'E-LAPAK26', icon: ShoppingBag, color: 'orange-500', bg: 'orange-50', action: () => setActiveTab('etoko') },
+3795-          { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck, color: 'emerald-500', bg: 'soft-green', action: () => setActiveTab('verifikasi') },
+3796-        ].map(item => (
+3797:          <button 
+3798-            key={item.id}
+3799-            onClick={item.action}
+3800-            className="flex-shrink-0 w-24 xl:w-auto snap-start bg-white/80 p-4 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95"
+3801-          >
+3802-            <div className={`w-14 h-14 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner`}>
+--
+3876-            <div className="flex items-center justify-between">
+3877-              <h3 className="text-sm font-bold text-slate-800 flex items-center">
+3878-                <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+3879-                Grafik Arus Kas ({kasPeriod === 'yearly' ? 'Januari - Desember' : `Bulan ${kasPeriod}`})
+3880-              </h3>
+3881:              <button 
+3882-                onClick={() => setKasPeriod('yearly')}
+3883-                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all border ${kasPeriod === 'yearly' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+3884-              >
+3885-                Setahun
+3886-              </button>
+3887-            </div>
+3888-            
+3889-            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+3890-              {months.map((m) => (
+3891:                <button
+3892-                  key={m.id}
+3893-                  onClick={() => setKasPeriod(m.id)}
+3894-                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+3895-                    kasPeriod === m.id 
+3896-                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' 
+--
+4077-          </div>
+4078-          <h3 className="text-lg font-bold text-slate-800 mb-2">{title}</h3>
+4079-          <p className="text-sm text-slate-500 leading-relaxed">{message}</p>
+4080-        </div>
+4081-        <div className="flex border-t border-slate-100">
+4082:          <button 
+4083-            onClick={onCancel}
+4084-            disabled={isLoading}
+4085-            className="flex-1 px-4 py-4 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-100 disabled:opacity-50"
+4086-          >
+4087-            {cancelText}
+4088-          </button>
+4089:          <button 
+4090-            onClick={onConfirm}
+4091-            disabled={isLoading}
+4092-            className={`flex-1 px-4 py-4 text-sm font-bold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
+4093-              type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 
+4094-              type === 'warning' ? 'bg-amber-500 hover:bg-amber-600' : 
+--
+4261-          {[
+4262-            { id: 'monitor', label: 'CCTV Monitor', icon: Monitor },
+4263-            { id: 'registrasi', label: 'Registrasi Tamu', icon: UserPlus },
+4264-            { id: 'log', label: 'Log Aktivitas', icon: History }
+4265-          ].map((tab) => (
+4266:            <button
+4267-              key={tab.id}
+4268-              onClick={() => setActiveSubTab(tab.id as any)}
+4269-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
+4270-                activeSubTab === tab.id ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'
+4271-              }`}
+--
+4463-                            placeholder="Kunjungan Keluarga / Kurir"
+4464-                          />
+4465-                        </div>
+4466-                      </div>
+4467-
+4468:                      <button 
+4469-                        type="submit" 
+4470-                        disabled={isLoading}
+4471-                        className="w-full py-5 bg-blue-600 text-white rounded-3xl font-black uppercase text-sm tracking-[0.2em] hover:bg-blue-700 transition-all active:scale-95 shadow-2xl shadow-blue-200 disabled:bg-slate-400 flex items-center justify-center gap-3 group"
+4472-                      >
+4473-                        <CheckCircle2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
+--
+4500-                            onUserMediaError={() => {}}
+4501-                          />
+4502-                          <div className="absolute inset-0 border-[20px] border-white/5 pointer-events-none"></div>
+4503-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-blue-500/50 rounded-[2rem] pointer-events-none border-dashed animate-pulse"></div>
+4504-                          
+4505:                          <button 
+4506-                            type="button"
+4507-                            onClick={capture}
+4508-                            className="absolute bottom-8 left-1/2 -translate-x-1/2 w-20 h-20 bg-white rounded-full border-4 border-blue-600 shadow-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all z-10"
+4509-                          >
+4510-                            <Camera className="w-10 h-10 text-blue-600" />
+--
+4512-                        </>
+4513-                      ) : photo ? (
+4514-                        <div className="w-full h-full relative p-2">
+4515-                          <img src={photo} alt="Capture" className="w-full h-full object-cover rounded-[2rem] shadow-lg" />
+4516-                          <div className="absolute top-6 left-6 px-3 py-1 bg-green-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">ID CAPTURED</div>
+4517:                          <button 
+4518-                            type="button"
+4519-                            onClick={() => setPhoto(null)}
+4520-                            className="absolute top-6 right-6 p-3 bg-red-600 text-white rounded-2xl shadow-xl hover:bg-red-700 transition-colors"
+4521-                          >
+4522-                            <Trash2 className="w-5 h-5" />
+4523-                          </button>
+4524:                          <button 
+4525-                            type="button"
+4526-                            onClick={() => setCameraOpen(true)}
+4527-                            className="absolute bottom-6 right-6 px-4 py-2 bg-blue-600 text-white rounded-2xl shadow-xl flex items-center gap-2 text-xs font-black uppercase tracking-tighter hover:bg-blue-700"
+4528-                          >
+4529-                            <Camera className="w-5 h-5" />
+--
+4577-                        placeholder="Cari tamu/tujuan..."
+4578-                        className="w-full bg-slate-50 border-none rounded-2xl pl-14 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all shadow-inner outline-none"
+4579-                      />
+4580-                    </div>
+4581-                    <div className="flex gap-2">
+4582:                       <button 
+4583-                        onClick={exportToExcel}
+4584-                        className="flex items-center gap-2 px-5 py-4 bg-green-50 text-green-700 rounded-2xl border border-green-200 font-black text-[10px] uppercase tracking-widest hover:bg-green-100 transition-all active:scale-95"
+4585-                      >
+4586-                        <FileSpreadsheet className="w-4 h-4" />
+4587-                        Excel
+4588-                      </button>
+4589:                      <button 
+4590-                        onClick={exportToPDF}
+4591-                        className="flex items-center gap-2 px-5 py-4 bg-red-50 text-red-700 rounded-2xl border border-red-200 font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all active:scale-95"
+4592-                      >
+4593-                        <FileText className="w-4 h-4" />
+4594-                        PDF
+--
+4661-                                </div>
+4662-                             </div>
+4663-                          </td>
+4664-                          <td className="px-8 py-6 text-right">
+4665-                            {item.status === 'Bertamu' && (
+4666:                              <button 
+4667-                                onClick={() => markFinished(item.id)}
+4668-                                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
+4669-                              >
+4670-                                Check-Out
+4671-                              </button>
+--
+4723-                    <div className="text-[9px] font-mono text-slate-600">{new Date(item.waktuDatang).toLocaleTimeString('id-id', { hour: '2-digit', minute: '2-digit' })}</div>
+4724-                 </div>
+4725-               ))}
+4726-               {bukuTamuData.length === 0 && <p className="text-slate-600 text-[10px] font-black uppercase text-center py-4">Belum ada data</p>}
+4727-             </div>
+4728:             <button 
+4729-              onClick={() => setActiveSubTab('log')}
+4730-              className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors border border-white/5"
+4731-             >
+4732-               Lihat Semua
+4733-             </button>
+--
+5330-                {uniqueRTs.map(rt => <option key={`rt-${rt}`} value={rt}>{rt === 'Semua' ? 'RT' : 'RT ' + rt}</option>)}
+5331-              </select>
+5332-            </div>
+5333-
+5334-            <div className="flex items-center gap-2">
+5335:              <button 
+5336-                onClick={() => { resetForm(); setShowAddForm(true); }}
+5337-                className="flex items-center gap-2 bg-brand-yellow hover:bg-yellow-400 text-slate-900 px-5 py-3 rounded-2xl text-xs font-black transition-all shadow-lg shadow-brand-yellow/30 active:scale-95 uppercase tracking-wider"
+5338-              >
+5339-                <PlusCircle className="w-4 h-4" />
+5340-                <span>Tambah</span>
+--
+5362-            {filteredWargaData.length} Warga Ditemukan
+5363-          </p>
+5364-        </div>
+5365-
+5366-        <div className="flex items-center gap-2">
+5367:          <button onClick={handleExportPDF} className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-pink hover:text-brand-pink text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95" title="Download PDF">
+5368-            <Download className="w-4 h-4" />
+5369-            <span className="hidden lg:inline">PDF</span>
+5370-          </button>
+5371:          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-green hover:text-brand-green text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95" title="Download Excel">
+5372-            <Download className="w-4 h-4" />
+5373-            <span className="hidden lg:inline">EXCEL</span>
+5374-          </button>
+5375-          
+5376-          {userRole !== 'Viewer' && (
+5377-            <>
+5378:              <button 
+5379-                onClick={() => fileInputRef.current?.click()} 
+5380-                className="flex items-center gap-2 bg-white border border-slate-200 hover:border-brand-blue hover:text-brand-blue text-slate-600 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95"
+5381-                title="Upload Data"
+5382-              >
+5383-                <Upload className="w-4 h-4" />
+5384-                <span className="hidden lg:inline">UPLOAD</span>
+5385-              </button>
+5386-              <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".csv, .xlsx, .xls" className="hidden" />
+5387-              
+5388-              {selectedWargaIds.length > 0 && (
+5389:                <button 
+5390-                  onClick={handleBulkDelete}
+5391-                  disabled={isDeletingWarga}
+5392-                  className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 animate-pulse"
+5393-                >
+5394-                  <Trash2 className="w-4 h-4" />
+--
+5488-                  </span>
+5489-                </td>
+5490-                {userRole !== 'Viewer' && (
+5491-                  <td className="px-6 py-3 text-right print:hidden">
+5492-                    <div className="flex items-center justify-end gap-2">
+5493:                       <button 
+5494-                        onClick={() => setViewWarga(warga)}
+5495-                        className="text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 p-1.5 rounded transition-colors" title="Detail Profil"
+5496-                      >
+5497-                        <Eye className="w-3.5 h-3.5" />
+5498-                      </button>
+5499:                      <button 
+5500-                        onClick={() => startEdit(warga)}
+5501-                        className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors" title="Edit"
+5502-                      >
+5503-                        <Edit className="w-3.5 h-3.5" />
+5504-                      </button>
+5505-                      {(userRole === 'ADMIN' || userRole === 'RT' || userRole === 'Admin' || userRole === 'SUPER_ADMIN') && (
+5506:                        <button 
+5507-                          onClick={() => setWargaToDelete(warga)}
+5508-                          className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors" title="Hapus"
+5509-                        >
+5510-                          <Trash2 className="w-3.5 h-3.5" />
+5511-                        </button>
+--
+5541-              ))}
+5542-            </select>
+5543-          </div>
+5544-        </div>
+5545-        <div className="flex gap-2">
+5546:           <button 
+5547-             onClick={handlePrevPage}
+5548-             disabled={currentPage === 1}
+5549-             className="px-2.5 py-1 border border-slate-200 bg-white rounded hover:bg-slate-100 text-slate-600 font-medium disabled:opacity-50 transition-colors" 
+5550-           >
+5551-             Sebelumnya
+5552-           </button>
+5553:           <button 
+5554-             onClick={handleNextPage}
+5555-             disabled={currentPage === totalPages}
+5556-             className="px-2.5 py-1 border border-slate-200 bg-white rounded hover:bg-slate-100 text-slate-600 font-medium disabled:opacity-50 transition-colors"
+5557-           >
+5558-             Selanjutnya
+--
+5564-      {(showAddForm || showEditForm) && (
+5565-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 ">
+5566-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+5567-            <div className="flex justify-between items-center p-4 border-b border-slate-100">
+5568-              <h3 className="text-sm font-bold text-slate-800">{showAddForm ? 'Tambah Data Warga' : 'Edit Data Warga'}</h3>
+5569:              <button onClick={() => { setShowAddForm(false); setShowEditForm(false); resetForm(); }} className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
+5570-                <X className="w-4 h-4" />
+5571-              </button>
+5572-            </div>
+5573-            <form className="p-4 space-y-4 overflow-y-auto" onSubmit={showAddForm ? handleAddSubmit : handleEditSubmit}>
+5574-              <div className="grid grid-cols-2 gap-4">
+--
+5787-                  </div>
+5788-                </div>
+5789-              </div>
+5790-
+5791-              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
+5792:                <button type="button" onClick={() => { setShowAddForm(false); setShowEditForm(false); resetForm(); }} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+5793-                  Batal
+5794-                </button>
+5795:                <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+5796-                  {showAddForm ? 'Simpan Data' : 'Simpan Perubahan'}
+5797-                </button>
+5798-              </div>
+5799-            </form>
+5800-          </div>
+--
+5813-              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+5814-                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+5815-                  <User className="w-4 h-4 text-blue-600" />
+5816-                  Detail Profil Warga
+5817-                </h3>
+5818:                <button onClick={() => setViewWarga(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
+5819-                  <X className="w-4 h-4" />
+5820-                </button>
+5821-              </div>
+5822-              <div className="p-6 overflow-y-auto space-y-6">
+5823-                <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+--
+6095-  const fileInputRef = useRef<HTMLInputElement>(null);
+6096-  
+6097-  return (
+6098-    <div className="space-y-6">
+6099-      <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit">
+6100:        <button
+6101-          onClick={() => setActiveSubTab('pembayaran')}
+6102-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+6103-        >
+6104-          <CreditCard className="w-4 h-4" />
+6105-          <span className="uppercase">Riwayat Pembayaran</span>
+6106-        </button>
+6107-        {isPengurus && (
+6108:          <button
+6109-            onClick={() => setActiveSubTab('rekap')}
+6110-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeSubTab === 'rekap' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+6111-          >
+6112-            <Users className="w-4 h-4" />
+6113-            <span className="uppercase">Rekap Iuran Warga</span>
+--
+6128-                {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+6129-              </select>
+6130-              <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+6131-                {years.map(y => <option key={y} value={y}>{y}</option>)}
+6132-              </select>
+6133:              <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-700 shadow-sm">
+6134-                <PlusCircle className="w-3.5 h-3.5" /> Buat Pembayaran
+6135-              </button>
+6136-            </div>
+6137-          </div>
+6138-          
+--
+6180-                      ) : '-'}
+6181-                    </td>
+6182-                    <td className="px-5 py-3 text-right">
+6183-                      {isPengurus && trx.status === 'Menunggu Verifikasi' && (
+6184-                        <div className="flex gap-1 justify-end">
+6185:                          <button onClick={() => handleApprove(trx)} className="p-1.5 px-3 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white rounded-lg border border-green-100 transition-colors font-bold text-xs" title="Terima">
+6186-                            <CheckCircle2 className="w-3 h-3" />
+6187-                          </button>
+6188:                          <button onClick={() => handleReject(trx)} className="p-1.5 px-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg border border-red-100 transition-colors font-bold text-xs" title="Tolak">
+6189-                            <X className="w-3 h-3" />
+6190-                          </button>
+6191-                        </div>
+6192-                      )}
+6193-                    </td>
+--
+6257-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+6258-              <h3 className="font-black text-slate-800 flex items-center gap-2">
+6259-                <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><PlusCircle className="w-4 h-4" /></span>
+6260-                Buat Pembayaran Baru
+6261-              </h3>
+6262:              <button onClick={() => setShowForm(false)} className="bg-white p-1.5 border border-slate-200 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+6263-            </div>
+6264-            
+6265-            <form onSubmit={handleCreatePayment} className="p-6 overflow-y-auto space-y-5">
+6266-              {isPengurus && (
+6267-                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
+--
+6307-                  <span>Bukti Pembayaran / Struk (Wajib U/Warga)</span>
+6308-                </label>
+6309-                {buktiUrl ? (
+6310-                  <div className="relative w-full aspect-video bg-slate-100 rounded-xl overflow-hidden border-2 border-slate-200 shadow-inner group">
+6311-                    <img src={buktiUrl} alt="Bukti" className="w-full h-full object-contain" />
+6312:                    <button type="button" onClick={() => setBuktiUrl('')} className="absolute top-3 right-3 p-2 bg-red-600/90 text-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"><X className="w-4 h-4" /></button>
+6313-                  </div>
+6314-                ) : (
+6315-                  <div className="w-full">
+6316-                    <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={async (e) => {
+6317-                      if (e.target.files && e.target.files[0]) {
+--
+6319-                        const url = await handleFileUpload(e.target.files[0], 'iuran_bukti');
+6320-                        if (url) setBuktiUrl(url);
+6321-                        setUploading(false);
+6322-                      }
+6323-                    }} />
+6324:                    <button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className="w-full py-6 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all flex flex-col items-center justify-center gap-3 bg-slate-50/50 outline-none group focus:ring-2 disabled:opacity-50 disabled:cursor-wait">
+6325-                      {uploading ? (
+6326-                        <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div>
+6327-                      ) : (
+6328-                        <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-200 group-hover:border-blue-200 group-hover:shadow-blue-100 transition-all">
+6329-                          <Upload className="w-5 h-5 text-blue-500" />
+--
+6338-                  </div>
+6339-                )}
+6340-              </div>
+6341-
+6342-              <div className="pt-6 flex gap-3">
+6343:                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batalkan</button>
+6344:                <button type="submit" disabled={uploading} className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2">
+6345-                  <CheckCircle2 className="w-4 h-4" /> Simpan Pembayaran
+6346-                </button>
+6347-              </div>
+6348-            </form>
+6349-          </motion.div>
+--
+6450-        </div>
+6451-        <div className="relative z-10 max-w-2xl">
+6452-          <h2 className="text-2xl font-black mb-2 flex items-center gap-2"><Smartphone className="w-6 h-6" /> Layanan PPOB & Tiketing</h2>
+6453-          <p className="text-blue-100 text-sm font-medium">Beli pulsa, token listrik, bayar tagihan hingga tiket kereta dari aplikasi warga. Setiap transaksi akan memberikan keuntungan otomatis (komisi) yang masuk ke Saldo Kas RT/RW!</p>
+6454-        </div>
+6455:        <button onClick={() => setShowSimulasiForm(true)} className="relative z-10 bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors shadow-lg active:scale-95 whitespace-nowrap">
+6456-          Lakukan Transaksi
+6457-        </button>
+6458-      </div>
+6459-
+6460-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+--
+6516-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+6517-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+6518-              <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+6519-                Transaksi PPOB & Tiket
+6520-              </h3>
+6521:              <button type="button" onClick={() => setShowSimulasiForm(false)} className="bg-white p-1.5 border border-slate-200 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+6522-            </div>
+6523-            
+6524-            <form onSubmit={handleSimulasiBayar} className="p-6 overflow-y-auto space-y-5">
+6525-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+6526-                {layanans.map(l => (
+6527:                  <button type="button" key={l.id} onClick={() => setSelectedLayanan(l.id)} className={`p-4 border rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${selectedLayanan === l.id ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50'}`}>
+6528-                    <div className={`p-2 rounded-xl ${selectedLayanan === l.id ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+6529-                      {l.icon}
+6530-                    </div>
+6531-                    <span className="text-[10px] font-bold text-slate-700 text-center">{l.name}</span>
+6532-                  </button>
+--
+6570-                  <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-indigo-600"/> Profit Pemilik (Anda): Rp {new Intl.NumberFormat('id-ID').format(Math.floor(adminFee * 0.8 * 0.15))}</span>
+6571-                </p>
+6572-              </div>
+6573-
+6574-              <div className="pt-2 flex gap-3">
+6575:                <button type="button" onClick={() => setShowSimulasiForm(false)} className="py-3 px-6 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batalkan</button>
+6576:                <button type="submit" className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] flex items-center justify-center gap-2">
+6577-                  <CreditCard className="w-4 h-4" /> Bayar Sekarang
+6578-                </button>
+6579-              </div>
+6580-            </form>
+6581-          </motion.div>
+--
+6592-  const canApprove = userRole === 'Admin' || userRole === 'RW' || userRole === 'RT' || userRole === 'Bendahara' || currentUser?.isSuperAdmin;
+6593-
+6594-  return (
+6595-    <div className="space-y-6">
+6596-      <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit flex-wrap gap-1">
+6597:        <button
+6598-          onClick={() => setActiveTabId('iuran')}
+6599-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeTabId === 'iuran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+6600-        >
+6601-          <CreditCard className="w-4 h-4" />
+6602-          <span className="uppercase tracking-widest hidden sm:inline">Pembayaran & Iuran Warga</span>
+6603-          <span className="uppercase tracking-widest sm:hidden">Iuran</span>
+6604-        </button>
+6605:        <button
+6606-          onClick={() => setActiveTabId('kas')}
+6607-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeTabId === 'kas' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+6608-        >
+6609-          <Wallet className="w-4 h-4" />
+6610-          <span className="uppercase tracking-widest hidden sm:inline">Buku Kas RT/RW</span>
+6611-          <span className="uppercase tracking-widest sm:hidden">Kas</span>
+6612-        </button>
+6613:        <button
+6614-          onClick={() => setActiveTabId('ppob')}
+6615-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeTabId === 'ppob' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+6616-        >
+6617-          <Smartphone className="w-4 h-4" />
+6618-          <span className="uppercase tracking-widest hidden sm:inline">Layanan Digital / PPOB</span>
+--
+7046-
+7047-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+7048-        {/* Unified Workflow Tabs */}
+7049-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white gap-4">
+7050-          <div className="flex bg-slate-100 p-1 rounded-xl">
+7051:            <button 
+7052-              onClick={() => setActiveView('manajemen')}
+7053-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'manajemen' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
+7054-            >
+7055-              Manajemen (Active)
+7056-            </button>
+7057:            <button 
+7058-              onClick={() => setActiveView('arsip')}
+7059-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'arsip' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
+7060-            >
+7061-              Arsip Digital
+7062-            </button>
+--
+7087-                </select>
+7088-              </>
+7089-            )}
+7090-            {userRole !== 'Viewer' && (
+7091-              <>
+7092:                <button onClick={exportSuratExcel} className="p-2 bg-white border border-slate-200 text-brand-blue rounded-xl hover:bg-blue-50 transition-all active:scale-90" title="Export Excel">
+7093-                  <Download className="w-4 h-4" />
+7094-                </button>
+7095:                <button onClick={() => setShowSuratForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95">
+7096-                  <PlusCircle className="w-3.5 h-3.5" />
+7097-                  Buat Surat Baru
+7098-                </button>
+7099-              </>
+7100-            )}
+--
+7138-                  </td>
+7139-                  <td className="px-6 py-4 text-right relative">
+7140-                    <div className="flex justify-end gap-1.5">
+7141-                      {userRole !== 'Viewer' && surat.status === 'Diajukan' && (
+7142-                        <>
+7143:                          <button disabled={isLoadingDB} onClick={() => handleSetujui(surat.id)} className="text-[10px] font-black uppercase text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 hover:bg-green-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Setujui</button>
+7144:                          <button disabled={isLoadingDB} onClick={() => setSuratToReject(surat)} className="text-[10px] font-black uppercase text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait">Tolak</button>
+7145-                        </>
+7146-                      )}
+7147-
+7148-                      {userRole !== 'Viewer' && surat.status === 'Disetujui' && (
+7149:                        <button disabled={isLoadingDB} onClick={() => handleSelesaikan(surat.id)} className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all active:scale-95 disabled:opacity-50">Selesaikan</button>
+7150-                      )}
+7151-                      
+7152-                      <div className="flex gap-1">
+7153-                        {['Selesai', 'Disetujui'].includes(surat.status) && (
+7154:                          <button onClick={() => handleCetak(surat.id)} className="bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 p-2 rounded-lg border border-slate-100 transition-all" title="Cetak Surat (PDF)">
+7155-                            <Printer className="w-3.5 h-3.5" />
+7156-                          </button>
+7157-                        )}
+7158:                        <button disabled={isLoadingDB} onClick={() => handleEdit(surat)} className="bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 p-2 rounded-lg border border-slate-100 transition-all disabled:opacity-50 disabled:cursor-wait" title="Edit Data">
+7159-                          <Edit className="w-3.5 h-3.5" />
+7160-                        </button>
+7161-                         {uploading && (
+7162-                           <div className="absolute top-0 left-0 h-1 bg-blue-600 transition-all duration-300" style={{ width: `${uploadPct}%` }}></div>
+7163-                         )}
+7164-                         {surat.file_url && (
+7165-                           <a href={surat.file_url} target="_blank" rel="noreferrer" className="bg-green-50 hover:bg-green-100 text-green-600 p-2 rounded-lg border border-green-200 transition-all" title="Lihat Berkas">
+7166-                             <FileText className="w-3.5 h-3.5" />
+7167-                           </a>
+7168-                         )}
+7169:                        <button 
+7170-                          disabled={isLoadingDB || userRole === 'Viewer'} 
+7171-                          onClick={() => setSuratToDelete(surat)} 
+7172-                          className="bg-red-50 hover:bg-red-600 text-red-400 hover:text-white p-2 rounded-lg border border-red-100 transition-all disabled:opacity-50 disabled:cursor-wait active:scale-95 shadow-sm" 
+7173-                          title="Hapus Permanen"
+7174-                        >
+--
+7206-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+7207-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+7208-                <FileText className="w-4 h-4 text-blue-600" />
+7209-                {editingSurat ? "Edit Surat Pengantar" : "Buat Surat Pengantar"}
+7210-              </h3>
+7211:              <button onClick={() => {setShowSuratForm(false); setEditingSurat(null);}} className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors">
+7212-                <X className="w-4 h-4" />
+7213-              </button>
+7214-            </div>
+7215-            <form className="p-6 space-y-4 overflow-y-auto" onSubmit={handleSaveSurat} ref={formRef}>
+7216-              {/* Seksi 1: Identitas Pribadi */}
+--
+7229-                    placeholder="Ketik nama atau NIK warga..." 
+7230-                  />
+7231-                  {searchResults.length > 0 && (
+7232-                    <div className="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+7233-                      {searchResults.map((w: any) => (
+7234:                        <button
+7235-                          key={w.nik}
+7236-                          type="button"
+7237-                          onClick={() => {
+7238-                            autoFillForm(w);
+7239-                            setSearchTerm("");
+--
+7254-                <div className="grid grid-cols-2 gap-3">
+7255-                  <div>
+7256-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Nomor NIK</label>
+7257-                    <div className="relative">
+7258-                      <input name="nik" type={showNik ? "text" : "password"} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono" placeholder="NIK" />
+7259:                      <button 
+7260-                        type="button"
+7261-                        onClick={() => setShowNik(!showNik)}
+7262-                        className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+7263-                      >
+7264-                        {showNik ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+--
+7427-                  <textarea name="keperluan" rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all" placeholder="Tuliskan keperluan surat di sini..."></textarea>
+7428-                </div>
+7429-              </div>
+7430-
+7431-              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
+7432:                <button type="button" onClick={() => setShowSuratForm(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+7433-                  Batal
+7434-                </button>
+7435:                <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+7436-                  {editingSurat ? 'Simpan Data' : 'Ajukan Surat'}
+7437-                </button>
+7438-              </div>
+7439-            </form>
+7440-          </div>
+--
+7483-                  autoFocus
+7484-                />
+7485-              </div>
+7486-
+7487-              <div className="flex gap-3 pt-2">
+7488:                <button onClick={() => {setSuratToReject(null); setRejectReason("");}} className="flex-1 py-3 text-slate-400 font-black uppercase text-[10px] tracking-widest bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">Batal</button>
+7489:                <button onClick={handleTolak} disabled={isLoadingDB} className="flex-1 py-3 bg-red-600 text-white font-black uppercase text-[10px] tracking-widest rounded-2xl shadow-xl shadow-red-100 hover:bg-red-700 transition-all active:scale-95 disabled:bg-slate-300">
+7490-                  {isLoadingDB ? 'Memproses...' : 'Tolak Surat'}
+7491-                </button>
+7492-              </div>
+7493-            </motion.div>
+7494-          </div>
+--
+7892-        <div className="md:ml-auto w-full md:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-3">
+7893-          <span className="text-[10px] font-bold text-slate-400 uppercase italic">
+7894-            {filteredData.length} transaksi di {selectedMonth === -1 ? `tahun ${selectedYear}` : `bulan ${months[selectedMonth]}`}
+7895-          </span>
+7896-          <div className="flex items-center gap-2 w-full sm:w-auto">
+7897:            <button onClick={handleExportExcelKas} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors shadow-sm">
+7898-              <Download className="w-3.5 h-3.5 text-green-600" /> EXCEL
+7899-            </button>
+7900:            <button onClick={handleExportPDFKas} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors shadow-sm">
+7901-              <Download className="w-3.5 h-3.5 text-red-500" /> PDF
+7902-            </button>
+7903-          </div>
+7904-        </div>
+7905-      </div>
+--
+7918-                  ref={fileInputRef} 
+7919-                  onChange={handleImportFileKas} 
+7920-                  className="hidden" 
+7921-                  accept=".csv, .xlsx, .xls" 
+7922-                />
+7923:                <button 
+7924-                  onClick={() => fileInputRef.current?.click()} 
+7925-                  className="flex items-center justify-center gap-1.5 bg-blue-600 text-white px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow-md active:scale-95"
+7926-                  title="Upload Database Transaksi (CSV/Excel)"
+7927-                >
+7928-                  <Upload className="w-3.5 h-3.5" /> Upload
+7929-                </button>
+7930-              </>
+7931-            )}
+7932:            <button onClick={() => { setTrxType('Masuk'); setShowMasukForm(true); }} className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all hover:bg-green-700 shadow-sm">
+7933-              <PlusCircle className="w-3.5 h-3.5" /> Catat Transaksi
+7934-            </button>
+7935-          </div>
+7936-        </div>
+7937-        <div className="overflow-x-auto">
+--
+7972-                  <td className="px-6 py-3 text-right font-mono text-xs font-bold bg-slate-50/50 text-slate-800">
+7973-                    {formatRupiah(trx.saldoAkhir)}
+7974-                  </td>
+7975-                  <td className="px-6 py-3 text-center">
+7976-                    <div className="flex justify-center gap-1">
+7977:                      <button 
+7978-                        onClick={() => setViewingKas(trx)} 
+7979-                        className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-all" 
+7980-                        title="Lihat Detail"
+7981-                      >
+7982-                        <Eye className="w-3.5 h-3.5" />
+7983-                      </button>
+7984:                      <button 
+7985-                        onClick={() => exportSingleTrxPDF(trx)} 
+7986-                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-all" 
+7987-                        title="Ekspor ke PDF"
+7988-                      >
+7989-                        <FileText className="w-3.5 h-3.5" />
+7990-                      </button>
+7991:                      <button 
+7992-                        onClick={() => {
+7993-                          setEditingKas(trx);
+7994-                          setTrxType(trx.tipe);
+7995-                          setStrukUrl(trx.strukUrl || "");
+7996-                          setShowMasukForm(true);
+--
+7998-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-all" 
+7999-                        title="Edit Transaksi"
+8000-                      >
+8001-                        <Edit2 className="w-3.5 h-3.5" />
+8002-                      </button>
+8003:                      <button 
+8004-                        onClick={() => setKasToDelete(trx)} 
+8005-                        className="p-1 text-red-500 hover:bg-red-100 rounded transition-all border border-red-100 hover:border-red-200" 
+8006-                        title="Hapus Transaksi"
+8007-                      >
+8008-                        <Trash2 className="w-3.5 h-3.5" />
+--
+8030-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+8031-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+8032-                {editingKas ? <Edit2 className="w-4 h-4 text-blue-600" /> : <PlusCircle className="w-4 h-4 text-blue-600" />}
+8033-                {editingKas ? 'Edit' : 'Catat'} Transaksi
+8034-              </h3>
+8035:              <button 
+8036-                onClick={() => {
+8037-                  setShowMasukForm(false);
+8038-                  setEditingKas(null);
+8039-                }} 
+8040-                className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors"
+--
+8044-            </div>
+8045-            
+8046-            <form onSubmit={handleSaveKas} className="p-5 overflow-y-auto space-y-4">
+8047-              {/* Tipe Transaksi Selector */}
+8048-              <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+8049:                <button 
+8050-                  type="button"
+8051-                  onClick={() => setTrxType('Masuk')}
+8052-                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Masuk' ? 'bg-green-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+8053-                >
+8054-                  Pemasukan
+8055-                </button>
+8056:                <button 
+8057-                  type="button"
+8058-                  onClick={() => setTrxType('Keluar')}
+8059-                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${trxType === 'Keluar' ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}
+8060-                >
+8061-                  Pengeluaran
+--
+8152-                    className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+8153-                  />
+8154-                  {strukUrl && (
+8155-                    <div className="mt-2 relative w-20 h-20 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden group">
+8156-                      <img src={strukUrl} alt="Struk" className="w-full h-full object-cover" />
+8157:                      <button 
+8158-                        type="button" 
+8159-                        onClick={() => setStrukUrl("")}
+8160-                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+8161-                      >
+8162-                        <Trash2 className="w-4 h-4 text-white" />
+--
+8165-                  )}
+8166-                </div>
+8167-              </div>
+8168-
+8169-              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
+8170:                <button 
+8171-                  type="button" 
+8172-                  onClick={() => {
+8173-                    setShowMasukForm(false);
+8174-                    setEditingKas(null);
+8175-                  }} 
+8176-                  className="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+8177-                >
+8178-                  Batal
+8179-                </button>
+8180:                <button 
+8181-                  type="submit"
+8182-                  className="px-6 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all shadow-md active:scale-95"
+8183-                >
+8184-                  {editingKas ? 'Simpan Perubahan' : 'Simpan Transaksi'}
+8185-                </button>
+--
+8196-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+8197-              <h3 className="font-black text-slate-800 uppercase tracking-widest text-sm flex items-center gap-2">
+8198-                <Info className="w-5 h-5 text-blue-600" />
+8199-                Detail Transaksi
+8200-              </h3>
+8201:              <button 
+8202-                onClick={() => setViewingKas(null)} 
+8203-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-all"
+8204-              >
+8205-                <X className="w-5 h-5" />
+8206-              </button>
+--
+8260-                </div>
+8261-              )}
+8262-            </div>
+8263-
+8264-            <div className="p-5 border-t border-slate-100 flex gap-3">
+8265:              <button 
+8266-                onClick={() => exportSingleTrxPDF(viewingKas)}
+8267-                className="flex-1 bg-emerald-600 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
+8268-              >
+8269-                <FileText className="w-4 h-4" /> Cetak PDF
+8270-              </button>
+8271:              <button 
+8272-                onClick={() => setViewingKas(null)}
+8273-                className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-200"
+8274-              >
+8275-                Tutup
+8276-              </button>
+--
+8287-                 <AlertTriangle className="w-8 h-8" />
+8288-              </div>
+8289-              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Hapus Transaksi?</h3>
+8290-              <p className="text-sm text-slate-500 font-medium">Tindakan ini akan menghapus catatan transaksi secara permanen dari sistem dan menyinkronkan data keuangan terkait.</p>
+8291-              <div className="flex gap-3">
+8292:                 <button 
+8293-                   onClick={() => setKasToDelete(null)}
+8294-                   className="flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all"
+8295-                 >
+8296-                   Batal
+8297-                 </button>
+8298:                 <button 
+8299-                   onClick={handleDeleteKas}
+8300-                   disabled={isDeletingKas}
+8301-                   className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 shadow-md shadow-red-200 transition-all disabled:opacity-50"
+8302-                 >
+8303-                   {isDeletingKas ? 'Menghapus...' : 'Ya, Hapus'}
+--
+8533-            </div>
+8534-            <div>
+8535-              <h3 className="text-xl font-black text-slate-800 tracking-tight">Paket: {currentTenant?.status || 'Trial'}</h3>
+8536-              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Langganan Anda Saat Ini</p>
+8537-              {currentUser?.isSuperAdmin && (
+8538:                <button 
+8539-                  onClick={() => setActiveTab('super-admin')}
+8540-                  className="mt-2 text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+8541-                >
+8542-                  <Shield className="w-3 h-3" /> Kelola (Tambah Slot) di Manajemen Tenant
+8543-                </button>
+--
+8658-              <textarea name="TEMPLATE_WA" defaultValue={settings.TEMPLATE_WA} rows={3} placeholder="Halo {nama}, iuran bulan ini belum lunas..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
+8659-            </div>
+8660-          </div>
+8661-
+8662-          <div className="md:col-span-2 pt-4 border-t border-slate-50 flex justify-end">
+8663:            <button 
+8664-              type="submit" 
+8665-              disabled={isSaving || userRole !== 'ADMIN'}
+8666-              className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
+8667-            >
+8668-              {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+--
+8672-      </div>
+8673-
+8674-      <div className="bg-red-50 p-6 rounded-xl border border-red-200">
+8675-        <h4 className="text-sm font-bold text-red-800 mb-2">Peringatan: Reset Data Warga</h4>
+8676-        <p className="text-xs text-red-600 mb-4">Fitur ini akan menghapus <strong>SELURUH</strong> data warga di sistem. Data yang sudah dihapus tidak bisa dikembalikan. Gunakan dengan sangat hati-hati.</p>
+8677:        <button 
+8678-          onClick={async () => {
+8679-            if (confirm("Apakah Anda yakin ingin menghapus SELURUH data warga? Tindakan ini tidak dapat dibatalkan!")) {
+8680-              try {
+8681-                // Delete batch
+8682-                const { collection, getDocs, writeBatch, doc } = await import('firebase/firestore');
+--
+8748-            </div>
+8749-          </div>
+8750-        </div>
+8751-
+8752-        <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+8753:          <button className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg text-sm font-bold transition-colors">
+8754-            Reset Default
+8755-          </button>
+8756:          <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95">
+8757-            Simpan Pengaturan
+8758-          </button>
+8759-        </div>
+8760-      </div>
+8761-
+--
+8798-        
+8799-        {generateMsg && (
+8800-          <p className="text-xs font-bold text-blue-700 mb-3 bg-white px-3 py-1 rounded shadow-sm">{generateMsg}</p>
+8801-        )}
+8802-
+8803:        <button 
+8804-          onClick={generateDummyData} 
+8805-          disabled={isGenerating || ((wargaData?.length || 0) + 20 > (currentTenant?.maxWarga || 50))}
+8806-          className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-all shadow-md disabled:bg-orange-300 flex items-center gap-2 disabled:cursor-not-allowed"
+8807-          title={((wargaData?.length || 0) + 20 > (currentTenant?.maxWarga || 50)) ? `Sisa slot paket tidak cukup (Butuh 20 slot)` : undefined}
+8808-        >
+--
+9084-          </h1>
+9085-          <p className="text-xs md:text-sm text-slate-500 font-medium">Kelola pengajuan perbaikan data dari warga secara mandiri.</p>
+9086-        </div>
+9087-        
+9088-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
+9089:          <button 
+9090-            onClick={handleMassSync}
+9091-            disabled={!verifikasiData.some(v => v.status === 'Disetujui' && !v.isFinalized)}
+9092-            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0"
+9093-          >
+9094-            <RefreshCw className="w-3.5 h-3.5" />
+--
+9097-          
+9098-          <div className="hidden sm:block h-4 w-px bg-slate-200 mx-1 shrink-0" />
+9099-          
+9100-          <div className="flex overflow-x-auto gap-2 w-full sm:w-auto pb-2 sm:pb-0 scrollbar-hide">
+9101-            {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => (
+9102:              <button
+9103-                key={f}
+9104-                onClick={() => setFilter(f)}
+9105-                className={`whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${filter === f ? 'bg-orange-400 text-white shadow-lg shadow-orange-100' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+9106-              >
+9107-                {f}
+--
+9171-                    <td className="px-6 py-4 text-right">
+9172-                      <div className="flex items-center justify-end gap-2">
+9173-                        {(!item.isFinalized && (item.status === 'Menunggu Persetujuan' || item.status === 'Disetujui')) && (
+9174-                          <>
+9175-                            {item.status === 'Menunggu Persetujuan' && (
+9176:                              <button 
+9177-                                onClick={() => handleApprove(item)}
+9178-                                disabled={actionLoading}
+9179-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-100 disabled:opacity-50"
+9180-                                title="Setujui"
+9181-                              >
+9182-                                {actionLoading ? <div className="w-5 h-5 border-2 border-green-200 border-t-green-600 rounded-full animate-spin"></div> : <CheckCircle className="w-5 h-5" />}
+9183-                              </button>
+9184-                            )}
+9185:                            <button 
+9186-                              onClick={() => handleReject(item)}
+9187-                              disabled={actionLoading}
+9188-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 disabled:opacity-50"
+9189-                              title={item.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
+9190-                            >
+9191-                              {actionLoading ? <div className="w-5 h-5 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></div> : <XCircle className="w-5 h-5" />}
+9192-                            </button>
+9193-                          </>
+9194-                        )}
+9195:                          <button 
+9196-                            onClick={() => {
+9197-                              setCatatan('');
+9198-                              setSelectedItem(item);
+9199-                            }}
+9200-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors"
+9201-                            title="Detail"
+9202-                          >
+9203-                            <Eye className="w-5 h-5" />
+9204-                          </button>
+9205:                          <button 
+9206-                            onClick={() => handleDelete(item.id)}
+9207-                            disabled={actionLoading}
+9208-                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent disabled:opacity-50"
+9209-                            title="Hapus Permanen"
+9210-                          >
+--
+9234-              className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 flex flex-col max-h-[90vh]"
+9235-            >
+9236-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+9237-                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Detail Verifikasi: {selectedItem.nama}</h2>
+9238-                <div className="flex items-center gap-2">
+9239:                  <button 
+9240-                    onClick={() => handleDelete(selectedItem.id)}
+9241-                    disabled={actionLoading}
+9242-                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+9243-                    title="Hapus Permanen"
+9244-                  >
+9245-                    <Trash2 className="w-5 h-5" />
+9246-                  </button>
+9247:                  <button onClick={() => { setSelectedItem(null); setCatatan(''); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+9248-                </div>
+9249-              </div>
+9250-
+9251-              <div className="p-8 overflow-y-auto flex-1">
+9252-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-bold">
+--
+9317-                        onChange={(e) => setCatatan(e.target.value)}
+9318-                      />
+9319-                    </div>
+9320-
+9321-                    <div className="flex gap-3 pt-4">
+9322:                      <button 
+9323-                        onClick={() => handleApprove(selectedItem)}
+9324-                        disabled={actionLoading || selectedItem.status === 'Disetujui'}
+9325-                        className="flex-1 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+9326-                      >
+9327-                        {actionLoading ? (
+--
+9329-                        ) : (
+9330-                          <CheckCircle className="w-5 h-5" />
+9331-                        )}
+9332-                        {actionLoading ? 'Memproses...' : 'Setujui Data'}
+9333-                      </button>
+9334:                      <button 
+9335-                        onClick={() => handleReject(selectedItem)}
+9336-                        disabled={actionLoading || selectedItem.status === 'Ditolak' || selectedItem.isFinalized}
+9337-                        className="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl border border-red-100 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+9338-                      >
+9339-                        {actionLoading ? (
+--
+9616-  return (
+9617-    <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 pb-20">
+9618-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100 mt-4">
+9619-        {/* Header */}
+9620-        <div className="bg-blue-600 p-8 text-white relative">
+9621:          <button 
+9622-            onClick={() => setWargaAuth(null)}
+9623-            className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+9624-          >
+9625-            <LogOut className="w-5 h-5" />
+9626-          </button>
+--
+9660-           {[
+9661-             { id: 'profil', label: 'Profil & Data', icon: User },
+9662-             { id: 'layanan', label: 'Ajukan Surat', icon: PlusCircle },
+9663-             { id: 'riwayat', label: 'Riwayat & Arsip', icon: History }
+9664-           ].map(tab => (
+9665:             <button
+9666-               key={tab.id}
+9667-               onClick={() => {setActiveCitizenTab(tab.id as any); setIsEditing(false);}}
+9668-               className={`flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeCitizenTab === tab.id ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+9669-             >
+9670-               <tab.icon className="w-3.5 h-3.5" />
+--
+9732-                    )}
+9733-                  </div>
+9734-                </div>
+9735-
+9736-                <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+9737:                  <button 
+9738-                    onClick={handleDataSudahBenar}
+9739-                    disabled={isLoadingDB || currentStatus === 'Disetujui'}
+9740-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale active:scale-95"
+9741-                  >
+9742-                    <CheckCircle className="w-5 h-5" />
+9743-                    Data Sudah Benar
+9744-                  </button>
+9745:                  <button 
+9746-                    onClick={() => setIsEditing(true)}
+9747-                    disabled={isLoadingDB || currentStatus === 'Disetujui'}
+9748-                    className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-3.5 px-6 rounded-2xl transition-all border border-blue-100 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
+9749-                  >
+9750-                    <Edit className="w-5 h-5" />
+--
+9929-                     </div>
+9930-                  </div>
+9931-                </div>
+9932-
+9933-                <div className="flex gap-4 pt-4">
+9934:                  <button 
+9935-                    type="button" 
+9936-                    onClick={() => setIsEditing(false)}
+9937-                    className="flex-1 py-3.5 border border-slate-200 rounded-2xl font-bold text-slate-600"
+9938-                  >
+9939-                    Batal
+--
+9944-                        className="bg-blue-600 h-full transition-all duration-300 shadow-[0_0_8px_rgba(37,99,235,0.5)]" 
+9945-                        style={{ width: `${uploadPct}%` }}
+9946-                      ></div>
+9947-                    </div>
+9948-                  )}
+9949:                  <button 
+9950-                    type="submit"
+9951-                    disabled={uploading}
+9952-                    className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-100 disabled:opacity-50"
+9953-                  >
+9954-                    {uploading ? `Mengunggah ${Math.round(uploadPct)}%` : 'Simpan & Ajukan'}
+--
+10006-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 font-bold text-slate-700"
+10007-                    placeholder="Contoh: Mengurus KTP baru, Persyaratan kerja, dll..."
+10008-                  ></textarea>
+10009-                </div>
+10010-
+10011:                <button 
+10012-                  type="submit"
+10013-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2"
+10014-                >
+10015-                  <PlusCircle className="w-4 h-4" />
+10016-                  Ajukan Surat Sekarang
+--
+10048-                          <Calendar className="w-3 h-3" />
+10049-                          {surat.tanggal}
+10050-                        </div>
+10051-                        {surat.status === 'Selesai' && (
+10052-                          <div className="flex items-center gap-2">
+10053:                             <button 
+10054-                               onClick={() => handleCetakSurat(surat.id)}
+10055-                               className="px-4 py-1.5 bg-slate-900 text-white rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center gap-1.5 hover:bg-slate-800 transition-all active:scale-95 shadow-md"
+10056-                             >
+10057-                               <Printer className="w-3 h-3" />
+10058-                               Cetak Surat
+--
+10198-            <div className="relative z-10 flex justify-between items-center">
+10199-              <div>
+10200-                <h2 className="text-2xl font-black tracking-tight">Formulir Pendaftaran Warga Baru</h2>
+10201-                <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">Lengkapi data Anda untuk verifikasi sistem</p>
+10202-              </div>
+10203:              <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+10204-                <X className="w-6 h-6" />
+10205-              </button>
+10206-            </div>
+10207-          </div>
+10208-
+--
+10416-            <div className="flex items-center gap-3">
+10417-              <ShieldCheck className="w-6 h-6 text-brand-blue" />
+10418-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Aman • Terenkripsi • Privasi Terjamin</p>
+10419-            </div>
+10420-            <div className="flex items-center gap-4 w-full sm:w-auto">
+10421:              <button type="button" disabled={uploading} onClick={onClose} className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">Batal</button>
+10422:              <button 
+10423-                  type="submit" 
+10424-                  disabled={uploading}
+10425-                  className="flex-1 sm:flex-none px-12 py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50 relative overflow-hidden"
+10426-              >
+10427-                  {uploading ? (
+--
+10455-        <h2 className="text-xl font-bold mb-4">Pendaftaran Tenant</h2>
+10456-        <form onSubmit={handleSubmit} className="space-y-4">
+10457-          <input required placeholder="Nama Tenant" value={formData.namaTenant} onChange={e => setFormData({...formData, namaTenant: e.target.value})} className="w-full p-2 border rounded" />
+10458-          <input required placeholder="Nama Penanggung Jawab" value={formData.namaPJ} onChange={e => setFormData({...formData, namaPJ: e.target.value})} className="w-full p-2 border rounded" />
+10459-          <input required type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 border rounded" />
+10460:          <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">Kirim</button>
+10461-        </form>
+10462-      </div>
+10463-    </div>
+10464-  );
+10465-}
+--
+10864-        </div>
+10865-      </div>
+10866-
+10867-        <div className="w-full max-w-md bg-white/90 rounded-[2.5rem] shadow-2xl shadow-slate-300/50 border border-white overflow-hidden relative z-10">
+10868-          <div className="flex border-b border-slate-100/50 bg-white/50 ">
+10869:            <button 
+10870-              onClick={() => { setLoginMode('admin'); setError(''); }}
+10871-              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === 'admin' ? 'text-brand-blue bg-white border-b-2 border-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
+10872-            >
+10873-              Pengurus
+10874-            </button>
+10875:            <button 
+10876-              onClick={() => { setLoginMode('warga'); setError(''); }}
+10877-              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === 'warga' ? 'text-brand-green bg-white border-b-2 border-brand-green shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
+10878-            >
+10879-              <span className="relative">
+10880-                Warga
+10881-                <span className="absolute -top-3 -right-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded-full text-[6px] animate-pulse">GOOGLE</span>
+10882-              </span>
+10883-            </button>
+10884:            <button 
+10885-              onClick={() => { setLoginMode('verifikasi'); setError(''); }}
+10886-              className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === 'verifikasi' ? 'text-brand-pink bg-white border-b-2 border-brand-pink shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/80'}`}
+10887-            >
+10888-              <span className="relative">
+10889-                NIK & KK
+--
+10940-                      value={password}
+10941-                      onChange={(e) => setPassword(e.target.value)}
+10942-                      className="w-full pl-14 pr-14 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-bold text-base"
+10943-                      placeholder="••••••••"
+10944-                    />
+10945:                    <button
+10946-                      type="button"
+10947-                      onClick={() => setShowPassword(!showPassword)}
+10948-                      className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-pink transition-colors p-2 rounded-full hover:bg-pink-50"
+10949-                    >
+10950-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="h-5 w-5" />}
+10951-                    </button>
+10952-                  </div>
+10953-                </div>
+10954:                <button
+10955-                  type="submit"
+10956-                  disabled={isLoading}
+10957-                  className="w-full bg-brand-blue hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] shadow-lg transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base"
+10958-                >
+10959-                  {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : "Masuk"}
+--
+10972-                   </div>
+10973-                   <p className="text-xs text-emerald-600 font-medium leading-relaxed">
+10974-                      Gunakan Google Login untuk akses penuh fitur warga: E-LAPAK26, Surat Digital, Keuangan, dan Pengaduan.
+10975-                   </p>
+10976-                </div>
+10977:                <button 
+10978-                  onClick={handleGoogleLogin}
+10979-                  disabled={isLoading}
+10980-                  className="w-full py-6 bg-white border-2 border-slate-100 text-slate-700 rounded-[2rem] font-black flex items-center justify-center gap-4 hover:bg-slate-50 hover:border-brand-green/30 transition-all active:scale-[0.98] shadow-sm text-base group"
+10981-                >
+10982-                  {isLoading ? (
+--
+11027-                        value={kodeKeluarga}
+11028-                        onChange={(e) => setKodeKeluarga(e.target.value)}
+11029-                        className="w-full pl-14 pr-14 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base"
+11030-                        placeholder="Nomor KK atau No. HP"
+11031-                      />
+11032:                      <button
+11033-                        type="button"
+11034-                        onClick={() => setShowKK(!showKK)}
+11035-                        className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+11036-                      >
+11037-                        {showKK ? <EyeOff className="w-5 h-5" /> : <Eye className="h-5 w-5" />}
+11038-                      </button>
+11039-                    </div>
+11040-                  </div>
+11041:                  <button
+11042-                    type="submit"
+11043-                    disabled={isLoading}
+11044-                    className="w-full bg-brand-pink hover:bg-pink-500 text-white font-black py-5 rounded-[1.5rem] shadow-lg transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 text-base"
+11045-                  >
+11046-                    {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : "Verifikasi & Cek Profil"}
+--
+11054-                  <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+11055-                    <span className="bg-white px-4 text-slate-400">Atau</span>
+11056-                  </div>
+11057-                </div>
+11058-
+11059:                <button 
+11060-                  onClick={onSelfRegister}
+11061-                  className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-brand-blue font-black text-xs uppercase tracking-widest hover:border-brand-blue/40 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+11062-                >
+11063-                  <UserPlus className="w-4 h-4" /> Warga Baru? Daftar Mandiri
+11064-                </button>
+--
+11067-             
+11068-             {loginMode === 'admin' && (
+11069-               <div className="mt-8 pt-8 border-t-2 border-slate-100 border-dashed">
+11070-                 <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Awal Cepat Uji Coba</p>
+11071-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+11072:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'arifrajcoach@gmail.com', '4R1f080162a3')} className="w-full bg-slate-50 hover:bg-brand-blue hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Super</button>
+11073:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'admin@rw26.com', 'admin123')} className="w-full bg-slate-50 hover:bg-brand-pink hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Admin</button>
+11074:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'operator@rw26.com', 'operator123')} className="w-full bg-slate-50 hover:bg-brand-yellow hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Kader</button>
+11075:                   <button onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, 'warga@rw26.com', 'warga123')} className="w-full bg-slate-50 hover:bg-brand-green hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm">Warga</button>
+11076-                 </div>
+11077-               </div>
+11078-             )}
+11079-          </div>
+11080-        </div>
+--
+11155-         <div className="flex justify-between items-center mb-6">
+11156-            <h3 className="text-sm font-bold text-slate-800 flex items-center">
+11157-              <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+11158-              Manajemen Pengguna & Pemetaan Unit
+11159-            </h3>
+11160:            <button 
+11161-              onClick={() => { setEditingUser(null); setShowForm(true); }}
+11162-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+11163-            >
+11164-              <PlusCircle className="w-4 h-4" />
+11165-              Tambah User
+--
+11214-                        {user.status || 'AKTIF'}
+11215-                      </span>
+11216-                   </td>
+11217-                   <td className="px-4 py-3 text-right">
+11218-                     <div className="flex justify-end gap-2">
+11219:                        <button 
+11220-                          onClick={() => { setEditingUser(user); setShowForm(true); }}
+11221-                          className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
+11222-                          title="Edit"
+11223-                        >
+11224-                          <Edit className="w-3.5 h-3.5" />
+11225-                        </button>
+11226:                        <button 
+11227-                          onClick={() => setUserToDelete(user)}
+11228-                          className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
+11229-                          title="Hapus"
+11230-                        >
+11231-                          <Trash2 className="w-3.5 h-3.5" />
+--
+11266-                     <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+11267-                        {editingUser ? <Edit className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
+11268-                     </div>
+11269-                     <h3 className="font-bold text-slate-800">{editingUser ? 'Edit User' : 'Tambah User baru'}</h3>
+11270-                  </div>
+11271:                  <button onClick={() => setShowForm(false)} className="p-1.5 hover:text-red-500 rounded-lg bg-white border border-slate-200 transition-colors"><X className="w-4 h-4" /></button>
+11272-               </div>
+11273-               <form className="p-6 space-y-4" onSubmit={handleSaveUser}>
+11274-                  <div className="grid grid-cols-2 gap-4">
+11275-                    <div className="col-span-2">
+11276-                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Nama Lengkap</label>
+--
+11289-
+11290-                    <div>
+11291-                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Password</label>
+11292-                      <div className="relative">
+11293-                        <input type={showPassword ? "text" : "password"} name="password" required={!editingUser} defaultValue={editingUser?.password || ''} placeholder="******" className="w-full px-3 py-2 pr-10 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold" />
+11294:                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+11295-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+11296-                        </button>
+11297-                      </div>
+11298-                    </div>
+11299-
+--
+11339-                      </select>
+11340-                    </div>
+11341-                  </div>
+11342-
+11343-                  <div className="pt-4 flex gap-3">
+11344:                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 text-slate-500 font-black uppercase text-[10px] tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+11345:                    <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">Simpan Pengguna</button>
+11346-                  </div>
+11347-               </form>
+11348-            </motion.div>
+11349-         </div>
+11350-       )}
+--
+11473-            <div>
+11474-              <h3 className="text-xl font-bold text-slate-800">Manajemen Tenant (Client RW/RT)</h3>
+11475-              <p className="text-sm text-slate-500">Ekosistem Multi-Tenant RW26 BERJUANG System.</p>
+11476-            </div>
+11477-          </div>
+11478:          <button 
+11479-            onClick={() => { setEditingTenant(null); setShowAddForm(true); }}
+11480-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
+11481-          >
+11482-            <PlusCircle className="w-4 h-4" />
+11483-            Tambah Tenant Baru
+--
+11550-                         {tenant.isActive !== false ? 'Aktif' : 'Nonaktif'}
+11551-                       </span>
+11552-                    </td>
+11553-                    <td className="px-6 py-4 text-right">
+11554-                       <div className="flex justify-end gap-2 text-[10px] uppercase font-black tracking-widest">
+11555:                          <button onClick={() => { setEditingTenant(tenant); setShowAddForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 font-bold active:scale-95 shadow-sm">
+11556-                             <Edit className="w-3.5 h-3.5" />
+11557-                             <span>Edit</span></button>
+11558:                          <button onClick={() => setTenantToDelete(tenant)} className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 font-bold active:scale-95 shadow-sm">
+11559-                             <Trash2 className="w-3.5 h-3.5" />
+11560-                             <span>Hapus</span></button>
+11561-                       </div>
+11562-                    </td>
+11563-                  </tr>
+--
+11574-               animate={{ opacity: 1, scale: 1 }}
+11575-               className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200"
+11576-            >
+11577-               <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+11578-                  <h3 className="text-lg font-bold text-slate-800">{editingTenant ? 'Edit Tenant' : 'Daftarkan Tenant Baru'}</h3>
+11579:                  <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+11580-               </div>
+11581-               <form className="p-8 grid grid-cols-2 gap-5 overflow-y-auto max-h-[80vh]" onSubmit={handleSaveTenant}>
+11582-                  <div className="col-span-2">
+11583-                    <div className="flex items-center gap-2 mb-2">
+11584-                       <Database className="w-4 h-4 text-blue-600" />
+--
+11656-                       <option value="false">Tidak Aktif (Suspended)</option>
+11657-                    </select>
+11658-                  </div>
+11659-
+11660-                  <div className="col-span-2 flex gap-4 mt-2">
+11661:                     <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50 transition-all border border-slate-200">Batal</button>
+11662:                     <button type="submit" disabled={isLoadingDB} className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300">
+11663-                        {isLoadingDB ? 'Memproses...' : (editingTenant ? 'Simpan Perubahan' : 'Daftarkan & Setup Tenant')}
+11664-                     </button>
+11665-                  </div>
+11666-               </form>
+11667-            </motion.div>
+--
+12395-            { id: 'balita', label: 'Balita', icon: Users },
+12396-            { id: 'ibuhamil', label: 'Ibu Hamil', icon: HeartPulse },
+12397-            { id: 'posbindu', label: 'Posbindu', icon: Activity },
+12398-            { id: 'kegiatan', label: 'Kegiatan', icon: Calendar },
+12399-          ].map(tab => (
+12400:            <button
+12401-              key={tab.id}
+12402-              onClick={() => setActiveSubTab(tab.id)}
+12403-              className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${
+12404-                activeSubTab === tab.id 
+12405-                  ? 'bg-white text-brand-pink shadow-lg shadow-pink-100 border border-pink-50' 
+--
+12435-                  <span className="text-slate-500 uppercase tracking-tighter">STUNTING</span>
+12436-                  <span className="text-brand-pink font-black text-lg">{stats.balitaStunting}</span>
+12437-                </div>
+12438-              </div>
+12439-              <div className="grid grid-cols-2 gap-2 mt-5">
+12440:                <button 
+12441-                  onClick={() => setActiveSubTab('balita')}
+12442-                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100"
+12443-                >
+12444-                  Lihat Daftar
+12445-                </button>
+12446:                <button 
+12447-                  onClick={() => { setEditingItem(null); setShowBalitaForm(true); }}
+12448-                  className="py-2.5 bg-brand-blue/10 text-brand-blue rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all"
+12449-                >
+12450-                  Tambah Data
+12451-                </button>
+--
+12463-                  <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">Risiko Tinggi</span>
+12464-                  <span className="text-brand-pink font-black text-2xl">{stats.ibuHamilRisiko}</span>
+12465-                </div>
+12466-              </div>
+12467-              <div className="grid grid-cols-2 gap-2 mt-5">
+12468:                <button 
+12469-                  onClick={() => setActiveSubTab('ibuhamil')}
+12470-                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-50 hover:text-pink-600 transition-all border border-slate-100"
+12471-                >
+12472-                  Lihat Daftar
+12473-                </button>
+12474:                <button 
+12475-                  onClick={() => { setEditingItem(null); setShowIbuHamilForm(true); }}
+12476-                  className="py-2.5 bg-brand-pink/10 text-brand-pink rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-pink hover:text-white transition-all"
+12477-                >
+12478-                  Tambah Data
+12479-                </button>
+--
+12506-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">Gula Darah</p>
+12507-                  <p className="text-xl font-black text-brand-blue">{stats.posbinduGulaDarah}</p>
+12508-                </div>
+12509-              </div>
+12510-              <div className="grid grid-cols-2 gap-2 mt-5">
+12511:                <button 
+12512-                  onClick={() => setActiveSubTab('posbindu')}
+12513-                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-50 hover:text-purple-600 transition-all border border-slate-100"
+12514-                >
+12515-                  Lihat Daftar
+12516-                </button>
+12517:                <button 
+12518-                  onClick={() => { setEditingPosbinduItem(null); setShowPosbinduForm(true); }}
+12519-                  className="py-2.5 bg-brand-purple/10 text-brand-purple rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-purple hover:text-white transition-all"
+12520-                >
+12521-                  Tambah Data
+12522-                </button>
+--
+12594-                    accept=".xlsx,.xls,.csv"
+12595-                    onChange={handleImportExcel}
+12596-                  />
+12597-                </div>
+12598-                <div className="flex gap-2 justify-center w-full sm:w-auto">
+12599:                  <button onClick={() => fileInputRef.current?.click()} className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90" title="Impor Data">
+12600-                    <Upload className="w-5 h-5" />
+12601-                  </button>
+12602:                  <button 
+12603-                    onClick={() => {
+12604-                       const doc = new jsPDF();
+12605-                       doc.text("Laporan Posbindu", 10, 10);
+12606-                       autoTable(doc, {
+12607-                           head: [['NIK', 'Nama', 'TD', 'GDS']],
+--
+12612-                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
+12613-                    title="Export PDF"
+12614-                  >
+12615-                    <FileText className="w-5 h-5" />
+12616-                  </button>
+12617:                  <button 
+12618-                    onClick={() => {
+12619-                      const ws = XLSX.utils.json_to_sheet(pemeriksaanPosbinduData);
+12620-                      const wb = XLSX.utils.book_new();
+12621-                      XLSX.utils.book_append_sheet(wb, ws, "Posbindu");
+12622-                      XLSX.writeFile(wb, `Data_Posbindu_${new Date().toISOString().split('T')[0]}.xlsx`);
+--
+12626-                  >
+12627-                    <FileSpreadsheet className="w-5 h-5" />
+12628-                  </button>
+12629-                </div>
+12630-              </div>
+12631:              <button 
+12632-                onClick={() => { setEditingPosbinduItem(null); setShowPosbinduForm(true); }}
+12633-                className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 flex items-center gap-2 transition-all active:scale-95"
+12634-              >
+12635-                <PlusCircle className="w-5 h-5" /> Tambah Pemeriksaan
+12636-              </button>
+--
+12656-                    <td className="px-6 py-3">{item.tanggal}</td>
+12657-                    <td className="px-6 py-3">{item.tekananDarah}</td>
+12658-                    <td className="px-6 py-3">{item.gulaDarah} mg/dL</td>
+12659-                    <td className="px-6 py-3">
+12660-                      <div className="flex gap-2">
+12661:                        <button onClick={() => { setEditingPosbinduItem(item); setShowPosbinduForm(true); }} className="p-1 px-2 text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 font-bold transition-all">Edit</button>
+12662:                        <button onClick={() => deleteItem('pemeriksaan_posbindu', item.id)} className="p-1.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+12663-                      </div>
+12664-                    </td>
+12665-                  </tr>
+12666-                ))}
+12667-              </tbody>
+--
+12740-                    <option value="Sedang">Sedang (Jalan rutin)</option>
+12741-                    <option value="Berat">Berat (Olahraga rutin)</option>
+12742-                </select>
+12743-              </div>
+12744-              <div className="flex gap-3 mt-6">
+12745:                <button type="button" onClick={() => setShowPosbinduForm(false)} className="flex-1 p-3 border rounded-xl">Batal</button>
+12746:                <button type="submit" className="flex-1 p-3 bg-blue-600 text-white rounded-xl">Simpan</button>
+12747-              </div>
+12748-            </form>
+12749-          </div>
+12750-        </div>
+12751-      )}
+--
+12770-                  ref={fileInputRef} 
+12771-                  className="hidden" 
+12772-                  accept=".xlsx,.xls,.csv"
+12773-                  onChange={handleImportExcel}
+12774-                />
+12775:                <button 
+12776-                  onClick={() => fileInputRef.current?.click()} 
+12777-                  className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90" 
+12778-                  title="Impor Database (Excel/CSV)"
+12779-                >
+12780-                  <Upload className="w-5 h-5" />
+12781-                </button>
+12782:                <button 
+12783-                  onClick={exportBalitaPDF}
+12784-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
+12785-                  title="Export PDF"
+12786-                >
+12787-                  <FileText className="w-5 h-5" />
+12788-                </button>
+12789:                <button 
+12790-                  onClick={exportBalitaExcel}
+12791-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
+12792-                  title="Export Excel"
+12793-                >
+12794-                  <FileSpreadsheet className="w-5 h-5" />
+12795-                </button>
+12796-              </div>
+12797-            </div>
+12798:            <button 
+12799-              onClick={() => { setEditingItem(null); setShowBalitaForm(true); }}
+12800-              className="px-4 py-2 bg-brand-blue text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-brand-blue/90 flex items-center gap-2 transition-all active:scale-95"
+12801-            >
+12802-              <PlusCircle className="w-4 h-4" />
+12803-              Daftar Balita
+--
+12840-                          {balita.statusStunting}
+12841-                        </span>
+12842-                      </td>
+12843-                      <td className="px-6 py-4 text-right">
+12844-                         <div className="flex justify-end gap-2">
+12845:                           <button 
+12846-                             onClick={() => { setSelectedBalita(balita); setActiveSubTab('timeline'); }}
+12847-                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" title="Lihat Detail (Timeline)"
+12848-                           >
+12849-                              <Eye className="w-4 h-4" />
+12850-                           </button>
+12851:                           <button 
+12852-                             onClick={() => exportBalitaKardPDF(balita)}
+12853-                             className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg transition-colors border border-transparent hover:border-pink-100" title="Download Kartu Kesehatan (PDF)"
+12854-                           >
+12855-                              <FileText className="w-4 h-4" />
+12856-                           </button>
+12857:                           <button 
+12858-                             onClick={() => { setEditingItem(balita); setShowBalitaForm(true); }}
+12859-                             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" title="Edit"
+12860-                           >
+12861-                              <Edit className="w-4 h-4" />
+12862-                           </button>
+12863:                           <button onClick={() => deleteItem('balita', balita.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100" title="Hapus">
+12864-                              <Trash2 className="w-4 h-4" />
+12865-                           </button>
+12866-                         </div>
+12867-                      </td>
+12868-                    </tr>
+--
+12889-                  </p>
+12890-                  <p className="text-[10px] text-slate-400 mt-1">Anak dari: {selectedBalita.namaOrangTua}</p>
+12891-                </div>
+12892-              </div>
+12893-              <div className="flex gap-2">
+12894:                <button 
+12895-                  onClick={() => exportBalitaKardPDF(selectedBalita)}
+12896-                  className="p-2 text-pink-600 hover:text-pink-700 bg-pink-50 rounded-xl transition-all"
+12897-                  title="Download Kartu Kesehatan (PDF)"
+12898-                >
+12899-                  <FileText className="w-5 h-5" />
+12900-                </button>
+12901:                <button 
+12902-                  onClick={() => setActiveSubTab('balita')}
+12903-                  className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl"
+12904-                >
+12905-                  <X className="w-5 h-5" />
+12906-                </button>
+--
+12914-                    <div className="w-20 h-20 bg-white/20  rounded-full flex items-center justify-center mb-4 border border-white/30">
+12915-                      <FileText className="w-10 h-10 text-white" />
+12916-                    </div>
+12917-                    <h3 className="text-xl font-black mb-2 uppercase tracking-widest">Digital Health Card</h3>
+12918-                    <p className="text-sm text-pink-100 font-medium max-w-xs mb-8">Kartu kesehatan digital ini berisi informasi lengkap pertumbuhan dan riwayat imunisasi anak.</p>
+12919:                    <button 
+12920-                      onClick={() => exportBalitaKardPDF(selectedBalita)} 
+12921-                      className="w-full py-4 bg-white text-pink-600 rounded-2xl font-black hover:bg-pink-50 transition-all shadow-lg uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95"
+12922-                    >
+12923-                      <Download className="w-5 h-5" /> Generate PDF
+12924-                    </button>
+--
+12929-                  <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+12930-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+12931-                      <Scale className="w-3 h-3" /> Quick Actions
+12932-                    </h4>
+12933-                    <div className="grid grid-cols-2 gap-4">
+12934:                      <button 
+12935-                        onClick={() => setShowPemeriksaanForm(true)}
+12936-                        className="flex-1 py-4 bg-blue-50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all flex flex-col items-center justify-center gap-2 border border-blue-100"
+12937-                      >
+12938-                        <Scale className="w-6 h-6" />
+12939-                        Update BB/TB
+12940-                      </button>
+12941:                      <button 
+12942-                        onClick={() => setShowImunisasiForm(true)}
+12943-                        className="flex-1 py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all flex flex-col items-center justify-center gap-2 border border-emerald-100"
+12944-                      >
+12945-                        <HeartPulse className="w-6 h-6" />
+12946-                        Register Imunisasi
+--
+12977-                  </p>
+12978-                  <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-black">HPL (Perkiraan): {formatTgl(selectedIbuHamil.tglHPL)}</p>
+12979-                </div>
+12980-              </div>
+12981-              <div className="flex gap-2">
+12982:                 <button 
+12983-                  onClick={() => exportIbuHamilKardPDF(selectedIbuHamil)}
+12984-                  className="p-2 text-blue-600 hover:text-blue-700 bg-blue-50 rounded-xl transition-all"
+12985-                  title="Cetak Kartu Kesehatan Hamil (PDF)"
+12986-                >
+12987-                  <FileText className="w-5 h-5" />
+12988-                </button>
+12989:                <button 
+12990-                  onClick={() => setActiveSubTab('ibuhamil')}
+12991-                  className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl transition-all"
+12992-                >
+12993-                  <X className="w-5 h-5" />
+12994-                </button>
+--
+13002-                    <div className="w-20 h-20 bg-white/20  rounded-full flex items-center justify-center mb-4 border border-white/30">
+13003-                      <HeartPulse className="w-10 h-10 text-white" />
+13004-                    </div>
+13005-                    <h3 className="text-xl font-black mb-2 uppercase tracking-widest">Pregnancy Health Card</h3>
+13006-                    <p className="text-sm text-blue-100 font-medium max-w-xs mb-8">Dokumen ringkasan kesehatan ibu hamil dan perkiraan kelahiran (HPL) siap untuk dicetak.</p>
+13007:                    <button 
+13008-                      onClick={() => exportIbuHamilKardPDF(selectedIbuHamil)} 
+13009-                      className="w-full py-4 bg-white text-blue-600 rounded-2xl font-black hover:bg-blue-50 transition-all shadow-lg uppercase text-xs tracking-widest flex items-center justify-center gap-3 active:scale-95"
+13010-                    >
+13011-                      <Download className="w-5 h-5" /> Download Digital Card
+13012-                    </button>
+--
+13062-                  ref={fileInputRefIbuHamil} 
+13063-                  className="hidden" 
+13064-                  accept=".xlsx,.xls,.csv"
+13065-                  onChange={handleImportIbuHamilExcel}
+13066-                />
+13067:                <button 
+13068-                  onClick={() => fileInputRefIbuHamil.current?.click()} 
+13069-                  className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90" 
+13070-                  title="Impor Database (Excel/CSV)"
+13071-                >
+13072-                  <Upload className="w-5 h-5" />
+13073-                </button>
+13074:                <button 
+13075-                  onClick={exportIbuHamilPDF}
+13076-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
+13077-                  title="Export PDF"
+13078-                >
+13079-                  <FileText className="w-5 h-5" />
+13080-                </button>
+13081:                <button 
+13082-                  onClick={exportIbuHamilExcel}
+13083-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
+13084-                  title="Export Excel"
+13085-                >
+13086-                  <FileSpreadsheet className="w-5 h-5" />
+13087-                </button>
+13088-              </div>
+13089-            </div>
+13090:            <button 
+13091-              onClick={() => { setEditingItem(null); setShowIbuHamilForm(true); }}
+13092-              className="px-4 py-2 bg-brand-blue text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-brand-blue/90 transition-all flex items-center gap-2"
+13093-            >
+13094-              <PlusCircle className="w-4 h-4" />
+13095-              Daftar Ibu Hamil
+--
+13122-                    <td className="px-6 py-4">
+13123-                       <p className="text-xs text-slate-500 max-w-[200px] truncate">{mil.riwayatKesehatan || '-'}</p>
+13124-                    </td>
+13125-                     <td className="px-6 py-4 text-right">
+13126-                        <div className="flex justify-end gap-1.5 group-hover:opacity-100 transition-all">
+13127:                          <button 
+13128-                            onClick={() => { setSelectedIbuHamil(mil); setActiveSubTab('ibuhamil_detail'); }}
+13129-                            className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-colors" 
+13130-                            title="Lihat Detail"
+13131-                          >
+13132-                            <Eye className="w-3.5 h-3.5" />
+13133-                          </button>
+13134:                          <button 
+13135-                            onClick={() => exportIbuHamilKardPDF(mil)} 
+13136-                            className="p-1.5 text-pink-600 bg-pink-50 rounded-lg hover:bg-pink-100 border border-pink-100 transition-colors" 
+13137-                            title="Download Kartu Kesehatan (PDF)"
+13138-                          >
+13139-                            <FileText className="w-3.5 h-3.5" />
+13140-                          </button>
+13141:                          <button onClick={() => { setEditingItem(mil); setShowIbuHamilForm(true); }} className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-100 transition-colors" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
+13142:                          <button onClick={() => deleteItem('ibu_hamil', mil.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100 transition-colors" title="Hapus"><Trash2 className="w-3.5 h-3.5" /></button>
+13143-                        </div>
+13144-                     </td>
+13145-                  </tr>
+13146-                ))}
+13147-              </tbody>
+--
+13154-        <div className="bg-white/80  rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+13155-          <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+13156-             <div className="flex items-center gap-3">
+13157-               <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight font-elegant">Jadwal & Agenda <span className="text-brand-pink">Kesehatan</span></h3>
+13158-               <div className="flex gap-2">
+13159:                 <button onClick={exportKegiatanPDF} className="p-2 bg-white border border-slate-200 text-brand-pink rounded-xl hover:bg-pink-50 transition-all active:scale-90" title="Export PDF">
+13160-                   <FileText className="w-5 h-5" />
+13161-                 </button>
+13162:                 <button onClick={exportKegiatanExcel} className="p-2 bg-white border border-slate-200 text-brand-blue rounded-xl hover:bg-blue-50 transition-all active:scale-90" title="Export Excel">
+13163-                   <FileSpreadsheet className="w-5 h-5" />
+13164-                 </button>
+13165-               </div>
+13166-             </div>
+13167:             <button 
+13168-               onClick={() => { setEditingItem(null); setShowKegiatanForm(true); }}
+13169-               className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 transition-all flex items-center gap-2 active:scale-95"
+13170-             >
+13171-               <PlusCircle className="w-5 h-5" />
+13172-               Buat Agenda
+--
+13178-                <div className="flex justify-between items-start mb-4">
+13179-                  <div className="p-3 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100">
+13180-                    <Calendar className="w-5 h-5" />
+13181-                  </div>
+13182-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+13183:                    <button onClick={() => { setEditingItem(kgt); setShowKegiatanForm(true); }} className="p-1 text-blue-600 hover:bg-white rounded border border-transparent hover:border-blue-100"><Edit className="w-3 h-3" /></button>
+13184:                    <button onClick={() => deleteItem('posyandu_kegiatan', kgt.id)} className="p-1 text-red-600 hover:bg-white rounded border border-transparent hover:border-red-100"><Trash2 className="w-3 h-3" /></button>
+13185-                  </div>
+13186-                </div>
+13187-                <h4 className="text-lg font-black text-slate-800">{formatTgl(kgt.tanggal)}</h4>
+13188-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">{kgt.lokasi}</p>
+13189-                <div className="space-y-2 border-t border-slate-200 pt-3">
+--
+13201-      {showBalitaForm && (
+13202-        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
+13203-           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden">
+13204-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+13205-                 <h3 className="font-bold text-slate-800">{editingItem ? 'Edit Data Balita' : 'Registrasi Balita Baru'}</h3>
+13206:                 <button onClick={() => setShowBalitaForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13207-              </div>
+13208-              <form className="p-6 space-y-4" onSubmit={handleSaveBalita}>
+13209-                 <div className="grid grid-cols-2 gap-4">
+13210-                    <div className="col-span-2">
+13211-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Nama Lengkap Balita</label>
+--
+13237-                          <option value="Stunting">Stunting</option>
+13238-                       </select>
+13239-                    </div>
+13240-                 </div>
+13241-                 <div className="pt-4 flex gap-3">
+13242:                    <button type="button" onClick={() => setShowBalitaForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13243:                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
+13244-                 </div>
+13245-              </form>
+13246-           </motion.div>
+13247-        </div>
+13248-      )}
+--
+13254-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
+13255-                 <h3 className="font-bold flex items-center gap-2">
+13256-                    <Scale className="w-4 h-4 text-blue-600" />
+13257-                    Pemeriksaan: {selectedBalita.nama}
+13258-                 </h3>
+13259:                 <button onClick={() => setShowPemeriksaanForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13260-              </div>
+13261-              <form className="p-6 space-y-4" onSubmit={handleSavePemeriksaan}>
+13262-                 <div className="grid grid-cols-2 gap-4">
+13263-                    <div className="col-span-2">
+13264-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Tanggal Periksa</label>
+--
+13276-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Catatan Tambahan</label>
+13277-                       <textarea name="catatan" rows={2} placeholder="Kondisi kesehatan balita saat ini..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500" />
+13278-                    </div>
+13279-                 </div>
+13280-                 <div className="pt-4 flex gap-3">
+13281:                    <button type="button" onClick={() => setShowPemeriksaanForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13282:                    <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-95">Simpan Hasil</button>
+13283-                 </div>
+13284-              </form>
+13285-           </motion.div>
+13286-        </div>
+13287-      )}
+--
+13293-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
+13294-                 <h3 className="font-bold flex items-center gap-2">
+13295-                    <HeartPulse className="w-4 h-4 text-green-600" />
+13296-                    Catat Imunisasi: {selectedBalita.nama}
+13297-                 </h3>
+13298:                 <button onClick={() => setShowImunisasiForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13299-              </div>
+13300-              <form className="p-6 space-y-4" onSubmit={handleSaveImunisasi}>
+13301-                 <div className="space-y-4">
+13302-                    <div>
+13303-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Jenis Imunisasi</label>
+--
+13321-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Tanggal Pemberian</label>
+13322-                       <input type="date" name="tanggal" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-green-500" />
+13323-                    </div>
+13324-                 </div>
+13325-                 <div className="pt-4 flex gap-3">
+13326:                    <button type="button" onClick={() => setShowImunisasiForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13327:                    <button type="submit" className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100 transition-all active:scale-95">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
+13328-                 </div>
+13329-              </form>
+13330-           </motion.div>
+13331-        </div>
+13332-      )}
+--
+13338-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
+13339-                 <h3 className="font-bold flex items-center gap-2">
+13340-                    <Calendar className="w-4 h-4 text-blue-600" />
+13341-                    {editingItem ? 'Edit Jadwal Kesehatan Warga' : 'Buat Jadwal Kesehatan Warga'}
+13342-                 </h3>
+13343:                 <button onClick={() => setShowKegiatanForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13344-              </div>
+13345-              <form className="p-6 space-y-4" onSubmit={handleSaveKegiatan}>
+13346-                 <div className="space-y-4">
+13347-                    <div>
+13348-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Tanggal Kegiatan</label>
+--
+13356-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Keterangan / Agenda</label>
+13357-                       <textarea name="keterangan" rows={3} defaultValue={editingItem?.keterangan} placeholder="Cth: Penimbangan rutin dan imunisasi campak..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500" />
+13358-                    </div>
+13359-                 </div>
+13360-                 <div className="pt-4 flex gap-3">
+13361:                    <button type="button" onClick={() => setShowKegiatanForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+13362:                    <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-95">Simpan Agenda</button>
+13363-                 </div>
+13364-              </form>
+13365-           </motion.div>
+13366-        </div>
+13367-      )}
+--
+13370-      {showIbuHamilForm && (
+13371-        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
+13372-           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden">
+13373-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800">
+13374-                 <h3 className="font-bold">{editingItem ? 'Edit Data Ibu Hamil' : 'Register Ibu Hamil'}</h3>
+13375:                 <button onClick={() => setShowIbuHamilForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+13376-              </div>
+13377-              <form className="p-6 space-y-4" onSubmit={handleSaveIbuHamil}>
+13378-                 <div className="grid grid-cols-2 gap-4">
+13379-                    <div className="col-span-2">
+13380-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Pilih dari Data Warga (NIK / Nama)</label>
+--
+13392-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Riwayat Kesehatan / Catatan</label>
+13393-                       <textarea name="riwayatKesehatan" rows={3} defaultValue={editingItem?.riwayatKesehatan} placeholder="Cth: Hipertensi, Alergi obat tertentu..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-pink-500" />
+13394-                    </div>
+13395-                 </div>
+13396-                 <div className="pt-4 flex gap-3">
+13397:                    <button type="button" onClick={() => setShowIbuHamilForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+13398:                    <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-pink-700 shadow-lg shadow-pink-100 transition-all active:scale-95">{editingItem ? 'Simpan Perubahan' : 'Simpan Data'}</button>
+13399-                 </div>
+13400-              </form>
+13401-           </motion.div>
+13402-        </div>
+13403-      )}
+--
+13867-            { id: 'setoran', label: 'Setoran', icon: PlusCircle },
+13868-            { id: 'tarik', label: 'Tarik Saldo', icon: HandCoins },
+13869-            { id: 'nasabah', label: 'Nasabah', icon: Users },
+13870-            { id: 'kategori', label: 'Kategori', icon: Settings },
+13871-          ].map((tab) => (
+13872:            <button
+13873-              key={tab.id}
+13874-              onClick={() => setActiveSubTab(tab.id)}
+13875-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+13876-                activeSubTab === tab.id 
+13877-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' 
+--
+13995-                    onChange={(e) => setSearchQuery(e.target.value)}
+13996-                  />
+13997-                </div>
+13998-              </div>
+13999-              {canEdit && (
+14000:                <button 
+14001-                  onClick={() => setShowSetoranForm(true)}
+14002-                  className="w-full sm:w-auto p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center justify-center gap-2"
+14003-                >
+14004-                  <PlusCircle className="w-4 h-4" />
+14005-                  Catat Setoran
+--
+14028-                      <td className="px-6 py-4 text-right text-slate-400">Rp {item.harga.toLocaleString()}</td>
+14029-                      <td className="px-6 py-4 text-right font-black text-emerald-600">Rp {item.total.toLocaleString()}</td>
+14030-                      <td className="px-6 py-4 text-slate-500 text-xs">{item.tanggal}</td>
+14031-                      <td className="px-6 py-4">
+14032-                        <div className="flex gap-2">
+14033:                          <button 
+14034-                            onClick={() => {
+14035-                              const n = nasabahSummary.find((nas: any) => nas.nik === item.nasabahId);
+14036-                              if (n) {
+14037-                                setSelectedNasabahId(n.nik);
+14038-                                setActiveSubTab('nasabah_detail');
+--
+14045-                          >
+14046-                            <Eye className="w-3.5 h-3.5" />
+14047-                          </button>
+14048-                          {canEdit && (
+14049-                            <>
+14050:                              <button onClick={() => { setEditingItem(item); setShowSetoranForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit">
+14051-                                <Edit className="w-3.5 h-3.5" />
+14052-                              </button>
+14053:                              <button onClick={() => deleteItem('sampah_setoran', item.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus Transaksi">
+14054-                                <Trash2 className="w-3.5 h-3.5" />
+14055-                              </button>
+14056-                            </>
+14057-                          )}
+14058-                        </div>
+--
+14076-                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 ring-blue-500/20"
+14077-                  onChange={(e) => setSearchQuery(e.target.value)}
+14078-                />
+14079-              </div>
+14080-              {canEdit && (
+14081:                <button 
+14082-                  onClick={() => setShowTarikForm(true)}
+14083-                  className="w-full sm:w-auto p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center justify-center gap-2"
+14084-                >
+14085-                  <HandCoins className="w-4 h-4" />
+14086-                  Tarik Saldo
+--
+14105-                      <td className="px-6 py-4 text-right font-black text-blue-600">Rp {item.nominal.toLocaleString()}</td>
+14106-                      <td className="px-6 py-4 text-slate-500 text-xs">{item.tanggal}</td>
+14107-                      <td className="px-6 py-4 text-slate-400 text-xs italic">{item.keterangan || '-'}</td>
+14108-                      <td className="px-6 py-4">
+14109-                        <div className="flex gap-2">
+14110:                          <button 
+14111-                            onClick={() => {
+14112-                              const n = nasabahSummary.find((nas: any) => nas.nik === item.nasabahId);
+14113-                              if (n) {
+14114-                                setSelectedNasabahId(n.nik);
+14115-                                setActiveSubTab('nasabah_detail');
+--
+14122-                          >
+14123-                            <Eye className="w-3.5 h-3.5" />
+14124-                          </button>
+14125-                          {canEdit && (
+14126-                            <div className="flex gap-2">
+14127:                              <button onClick={() => { setEditingItem(item); setShowTarikForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit">
+14128-                                <Edit className="w-3.5 h-3.5" />
+14129-                              </button>
+14130:                              <button onClick={() => deleteItem('sampah_tarik_saldo', item.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus Penarikan">
+14131-                                <Trash2 className="w-3.5 h-3.5" />
+14132-                              </button>
+14133-                            </div>
+14134-                          )}
+14135-                        </div>
+--
+14154-                  <h2 className="text-xl font-black text-slate-800">{selectedNasabah.nama}</h2>
+14155-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nasabah ID: {selectedNasabah.nik}</p>
+14156-                </div>
+14157-              </div>
+14158-              <div className="flex gap-2">
+14159:                <button 
+14160-                  onClick={() => exportBukuTabunganPDF(selectedNasabah)}
+14161-                  className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-red-100 border border-red-100 transition-all"
+14162-                >
+14163-                  <FileText className="w-4 h-4" /> PDF
+14164-                </button>
+14165:                <button 
+14166-                  onClick={() => setActiveSubTab('nasabah')}
+14167-                  className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl transition-all"
+14168-                >
+14169-                  <X className="w-5 h-5" />
+14170-                </button>
+--
+14248-                    className="hidden" 
+14249-                    accept=".xlsx,.xls,.csv"
+14250-                    onChange={handleImportExcel}
+14251-                  />
+14252-                  {canEdit && (
+14253:                    <button 
+14254-                      onClick={() => { setEditingItem(null); setShowNasabahForm(true); }} 
+14255-                      className="p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center gap-2" 
+14256-                      title="Tambah Nasabah Baru"
+14257-                    >
+14258-                      <PlusCircle className="w-4 h-4" />
+14259-                      Nasabah
+14260-                    </button>
+14261-                  )}
+14262:                  <button 
+14263-                    onClick={() => fileInputRef.current?.click()} 
+14264-                    className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-all active:scale-95" 
+14265-                    title="Impor Database (Excel/CSV)"
+14266-                  >
+14267-                    <Upload className="w-4 h-4" />
+14268-                  </button>
+14269:                  <button onClick={exportNasabahSummaryPDF} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100" title="Export PDF Semua Nasabah">
+14270-                    <FileText className="w-4 h-4" />
+14271-                  </button>
+14272:                  <button onClick={exportNasabahSummaryExcel} className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100" title="Export Excel Semua Nasabah">
+14273-                    <FileSpreadsheet className="w-4 h-4" />
+14274-                  </button>
+14275-                </div>
+14276-              </div>
+14277-           </div>
+--
+14301-                            Rp {n.saldo.toLocaleString()}
+14302-                          </span>
+14303-                        </td>
+14304-                       <td className="px-6 py-4 text-right">
+14305-                            <div className="flex justify-end gap-1.5 transition-all">
+14306:                              <button 
+14307-                                onClick={() => { setSelectedNasabahId(n.nik); setActiveSubTab('nasabah_detail'); }} 
+14308-                                className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm active:scale-95" 
+14309-                                title="Lihat/Mata"
+14310-                              >
+14311-                                <Eye className="w-3.5 h-3.5" />
+14312-                              </button>
+14313:                              <button 
+14314-                                onClick={() => { setEditingItem(n); setShowNasabahForm(true); }} 
+14315-                                className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" 
+14316-                                title="Edit Nasabah"
+14317-                              >
+14318-                                <Edit className="w-3.5 h-3.5" />
+14319-                              </button>
+14320:                              <button 
+14321-                                onClick={() => deleteItemsByNasabah(n.nik)} 
+14322-                                className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" 
+14323-                                title="Hapus Semua Riwayat"
+14324-                              >
+14325-                                <Trash2 className="w-3.5 h-3.5" />
+--
+14338-      {activeSubTab === 'kategori' && (
+14339-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+14340-          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+14341-             <h3 className="font-bold text-slate-800">Kategori Sampah & Harga</h3>
+14342-             {canEdit && (
+14343:               <button onClick={() => setShowKategoriForm(true)} className="p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center gap-2">
+14344-                 <PlusCircle className="w-4 h-4" />
+14345-                 Tambah Kategori
+14346-               </button>
+14347-             )}
+14348-          </div>
+--
+14353-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-slate-100 shadow-sm">
+14354-                    <Recycle className="w-5 h-5 text-emerald-600" />
+14355-                  </div>
+14356-                  {canEdit && (
+14357-                    <div className="flex gap-2">
+14358:                       <button onClick={() => { setEditingItem(kat); setShowKategoriForm(true); }} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95" title="Edit"><Edit className="w-4 h-4" /></button>
+14359:                       <button onClick={() => deleteItem('sampah_kategori', kat.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+14360-                    </div>
+14361-                  )}
+14362-                </div>
+14363-                <h4 className="font-bold text-slate-800 text-lg mb-1">{kat.nama}</h4>
+14364-                <p className="text-emerald-600 font-black text-xl">
+--
+14375-      {showKategoriForm && (
+14376-        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4">
+14377-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
+14378-             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+14379-                <h3 className="font-bold text-slate-800">{editingItem ? 'Edit Kategori' : 'Tambah Kategori Sampah'}</h3>
+14380:                <button onClick={() => { setShowKategoriForm(false); setEditingItem(null); }} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+14381-             </div>
+14382-             <form className="p-6 space-y-4" onSubmit={handleSaveKategori}>
+14383-                <div>
+14384-                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Nama Kategori</label>
+14385-                   <input type="text" name="nama" required defaultValue={editingItem?.nama} placeholder="Cth: Botol Plastik, Kardus, dll" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500" />
+--
+14397-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Harga Beli (Rp)</label>
+14398-                      <input type="number" name="hargaBeli" required defaultValue={editingItem?.hargaBeli} placeholder="Cth: 2500" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500" />
+14399-                   </div>
+14400-                </div>
+14401-                <div className="pt-4 flex gap-3">
+14402:                   <button type="button" onClick={() => { setShowKategoriForm(false); setEditingItem(null); }} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14403:                   <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all">Simpan Kategori</button>
+14404-                </div>
+14405-             </form>
+14406-          </motion.div>
+14407-        </div>
+14408-      )}
+--
+14410-      {showSetoranForm && (
+14411-        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4 overflow-y-auto">
+14412-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden my-auto">
+14413-             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
+14414-                <span className="flex items-center gap-2"><Recycle className="w-4 h-4 text-emerald-600" /> Catat Setoran Baru</span>
+14415:                <button onClick={() => setShowSetoranForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+14416-             </div>
+14417-             <form className="p-6 space-y-4" onSubmit={handleSaveSetoran}>
+14418-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+14419-                   <div className="col-span-full">
+14420-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Pilih Nasabah (Warga)</label>
+--
+14446-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Keterangan Tambahan</label>
+14447-                      <textarea name="keterangan" rows={2} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-emerald-500" placeholder="Opsional..."></textarea>
+14448-                   </div>
+14449-                </div>
+14450-                <div className="pt-4 flex gap-3">
+14451:                   <button type="button" onClick={() => setShowSetoranForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14452:                   <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all">Simpan Setoran</button>
+14453-                </div>
+14454-             </form>
+14455-          </motion.div>
+14456-        </div>
+14457-      )}
+--
+14459-      {showTarikForm && (
+14460-        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4">
+14461-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
+14462-             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
+14463-                <span className="flex items-center gap-2"><HandCoins className="w-4 h-4 text-blue-600" /> {editingItem ? 'Edit Tarik Saldo' : 'Tarik Saldo Nasabah'}</span>
+14464:                <button onClick={() => { setShowTarikForm(false); setEditingItem(null); }} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+14465-             </div>
+14466-             <form className="p-6 space-y-4" onSubmit={handleSaveTarik}>
+14467-                <div>
+14468-                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Pilih Nasabah (Aktif)</label>
+14469-                   <select name="nasabahId" required defaultValue={editingItem?.nasabahId} disabled={!!editingItem} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500 disabled:opacity-50">
+--
+14484-                <div>
+14485-                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Keterangan</label>
+14486-                   <textarea name="keterangan" rows={2} defaultValue={editingItem?.keterangan} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500" placeholder="Contoh: Keperluan harian..."></textarea>
+14487-                </div>
+14488-                <div className="pt-4 flex gap-3">
+14489:                   <button type="button" onClick={() => { setShowTarikForm(false); setEditingItem(null); }} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14490:                   <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transform active:scale-95 transition-all">{editingItem ? 'Simpan Perubahan' : 'Konfirmasi Tarik'}</button>
+14491-                </div>
+14492-             </form>
+14493-          </motion.div>
+14494-        </div>
+14495-      )}
+--
+14497-      {showNasabahForm && (
+14498-        <div className="fixed inset-0 z-[100] bg-slate-900/60  flex items-center justify-center p-4">
+14499-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
+14500-             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 font-bold uppercase text-[10px] tracking-widest">
+14501-                <span className="flex items-center gap-2"><User className="w-4 h-4 text-emerald-600" /> {editingItem ? 'Edit Data Nasabah (Warga)' : 'Tambah Nasabah (Warga)'}</span>
+14502:                <button onClick={() => setShowNasabahForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+14503-             </div>
+14504-             <form className="p-6 space-y-4" onSubmit={handleSaveNasabah}>
+14505-                <div className="bg-blue-50 text-blue-800 text-xs p-3 rounded-lg border border-blue-100 mb-4 flex items-start gap-2">
+14506-                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+14507-                   <p>Data nasabah ini terhubung dengan data Warga. {editingItem ? 'Mengedit' : 'Menambahkan'} nama di sini akan ikut {editingItem ? 'mengubah' : 'menambahkan'} data warga tersebut.</p>
+--
+14541-                     <input type="text" name="rw" required defaultValue={editingItem?.rw || '05'} placeholder="05" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500" />
+14542-                  </div>
+14543-                </div>
+14544-                
+14545-                <div className="pt-4 flex gap-3">
+14546:                   <button type="button" onClick={() => setShowNasabahForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+14547:                   <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all">{editingItem ? 'Simpan Perubahan' : 'Tambah Nasabah'}</button>
+14548-                </div>
+14549-             </form>
+14550-          </motion.div>
+14551-        </div>
+14552-      )}
+--
+14834-             value={searchQuery}
+14835-             onChange={(e) => setSearchQuery(e.target.value)}
+14836-             className="w-full md:w-64 pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium shadow-sm"
+14837-           />
+14838-           {canEdit && (
+14839:             <button 
+14840-               onClick={() => { setEditingItem(null); setShowAddForm(true); }}
+14841-               className="flex-shrink-0 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95"
+14842-             >
+14843-               <PlusCircle className="w-4 h-4" />
+14844-               Tambah Aset Baru
+--
+14906-                      <p className="text-[10px] font-bold text-slate-700">{item.tanggal_perolehan ? new Date(item.tanggal_perolehan).toLocaleDateString('id-ID') : '-'}</p>
+14907-                      <p className="text-[10px] text-emerald-600 font-mono font-bold mt-0.5">Rp {(item.harga_perolehan || 0).toLocaleString('id-ID')}</p>
+14908-                    </td>
+14909-                    <td className="px-4 py-3 text-right">
+14910-                      <div className="flex justify-end gap-2">
+14911:                        <button 
+14912-                          onClick={() => { setSelectedItem(item); setShowLogForm(true); }} 
+14913-                          className="flex items-center gap-1.5 px-2 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors border border-green-100 text-[10px] font-bold uppercase tracking-wider"
+14914-                          title="Catat Aktivitas"
+14915-                        >
+14916-                          <ClipboardList className="w-3.5 h-3.5" />
+14917-                          Catat
+14918-                        </button>
+14919:                        <button 
+14920-                          onClick={() => { setSelectedItem(item); setShowLogHistory(true); }} 
+14921-                          className="p-1.5 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
+14922-                          title="Riwayat"
+14923-                        >
+14924-                          <History className="w-3.5 h-3.5" />
+14925-                        </button>
+14926-                        {canEdit && (
+14927:                          <button onClick={() => { setEditingItem(item); setShowAddForm(true); }} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100" title="Edit Aset">
+14928-                            <Edit className="w-3.5 h-3.5" />
+14929-                          </button>
+14930-                        )}
+14931-                      </div>
+14932-                    </td>
+--
+14947-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+14948-                    {editingItem ? <Edit className="w-4 h-4" /> : <Package className="w-4 h-4" />}
+14949-                  </div>
+14950-                  <h3 className="font-bold text-slate-800">{editingItem ? 'Edit Aset' : 'Tambah Aset Baru'}</h3>
+14951-               </div>
+14952:               <button onClick={() => setShowAddForm(false)} className="p-1.5 hover:text-red-500 bg-white border border-slate-200 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+14953-             </div>
+14954-             <form onSubmit={handleSaveItem} className="p-6 space-y-4">
+14955-               <div className="grid grid-cols-2 gap-4">
+14956-                 <div className="col-span-2">
+14957-                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Foto Aset</label>
+--
+15039-                   <input type="text" name="spesifikasi" defaultValue={editingItem?.spesifikasi} placeholder="Detail teknis..." className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-blue-500 outline-none font-bold text-slate-600" />
+15040-                 </div>
+15041-               </div>
+15042-               
+15043-               <div className="pt-4 flex gap-3">
+15044:                 <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-slate-50 transition-all">Batal</button>
+15045:                 <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95">Simpan Aset</button>
+15046-               </div>
+15047-             </form>
+15048-          </div>
+15049-        </div>
+15050-      )}
+--
+15056-             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+15057-               <h3 className="font-bold text-slate-800 flex items-center gap-2">
+15058-                 <ClipboardList className="w-4 h-4 text-green-600" />
+15059-                 Catat Transaksi: {selectedItem.nama_barang}
+15060-               </h3>
+15061:               <button onClick={() => setShowLogForm(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+15062-             </div>
+15063-             <form onSubmit={handleSaveLog} className="p-6 space-y-4">
+15064-               <div>
+15065-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Jenis Transaksi <span className="text-red-500">*</span></label>
+15066-                  <select 
+--
+15173-                    </div>
+15174-                 </div>
+15175-               )}
+15176-
+15177-               <div className="pt-2 flex gap-3">
+15178:                 <button type="button" onClick={() => setShowLogForm(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50">Batal</button>
+15179:                 <button type="submit" className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100">Simpan Catatan</button>
+15180-               </div>
+15181-             </form>
+15182-          </div>
+15183-        </div>
+15184-      )}
+--
+15190-             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+15191-               <h3 className="font-bold text-slate-800 flex items-center gap-2">
+15192-                 <History className="w-4 h-4 text-blue-600" />
+15193-                 Riwayat: {selectedItem.nama_barang}
+15194-               </h3>
+15195:               <button onClick={() => setShowLogHistory(false)} className="p-1.5 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+15196-             </div>
+15197-             <div className="p-0 max-h-[60vh] overflow-y-auto">
+15198-                {inventarisLogs.filter((l: any) => l.itemId === selectedItem.id).length === 0 ? (
+15199-                  <div className="p-12 text-center text-slate-400">Belum ada riwayat aktivitas untuk barang ini.</div>
+15200-                ) : (
+--
+15251-                      ))}
+15252-                  </div>
+15253-                )}
+15254-             </div>
+15255-             <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+15256:                <button onClick={() => setShowLogHistory(false)} className="px-6 py-2 bg-white border border-slate-200 text-slate-600 font-bold text-xs rounded-lg uppercase tracking-widest">Tutup</button>
+15257-             </div>
+15258-          </div>
+15259-        </div>
+15260-      )}
+15261-    </div>

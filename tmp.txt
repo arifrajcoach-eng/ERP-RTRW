@@ -1,0 +1,5 @@
+516:  const [inventarisKategori, setInventarisKategori] = useState<any[]>([]);
+1821:             inventarisKategori={inventarisKategori} inventarisLokasi={inventarisLokasi} inventarisSupplier={inventarisSupplier}
+14557:function InventarisView({ inventarisData, setInventarisData, inventarisLogs, setInventarisLogs, inventarisKategori, inventarisLokasi, inventarisSupplier, userRole, currentUser, tenantId, setIsLoadingDB, handleFirestoreError, showNotification, handleFileUpload }: any) {
+14622:        const kExists = inventarisKategori.find(k => k.nama_kategori?.toLowerCase() === itemData.kategori?.toLowerCase());
+14984:                      {inventarisKategori.map(k => <option key={k.id} value={k.nama_kategori} />)}
