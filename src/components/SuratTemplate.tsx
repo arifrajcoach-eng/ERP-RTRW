@@ -47,7 +47,15 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
                 <div className="text-center">
                     <p>Mengetahui,</p>
                     <p>Ketua RW {surat?.rw || kop?.rw || '....'}</p>
-                    <div className="h-20"></div>
+                    <div className="h-20 flex items-center justify-center relative">
+                        {kop?.signature_rw_url && (
+                          <img 
+                            src={kop.signature_rw_url} 
+                            alt="TTD RW" 
+                            className="absolute h-20 w-full object-contain pointer-events-none" 
+                          />
+                        )}
+                    </div>
                     <p className="font-bold underline">( {surat?.ketua_rw_nama || kop?.nama_ketua_rw || '...................................'} )</p>
                 </div>
                 <div className="text-center">
@@ -57,7 +65,15 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
                         return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
                       })()}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     <p>{surat?.jabatan_ttd || 'Ketua RT'} {surat?.rt || kop?.rt || '....'}</p>
-                    <div className="h-20"></div>
+                    <div className="h-20 flex items-center justify-center relative">
+                        {kop?.signature_rt_url && (
+                          <img 
+                            src={kop.signature_rt_url} 
+                            alt="TTD RT" 
+                            className="absolute h-20 w-full object-contain pointer-events-none" 
+                          />
+                        )}
+                    </div>
                     <p className="font-bold underline">( {surat?.ketua || kop?.nama_ketua_rt || '...................................'} )</p>
                 </div>
             </div>

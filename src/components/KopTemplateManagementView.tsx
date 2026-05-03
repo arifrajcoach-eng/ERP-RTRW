@@ -119,6 +119,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
   });
   const [logoUrl, setLogoUrl] = useState('');
   const [logoRwUrl, setLogoRwUrl] = useState('');
+  const [signatureRtUrl, setSignatureRtUrl] = useState('');
+  const [signatureRwUrl, setSignatureRwUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -250,6 +252,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         });
         setLogoUrl(data.logo_url || '');
         setLogoRwUrl(data.logo_rw_url || '');
+        setSignatureRtUrl(data.signature_rt_url || '');
+        setSignatureRwUrl(data.signature_rw_url || '');
       }
     });
     return unsub;
@@ -262,7 +266,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     }));
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'logoRw' = 'logo') => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'logoRw' | 'signatureRt' | 'signatureRw' = 'logo') => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
 
@@ -308,14 +312,22 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         setUploadProgress(80);
         
         try {
-          const update = type === 'logo' ? { logo_url: dataUrl } : { logo_rw_url: dataUrl };
-          await setDoc(doc(db, 'tenant_settings', tenantId), update, { merge: true });
+          const updateKey = 
+            type === 'logo' ? 'logo_url' : 
+            type === 'logoRw' ? 'logo_rw_url' : 
+            type === 'signatureRt' ? 'signature_rt_url' : 'signature_rw_url';
+            
+          await setDoc(doc(db, 'tenant_settings', tenantId), { [updateKey]: dataUrl }, { merge: true });
+          
           if (type === 'logo') setLogoUrl(dataUrl);
-          else setLogoRwUrl(dataUrl);
-          showNotification("Logo berhasil disimpan", 'success');
+          else if (type === 'logoRw') setLogoRwUrl(dataUrl);
+          else if (type === 'signatureRt') setSignatureRtUrl(dataUrl);
+          else if (type === 'signatureRw') setSignatureRwUrl(dataUrl);
+          
+          showNotification("File berhasil disimpan", 'success');
         } catch (error: any) {
           console.error(error);
-          showNotification(`Gagal menyimpan logo: ${error.message}`, 'error');
+          showNotification(`Gagal menyimpan file: ${error.message}`, 'error');
         } finally {
           setUploading(false);
           setUploadProgress(0);
@@ -329,19 +341,27 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     e.target.value = ''; // Reset input
   };
 
-  const handleRemoveLogo = async (type: 'logo' | 'logoRw' = 'logo') => {
-    if (!confirm("Hapus logo ini?")) return;
+  const handleRemoveLogo = async (type: 'logo' | 'logoRw' | 'signatureRt' | 'signatureRw' = 'logo') => {
+    if (!confirm("Hapus file ini?")) return;
     setUploading(true);
     try {
-      const update = type === 'logo' ? { logo_url: '' } : { logo_rw_url: '' };
-      await setDoc(doc(db, 'tenant_settings', tenantId), update, { merge: true });
+      const updateKey = 
+        type === 'logo' ? 'logo_url' : 
+        type === 'logoRw' ? 'logo_rw_url' : 
+        type === 'signatureRt' ? 'signature_rt_url' : 'signature_rw_url';
+        
+      await setDoc(doc(db, 'tenant_settings', tenantId), { [updateKey]: '' }, { merge: true });
+      
       if (type === 'logo') setLogoUrl('');
-      else setLogoRwUrl('');
-      showNotification("Logo berhasil dihapus", 'success');
+      else if (type === 'logoRw') setLogoRwUrl('');
+      else if (type === 'signatureRt') setSignatureRtUrl('');
+      else if (type === 'signatureRw') setSignatureRwUrl('');
+      
+      showNotification("File berhasil dihapus", 'success');
     } catch (error) {
       console.error(error);
       handleFirestoreError(error, 'update', `tenant_settings/${tenantId}`);
-      showNotification("Gagal menghapus logo", 'error');
+      showNotification("Gagal menghapus file", 'error');
     } finally {
       setUploading(false);
     }
@@ -350,7 +370,14 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
   const handleSaveBranding = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, 'tenant_settings', tenantId), { ...formData, logo_url: logoUrl, logo_rw_url: logoRwUrl, tenantId }, { merge: true });
+      await setDoc(doc(db, 'tenant_settings', tenantId), { 
+        ...formData, 
+        logo_url: logoUrl, 
+        logo_rw_url: logoRwUrl, 
+        signature_rt_url: signatureRtUrl,
+        signature_rw_url: signatureRwUrl,
+        tenantId 
+      }, { merge: true });
       showNotification("Branding berhasil disimpan", 'success');
     } catch (error) {
       console.error(error);
@@ -442,6 +469,48 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
             </div>
         </div>
 
+        <div className="mb-4 pt-4 border-t border-slate-100">
+            <label className="block text-sm font-medium text-slate-700 mb-2">TTD RT (Tanda Tangan Digital)</label>
+            <p className="text-[10px] text-slate-500 mb-2">Tanda tangan dalam format gambar (.png transparan disarankan).</p>
+            {signatureRtUrl ? (
+              <div className="flex items-center gap-4 mb-3">
+                <img src={signatureRtUrl} alt="TTD RT" className="w-32 h-20 object-contain border rounded p-1 bg-white" />
+                <button 
+                  onClick={() => handleRemoveLogo('signatureRt')}
+                  className="text-xs text-red-600 font-bold hover:underline"
+                >
+                  Hapus TTD
+                </button>
+              </div>
+            ) : (
+              <div className="w-32 h-20 border-2 border-dashed border-slate-200 rounded flex items-center justify-center text-slate-400 mb-2">
+                <Upload size={20} />
+              </div>
+            )}
+            <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'signatureRt')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+        </div>
+
+        <div className="mb-4 pt-4 border-t border-slate-100">
+            <label className="block text-sm font-medium text-slate-700 mb-2">TTD RW (Tanda Tangan Digital)</label>
+            <p className="text-[10px] text-slate-500 mb-2">Tanda tangan dalam format gambar (.png transparan disarankan).</p>
+            {signatureRwUrl ? (
+              <div className="flex items-center gap-4 mb-3">
+                <img src={signatureRwUrl} alt="TTD RW" className="w-32 h-20 object-contain border rounded p-1 bg-white" />
+                <button 
+                  onClick={() => handleRemoveLogo('signatureRw')}
+                  className="text-xs text-red-600 font-bold hover:underline"
+                >
+                  Hapus TTD
+                </button>
+              </div>
+            ) : (
+              <div className="w-32 h-20 border-2 border-dashed border-slate-200 rounded flex items-center justify-center text-slate-400 mb-2">
+                <Upload size={20} />
+              </div>
+            )}
+            <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'signatureRw')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700">Papan Nama RT/RW</label>
@@ -515,7 +584,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         <h3 className="text-lg font-semibold mb-4 text-slate-700">Live Preview</h3>
         <div ref={previewRef} className="p-4 bg-white overflow-x-auto">
           {/* Note: Dummy surat object for preview */}
-          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR', show_logo: 'yes' }} kop={{ ...formData, logo_url: logoUrl, logo_rw_url: logoRwUrl }} settings={settings} />
+          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR', show_logo: 'yes' }} kop={{ ...formData, logo_url: logoUrl, logo_rw_url: logoRwUrl, signature_rt_url: signatureRtUrl, signature_rw_url: signatureRwUrl }} settings={settings} />
         </div>
       </div>
     </div>

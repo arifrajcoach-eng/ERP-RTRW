@@ -6,10 +6,10 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isAdmin() { 
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
-        ("email" in request.auth.token && request.auth.token.email == 'arifrajcoach@gmail.com') || 
+        request.auth.token.email == 'arifrajcoach@gmail.com' || 
         request.auth.uid == 'eHFrJ7Re1sb4xhMWlsHNoKr5qs53' ||
-        request.auth.uid == 'MKe94buSU4SMg8jiRbCcOLwJp9H3'
+        request.auth.uid == 'MKe94buSU4SMg8jiRbCcOLwJp9H3' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       ); 
     }
     
@@ -21,14 +21,19 @@ service cloud.firestore {
     
     function isTenantMember(tenantId) {
       let userData = getUserData();
-      return isSignedIn() && (isAdmin() || (userData != null && userData.tenantId == tenantId));
+      return isSignedIn() && (
+        isAdmin() || 
+        (userData != null && (
+          userData.tenantId == tenantId || 
+          (userData.tenantId == 'RW_BERJUANG' && tenantId == 'trihprw26')
+        ))
+      );
     }
     
     function isPengurus() {
-      let userData = getUserData();
       return isSignedIn() && (
         isAdmin() || 
-        (userData != null && (userData.role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS']))
+        (getUserData() != null && (getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS']))
       );
     }
 
@@ -49,8 +54,10 @@ service cloud.firestore {
     }
 
     match /buku_tamu/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId);
+      allow list: if isTenantMember(resource.data.tenantId);
+      allow get: if isSignedIn();
       allow create: if true;
+      allow update, delete: if isTenantMember(resource.data.tenantId);
     }
 
     match /tenant_registrations/{docId} {
@@ -58,7 +65,8 @@ service cloud.firestore {
     }
     
     match /tenants/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /inventaris/{docId} {
@@ -78,6 +86,12 @@ service cloud.firestore {
     }
 
     match /iuran/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isTenantMember(resource.data.tenantId);
+    }
+
+    match /ppob_trx/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isTenantMember(resource.data.tenantId);
@@ -142,10 +156,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow list: if isPengurus();
-      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isSuperAdmin', 'tenantId']));
-      allow delete: if isAdmin();
+      allow list: if isPengurus() || isAdmin();
+      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isPengurus());
+      allow update: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId)) || (isSignedIn() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isSuperAdmin', 'tenantId']));
+      allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
     }
 
     match /verifikasi_warga/{docId} {

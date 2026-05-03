@@ -150,6 +150,9 @@ const PLAN_FEATURES = {
 
 // Shared Helper for Document Generation
 const generateSuratHTML = (surat: any, kop: any, settings: any) => {
+  const displayRT = surat.rt || kop.rt || '...';
+  const displayRW = surat.rw || kop.rw || '...';
+  
   return `
     <html>
       <head>
@@ -187,7 +190,7 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
                     ${surat.show_logo !== 'no' && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-[90px] h-[90px] object-contain mr-4 ml-4" />` : ''}
                 </div>
                 <div class="flex-1 text-center px-4 flex flex-col justify-center items-center">
-                    <h2 class="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">${kop.nama_rt || `RUKUN TETANGGA ${kop.rt || '...'} / RUKUN WARGA ${kop.rw || '...'}`}</h2>
+                    <h2 class="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}</h2>
                     <p class="font-['Arial'] text-[16px] leading-[24.8571px] font-bold w-[398.875px] h-[23.9792px]">KELURAHAN ${kop.kelurahan?.toUpperCase() || '...'} - KECAMATAN ${kop.kecamatan?.toUpperCase() || '...'}</p>
                     <p class="font-['Arial'] text-[16px] leading-[20px] font-bold">${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KABUPATEN') || (kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}${(kop.kabupaten || settings.kabupaten || 'BEKASI').toUpperCase()}</p>
                     <p class="w-[347.242px] h-[23.2461px] text-[8px] leading-[11.14px]">Sekretariat : ${kop.alamat || '...'} | Email: ${kop.email || '...'} | Instagram: ${kop.instagram || '...'}</p>
@@ -225,7 +228,9 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
               <div class="text-center ml-12">
                   <p>Mengetahui,</p>
                   <p>Ketua RW ${surat.rw || kop.rw || '....'}</p>
-                  <div class="h-20"></div>
+                  <div class="h-20 flex items-center justify-center relative">
+                      ${kop.signature_rw_url ? `<img src="${kop.signature_rw_url}" alt="TTD RW" class="absolute h-20 w-full object-contain pointer-events-none" />` : ''}
+                  </div>
                   <p class="font-bold underline">( ${surat.ketua_rw_nama || kop.nama_ketua_rw || '...................................'} )</p>
               </div>
               <div class="text-center mr-12">
@@ -235,7 +240,9 @@ const generateSuratHTML = (surat: any, kop: any, settings: any) => {
                       return prefix + kab.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
                     })()}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   <p>${surat.jabatan_ttd || 'Ketua RT'} ${surat.rt || kop.rt || '....'}</p>
-                  <div class="h-20"></div>
+                  <div class="h-20 flex items-center justify-center relative">
+                      ${kop.signature_rt_url ? `<img src="${kop.signature_rt_url}" alt="TTD RT" class="absolute h-20 w-full object-contain pointer-events-none" />` : ''}
+                  </div>
                   <p class="font-bold underline">( ${surat.ketua || kop.nama_ketua_rt || '...................................'} )</p>
               </div>
           </div>
@@ -350,12 +357,12 @@ export default function App() {
             let userData = userDoc.data() as any;
             
             // --- AUTO MIGRATION & REPAIR LOGIC ---
-            const isTrihUser = user.email?.toLowerCase() === 'trihprw26@rw26.com' || user.email?.toLowerCase().startsWith('trihprw26');
+            const isTrihUser = user.email?.toLowerCase().includes('trihprw26');
             let needsUpdate = false;
             
             // Fix missing or wrong tenantId for known client
-            if (isTrihUser && userData.tenantId !== 'trihprw26') {
-              userData.tenantId = 'trihprw26';
+            if (isTrihUser && userData.tenantId !== 'RW_BERJUANG') {
+              userData.tenantId = 'RW_BERJUANG';
               needsUpdate = true;
             }
             
@@ -406,8 +413,8 @@ export default function App() {
             
             // Set default tenantId based on username or email
             let tenantId = 'RW26_SMART';
-            if (user.email?.startsWith('trihprw26')) {
-              tenantId = 'trihprw26';
+            if (user.email?.toLowerCase().includes('trihprw26')) {
+              tenantId = 'RW_BERJUANG';
             } else if (user.email?.includes('@')) {
               // Extract potential tenantId from email if it's a custom domain or structured
               const domain = user.email.split('@')[1];
@@ -707,6 +714,7 @@ export default function App() {
     }
 
     const tId = currentUser?.tenantId || wargaAuth?.tenantId || 'RW26_SMART';
+    const tIds = tId === 'RW_BERJUANG' ? ['RW_BERJUANG', 'trihprw26'] : [tId];
 
     const isViewer = currentUser?.role === 'Viewer';
     const isCitizen = currentUser?.role === 'Warga' || (!currentUser && !!wargaAuth);
@@ -724,11 +732,14 @@ export default function App() {
     };
 
     // 0. Settings Listener
-    const unsubSettings = onSnapshot(doc(db, 'settings', tId), (snap) => {
-      if (snap.exists()) {
-        setSettings(snap.data());
-      }
-    });
+    const unsubSettings = onSnapshot(doc(db, 'settings', tId), 
+      (snap) => {
+        if (snap.exists()) {
+          setSettings(snap.data());
+        }
+      },
+      (err) => { handleFirestoreError(err, 'get', `settings/${tId}`); onDataLoaded(); }
+    );
 
     const unsubCurrentTenant = tId === 'MASTER' 
       ? (() => {
@@ -738,29 +749,41 @@ export default function App() {
             status: 'ENTERPRISE', 
             maxWarga: 999999 
           });
+          onDataLoaded();
           return () => {};
         })()
-      : onSnapshot(doc(db, 'tenants', tId), (snap) => {
-          if (snap.exists()) {
-            setCurrentTenant(snap.data());
-          } else {
+      : onSnapshot(doc(db, 'tenants', tId), 
+          (snap) => {
+            if (snap.exists()) {
+              setCurrentTenant(snap.data());
+            } else {
+              setCurrentTenant(null);
+            }
+            onDataLoaded();
+          },
+          (err) => { 
+            handleFirestoreError(err, 'get', `tenants/${tId}`); 
             setCurrentTenant(null);
+            onDataLoaded();
           }
-        });
+        );
 
     // 0.5 Kop Settings Listener
-    const unsubKopSettings = onSnapshot(doc(db, 'tenant_settings', tId), (snap) => {
-      if (snap.exists()) {
-        setKopSettings(snap.data());
-      }
-    });
+    const unsubKopSettings = onSnapshot(doc(db, 'tenant_settings', tId), 
+      (snap) => {
+        if (snap.exists()) {
+          setKopSettings(snap.data());
+        }
+      },
+      (err) => { handleFirestoreError(err, 'get', `tenant_settings/${tId}`); onDataLoaded(); }
+    );
 
     // 1. Warga Listener
     const getWargaQuery = () => {
       const base = collection(db, 'data_warga');
       if (currentUser?.isSuperAdmin) return query(base);
       
-      const constraints = [where('tenantId', '==', tId)];
+      const constraints = [where('tenantId', 'in', tIds)];
       
       if (currentUser?.role === 'RT') {
         constraints.push(where('rt', '==', currentUser.rt || '01'));
@@ -786,7 +809,7 @@ export default function App() {
     if (hasFullAccess) {
       const getKasQuery = () => {
         const base = collection(db, 'kas');
-        const constraints = [where('tenantId', '==', tId)];
+        const constraints = [where('tenantId', 'in', tIds)];
         if (currentUser?.role === 'RT') {
           constraints.push(where('rt', '==', currentUser.rt || '01'));
         }
@@ -809,7 +832,7 @@ export default function App() {
     // 3. Surat Listener
     let unsubSurat = () => {};
     if (hasFullAccess) {
-      unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId)), 
+      unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', 'in', tIds)), 
         (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           const filtered = currentUser?.role === 'RT' 
@@ -827,7 +850,7 @@ export default function App() {
       // Citizen listener: only their own letters
       const uid = auth.currentUser?.uid;
       if (uid) {
-        unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', '==', tId), where('authUid', '==', uid)), 
+        unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', 'in', tIds), where('authUid', '==', uid)), 
           (snap) => {
             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setSuratData(data);
@@ -846,7 +869,7 @@ export default function App() {
     // 4. Iuran Listener
     let unsubIuran = () => {};
     if (hasFullAccess) {
-      unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', tId)), 
+      unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', 'in', tIds)), 
         (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           const filtered = currentUser?.role === 'RT'
@@ -863,7 +886,7 @@ export default function App() {
     } else if (isCitizen && (wargaAuth || currentUser?.role === 'Warga')) {
       const uid = auth.currentUser?.uid;
       if (uid) {
-        unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', '==', tId), where('userId', '==', uid)), 
+        unsubIuran = onSnapshot(query(collection(db, 'iuran'), where('tenantId', 'in', tIds), where('userId', '==', uid)), 
           (snap) => {
             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setIuranData(data);
@@ -880,7 +903,7 @@ export default function App() {
     // 4.6 PPOB Listener
     let unsubPpob = () => {};
     if (hasFullAccess) {
-      unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', '==', tId)), 
+      unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', 'in', tIds)), 
         (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           const filtered = currentUser?.role === 'RT'
@@ -894,7 +917,7 @@ export default function App() {
     } else if (isCitizen && (wargaAuth || currentUser?.role === 'Warga')) {
       const uid = auth.currentUser?.uid;
       if (uid) {
-        unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', '==', tId), where('userId', '==', uid)), 
+        unsubPpob = onSnapshot(query(collection(db, 'ppob_trx'), where('tenantId', 'in', tIds), where('userId', '==', uid)), 
           (snap) => {
             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setPpobData(data);
@@ -915,7 +938,7 @@ export default function App() {
     if (hasFullAccess) {
       const getInventarisQuery = () => {
         const base = collection(db, 'inventaris');
-        const constraints = [where('tenantId', '==', tId)];
+        const constraints = [where('tenantId', 'in', tIds)];
         if (currentUser?.role === 'RT') {
           constraints.push(where('rt', '==', currentUser.rt || '01'));
         }
@@ -937,7 +960,7 @@ export default function App() {
       // 4.6 Inventaris Logs Listener
       const getInventarisLogsQuery = () => {
         const base = collection(db, 'inventaris_logs');
-        const constraints = [where('tenantId', '==', tId)];
+        const constraints = [where('tenantId', 'in', tIds)];
         if (currentUser?.role === 'RT') {
           constraints.push(where('rt', '==', currentUser.rt || '01'));
         }
@@ -955,13 +978,13 @@ export default function App() {
       );
 
       // 4.7 Inventaris Kategori/Lokasi/Supplier
-      unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', '==', tId)), 
+      unsubInventarisKategori = onSnapshot(query(collection(db, 'inventaris_kategori'), where('tenantId', 'in', tIds)), 
         (snap) => setInventarisKategori(snap.docs.map(doc => ({ ...doc.data() })))
       );
-      unsubInventarisLokasi = onSnapshot(query(collection(db, 'inventaris_lokasi'), where('tenantId', '==', tId)), 
+      unsubInventarisLokasi = onSnapshot(query(collection(db, 'inventaris_lokasi'), where('tenantId', 'in', tIds)), 
         (snap) => setInventarisLokasi(snap.docs.map(doc => ({ ...doc.data() })))
       );
-      unsubInventarisSupplier = onSnapshot(query(collection(db, 'inventaris_supplier'), where('tenantId', '==', tId)), 
+      unsubInventarisSupplier = onSnapshot(query(collection(db, 'inventaris_supplier'), where('tenantId', 'in', tIds)), 
         (snap) => setInventarisSupplier(snap.docs.map(doc => ({ ...doc.data() })))
       );
     }
@@ -978,7 +1001,7 @@ export default function App() {
     if (hasFullAccess) {
       const getRTFilter = (coll: string) => {
         const base = collection(db, coll);
-        const constraints = [where('tenantId', '==', tId)];
+        const constraints = [where('tenantId', 'in', tIds)];
         if (currentUser?.role === 'RT') {
           constraints.push(where('rt', '==', currentUser.rt || '01'));
         }
@@ -1043,7 +1066,7 @@ export default function App() {
     if (hasFullAccess) {
       const getRTFilter = (coll: string) => {
         const base = collection(db, coll);
-        const constraints = [where('tenantId', '==', tId)];
+        const constraints = [where('tenantId', 'in', tIds)];
         if (currentUser?.role === 'RT') {
           constraints.push(where('rt', '==', currentUser.rt || '01'));
         }
@@ -1073,7 +1096,7 @@ export default function App() {
       );
     }
 
-    const unsubEmergencies = onSnapshot(query(collection(db, 'emergencies'), where('tenantId', '==', tId)), 
+    const unsubEmergencies = onSnapshot(query(collection(db, 'emergencies'), where('tenantId', 'in', tIds)), 
       (snap) => {
         setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         onDataLoaded();
@@ -1081,7 +1104,7 @@ export default function App() {
       (err) => { handleFirestoreError(err, 'list', 'emergencies'); onDataLoaded(); }
     );
 
-    const unsubVotingCandidates = onSnapshot(query(collection(db, 'voting_candidates'), where('tenantId', '==', tId)), 
+    const unsubVotingCandidates = onSnapshot(query(collection(db, 'voting_candidates'), where('tenantId', 'in', tIds)), 
       (snap) => {
         setVotingCandidates(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
@@ -1097,7 +1120,7 @@ export default function App() {
       (err) => { handleFirestoreError(err, 'list', 'voting_config'); onDataLoaded(); }
     );
 
-    const unsubUserVotes = onSnapshot(query(collection(db, 'voting_votes'), where('tenantId', '==', tId)), 
+    const unsubUserVotes = onSnapshot(query(collection(db, 'voting_votes'), where('tenantId', 'in', tIds)), 
       (snap) => {
         setUserVotes(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
@@ -1105,7 +1128,7 @@ export default function App() {
       (err) => { handleFirestoreError(err, 'list', 'voting_votes'); onDataLoaded(); }
     );
     
-    const unsubTokoProducts = onSnapshot(query(collection(db, 'toko_products'), where('tenantId', '==', tId)), 
+    const unsubTokoProducts = onSnapshot(query(collection(db, 'toko_products'), where('tenantId', 'in', tIds)), 
       (snap) => {
         setTokoProducts(snap.docs.map(doc => ({ ...doc.data() })));
         onDataLoaded();
@@ -1115,7 +1138,7 @@ export default function App() {
 
     const getTokoOrdersQuery = () => {
       const base = collection(db, 'toko_orders');
-      const constraints = [where('tenantId', '==', tId)];
+      const constraints = [where('tenantId', 'in', tIds)];
       
       // Citizens can only list their own orders to avoid permission errors
       if (isCitizen) {
@@ -1152,7 +1175,7 @@ export default function App() {
 
       if (currentUser?.isSuperAdmin) return query(base);
       
-      const constraints = [where('tenantId', '==', tId)];
+      const constraints = [where('tenantId', 'in', tIds)];
       return query(base, ...constraints);
     };
 
@@ -1173,7 +1196,10 @@ export default function App() {
     if (currentUser?.role === 'ADMIN' || currentUser?.isSuperAdmin || currentUser?.role === 'RW' || currentUser?.role === 'RT') {
       const usersQuery = currentUser.isSuperAdmin 
         ? query(collection(db, 'users'))
-        : query(collection(db, 'users'), where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'));
+        : (currentUser.tenantId === 'RW_BERJUANG' 
+            ? query(collection(db, 'users'), where('tenantId', 'in', ['RW_BERJUANG', 'trihprw26']))
+            : query(collection(db, 'users'), where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'))
+          );
 
       unsubUsers = onSnapshot(usersQuery, 
         (snap) => {
@@ -1798,7 +1824,7 @@ export default function App() {
           {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
 
-          {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} />}
+          {activeTab === 'users' && <UsersView usersData={usersData} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} tenantId={currentUser.tenantId || 'RW26_SMART'} showNotification={showNotification} settings={settings} />}
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
           {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} currentTenant={currentTenant} wargaData={wargaData} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} currentUser={currentUser} setActiveTab={setActiveTab} />}
           { activeTab === 'voting' && (
@@ -5829,7 +5855,7 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
                     <p className="font-medium text-slate-800">{viewWarga.kewarganegaraan || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">RT / RW</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">RT/RW</p>
                     <p className="font-medium text-slate-800 font-mono">{viewWarga.rt || '-'}/{viewWarga.rw || '-'}</p>
                   </div>
                   <div className="col-span-2">
@@ -7252,7 +7278,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1">RT</label>
-                      <select name="rt" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono">
+                      <select name="rt" defaultValue={editingSurat?.rt || settings.RT || "01"} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono">
                         {Array.from({ length: 50 }, (_, i) => (i + 1).toString().padStart(2, '0')).map(val => (
                           <option key={val} value={val}>{val}</option>
                         ))}
@@ -7260,7 +7286,7 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1">RW</label>
-                      <select name="rw" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono">
+                      <select name="rw" defaultValue={editingSurat?.rw || settings.RW || "26"} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:border-blue-500 transition-all font-mono">
                         {Array.from({ length: 50 }, (_, i) => (i + 1).toString().padStart(2, '0')).map(val => (
                           <option key={val} value={val}>{val}</option>
                         ))}
@@ -10555,9 +10581,13 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
             throw new Error('Username valid, but no email set.');
           }
         } else if (inputEmail.toLowerCase() === 'trihprw26') {
-             loginEmail = 'trihprw26@rw26.com';
+          loginEmail = 'trihprw26@trihprw26.com';
+        } else if (inputEmail.toLowerCase() === 'master') {
+          loginEmail = 'arifrajcoach@gmail.com';
+        } else if (inputEmail.toLowerCase() === 'rw26_smart') {
+          loginEmail = 'admin@rw26.com';
         } else {
-             throw new Error('Username tidak ditemukan.');
+          throw new Error('Username tidak ditemukan.');
         }
       }
 
@@ -10569,10 +10599,10 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       if (err.message === 'Username tidak ditemukan.') {
         msg = 'Gagal masuk (ERR). Username tidak ditemukan.';
       } else if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        if (inputEmail.toLowerCase() === 'arifrajcoach@gmail.com') {
-          msg = 'AKUN BELUM TERDAFTAR: Bpk. Arif, silakan gunakan tombol "Masuk dengan Google" atau daftarkan email ini di Firebase Console > Authentication.';
+        if (inputEmail.toLowerCase() === 'arifrajcoach@gmail.com' || inputEmail.toLowerCase() === 'master') {
+          msg = 'AKUN ADMIN: Bpk. Arif, silakan gunakan tombol "Masuk dengan Google" atau pastikan password sudah diset di Firebase Console.';
         } else {
-          msg = 'KREDENSIAL SALAH: Email atau password tidak sesuai. Silakan hubungi admin.';
+          msg = 'KREDENSIAL SALAH: Email/Username atau password tidak sesuai. Pastikan akun sudah terdaftar dan provider Email/Password sudah aktif di Firebase Console.';
         }
       } else if (err.code === 'auth/wrong-password') {
         msg = 'PASSWORD SALAH: Periksa kembali kata sandi Anda.';
@@ -10602,8 +10632,8 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       
       const isArif = user.email?.toLowerCase() === 'arifrajcoach@gmail.com';
       let tenantId = 'RW26_SMART';
-      if (user.email?.startsWith('trihprw26')) {
-        tenantId = 'trihprw26';
+      if (user.email?.toLowerCase().includes('trihprw26')) {
+        tenantId = 'RW_BERJUANG';
       } else if (isArif) {
         tenantId = 'MASTER';
       }
@@ -10887,7 +10917,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
     );
   }
 
-function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void }) {
+function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, showNotification, settings }: { usersData: any[], setIsLoadingDB: any, handleFirestoreError: any, tenantId: string, showNotification: (m: string, t?: any) => void, settings: any }) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
@@ -10978,7 +11008,7 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Nama Pengguna</th>
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Username</th>
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Peran</th>
-                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">RT</th>
+                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">RT/RW</th>
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">NIK</th>
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
                  <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Aksi</th>
@@ -11127,8 +11157,8 @@ function UsersView({ usersData, setIsLoadingDB, handleFirestoreError, tenantId, 
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Nomor RT</label>
-                      <input type="text" name="rt" defaultValue={editingUser?.rt || ''} placeholder="Contoh: 01" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Nomor RT/RW</label>
+                      <input type="text" name="rt" defaultValue={editingUser?.rt || (settings?.RT && settings?.RW ? `${settings.RT} / ${settings.RW}` : settings?.RT || '')} placeholder="Contoh: 01 / 26" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold" />
                     </div>
 
                     <div className="col-span-2">
@@ -11172,6 +11202,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
     const phone = formData.get('adminPhone') as string;
     const paket = formData.get('status') as string;
     const rtCount = parseInt(formData.get('rtCount') as string || "1");
+    const rwNumber = formData.get('rwNumber') as string || "26";
     const isActive = formData.get('isActive') === 'true';
 
     if (!editingTenant && (!password || password.length < 6)) {
@@ -11197,6 +11228,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
       isActive: isActive,
       maxWarga,
       rtTarget: rtCount,
+      rwTarget: rwNumber,
       createdAt: editingTenant ? editingTenant.createdAt : new Date().toISOString()
     };
 
@@ -11228,6 +11260,8 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
         // 3. Auto Setup Default Settings
         batch.set(doc(db, 'settings', tenantId), {
           NAMA_RT: name,
+          RT: rtCount.toString().padStart(2, '0'),
+          RW: rwNumber,
           NAMA_KETUA: "-",
           NOMINAL_IURAN: "50000",
           STATUS_WA: "Nonaktif",
@@ -11313,11 +11347,18 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                           <div>
                              <p className={`text-sm font-bold ${tenant.isActive === false ? 'text-slate-400' : 'text-slate-800'}`}>{tenant.name}</p>
                              <p className="text-[10px] font-mono text-blue-600 font-bold bg-blue-50 px-1 rounded inline-block">ID: {tenant.id}</p>
-                             {(tenant.maxWarga || tenant.citizenLimit) && (
-                               <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-fit">
-                                 <Users className="w-3 h-3" /> Max {tenant.maxWarga || tenant.citizenLimit} Warga
-                               </div>
-                             )}
+                             <div className="flex gap-2 mt-1">
+                               {(tenant.maxWarga || tenant.citizenLimit) && (
+                                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-fit">
+                                   <Users className="w-3 h-3" /> Max {tenant.maxWarga || tenant.citizenLimit} Warga
+                                 </div>
+                               )}
+                               {tenant.rwTarget && (
+                                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full w-fit border border-slate-200">
+                                   RW: {tenant.rwTarget}
+                                 </div>
+                               )}
+                             </div>
                           </div>
                        </div>
                     </td>
@@ -11426,6 +11467,11 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                        <option value="Pro">Professional (Max 2000 Warga)</option>
                        <option value="Enterprise">Enterprise (Max 10000 Warga)</option>
                     </select>
+                  </div>
+
+                  <div className="col-span-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nomor RW</label>
+                    <input name="rwNumber" defaultValue={editingTenant?.rwTarget || '26'} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" />
                   </div>
 
                   <div className="col-span-1">
