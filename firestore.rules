@@ -166,6 +166,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /posyandu_balita/{docId} {
+      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
+    }
+
     match /balita/{docId} {
       allow read, write: if isTenantMember(resource.data.tenantId);
     }

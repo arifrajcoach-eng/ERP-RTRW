@@ -7043,6 +7043,13 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
   const [uploading, setUploading] = useState(false);
   const [jenisPembayaran, setJenisPembayaran] = useState('Iuran Warga');
   
+  // Simulated PG States
+  const [showPgModal, setShowPgModal] = useState(false);
+  const [pgStep, setPgStep] = useState(1);
+  const [pgMethod, setPgMethod] = useState('');
+  const [pgFormState, setPgFormState] = useState<any>(null);
+  const [pgVirtualAccount, setPgVirtualAccount] = useState('');
+  
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const years = [2024, 2025, 2026, 2027];
 
@@ -7138,6 +7145,104 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
     } catch (e: any) {
       handleFirestoreError(e, 'create', 'iuran');
       showNotification('Gagal mencatat pembayaran', 'error');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleStartPg = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget.closest('form');
+    if (!form) return;
+    const formData = new FormData(form);
+    const nominalString = formData.get('nominal') as string;
+    const nominalRaw = parseInt(nominalString?.replace(/\D/g, '') || "0");
+    if (nominalRaw <= 0) {
+      showNotification("Sistem: Minimal nominal adalah Rp10.000 untuk P/G", "error");
+      return;
+    }
+    setPgFormState({
+      tanggal: formData.get('tanggal'),
+      nominal: nominalRaw,
+      jenis: formData.get('jenis'),
+      keterangan: formData.get('keterangan'),
+      wargaId: formData.get('wargaId'),
+      namaPenyetor: formData.get('namaPenyetor')
+    });
+    setPgStep(1);
+    setPgMethod('');
+    setShowPgModal(true);
+  };
+
+  const handlePgSuccess = async () => {
+    const id = `IURAN-${Date.now()}`;
+    const dateObj = pgFormState.tanggal ? new Date(pgFormState.tanggal) : new Date();
+    
+    let nik = currentUser.nik || currentUser.uid || currentUser.id_user;
+    let nama = currentUser.nama || currentUser.name || "Warga";
+    let alamat = currentUser.alamat || "-";
+
+    if (isPengurus && pgFormState.wargaId) {
+      const selectedWarga = wargaData.find((w:any) => w.id === pgFormState.wargaId);
+      if (selectedWarga) {
+        nik = selectedWarga.nik;
+        nama = selectedWarga.nama;
+        alamat = selectedWarga.alamat || selectedWarga.blok || "-";
+      }
+    } else if (isPengurus && pgFormState.namaPenyetor) {
+      nama = pgFormState.namaPenyetor;
+      nik = "-";
+    }
+
+    const payload = {
+      id,
+      tenantId,
+      rt: currentUser.rt || '01',
+      tanggal: dateObj.toISOString(),
+      jenis: pgFormState.jenis,
+      nominal: pgFormState.nominal,
+      keterangan: pgFormState.keterangan || `Pembayaran ${pgFormState.jenis} (via ${pgMethod})`,
+      nik,
+      namaPenyetor: nama,
+      alamat,
+      buktiUrl: 'Sistem Payment Gateway TRIPAY',
+      status: 'Lunas',
+      userId: currentUser.uid || currentUser.id_user || null,
+      verifiedBy: 'Sistem',
+      verifiedAt: new Date().toISOString()
+    };
+
+    setIsLoadingDB(true);
+    try {
+      await setDoc(doc(db, 'iuran', id), payload);
+      setIuranData((prev: any) => [payload, ...prev]);
+      
+      const kasId = `TRX-${Date.now()}`;
+      const kasPayload = {
+        id: kasId,
+        tenantId,
+        rt: payload.rt,
+        tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        tipe: 'Masuk',
+        transaksi: payload.jenis,
+        nama: payload.namaPenyetor,
+        keterangan: payload.keterangan,
+        debit: payload.nominal,
+        kredit: 0,
+        strukUrl: 'Sistem Payment Gateway TRIPAY',
+        iuranId: id
+      };
+      await setDoc(doc(db, 'kas', kasId), kasPayload);
+      setKasData((prev: any) => [kasPayload, ...prev]);
+      
+      showNotification('Pembayaran Online Berhasil!', 'success');
+      setShowPgModal(false);
+      setShowForm(false);
+      setBuktiUrl('');
+      setJenisPembayaran('Iuran Warga');
+    } catch (e: any) {
+      handleFirestoreError(e, 'create', 'iuran');
+      showNotification('Gagal mencatat pembayaran online', 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -7442,13 +7547,107 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
                 )}
               </div>
 
-              <div className="pt-6 flex gap-3">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batalkan</button>
-                <button type="submit" disabled={uploading} className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" /> Simpan Pembayaran
-                </button>
+              <div className="pt-6 flex flex-col sm:flex-row gap-3">
+                <button type="button" onClick={() => setShowForm(false)} className="py-3 px-4 text-xs font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-colors border border-slate-200">Batal</button>
+                <div className="flex-1 flex gap-2">
+                  <button type="submit" disabled={uploading} className="flex-1 py-3 text-xs font-black border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl transition-all disabled:opacity-70 flex items-center justify-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Manual
+                  </button>
+                  <button type="button" onClick={handleStartPg} disabled={uploading} className="flex-1 py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2">
+                    <CreditCard className="w-4 h-4" /> Bayar Online
+                  </button>
+                </div>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {showPgModal && (
+        <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative"
+          >
+            <div className="bg-blue-600 p-6 flex flex-col items-center justify-center text-white relative">
+              <button onClick={() => setShowPgModal(false)} className="absolute top-4 right-4 text-blue-200 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+              <h3 className="font-black tracking-widest uppercase text-xs text-blue-200 mb-1">Simulasi Payment Gateway</h3>
+              <div className="text-3xl font-black font-mono">
+                Rp {new Intl.NumberFormat('id-ID').format(pgFormState?.nominal || 0)}
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto">
+              {pgStep === 1 && (
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Pilih Metode Pembayaran</p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => { setPgMethod('QRIS'); setPgVirtualAccount(''); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                        <QrCode className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-black text-slate-700">QRIS</span>
+                    </button>
+                    <button onClick={() => { setPgMethod('VA BCA'); setPgVirtualAccount('014' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                        <Wallet className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-black text-slate-700">VA BCA</span>
+                    </button>
+                    <button onClick={() => { setPgMethod('VA Mandiri'); setPgVirtualAccount('895' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                        <Wallet className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-black text-slate-700">VA Mandiri</span>
+                    </button>
+                    <button onClick={() => { setPgMethod('Alfamart'); setPgVirtualAccount('ALF' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0')); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                        <Store className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-black text-slate-700">Alfamart</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {pgStep === 2 && (
+                <div className="space-y-6 flex flex-col items-center">
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{pgMethod}</p>
+                    <p className="text-sm font-bold text-slate-800 mt-1">Selesaikan Pembayaran</p>
+                  </div>
+
+                  {pgMethod === 'QRIS' ? (
+                    <div className="w-48 h-48 bg-slate-100 rounded-2xl border-4 border-white shadow-xl flex items-center justify-center p-4">
+                      <QrCode className="w-full h-full text-slate-800" />
+                    </div>
+                  ) : (
+                    <div className="w-full bg-slate-50 rounded-2xl border border-slate-200 p-4 text-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nomor Virtual Account</p>
+                      <p className="text-2xl font-mono font-black text-blue-600 tracking-wider select-all">{pgVirtualAccount}</p>
+                    </div>
+                  )}
+
+                  <div className="w-full pt-4 border-t border-slate-100">
+                    <button onClick={handlePgSuccess} className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
+                      <CheckCircle2 className="w-5 h-5" /> Simulasi Bayar Sukses
+                    </button>
+                    <button onClick={() => setPgStep(1)} className="w-full mt-3 py-3 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                      Kembali Pilih Metode
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Watermark */}
+            <div className="py-3 bg-slate-50 text-center border-t border-slate-100">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1">
+                <ShieldCheck className="w-3 h-3" /> Powered by Tripay Simulation
+              </span>
+            </div>
           </motion.div>
         </div>
       )}
@@ -8607,6 +8806,8 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [strukUrl, setStrukUrl] = useState("");
   const [trxType, setTrxType] = useState<'Masuk' | 'Keluar'>('Masuk');
+  const [isScanningStatus, setIsScanningStatus] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   
   // ... (reset states when form closes)
   useEffect(() => {
@@ -9146,7 +9347,7 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
               </button>
             </div>
             
-            <form onSubmit={handleSaveKas} className="p-5 overflow-y-auto space-y-4">
+            <form ref={formRef} onSubmit={handleSaveKas} className="p-5 overflow-y-auto space-y-4">
               {/* Tipe Transaksi Selector */}
               <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
                 <button 
@@ -9238,22 +9439,95 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">Bukti Struk/Kwitansi (Opsional)</label>
                 <div className="flex flex-col gap-2">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try {
-                          const url = await handleFileUpload(file, 'struk');
-                          setStrukUrl(url);
-                        } catch (err) {
-                          showNotification("Gagal mengunggah struk.", 'error');
+                  <div className="flex gap-2">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      id="strukFileInput"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const url = await handleFileUpload(file, 'struk');
+                            setStrukUrl(url);
+                          } catch (err) {
+                            showNotification("Gagal mengunggah struk.", 'error');
+                          }
                         }
-                      }
-                    }} 
-                    className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                  />
+                      }} 
+                      className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer flex-1"
+                    />
+                    <button 
+                      type="button"
+                      disabled={isScanningStatus}
+                      onClick={() => {
+                        const fileInput = document.getElementById('strukFileInput') as HTMLInputElement;
+                        const file = fileInput?.files?.[0];
+                        if (!file) {
+                          showNotification("Silakan unggah atau pilih foto struk terlebih dahulu.", "info");
+                          return;
+                        }
+                        
+                        setIsScanningStatus(true);
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                          try {
+                            const base64data = (reader.result as string).split(',')[1];
+                            const res = await fetch('/api/ai/scan-receipt', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ imageBase64: base64data })
+                            });
+                            
+                            if (res.ok) {
+                              const result = await res.json();
+                              showNotification("Struk berhasil dipindai dengan AI!", "success");
+                              
+                              if (result.tipe === 'Masuk' || result.tipe === 'Keluar') {
+                                setTrxType(result.tipe);
+                              }
+                              
+                              if (formRef.current) {
+                                if (result.nominal) {
+                                  const nomInput = formRef.current.elements.namedItem('nominal') as HTMLInputElement;
+                                  if (nomInput) nomInput.value = result.nominal;
+                                }
+                                if (result.keterangan) {
+                                  const ketInput = formRef.current.elements.namedItem('keterangan') as HTMLInputElement;
+                                  if (ketInput && !ketInput.value) ketInput.value = result.keterangan;
+                                }
+                                if (result.nama) {
+                                  const namaInput = formRef.current.elements.namedItem('nama') as HTMLInputElement;
+                                  if (namaInput && !namaInput.value) namaInput.value = result.nama;
+                                }
+                              }
+                            } else {
+                              showNotification("Gagal memindai struk dengan AI.", "error");
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            showNotification("Gagal memindai struk dengan AI.", "error");
+                          } finally {
+                            setIsScanningStatus(false);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-wait flex items-center gap-1.5"
+                    >
+                      {isScanningStatus ? (
+                        <>
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+                          Scanning...
+                        </>
+                      ) : (
+                        <>
+                          <Bot className="w-4 h-4" />
+                          Scan AI
+                        </>
+                      )}
+                    </button>
+                  </div>
                   {strukUrl && (
                     <div className="mt-2 relative w-20 h-20 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden group">
                       <img src={strukUrl} alt="Struk" className="w-full h-full object-cover" />
@@ -12602,7 +12876,8 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
           </div>
           <button 
             onClick={() => { setEditingTenant(null); setShowAddForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold text-sm shadow-lg shadow-pink-100 hover:opacity-90 transition-all active:scale-95"
+            style={{ backgroundColor: '#fc1580' }}
           >
             <PlusCircle className="w-4 h-4" />
             Tambah Tenant Baru
@@ -12846,7 +13121,12 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                       ))}
                     </div>
 
-                    <button className={`mt-auto w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    <button 
+                      onClick={() => {
+                        const waText = encodeURIComponent(`Halo Tim Nexapps, saya tertarik untuk berlangganan/upgrade ke paket ${key} (${features.price}). Mohon info proses selanjutnya.`);
+                        window.open(`https://wa.me/6285155455667?text=${waText}`, '_blank');
+                      }}
+                      className={`mt-auto w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                       isEnterprise ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg' :
                       isPremium ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' :
                       'bg-slate-100 hover:bg-slate-200 text-slate-600'

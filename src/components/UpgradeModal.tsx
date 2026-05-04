@@ -38,12 +38,21 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
               
               <div className="w-full space-y-3">
                 <button
+                  onClick={() => {
+                    const waText = encodeURIComponent(`Halo Tim Nexapps, saya ingin upgrade paket tenant saya untuk membuka fitur premium. Mohon panduannya.`);
+                    window.open(`https://wa.me/6285155455667?text=${waText}`, '_blank');
+                  }}
                   className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
                 >
                   <Zap className="w-4 h-4" />
                   Upgrade Paket Premium
                 </button>
-                <div className="p-4 bg-slate-900 rounded-2xl text-white flex justify-between items-center group cursor-pointer hover:bg-black transition-all">
+                <div 
+                  onClick={() => {
+                    const waText = encodeURIComponent(`Halo Tim Nexapps, saya mewakili instansi pemerintah dan tertarik untuk integrasi Paket Enterprise. Mohon info proses selanjutnya.`);
+                    window.open(`https://wa.me/6285155455667?text=${waText}`, '_blank');
+                  }}
+                  className="p-4 bg-slate-900 rounded-2xl text-white flex justify-between items-center group cursor-pointer hover:bg-black transition-all">
                    <div>
                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pilihan Pemerintah</p>
                      <p className="text-xs font-bold">🏛️ PAKET ENTERPRISE</p>

@@ -118,6 +118,42 @@ async function startServer() {
     }
   });
 
+  app.post("/api/ai/scan-receipt", async (req, res) => {
+    const { imageBase64 } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: "Image is required" });
+
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Anda adalah AI pendeteksi struk/invoice/kwitansi. Ekstrak informasi dari gambar struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: 
+      {
+        "nominal": 150000, 
+        "keterangan": "Beli semen",
+        "tipe": "Keluar",
+        "nama": "Toko Bangunan XYZ"
+      }
+      Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Tipe biasanya "Keluar" jika itu struk belanja/pengeluaran, atau "Masuk" jika kwitansi penerimaan. Return HANYA JSON block.`;
+
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            data: imageBase64,
+            mimeType: "image/jpeg"
+          }
+        }
+      ]);
+
+      const text = result.response.text();
+      const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+
+      res.json(parsed);
+    } catch (error: any) {
+      console.error("Scan Receipt Error:", error);
+      res.status(500).json({ error: "Gagal mendeteksi struk", details: error.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
