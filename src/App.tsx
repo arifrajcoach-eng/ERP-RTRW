@@ -23,6 +23,9 @@ import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase
 import { auth, storage } from './firebase';
 import KopTemplateManagementView from './components/KopTemplateManagementView';
 import { RTRegistrationForm } from './components/RTRegistrationForm';
+import ChatWargaView from './components/ChatWargaView';
+import AIChatBot from './components/AIChatBot';
+import { MessageSquare, Bot } from 'lucide-react';
 
 const APP_LOGO = "/logo_rw.png";
 
@@ -327,6 +330,7 @@ const calculateAge = (tglLahir: string) => {
 };
 
 export default function App() {
+  console.log("App component: DB exists?", !!db);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{name: string, role: string, email?: string, tenantId?: string, isSuperAdmin?: boolean} | null>(null);
@@ -1759,6 +1763,8 @@ export default function App() {
             />
           )}
           {activeTab === 'verifikasi' && <VerifikasiAdminView verifikasiData={verifikasiWargaData} wargaData={wargaData} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} showNotification={showNotification} handleFirestoreError={handleFirestoreError} currentUser={currentUser} />}
+          {activeTab === 'chat' && <ChatWargaView tenantId={currentUser.tenantId || 'RW26_SMART'} currentUser={currentUser} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'ai-bot' && <AIChatBot currentUser={currentUser} />}
           {activeTab === 'keuangan' && (
             <FinansialDashboardView 
               ppobData={ppobData} setPpobData={setPpobData}
@@ -3794,6 +3800,8 @@ function DashboardView({
           { id: 'voting', label: 'E-PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting') },
           { id: 'toko', label: 'E-LAPAK26', icon: ShoppingBag, color: 'orange-500', bg: 'orange-50', action: () => setActiveTab('etoko') },
           { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck, color: 'emerald-500', bg: 'soft-green', action: () => setActiveTab('verifikasi') },
+          { id: 'chat', label: 'CHAT', icon: MessageSquare, color: 'blue-500', bg: 'blue-50', action: () => setActiveTab('chat') },
+          { id: 'ai-bot', label: 'AI ASISTEN', icon: Bot, color: 'indigo-500', bg: 'indigo-50', action: () => setActiveTab('ai-bot') },
         ].map(item => (
           <button 
             key={item.id}
@@ -4996,7 +5004,8 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
     }
     
     const selectedTenantInfo = formData.targetTenant || (tenantId === 'MASTER' ? 'RW_BERJUANG' : tenantId) || 'RW26_SMART';
-    const newWarga = { ...formData, targetTenant: undefined, tenantId: selectedTenantInfo, tglDaftar: new Date().toISOString().split('T')[0] };
+    const { targetTenant: _, ...formDataWithoutTargetTenant } = formData;
+    const newWarga = { ...formDataWithoutTargetTenant, tenantId: selectedTenantInfo, tglDaftar: new Date().toISOString().split('T')[0] };
     
     setIsLoadingDB(true);
     try {
@@ -5027,7 +5036,8 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
       const originalId = editingWarga.docId || `${editingWarga.tenantId || tenantId}_${editingWarga.nik}`;
       const newId = `${selectedTenantInfo}_${formData.nik}`;
 
-      const dataToSave = { ...formData, targetTenant: undefined, tenantId: selectedTenantInfo };
+      const { targetTenant: _, ...formDataWithoutTargetTenant } = formData;
+      const dataToSave = { ...formDataWithoutTargetTenant, tenantId: selectedTenantInfo };
 
       if (originalId !== newId) {
         // Jika ID berubah (atau sebelumnya menggunakan auto-id), pindahkan data ke ID NIK yang benar

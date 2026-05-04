@@ -464,6 +464,20 @@
       },
       "required": ["id", "candidateId", "voterId", "tenantId"]
     },
+    "Chat": {
+      "title": "Chat Warga",
+      "description": "Pesan antar warga dalam satu RT/RW",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "senderId", "senderName", "message", "timestamp", "tenantId"]
+    },
     "TokoProduct": {
       "title": "Produk E-Toko",
       "description": "Daftar produk yang dijual di E-Toko warga",
@@ -613,6 +627,10 @@
     "/emergencies/{id}": {
       "schema": "Emergency",
       "description": "Koleksi sinyal darurat aktif"
+    },
+    "/chat_messages/{id}": {
+      "schema": "Chat",
+      "description": "Koleksi pesan chat warga"
     }
   }
 }
