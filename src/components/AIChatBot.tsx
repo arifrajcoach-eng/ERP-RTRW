@@ -1,43 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getFinancialSummary, getHealthSummary, getPPOBSummary, getWargaActivitySummary, detectAnomalies } from '../services/aiAgentTools';
-
-// Initialize AI SDK. 
-// The environment provides GEMINI_API_KEY.
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
-  tools: [{
-    functionDeclarations: [
-      {
-        name: 'getFinancialSummary',
-        description: 'Mendapatkan ringkasan keuangan RT/RW (total masuk, keluar, dan saldo)',
-        parameters: { type: 'object', properties: { tenantId: { type: 'string' } }, required: ['tenantId'] }
-      },
-      {
-        name: 'getHealthSummary',
-        description: 'Mendapatkan ringkasan data kesehatan warga (Posyandu balita, ibu hamil, dll)',
-        parameters: { type: 'object', properties: { tenantId: { type: 'string' } }, required: ['tenantId'] }
-      },
-      {
-        name: 'getPPOBSummary',
-        description: 'Mendapatkan ringkasan transaksi PPOB (jumlah transaksi dan volume)',
-        parameters: { type: 'object', properties: { tenantId: { type: 'string' } }, required: ['tenantId'] }
-      },
-      {
-        name: 'getWargaActivitySummary',
-        description: 'Mendapatkan ringkasan aktivitas warga (total, aktif, pasif)',
-        parameters: { type: 'object', properties: { tenantId: { type: 'string' } }, required: ['tenantId'] }
-      },
-      {
-        name: 'detectAnomalies',
-        description: 'Mendeteksi aktivitas mencurigakan atau anomali keuangan',
-        parameters: { type: 'object', properties: { tenantId: { type: 'string' } }, required: ['tenantId'] }
-      }
-    ]
-  }]
-});
+import { Bot, Send } from 'lucide-react';
+import { getFinancialSummary, getHealthSummary, getWargaActivitySummary } from '../services/aiAgentTools';
 
 export default function AIChatBot({ currentUser }: { currentUser: any }) {
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
@@ -52,25 +15,15 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const [chatSession, setChatSession] = useState<any>(null);
-
-  useEffect(() => {
-    setChatSession(model.startChat({
-        history: [
-            {
-                role: "user",
-                parts: [{ text: "Anda adalah asisten AI RW. Anda membantu pengurus mengolah data, membuat laporan, dan memonitor aktivitas warga. Gunakan tools yang tersedia untuk menjawab pertanyaan." }],
-            },
-            {
-                role: "model",
-                parts: [{ text: "Siap, saya siap membantu pengurus RW." }],
-            },
-        ],
-    }));
-  }, []);
+  const [usageCount, setUsageCount] = useState(0);
+  const maxUsage = currentUser?.role === 'Admin' ? 999 : 10;
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !chatSession) return;
+    if (!input.trim() || isLoading) return;
+    if (usageCount >= maxUsage) {
+      setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, kuota AI harian Anda telah habis (Maksimal 10 tanyaan/hari).' }]);
+      return;
+    }
 
     const userMessage = input;
     setInput('');
@@ -78,33 +31,37 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     setIsLoading(true);
 
     try {
-      let result = await chatSession.sendMessage(userMessage);
-      let response = result.response;
+      // Prepare data summary to help AI
+      const [fin, health, activity] = await Promise.all([
+        getFinancialSummary(tenantId),
+        getHealthSummary(tenantId),
+        getWargaActivitySummary(tenantId)
+      ]);
+
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          tenantId,
+          userId: currentUser?.uid,
+          role: currentUser?.role || 'Warga',
+          dataSummary: { financial: fin, health, activity },
+          history: messages.map(m => ({ 
+            role: m.role === 'user' ? 'user' : 'model', 
+            parts: [{ text: m.text }] 
+          }))
+        })
+      });
+
+      if (!response.ok) throw new Error('Gateway Error');
       
-      const functionCalls = response.functionCalls();
-      
-      if (functionCalls && functionCalls.length > 0) {
-        const call = functionCalls[0];
-        let resultData;
-        if (call.name === 'getFinancialSummary') resultData = await getFinancialSummary(tenantId);
-        else if (call.name === 'getHealthSummary') resultData = await getHealthSummary(tenantId);
-        else if (call.name === 'getPPOBSummary') resultData = await getPPOBSummary(tenantId);
-        else if (call.name === 'getWargaActivitySummary') resultData = await getWargaActivitySummary(tenantId);
-        else if (call.name === 'detectAnomalies') resultData = await detectAnomalies(tenantId);
-        
-        result = await chatSession.sendMessage([{
-            functionResponse: {
-                name: call.name,
-                response: resultData
-            }
-        }]);
-        response = result.response;
-      }
-      
-      setMessages(prev => [...prev, { role: 'bot', text: response.text() }]);
+      const result = await response.json();
+      setMessages(prev => [...prev, { role: 'bot', text: result.text }]);
+      setUsageCount(prev => prev + 1);
     } catch (error) {
-      console.error('Error:', error);
-      setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, terjadi kesalahan saat menghubungi AI.' }]);
+      console.error('AI Chat Error:', error);
+      setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, terjadi kesalahan saat menghubungi AI Hub (Limit atau Gangguan).' }]);
     } finally {
       setIsLoading(false);
     }
@@ -112,31 +69,50 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
 
   return (
     <div className="flex flex-col h-[500px] bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-      <div className="p-4 border-b border-slate-200 bg-slate-50 font-bold flex items-center gap-2">
-        <Bot className="w-5 h-5 text-blue-600" />
-        <span>AI Asisten RW</span>
+      <div className="p-4 border-b border-slate-200 bg-slate-50 font-bold flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bot className="w-5 h-5 text-blue-600" />
+          <span>AI Asisten RW (Premium)</span>
+        </div>
+        <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-slate-100">
+           <div className={`w-2 h-2 rounded-full ${usageCount >= maxUsage ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></div>
+           <span className="text-[9px] font-black uppercase text-slate-400">Quota: {usageCount} / {maxUsage}</span>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`p-3 rounded-2xl max-w-[80%] ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-800'}`}>
-              {msg.role === 'bot' && <div className="text-xs font-bold mb-1 opacity-70">AI Asisten</div>}
-              {msg.text}
+            <div className={`p-3 rounded-2xl max-w-[80%] ${msg.role === 'user' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-800'}`}>
+              {msg.role === 'bot' && <div className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-50">AI Asisten</div>}
+              <p className="text-sm leading-relaxed">{msg.text}</p>
             </div>
           </div>
         ))}
-        {isLoading && <div className="text-sm text-slate-500">Mencari jawaban...</div>}
+        {isLoading && (
+          <div className="flex gap-2 items-center text-slate-400">
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Menyusun jawaban...</span>
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
-      <div className="p-4 border-t border-slate-200 flex gap-2">
+      <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex gap-2">
         <input 
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-          className="flex-1 border border-slate-200 rounded-xl px-4 py-2"
-          placeholder="Tanya sesuatu tentang RW..."
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+          placeholder="Tanya ringkasan warga, keuangan, atau anomali..."
         />
-        <button onClick={handleSend} disabled={isLoading} className="p-2 bg-blue-600 rounded-xl text-white disabled:bg-blue-300">
+        <button 
+          onClick={handleSend} 
+          disabled={isLoading || !input.trim()} 
+          className="p-3 bg-blue-600 rounded-xl text-white disabled:bg-blue-200 shadow-lg shadow-blue-200 flex items-center justify-center transition-all active:scale-90"
+        >
           <Send className="w-5 h-5" />
         </button>
       </div>

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight, Smartphone, Zap, Droplets, Train } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight, Smartphone, Zap, Droplets, Train, QrCode, BarChart3, Video, FileCheck, Globe } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, Cell, PieChart, Pie } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import Webcam from 'react-webcam';
 import { db } from './firebase';
@@ -21,10 +21,14 @@ import {
 } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { auth, storage } from './firebase';
+import { QRCodeSVG } from 'qrcode.react';
 import KopTemplateManagementView from './components/KopTemplateManagementView';
 import { RTRegistrationForm } from './components/RTRegistrationForm';
 import ChatWargaView from './components/ChatWargaView';
 import AIChatBot from './components/AIChatBot';
+import UpgradeModal from './components/UpgradeModal';
+import { GuestBookFormPublic } from './components/GuestBookFormPublic';
+import { GuestBookQRCode } from './components/GuestBookQRCode';
 import { MessageSquare, Bot } from 'lucide-react';
 
 const APP_LOGO = "/logo_rw.png";
@@ -93,67 +97,106 @@ const INITIAL_INVENTARIS_DATA = [
 // Anda dapat menambahkannya melalui fitur "Kategori" pada menu Inventaris di aplikasi.
 
 
-const PLAN_FEATURES = {
+const PLAN_FEATURES: Record<string, any> = {
   TRIAL: {
     maxWarga: 50,
+    maxAdmins: 1,
+    dailyTransactionLimit: 100,
     keuangan: "DASAR",
     surat: "STANDAR",
+    chatMode: "NONE",
     bankSampah: false,
-    kesehatan: false,
-    eLapak: "LIHAT",
+    posyandu: false,
+    eLapak: false,
     ePemilu: false,
-    sos: true,
-    inventaris: true,
+    analytics: false,
+    ai: false,
     description: "Cocok untuk uji coba sistem di lingkungan RT kecil."
   },
-  RT: {
-    maxWarga: 200,
-    keuangan: "BASIC",
-    surat: "STANDAR",
-    bankSampah: true,
-    kesehatan: "BASIC",
-    eLapak: false,
-    ePemilu: "BASIC",
-    sos: true,
-    inventaris: true,
-    description: "Khusus untuk lingkup RT dengan kapasitas warga dinamis."
-  },
   BASIC: {
-    maxWarga: 500,
+    maxWarga: 150,
+    maxAdmins: 3,
+    dailyTransactionLimit: 800,
     keuangan: "FULL",
-    surat: "CUSTOM",
-    bankSampah: true,
-    kesehatan: "DASAR",
-    eLapak: "JUAL",
-    ePemilu: "BASIC",
-    sos: true,
-    inventaris: true,
-    description: "Ideal untuk RW dengan populasi menengah."
+    surat: "FULL",
+    chatMode: "POLLING",
+    bankSampah: false,
+    posyandu: false,
+    eLapak: "BASIC",
+    ePemilu: false,
+    analytics: false,
+    ai: false,
+    description: "BASIC PLAN (RT DIGITAL) - Operasional Lengkap untuk 1 RT."
   },
   PRO: {
-    maxWarga: 2000,
-    keuangan: "FULL",
-    surat: "FULL_CUSTOM",
+    maxWarga: 500,
+    maxAdmins: 10,
+    dailyTransactionLimit: 5000,
+    keuangan: "PPOB",
+    surat: "CUSTOM",
+    chatMode: "REALTIME",
     bankSampah: true,
-    kesehatan: "FULL",
-    eLapak: "PRIORITAS",
-    ePemilu: "UNLIMITED",
-    sos: true,
-    inventaris: true,
-    description: "Solusi lengkap untuk RW besar dengan fitur penuh."
+    posyandu: true,
+    eLapak: "PREMIUM",
+    ePemilu: true,
+    analytics: true,
+    multiRT: true,
+    ai: "BASIC", // Rule-based insights
+    description: "PRO PLAN - Solusi Lengkap untuk RW & Sistem Otomatis."
+  },
+  PREMIUM: {
+    maxWarga: 5000,
+    maxAdmins: 50,
+    dailyTransactionLimit: 20000,
+    keuangan: "FULL_AUTO",
+    surat: "SMART",
+    chatMode: "REALTIME_UNLIMITED",
+    bankSampah: true,
+    posyandu: true,
+    eLapak: "ENTERPRISE",
+    ePemilu: true,
+    analytics: "PREDICTIVE",
+    multiRT: true,
+    ai: "FULL", // AI Agent & Automation
+    cctv: true,
+    sos: "ADVANCED",
+    description: "PREMIUM PLAN - Integrasi AI, CCTV, & Otomasi Penuh."
   },
   ENTERPRISE: {
-    maxWarga: 10000,
-    keuangan: "FULL",
-    surat: "FULL_CUSTOM",
+    maxWarga: 20000,
+    maxAdmins: 200,
+    dailyTransactionLimit: 100000,
+    keuangan: "ENTERPRISE",
+    surat: "DYNAMIC",
+    chatMode: "REALTIME_UNLIMITED",
     bankSampah: true,
-    kesehatan: "FULL+AI",
-    eLapak: "WHITELABEL",
-    ePemilu: "UNLIMITED",
-    sos: true,
-    inventaris: true,
-    description: "Kapasitas raksasa untuk integrasi se-Kelurahan atau Kecamatan."
+    posyandu: true,
+    eLapak: "GOV_LEVEL",
+    ePemilu: true,
+    analytics: "GOV_DASHBOARD", // Regional analytics
+    multiRegion: true, // Kelurahan -> RW -> RT
+    governance: "HIGH", // Audit logs, multi-layered approval
+    ai: "STRATEGIC", // Regional decision support AI
+    cctv: true,
+    description: "ENTERPRISE - Platform Smart Village & Dashboard Monitoring Kelurahan."
   }
+};
+
+// Aliases for backward compatibility and status variations
+PLAN_FEATURES.ACTIVE = PLAN_FEATURES.TRIAL;
+PLAN_FEATURES.FREE = PLAN_FEATURES.TRIAL;
+PLAN_FEATURES.LITE = PLAN_FEATURES.BASIC;
+PLAN_FEATURES.RT = PLAN_FEATURES.BASIC;
+PLAN_FEATURES.FLASH = PLAN_FEATURES.PRO;
+PLAN_FEATURES.RW = PLAN_FEATURES.PRO;
+PLAN_FEATURES.GOLD = PLAN_FEATURES.PREMIUM;
+PLAN_FEATURES.DIAMOND = PLAN_FEATURES.ENTERPRISE;
+PLAN_FEATURES.GOV = PLAN_FEATURES.ENTERPRISE;
+
+const getPlanFeatures = (status: string | undefined) => {
+  if (!status) return PLAN_FEATURES.TRIAL;
+  const normalizedStatus = status.toUpperCase().replace('V4.0 ', '').replace('PLAN', '').trim();
+  return PLAN_FEATURES[normalizedStatus] || PLAN_FEATURES.TRIAL;
 };
 
 // Shared Helper for Document Generation
@@ -332,6 +375,8 @@ const calculateAge = (tglLahir: string) => {
 export default function App() {
   console.log("App component: DB exists?", !!db);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{name: string, role: string, email?: string, tenantId?: string, isSuperAdmin?: boolean} | null>(null);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
@@ -507,6 +552,7 @@ export default function App() {
     const saved = localStorage.getItem('rw26_kasData');
     return saved ? JSON.parse(saved) : INITIAL_KAS_DATA;
   });
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   const [suratData, setSuratData] = useState(() => {
     const saved = localStorage.getItem('rw26_suratData');
@@ -731,7 +777,7 @@ export default function App() {
 
     setIsLoadingDB(true);
     let loadedSections = 0;
-    const totalSections = currentUser?.isSuperAdmin ? 16 : (currentUser?.role === 'ADMIN' ? 15 : (hasFullAccess ? 14 : 3)); // Settings, Warga, Emergencies for Viewer/Citizen
+    const totalSections = currentUser?.isSuperAdmin ? 17 : (currentUser?.role === 'ADMIN' ? 16 : (hasFullAccess ? 15 : 3)); // Updated for Audit logs
 
     const onDataLoaded = () => {
       loadedSections++;
@@ -1242,6 +1288,22 @@ export default function App() {
       );
     }
 
+    // 7. Audit Log Listener (Enterprise)
+    let unsubAudit = () => {};
+    if (hasFullAccess && getPlanFeatures(currentTenant?.status).governance === 'HIGH') {
+      unsubAudit = onSnapshot(query(collection(db, 'audit_logs'), where('tenantId', 'in', tIds), limit(100)), 
+        (snap) => {
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setAuditLogs(data.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+          onDataLoaded();
+        },
+        (err) => {
+          handleFirestoreError(err, 'list', 'audit_logs');
+          onDataLoaded();
+        }
+      );
+    }
+
     return () => {
       unsubWarga();
       unsubKas();
@@ -1275,6 +1337,7 @@ export default function App() {
       unsubSettings();
       unsubCurrentTenant();
       unsubKopSettings();
+      unsubAudit();
     };
   }, [currentUser, wargaAuth]);
 
@@ -1426,35 +1489,6 @@ export default function App() {
   useEffect(() => { localStorage.setItem('rw26_suratData', JSON.stringify(suratData)); }, [suratData]);
   useEffect(() => { localStorage.setItem('rw26_iuranData', JSON.stringify(iuranData)); }, [iuranData]);
 
-  if (isAuthInitializing) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
-          <AppLogo size={8} className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-        </div>
-        <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
-        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
-      </div>
-    );
-  }
-
-  if (isSelfRegistering) {
-    return (
-      <SelfRegistrationView 
-        tenantId={currentUser?.tenantId || 'RW26_SMART'}
-        onClose={() => setIsSelfRegistering(false)}
-        handleFileUpload={handleFileUpload}
-        showNotification={showNotification}
-        handleFirestoreError={handleFirestoreError}
-      />
-    );
-  }
-
-  if (!wargaAuth && (!currentUser || (currentUser.role === 'Warga' && currentUser.name === 'Warga (Anonymous)'))) {
-    return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} verifikasiWargaData={verifikasiWargaData} isLoadingDB={isLoadingDB} onSelfRegister={() => setIsSelfRegistering(true)} />;
-  }
-
   const handleLinkToWarga = async (nik: string, pin: string) => {
     setIsLoadingDB(true);
     try {
@@ -1502,6 +1536,58 @@ export default function App() {
       setIsLoadingDB(false);
     }
   };
+
+  // 1A. Handle Public Self-Registration via QR
+  const queryParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const regTenantId = queryParams.get('reg');
+
+  // --- VIEW SELECTION (Must be after all hooks) ---
+  
+  if (window.location.pathname.startsWith('/guestbook/')) {
+    const tenantId = window.location.pathname.split('/')[2];
+    return <GuestBookFormPublic tenantId={tenantId} />;
+  }
+
+  if (isAuthInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
+          <AppLogo size={8} className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
+        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
+      </div>
+    );
+  }
+
+  if (regTenantId) {
+    return (
+      <SelfRegistrationView 
+        tenantId={regTenantId} 
+        onClose={() => window.location.href = '/'}
+        handleFileUpload={handleFileUpload}
+        showNotification={showNotification}
+        handleFirestoreError={handleFirestoreError}
+      />
+    );
+  }
+
+  if (isSelfRegistering) {
+    return (
+      <SelfRegistrationView 
+        tenantId={currentUser?.tenantId || 'RW26_SMART'}
+        onClose={() => setIsSelfRegistering(false)}
+        handleFileUpload={handleFileUpload}
+        showNotification={showNotification}
+        handleFirestoreError={handleFirestoreError}
+      />
+    );
+  }
+
+  if (!wargaAuth && (!currentUser || (currentUser.role === 'Warga' && currentUser.name === 'Warga (Anonymous)'))) {
+    return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} verifikasiWargaData={verifikasiWargaData} isLoadingDB={isLoadingDB} onSelfRegister={() => setIsSelfRegistering(true)} />;
+  }
 
   if (wargaAuth && !currentUser?.isSuperAdmin) {
     return (
@@ -1593,27 +1679,45 @@ export default function App() {
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI ACTIVE</p>
           </div>
           <div className="p-2 bg-soft-blue rounded-xl border border-blue-100">
-            <p className="text-[9px] text-brand-blue font-bold uppercase tracking-tight">ID Klien:</p>
-            <p className="text-[10px] text-slate-700 font-mono font-bold truncate">{currentUser.tenantId || 'RW26_SMART'}</p>
+             {getPlanFeatures(currentTenant?.status).multiRegion ? (
+              <div className="space-y-1">
+                <p className="text-[8px] text-brand-blue font-black uppercase tracking-widest">Wilayah Kerja:</p>
+                <select className="w-full bg-white border border-blue-100 rounded-lg text-[10px] font-bold p-1 outline-none text-slate-700">
+                  <option>🏢 KELURAHAN (PUSAT)</option>
+                  <option>🏠 RW 05 (AKTIF)</option>
+                  <option>🏠 RW 01</option>
+                  <option>🏠 RW 02</option>
+                </select>
+              </div>
+             ) : (
+               <>
+                <p className="text-[9px] text-brand-blue font-bold uppercase tracking-tight">ID Klien:</p>
+                <p className="text-[10px] text-slate-700 font-mono font-bold truncate">{currentUser.tenantId || 'RW26_SMART'}</p>
+               </>
+             )}
           </div>
         </div>
         <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto pb-20 scrollbar-hide">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
             { id: 'buku-tamu', label: 'Buku Tamu', icon: BookCopy },
             { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck },
-            { id: 'keuangan', label: 'Keuangan', icon: CreditCard },
-            { id: 'posyandu', label: 'Kesehatan', icon: Baby },
-            { id: 'bank-sampah', label: 'Bank Sampah', icon: Recycle },
-            { id: 'etoko', label: 'E-LAPAK26', icon: ShoppingBag },
-            { id: 'voting', label: 'E-Pemilu', icon: Vote },
+            { id: 'keuangan', label: 'Keuangan', icon: CreditCard, plan: 'keuangan', minPlan: 'BASIC' },
+            { id: 'posyandu', label: 'Kesehatan', icon: Baby, plan: 'posyandu', minPlan: 'PRO' },
+            { id: 'bank-sampah', label: 'Bank Sampah', icon: Recycle, plan: 'bankSampah', minPlan: 'PRO' },
+            { id: 'etoko', label: 'E-LAPAK26', icon: ShoppingBag, plan: 'eLapak', minPlan: 'BASIC' },
+            { id: 'voting', label: 'E-Pemilu', icon: Vote, plan: 'ePemilu', minPlan: 'PRO' },
             { id: 'inventaris', label: 'Inventaris', icon: Package },
-            { id: 'surat', label: 'Surat', icon: FileText },
+            { id: 'surat', label: 'Surat', icon: FileText, plan: 'surat', minPlan: 'BASIC' },
             { id: 'kop-template', label: 'KOP & Template', icon: FileSpreadsheet },
             { id: 'users', label: 'Manage User', icon: User },
             { id: 'super-admin', label: 'Manajemen Tenant', icon: Shield },
             { id: 'pengaturan', label: 'Pengaturan', icon: Settings },
+            { id: 'chat', label: 'Grup Chat', icon: MessageSquare, plan: 'chatMode', minPlan: 'BASIC' },
+            { id: 'ai-bot', label: 'AI Agent', icon: Bot, plan: 'ai', minPlan: 'PREMIUM' },
+            { id: 'monitoring', label: 'MONITORING', icon: LayoutGrid, plan: 'multiRegion', minPlan: 'ENTERPRISE' },
+            { id: 'audit', label: 'GOVERNANCE', icon: Shield, plan: 'governance', minPlan: 'ENTERPRISE' },
           ].filter(item => {
             const role = currentUser?.role || 'TAMU';
             const isSuperAdmin = !!currentUser?.isSuperAdmin;
@@ -1621,48 +1725,70 @@ export default function App() {
             if (isSuperAdmin) return true;
 
             const rolePermissions: { [key: string]: string[] } = {
-              'SUPER_ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'super-admin', 'pengaturan'],
-              'ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'pengaturan'],
-              'RW': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users'],
-              'RT': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users'],
-              'SEKRETARIS': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'inventaris', 'surat', 'kop-template'],
-              'BENDAHARA': ['dashboard', 'keuangan', 'bank-sampah'],
+              'SUPER_ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'super-admin', 'pengaturan', 'chat', 'ai-bot', 'monitoring', 'audit'],
+              'KELURAHAN_ADMIN': ['dashboard', 'warga', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'users', 'chat', 'ai-bot', 'monitoring', 'audit'],
+              'ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'pengaturan', 'chat', 'ai-bot', 'monitoring', 'audit'],
+              'RW': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'chat', 'ai-bot', 'monitoring', 'audit'],
+              'RT': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'chat', 'ai-bot'],
+              'SEKRETARIS': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'inventaris', 'surat', 'kop-template', 'chat', 'ai-bot'],
+              'BENDAHARA': ['dashboard', 'keuangan', 'bank-sampah', 'chat', 'ai-bot'],
               'SATPAM': ['dashboard', 'buku-tamu'],
-              'KADER': ['dashboard', 'posyandu', 'bank-sampah'],
-              'WARGA': ['dashboard', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'surat'],
+              'KADER': ['dashboard', 'posyandu', 'bank-sampah', 'chat', 'ai-bot'],
+              'WARGA': ['dashboard', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'surat', 'chat', 'ai-bot'],
               'TAMU': ['dashboard', 'etoko'],
               'Viewer': ['dashboard', 'etoko']
             };
 
             const allowed = rolePermissions[role] || ['dashboard'];
             return allowed.includes(item.id);
-          }).map((item: any) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                setIsSidebarOpen(false);
-              }}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-300 relative group overflow-hidden ${
-                activeTab === item.id 
-                  ? 'bg-brand-blue text-white shadow-xl shadow-brand-blue/30 scale-[1.02]' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand-blue'
-              }`}
-            >
-              {activeTab === item.id && (
-                <motion.div 
-                  layoutId="activeIndicator"
-                  className="absolute left-0 w-1.5 h-6 bg-brand-yellow rounded-r-full"
-                />
-              )}
-              <div className={`transition-all duration-300 ${activeTab === item.id ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>
-                <item.icon className="w-5 h-5" />
-              </div>
-              <span className="font-black text-[14px] tracking-[0.1em] uppercase font-sans">
-                {item.label}
-              </span>
-            </button>
-          ))}
+          }).map((item: any) => {
+            const planConfig = getPlanFeatures(currentTenant?.status);
+            const isLocked = item.plan && (!currentTenant || (planConfig as any)[item.plan] === false);
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (isLocked) {
+                    setShowUpgradeModal(true);
+                  } else {
+                    setActiveTab(item.id);
+                    setIsSidebarOpen(false);
+                  }
+                }}
+                className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-300 relative group overflow-hidden ${
+                  activeTab === item.id 
+                    ? 'bg-brand-blue text-white shadow-xl shadow-brand-blue/30 scale-[1.02]' 
+                    : isLocked ? 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60' : 'text-slate-500 hover:bg-slate-50 hover:text-brand-blue font-black'
+                }`}
+              >
+                {activeTab === item.id && (
+                  <motion.div 
+                    layoutId="activeIndicator"
+                    className="absolute left-0 w-1.5 h-6 bg-brand-yellow rounded-r-full"
+                  />
+                )}
+                <div className={`relative transition-all duration-300 ${activeTab === item.id ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {isLocked && (
+                    <div className="absolute -top-1.5 -right-1.5 bg-slate-800 text-white p-0.5 rounded-full border border-white">
+                      <Lock className="w-2 h-2" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 text-left flex flex-col">
+                  <span className={`text-[11px] font-black uppercase tracking-widest ${isLocked ? 'text-slate-400' : ''}`}>
+                    {item.label}
+                  </span>
+                  {isLocked && (
+                    <span className="text-[7px] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-100 self-start mt-0.5 animate-pulse">
+                      LEVEL: {item.minPlan || 'PRO'}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </nav>
       </aside>
 
@@ -1748,9 +1874,12 @@ export default function App() {
               userVotes={userVotes} 
               tokoOrders={tokoOrders} 
               handleLinkToWarga={handleLinkToWarga}
+              currentTenant={currentTenant}
+              setShowUpgradeModal={setShowUpgradeModal}
+              setShowQRModal={setShowQRModal}
             />
           )}
-          {activeTab === 'warga' && <WargaView wargaData={wargaData} currentTenant={currentTenant} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} />}
+          {activeTab === 'warga' && <WargaView wargaData={wargaData} currentTenant={currentTenant} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} currentUser={currentUser} />}
           {activeTab === 'buku-tamu' && (
             <BukuTamuView 
               bukuTamuData={bukuTamuData} 
@@ -1763,7 +1892,7 @@ export default function App() {
             />
           )}
           {activeTab === 'verifikasi' && <VerifikasiAdminView verifikasiData={verifikasiWargaData} wargaData={wargaData} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} showNotification={showNotification} handleFirestoreError={handleFirestoreError} currentUser={currentUser} />}
-          {activeTab === 'chat' && <ChatWargaView tenantId={currentUser.tenantId || 'RW26_SMART'} currentUser={currentUser} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'chat' && <ChatWargaView tenantId={currentUser.tenantId || 'RW26_SMART'} currentUser={currentUser} handleFirestoreError={handleFirestoreError} currentTenant={currentTenant} />}
           {activeTab === 'ai-bot' && <AIChatBot currentUser={currentUser} />}
           {activeTab === 'keuangan' && (
             <FinansialDashboardView 
@@ -1782,7 +1911,7 @@ export default function App() {
             />
           )}
           { activeTab === 'posyandu' && (
-            PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].kesehatan ? (
+            getPlanFeatures(currentTenant?.status).posyandu ? (
               <PosyanduView 
                 balitaData={balitaData} setBalitaData={setBalitaData}
                 ibuHamilData={ibuHamilData} setIbuHamilData={setIbuHamilData}
@@ -1800,12 +1929,13 @@ export default function App() {
                   <Lock className="w-8 h-8 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
-                <p className="text-slate-500 mt-2">Fitur Kesehatan/Posyandu hanya tersedia untuk paket BASIC atau PRO. Silakan hubungi admin untuk upgrade.</p>
+                <p className="text-slate-500 mt-2">Fitur Kesehatan/Posyandu tersedia untuk paket PRO, PREMIUM, dan ENTERPRISE.</p>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-brand-pink text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Upgrade Paket</button>
               </div>
             )
           )}
           { activeTab === 'bank-sampah' && (
-            PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].bankSampah ? (
+            getPlanFeatures(currentTenant?.status).bankSampah ? (
               <BankSampahView 
                 sampahKategoriData={sampahKategoriData}
                 sampahSetoranData={sampahSetoranData}
@@ -1822,7 +1952,8 @@ export default function App() {
                   <Lock className="w-8 h-8 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
-                <p className="text-slate-500 mt-2">Fitur Bank Sampah hanya tersedia untuk paket BASIC atau PRO. Silakan hubungi admin untuk upgrade.</p>
+                <p className="text-slate-500 mt-2">Fitur Bank Sampah lingkungan tersedia untuk paket PRO, PREMIUM, dan ENTERPRISE.</p>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-brand-green text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Upgrade Paket</button>
               </div>
             )
           )}
@@ -1842,7 +1973,7 @@ export default function App() {
           {activeTab === 'super-admin' && <TenantsView tenantsData={tenantsData} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} />}
           {activeTab === 'pengaturan' && <PengaturanView tenantId={currentUser.tenantId || 'RW26_SMART'} currentTenant={currentTenant} wargaData={wargaData} settings={settings} userRole={currentUser.role} handleFileUpload={handleFileUpload} showNotification={showNotification} currentUser={currentUser} setActiveTab={setActiveTab} />}
           { activeTab === 'voting' && (
-            PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].ePemilu ? (
+            getPlanFeatures(currentTenant?.status).ePemilu ? (
               <EVotingView 
                 userRole={currentUser.role} 
                 tenantId={currentUser.tenantId || 'RW26_SMART'}
@@ -1861,7 +1992,8 @@ export default function App() {
                   <Lock className="w-8 h-8 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
-                <p className="text-slate-500 mt-2">Fitur E-Voting hanya tersedia untuk paket BASIC atau PRO. Silakan hubungi admin untuk upgrade.</p>
+                <p className="text-slate-500 mt-2">Fitur E-Voting tersedia untuk paket PRO, PREMIUM, dan ENTERPRISE.</p>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Upgrade Paket</button>
               </div>
             )
           )}
@@ -1875,8 +2007,62 @@ export default function App() {
             handleFirestoreError={handleFirestoreError}
             handleFileUpload={handleFileUpload}
             showNotification={showNotification}
-            accessMode={PLAN_FEATURES[currentTenant?.status?.toUpperCase() || 'TRIAL'].eLapak}
+            accessMode={getPlanFeatures(currentTenant?.status).eLapak}
           />}
+          {activeTab === 'analitik' && (
+            getPlanFeatures(currentTenant?.status).analytics ? (
+              <AnalyticsPremiumView tenantId={currentUser.tenantId} kasData={kasData} wargaData={wargaData} iuranData={iuranData} />
+            ) : (
+              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <TrendingUp className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 tracking-tight">Analitik Premium</h3>
+                <p className="text-slate-500 mt-2 max-w-sm mx-auto font-medium">Visualisasi tren, prediksi iuran, dan insight aktivitas warga berbasis AI hanya tersedia di paket 🚀 PREMIUM.</p>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-blue-100">Upgrade ke Premium</button>
+              </div>
+            )
+          )}
+          {activeTab === 'cctv' && (
+             getPlanFeatures(currentTenant?.status).cctv ? (
+               <CCTVView tenantId={currentUser.tenantId} settings={settings} onUpdateSettings={setSettings} />
+             ) : (
+               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Video className="w-8 h-8 text-slate-400" />
+                 </div>
+                 <h3 className="text-lg font-bold">Integrasi CCTV</h3>
+                 <p className="text-slate-500 mt-2">Pantauan kamera keamanan lingkungan langsung dari dashboard tersedia di paket PREMIUM.</p>
+                 <button onClick={() => setShowUpgradeModal(true)} className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-blue-100">Upgrade Paket</button>
+               </div>
+             )
+          )}
+          {activeTab === 'monitoring' && (
+            getPlanFeatures(currentTenant?.status).multiRegion ? (
+              <EnterpriseGovDashboard tenantId={currentUser.tenantId} />
+            ) : (
+              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                 <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Globe className="w-8 h-8 text-indigo-600" />
+                 </div>
+                 <h3 className="text-lg font-bold">Smart Monitoring Region</h3>
+                 <p className="text-slate-500 mt-2">Fitur monitoring multi-wilayah hanya tersedia untuk paket 🏛️ ENTERPRISE.</p>
+              </div>
+            )
+          )}
+          {activeTab === 'audit' && (
+            getPlanFeatures(currentTenant?.status).governance === 'HIGH' ? (
+              <AuditLogView logs={auditLogs} />
+            ) : (
+              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Shield className="w-8 h-8 text-slate-400" />
+                 </div>
+                 <h3 className="text-lg font-bold">Governance & Audit Log</h3>
+                 <p className="text-slate-500 mt-2">Transparansi tata kelola dan log aktivitas admin tersedia di paket 🏛️ ENTERPRISE.</p>
+              </div>
+            )
+          )}
         </div>
       </main>
 
@@ -1954,11 +2140,573 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+      <RegistrationQRModal 
+        isOpen={showQRModal} 
+        onClose={() => setShowQRModal(false)} 
+        tenantId={currentTenant?.id || currentUser?.tenantId || 'RW26_SMART'}
+        tenantName={currentTenant?.nama || 'RT/RW Digital'}
+      />
     </div>
   );
 }
 
+function RegistrationQRModal({ isOpen, onClose, tenantId, tenantName }: { isOpen: boolean, onClose: () => void, tenantId: string, tenantName: string }) {
+  const regUrl = `${window.location.origin}?reg=${tenantId}`;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="bg-white w-full max-w-md rounded-[2.5rem] p-8 text-center shadow-2xl relative overflow-hidden"
+          >
+            <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 transition-colors">
+              <X className="w-5 h-5 text-slate-400" />
+            </button>
+
+            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <QrCode className="w-8 h-8 text-blue-600" />
+            </div>
+
+            <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2">QR Self-Registration</h3>
+            <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed px-4">
+              Tunjukkan QR Code ini kepada tamu atau warga baru. Mereka cukup scan untuk mengisi formulir pendaftaran secara mandiri.
+            </p>
+
+            <div className="bg-slate-50 p-8 rounded-3xl border-2 border-slate-100 flex items-center justify-center mb-8 mx-auto w-fit">
+              <QRCodeSVG value={regUrl} size={200} level="H" includeMargin={false} />
+            </div>
+
+            <div className="bg-blue-50/50 p-4 rounded-xl mb-8 flex flex-col items-center">
+              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Target Tenant</span>
+              <span className="text-xs font-bold text-blue-600 uppercase tracking-tighter">{tenantName} ({tenantId})</span>
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(regUrl);
+                  alert('Link pendaftaran berhasil disalin!');
+                }}
+                className="flex-1 py-4 bg-white border-2 border-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+              >
+                Salin Link
+              </button>
+              <button 
+                onClick={() => window.print()}
+                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
+              >
+                Cetak QR
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// --- PREMIUM: ANALYTICS VIEW ---
+function AnalyticsPremiumView({ tenantId, kasData, wargaData, iuranData }: any) {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [report, setReport] = useState('');
+
+  const generateReport = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/ai/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId,
+          dataSummary: {
+            financial: kasData.slice(-20),
+            warga: wargaData.length,
+            iuran: iuranData.slice(-20)
+          }
+        })
+      });
+      const result = await response.json();
+      setReport(result.report);
+      
+      // Save to Firestore
+      try {
+        const reportId = `report_${new Date().getFullYear()}_${new Date().getMonth() + 1}`;
+        await setDoc(doc(db, 'monthly_reports', reportId), {
+          tenantId,
+          month: new Date().getMonth() + 1,
+          year: new Date().getFullYear(),
+          content: result.report,
+          createdAt: new Date().toISOString(),
+          generatedBy: 'AI_SYSTEM'
+        });
+      } catch (err) {
+        console.error('Failed to save report to firestore');
+      }
+    } catch (e) {
+      alert('Gagal membuat laporan AI');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const data = useMemo(() => {
+    // Group financial by month for predictive trend
+    const monthlyTotal: Record<string, number> = {};
+    kasData.forEach((k: any) => {
+      const month = k.tanggal.split(' ')[1] || 'Jan';
+      monthlyTotal[month] = (monthlyTotal[month] || 0) + (k.debit || 0);
+    });
+    return Object.entries(monthlyTotal)
+      .map(([name, val]) => ({ name, actual: val, prediction: val * 1.05 + 500000 }))
+      .slice(-6);
+  }, [kasData]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-black text-slate-800 tracking-tighter">ANALYTICS PREDIKTIF AI</h2>
+        <div className="flex gap-3">
+          <button 
+            onClick={generateReport}
+            disabled={isGenerating}
+            className="bg-white border-2 border-indigo-600 text-indigo-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2"
+          >
+            {isGenerating ? 'Sedang Menyusun...' : (
+              <>
+                <FileCheck className="w-4 h-4" />
+                Generate Laporan Bulanan
+              </>
+            )}
+          </button>
+          <span className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 flex items-center gap-2">
+            <Bot className="w-4 h-4" />
+            🚀 AI Premium
+          </span>
+        </div>
+      </div>
+
+      {report && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-indigo-900 text-white p-8 rounded-[2.5rem] shadow-2xl relative"
+        >
+          <button onClick={() => setReport('')} className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full">
+            <X className="w-5 h-5" />
+          </button>
+          <h3 className="text-xl font-black mb-6 flex items-center gap-2">
+            <FileText className="w-6 h-6" />
+            LAPORAN BULANAN OTOMATIS (AI)
+          </h3>
+          <div className="prose prose-invert max-w-none">
+            <pre className="whitespace-pre-wrap font-sans text-indigo-100 leading-relaxed text-sm bg-indigo-950/50 p-6 rounded-2xl border border-indigo-800">
+              {report}
+            </pre>
+          </div>
+          <div className="mt-6 flex gap-4">
+             <button className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-bold text-[10px] uppercase tracking-widest">Cetak PDF</button>
+             <button className="px-6 py-3 bg-indigo-100/10 text-white border border-indigo-500 rounded-xl font-bold text-[10px] uppercase tracking-widest">Bagikan ke Grup Pengurus</button>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/30">
+          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-indigo-500" />
+            Prediksi Pendapatan (6 Bulan Ke Depan)
+          </h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
+                <Tooltip />
+                <Area type="monotone" dataKey="prediction" stroke="#8b5cf6" strokeWidth={3} fill="#8b5cf6" fillOpacity={0.05} strokeDasharray="5 5" name="Prediksi AI" />
+                <Area type="monotone" dataKey="actual" stroke="#4f46e5" strokeWidth={4} fill="#4f46e5" fillOpacity={0.1} name="Realisasi" />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+            <Bot className="absolute -bottom-4 -right-4 w-32 h-32 opacity-10" />
+            <h4 className="text-xs font-black uppercase tracking-widest opacity-80 mb-4">AI Insight Hari Ini</h4>
+            <div className="space-y-4 relative z-10">
+              <div className="bg-white/10 p-4 rounded-2xl border border-white/10">
+                <p className="text-sm font-bold leading-relaxed italic">"Berdasarkan tren 3 bulan terakhir, pembayaran iuran memuncak di minggu ke-2. Kami merekomendasikan pengiriman pengingat di tanggal 5 setiap bulannya untuk efisiensi tertagih +15%."</p>
+              </div>
+              <p className="text-[10px] font-medium opacity-60">Insight dihasilkan otomatis pukul 08:00 WIB</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/30">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Metrik Efisiensi</h4>
+            <div className="space-y-4">
+              {[
+                { label: 'Kepatuhan Iuran', val: '92%', change: '+4.5%', color: 'emerald' },
+                { label: 'Respon Admin', val: '12m', change: '-5m', color: 'blue' },
+                { label: 'Kepuasan Warga', val: '4.8', change: '+0.2', color: 'amber' },
+              ].map(stat => (
+                <div key={stat.label} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                    <p className="text-xl font-black text-slate-800">{stat.val}</p>
+                  </div>
+                  <span className={`text-[10px] font-black text-${stat.color}-600 bg-${stat.color}-50 px-2 py-1 rounded-lg`}>{stat.change}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- PREMIUM: CCTV VIEW ---
+// --- SHARED: AUDIT LOG HELPER ---
+const logAction = async (userId: string, userName: string, action: string, resource: string, details: string, tenantId: string) => {
+  try {
+    const logId = `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    await setDoc(doc(db, 'audit_logs', logId), {
+      userId,
+      userName,
+      action,
+      resource,
+      details,
+      tenantId,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Audit Log failed', err);
+  }
+};
+
+// --- ENTERPRISE: AUDIT LOG VIEW ---
+function AuditLogView({ logs }: { logs: any[] }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">🛡️ AUDIT LOG & GOVERNANCE</h2>
+        <button className="bg-slate-100 text-slate-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+          <Download className="w-4 h-4" /> Export Report
+        </button>
+      </div>
+
+      <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-100">
+              <tr>
+                <th className="px-8 py-6">Timestamp</th>
+                <th className="px-8 py-6">User</th>
+                <th className="px-8 py-6">Action</th>
+                <th className="px-8 py-6">Resource</th>
+                <th className="px-8 py-6">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {logs.map((log, i) => (
+                <tr key={i} className="hover:bg-slate-50/50 transition-all">
+                  <td className="px-8 py-6 font-mono text-xs text-slate-400">
+                    {new Date(log.timestamp).toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-[10px]">
+                        {log.userName?.charAt(0)}
+                      </div>
+                      <span className="font-bold text-slate-700">{log.userName}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                      log.action.includes('HAPUS') ? 'bg-red-50 text-red-600' : 
+                      log.action.includes('TAMBAH') ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+                    }`}>
+                      {log.action}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6 font-medium text-slate-500 uppercase text-[10px] tracking-widest">{log.resource}</td>
+                  <td className="px-8 py-6 text-slate-500 max-w-xs truncate">{log.details}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- ENTERPRISE: GOVERNMENT DASHBOARD ---
+function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
+  const [activeRegion, setActiveRegion] = useState('RW 05');
+  const [insight, setInsight] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Simulated hierarchical data
+  const regionalData = [
+    { name: 'RW 05', status: 'SANGAT AKTIF', budget: 12500000, compliance: 95, health: 88 },
+    { name: 'RW 01', status: 'AKTIF', budget: 8900000, compliance: 82, health: 75 },
+    { name: 'RW 02', status: 'PERLU ATENSI', budget: 4200000, compliance: 55, health: 60 },
+    { name: 'RW 03', status: 'STABIL', budget: 10100000, compliance: 88, health: 92 },
+  ];
+
+  const generateRegionalInsight = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/ai/regional-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regionsData: regionalData })
+      });
+      const result = await response.json();
+      setInsight(result.insight);
+    } catch (e) {
+      alert('Gagal mengambil insight AI');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8 pb-20">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">🏛️ DASHBOARD KELURAHAN</h1>
+            <span className="bg-indigo-900 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-200">Enterprise</span>
+          </div>
+          <p className="text-slate-500 font-medium">Monitoring Real-time & Decision Support Wilayah Terintegrasi.</p>
+        </div>
+        <div className="flex gap-4">
+          <button 
+            onClick={generateRegionalInsight}
+            disabled={isLoading}
+            className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-3"
+          >
+            {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            Decision Insight (AI)
+          </button>
+        </div>
+      </div>
+
+      {insight && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden border border-slate-800"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full"></div>
+          <button onClick={() => setInsight('')} className="absolute top-8 right-8 text-slate-500 hover:text-white">
+            <X className="w-6 h-6" />
+          </button>
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-indigo-400 mb-6 font-mono">Goverment AI System v1.0</h3>
+          <div className="prose prose-invert max-w-none">
+             <div className="bg-slate-800/50 p-8 rounded-3xl border border-slate-700/50 leading-relaxed font-medium text-slate-300">
+               {insight.split('\n').map((line, i) => (
+                 <p key={i} className="mb-4">{line}</p>
+               ))}
+             </div>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {regionalData.map(reg => (
+          <div 
+            key={reg.name} 
+            className={`p-8 rounded-[2.5rem] border-2 transition-all cursor-pointer ${
+              activeRegion === reg.name ? 'bg-white border-indigo-600 shadow-2xl shadow-indigo-100' : 'bg-white border-slate-50 hover:border-slate-200'
+            }`}
+            onClick={() => setActiveRegion(reg.name)}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div className={`p-4 rounded-2xl ${
+                reg.status.includes('SANGAT') ? 'bg-emerald-50 text-emerald-600' : 
+                reg.status.includes('PERLU') ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-600'
+              }`}>
+                <MapPin className="w-6 h-6" />
+              </div>
+              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter ${
+                 reg.status.includes('SANGAT') ? 'bg-emerald-100 text-emerald-700' : 
+                 reg.status.includes('PERLU') ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'
+              }`}>
+                {reg.status}
+              </span>
+            </div>
+            <h4 className="text-2xl font-black text-slate-800 tracking-tighter mb-1">{reg.name}</h4>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Kawasan Cluster A-C</p>
+            
+            <div className="space-y-4 pt-6 border-t border-slate-50">
+               <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Compliance</span>
+                  <span className="font-bold text-slate-700">{reg.compliance}%</span>
+               </div>
+               <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-600" style={{ width: `${reg.compliance}%` }}></div>
+               </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl">
+           <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-10 flex items-center gap-3">
+             <BarChart3 className="w-6 h-6 text-indigo-600" />
+             Distribusi Anggaran Regional
+           </h3>
+           <div className="h-[400px]">
+             <ResponsiveContainer width="100%" height="100%">
+               <BarChart data={regionalData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 700}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                  <Tooltip />
+                   <Bar dataKey="budget" fill="#4f46e5" radius={[12, 12, 12, 12]} barSize={60}>
+                     {regionalData.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={entry.status.includes('PERLU') ? '#ef4444' : '#4f46e5'} fillOpacity={0.8} />
+                     ))}
+                   </Bar>
+               </BarChart>
+             </ResponsiveContainer>
+           </div>
+        </div>
+
+        <div className="bg-indigo-600 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-between">
+           <Globe className="absolute -top-12 -right-12 w-64 h-64 opacity-10" />
+           <div>
+             <h3 className="text-xs font-black uppercase tracking-widest opacity-60 mb-8 font-mono">Hierarchical Info</h3>
+             <div className="space-y-8">
+               <div>
+                  <p className="text-4xl font-black tracking-tighter mb-2">1,248</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Total Warga Kelurahan</p>
+               </div>
+               <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-2xl font-black tracking-tighter mb-1">12</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 text-indigo-200">Total RW</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black tracking-tighter mb-1">45</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 text-indigo-200">Total RT</p>
+                  </div>
+               </div>
+             </div>
+           </div>
+           
+           <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
+              <div className="flex items-center gap-3">
+                 <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">Sistem Kelurahan Online</span>
+              </div>
+              <p className="text-xs font-medium text-indigo-100 leading-relaxed italic opacity-80">
+                "Pantauan iuran mencapai 88.5% secara merata. Dibandingkan tahun lalu, terjadi peningkatan digitalisasi sebesar 42% di seluruh wilayah RW."
+              </p>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
+  const [links, setLinks] = useState<string[]>(settings?.cctvLinks || []);
+  const [newLink, setNewLink] = useState('');
+
+  const addLink = () => {
+    if (!newLink) return;
+    const updated = [...links, newLink];
+    setLinks(updated);
+    setNewLink('');
+    // in real app update settings in firestore
+  };
+
+  return (
+    <div className="space-y-8">
+       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">🛡️ INTEGRASI CCTV LINGKUNGAN</h2>
+          <p className="text-slate-500 font-medium text-sm">Pantauan real-time area strategis melalui link IP Camera / Streaming.</p>
+        </div>
+        <div className="flex gap-2">
+           <input 
+             value={newLink}
+             onChange={(e) => setNewLink(e.target.value)}
+             placeholder="Masukkan Link URL CCTV..."
+             className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm w-full md:w-64"
+           />
+           <button onClick={addLink} className="p-3 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-100 flex-shrink-0">
+             <Plus className="w-5 h-5" />
+           </button>
+        </div>
+      </div>
+
+      {links.length === 0 ? (
+        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center">
+           <Video className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+           <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Belum ada kamera yang ditautkan</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {links.map((url, i) => (
+            <div key={i} className="group relative bg-slate-900 aspect-video rounded-[2.5rem] overflow-hidden shadow-2xl ring-4 ring-white">
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-800 animate-pulse">
+                <Video className="w-12 h-12 text-slate-600" />
+              </div>
+              {/* Emulating CCTV embed */}
+              <iframe 
+                src={url} 
+                className="absolute inset-0 w-full h-full border-0 grayscale hover:grayscale-0 transition-all"
+                title={`Kamera ${i+1}`}
+              />
+              <div className="absolute top-6 left-6 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full animate-pulse">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">LIVE - CAM 0{i+1}</span>
+              </div>
+              <button 
+                onClick={() => setLinks(links.filter((_, idx) => idx !== i))}
+                className="absolute top-6 right-6 p-3 bg-black/40 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl flex items-start gap-4">
+         <div className="p-3 bg-indigo-100 rounded-2xl flex-shrink-0">
+           <Info className="w-6 h-6 text-indigo-600" />
+         </div>
+         <p className="text-sm font-medium text-indigo-900 opacity-80 leading-relaxed">
+           <strong>Catatan Privasi:</strong> Nexapps tidak menyimpan data video di server. Tautan CCTV bersifat langsung (embed) dari penyedia masing-masing. Pastikan link yang Anda masukkan aman dan terproteksi kata sandi.
+         </p>
+      </div>
+    </div>
+  );
+}
+
+
 function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
+  // Save to log when viewed (implied)
+  useEffect(() => {
+    if (emergency && !emergency.logged) {
+      // Logic would be here in a real production app to log the view
+    }
+  }, [emergency]);
+
   const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
@@ -3511,6 +4259,35 @@ function EVotingView({
   );
 }
 
+const QuotaProgress = ({ label, current, max, color = 'blue', isText = false }: { label: string, current: any, max: any, color?: string, isText?: boolean }) => {
+  const percentage = isText ? 100 : Math.min(100, (current / max) * 100);
+  const colorMap: Record<string, string> = {
+    blue: 'bg-brand-blue',
+    pink: 'bg-brand-pink',
+    yellow: 'bg-brand-yellow',
+    indigo: 'bg-indigo-600',
+    emerald: 'bg-emerald-600'
+  };
+  
+  return (
+    <div className="space-y-1.5 flex-1">
+      <div className="flex justify-between items-end">
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{label}</span>
+        <span className={`text-[10px] font-black ${isText ? 'text-indigo-600' : 'text-slate-600'}`}>
+          {isText ? current : <>{current} / <span className="text-slate-400">{max}</span></>}
+        </span>
+      </div>
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          className={`h-full ${colorMap[color] || 'bg-brand-blue'}`}
+        />
+      </div>
+    </div>
+  );
+};
+
 function DashboardView({ 
   kasData, 
   wargaData, 
@@ -3529,7 +4306,10 @@ function DashboardView({
   votingConfig,
   userVotes,
   tokoOrders,
-  handleLinkToWarga
+  handleLinkToWarga,
+  currentTenant,
+  setShowUpgradeModal,
+  setShowQRModal
 }: { 
   kasData: any[], 
   wargaData: any[], 
@@ -3548,7 +4328,10 @@ function DashboardView({
   votingConfig: any,
   userVotes: any[],
   tokoOrders: any[],
-  handleLinkToWarga: (nik: string, pin: string) => void
+  handleLinkToWarga: (nik: string, pin: string) => void,
+  currentTenant: any,
+  setShowUpgradeModal: (v: boolean) => void,
+  setShowQRModal: (v: boolean) => void
 }) {
   const [kasPeriod, setKasPeriod] = useState('yearly');
   const [piePeriod, setPiePeriod] = useState('30days');
@@ -3631,6 +4414,19 @@ function DashboardView({
   const totalRemaja = ages.filter(a => a > 12 && a <= 18).length;
   const totalDewasa = ages.filter(a => a > 18 && a <= 60).length;
   const totalLansia = ages.filter(a => a > 60).length;
+
+  const dataByRT = useMemo(() => {
+    const rts: Record<string, number> = {};
+    wargaData.forEach(w => {
+      const rt = w.rt || '??';
+      rts[rt] = (rts[rt] || 0) + 1;
+    });
+    return Object.entries(rts)
+      .map(([name, value]) => ({ name: `RT ${name}`, value }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [wargaData]);
+
+  const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
   // Recent activity calculation
   const recentActivities = [
@@ -3717,6 +4513,107 @@ function DashboardView({
 
   return (
     <div className="space-y-6">
+      {/* SOS Alert & Plan Info */}
+      <div className="flex flex-col md:flex-row gap-4 mb-2">
+        {activeSOS ? (
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => setActiveTab('dashboard')}
+            className="flex-1 bg-red-600 p-6 rounded-[2.5rem] shadow-red-200 shadow-xl border-4 border-red-500 overflow-hidden relative group cursor-pointer"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-150 transition-transform">
+              <Siren size={80} />
+            </div>
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center animate-pulse border border-white/30">
+                <Siren className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black uppercase tracking-tighter leading-none mb-1 text-white">DARURAT: {activeSOS.lokasi || 'LINGKUNGAN'}</h3>
+                <p className="font-bold text-white/90 text-xs uppercase tracking-widest">{activeSOS.keterangan || 'Bantuan segera dibutuhkan.'}</p>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`flex-1 p-6 rounded-[2.5rem] border-2 flex flex-col sm:flex-row items-center gap-6 shadow-sm overflow-hidden relative ${
+              currentTenant?.status === 'PRO' ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-100'
+            }`}
+          >
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border flex-shrink-0 ${
+              currentTenant?.status === 'ENTERPRISE' || currentTenant?.status === 'GOV' || currentTenant?.status === 'DIAMOND' 
+                ? 'bg-slate-900 border-slate-800 shadow-xl shadow-slate-200' :
+              currentTenant?.status === 'PREMIUM' 
+                ? 'bg-indigo-900 border-indigo-800 shadow-lg shadow-indigo-200' :
+              currentTenant?.status === 'PRO' 
+                ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-100' : 
+              'bg-brand-blue/5 border-brand-blue/10'
+            }`}>
+              <Zap className={`w-7 h-7 ${currentTenant?.status === 'PRO' || currentTenant?.status === 'PREMIUM' || currentTenant?.status === 'ENTERPRISE' || currentTenant?.status === 'GOV' ? 'text-white' : 'text-brand-blue'}`} />
+            </div>
+            <div className="flex-1 w-full">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest">Status Paket</h3>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm border ${
+                  currentTenant?.status === 'ENTERPRISE' || currentTenant?.status === 'GOV' || currentTenant?.status === 'DIAMOND' ? 'bg-slate-900 text-white border-slate-800 shadow-slate-200' :
+                  currentTenant?.status === 'PREMIUM' ? 'bg-indigo-900 text-white border-indigo-700 shadow-indigo-200' :
+                  currentTenant?.status === 'PRO' ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-100' : 
+                  currentTenant?.status === 'BASIC' ? 'bg-amber-100 text-amber-600 border-amber-200' : 
+                  'bg-slate-100 text-slate-500 border-slate-200'
+                }`}>
+                  {currentTenant?.status === 'ENTERPRISE' || currentTenant?.status === 'GOV' || currentTenant?.status === 'DIAMOND' ? '🏛️ ENTERPRISE SYSTEM' : 
+                   currentTenant?.status === 'PREMIUM' ? '🚀 PREMIUM PLAN (Unlimited AI)' : 
+                   currentTenant?.status === 'PRO' ? '💎 STAR PRO PLAN' : 
+                   currentTenant?.status === 'BASIC' ? '⚡ BASIC PLAN' : '🛡️ FREE TRIAL'}
+                </span>
+                {(currentTenant?.status === 'PRO' || currentTenant?.status === 'PREMIUM' || currentTenant?.status === 'ENTERPRISE') && (
+                  <span className="text-[10px] font-black text-emerald-600 animate-pulse flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> AKTIF
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col lg:flex-row gap-6">
+                <QuotaProgress 
+                  label="Warga Terdaftar" 
+                  current={totalWarga} 
+                  max={getPlanFeatures(currentTenant?.status)?.maxWarga || 50} 
+                  color="blue"
+                />
+                <QuotaProgress 
+                  label="Otoritas" 
+                  current={getPlanFeatures(currentTenant?.status)?.multiRT ? 'RW (Multi RT)' : 'RT (Single)'} 
+                  max={getPlanFeatures(currentTenant?.status)?.multiRT ? 'Multi-RT' : 'Single RT'} 
+                  color={currentTenant?.status === 'PRO' ? 'indigo' : 'pink'}
+                  isText
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {!(currentTenant?.status === 'PRO' || currentTenant?.status === 'PREMIUM' || currentTenant?.status === 'ENTERPRISE' || currentTenant?.status === 'GOV') && (
+          <motion.div 
+            whileHover={{ y: -4 }}
+            className="md:w-72 bg-gradient-to-br from-indigo-600 to-brand-blue p-6 rounded-[2.5rem] text-white flex flex-col justify-between shadow-xl shadow-indigo-200 relative overflow-hidden group border-4 border-white/10"
+          >
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="relative z-10">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-80">🔥 Boost System</p>
+              <h4 className="font-black text-lg leading-tight mb-4 tracking-tighter">UPGRADE KE PRO UNTUK FITUR OTOMATIS</h4>
+            </div>
+            <button 
+              onClick={() => setActiveTab('super-admin')}
+              className="w-full py-3 bg-white text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-lg relative z-10"
+            >
+              UPGRADE SEKARANG
+            </button>
+          </motion.div>
+        )}
+      </div>
+
       {userRole === 'Viewer' && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -3789,31 +4686,50 @@ function DashboardView({
       {/* Quick Access Shortcuts */}
       <div className="flex xl:grid xl:grid-cols-10 gap-3 px-1 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
         {[
-          { id: 'sos', label: 'SOS', icon: Siren, color: 'brand-pink', bg: 'soft-pink', action: handleTriggerSOS },
+          { id: 'sos', label: 'SOS', icon: Siren, color: 'brand-pink', bg: 'soft-pink', action: handleTriggerSOS, minPlan: 'PREMIUM' },
           { id: 'warga', label: 'WARGA', icon: Users, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('warga') },
           { id: 'buku-tamu', label: 'TAMU', icon: BookCopy, color: 'teal-500', bg: 'teal-50', action: () => setActiveTab('buku-tamu') },
-          { id: 'keuangan', label: 'KEUANGAN', icon: CreditCard, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('keuangan') },
-          { id: 'sampah', label: 'BANK SAMPAH', icon: Recycle, color: 'brand-green', bg: 'soft-green', action: () => setActiveTab('bank-sampah') },
-          { id: 'kesehatan', label: 'Kesehatan', icon: Baby, color: 'brand-pink', bg: 'soft-pink', action: () => setActiveTab('posyandu') },
+          { id: 'self-qr', label: 'QR MANDIRI', icon: QrCode, color: 'blue-600', bg: 'blue-50', action: () => setShowQRModal(true) },
+          { id: 'keuangan', label: 'KEUANGAN', icon: CreditCard, color: 'brand-blue', bg: 'soft-blue', action: () => setActiveTab('keuangan'), minPlan: 'BASIC' },
+          { id: 'sampah', label: 'BANK SAMPAH', icon: Recycle, color: 'brand-green', bg: 'soft-green', action: () => setActiveTab('bank-sampah'), minPlan: 'PRO' },
+          { id: 'kesehatan', label: 'Kesehatan', icon: Baby, color: 'brand-pink', bg: 'soft-pink', action: () => setActiveTab('posyandu'), minPlan: 'PRO' },
           { id: 'inventaris', label: 'INVENTARIS', icon: Package, color: 'brand-purple', bg: 'soft-purple', action: () => setActiveTab('inventaris') },
-          { id: 'surat', label: 'SURAT', icon: FileText, color: 'cyan-500', bg: 'cyan-50', action: () => setActiveTab('surat') },
-          { id: 'voting', label: 'E-PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting') },
-          { id: 'toko', label: 'E-LAPAK26', icon: ShoppingBag, color: 'orange-500', bg: 'orange-50', action: () => setActiveTab('etoko') },
+          { id: 'surat', label: 'SURAT', icon: FileText, color: 'cyan-500', bg: 'cyan-50', action: () => setActiveTab('surat'), minPlan: 'BASIC' },
+          { id: 'voting', label: 'E-PEMILU', icon: Vote, color: 'brand-yellow', bg: 'soft-yellow', action: () => setActiveTab('voting'), minPlan: 'PRO' },
+          { id: 'toko', label: 'E-LAPAK26', icon: ShoppingBag, color: 'orange-500', bg: 'orange-50', action: () => setActiveTab('etoko'), minPlan: 'BASIC' },
           { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck, color: 'emerald-500', bg: 'soft-green', action: () => setActiveTab('verifikasi') },
-          { id: 'chat', label: 'CHAT', icon: MessageSquare, color: 'blue-500', bg: 'blue-50', action: () => setActiveTab('chat') },
-          { id: 'ai-bot', label: 'AI ASISTEN', icon: Bot, color: 'indigo-500', bg: 'indigo-50', action: () => setActiveTab('ai-bot') },
-        ].map(item => (
-          <button 
-            key={item.id}
-            onClick={item.action}
-            className="flex-shrink-0 w-24 xl:w-auto snap-start bg-white/80 p-4 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95"
-          >
-            <div className={`w-14 h-14 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner`}>
-              <item.icon className={`w-8 h-8 text-${item.color}`} />
-            </div>
-            <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">{item.label}</span>
-          </button>
-        ))}
+          { id: 'chat', label: 'CHAT', icon: MessageSquare, color: 'blue-500', bg: 'blue-50', action: () => setActiveTab('chat'), minPlan: 'BASIC' },
+          { id: 'ai-bot', label: 'AI ASISTEN', icon: Bot, color: 'indigo-500', bg: 'indigo-50', action: () => setActiveTab('ai-bot'), minPlan: 'PREMIUM' },
+        ].map(item => {
+          const planConfig = getPlanFeatures(currentTenant?.status);
+          const isTRIAL = currentTenant?.status !== 'BASIC' && currentTenant?.status !== 'PRO' && currentTenant?.status !== 'PREMIUM' && currentTenant?.status !== 'ENTERPRISE';
+          const isAtLeastBASIC = !isTRIAL;
+          const isAtLeastPRO = currentTenant?.status === 'PRO' || currentTenant?.status === 'PREMIUM' || currentTenant?.status === 'ENTERPRISE';
+          const isAtLeastPREMIUM = currentTenant?.status === 'PREMIUM' || currentTenant?.status === 'ENTERPRISE';
+          
+          const isLocked = item.minPlan === 'BASIC' ? !isAtLeastBASIC :
+                         item.minPlan === 'PRO' ? !isAtLeastPRO :
+                         item.minPlan === 'PREMIUM' ? !isAtLeastPREMIUM : 
+                         item.minPlan === 'ENTERPRISE' ? currentTenant?.status !== 'ENTERPRISE' : false;
+
+          return (
+            <button 
+              key={item.id}
+              onClick={() => isLocked ? setShowUpgradeModal(true) : item.action()}
+              className={`flex-shrink-0 w-24 xl:w-auto snap-start bg-white/80 p-4 rounded-3xl border border-white/50 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all flex flex-col items-center justify-center gap-3 group active:scale-95 ${isLocked ? 'grayscale opacity-50' : ''}`}
+            >
+              <div className={`w-14 h-14 rounded-2xl bg-${item.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner relative`}>
+                <item.icon className={`w-8 h-8 text-${item.color}`} />
+                {isLocked && (
+                  <div className="absolute inset-0 bg-slate-900/40 rounded-2xl flex items-center justify-center">
+                    <Lock className="w-5 h-5 text-white" />
+                  </div>
+                )}
+              </div>
+              <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">{item.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3983,6 +4899,109 @@ function DashboardView({
 
       </div>
 
+      {/* PRO Analytics Section */}
+      {getPlanFeatures(currentTenant?.status).analytics && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white p-8 rounded-[3.5rem] border border-indigo-100 shadow-2xl shadow-indigo-100/30 overflow-hidden relative mb-6"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-[0.03]">
+            <BarChart3 size={180} className="text-indigo-600" />
+          </div>
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 relative z-10">
+            <div>
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                  <LayoutGrid className="w-6 h-6 text-white" />
+                </div>
+                Distribusi Multi-RT (RW Monitoring)
+              </h3>
+              <p className="text-slate-400 font-bold text-[10px] tracking-[0.2em] uppercase mt-2">Data Real-time Agregasi Lingkungan • Pro Plan Active</p>
+            </div>
+            
+            <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-[2rem] border border-slate-100">
+              <div className="px-4 py-2 text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Total RT</p>
+                <p className="text-xl font-black text-indigo-600">{dataByRT.length}</p>
+              </div>
+              <div className="w-px h-8 bg-slate-200" />
+              <div className="px-4 py-2 text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Iuran Kolektif</p>
+                <p className="text-xl font-black text-emerald-600">82%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+            <div className="lg:col-span-1 h-[280px] relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={dataByRT}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={95}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {dataByRT.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Populasi</p>
+                <p className="text-3xl font-black text-slate-800">{totalWarga}</p>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {dataByRT.map((rt, idx) => (
+                <div key={rt.name} className="bg-slate-50/50 p-5 rounded-[2rem] border border-slate-100 hover:border-indigo-200 transition-all group relative overflow-hidden">
+                   <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{rt.name}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                        {Math.round((rt.value / totalWarga) * 100)}%
+                      </span>
+                   </div>
+                   <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-2xl font-black text-slate-800 leading-none mb-1">{rt.value}</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Jiwa Terdata</p>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <p className="text-xs font-black text-emerald-600 uppercase tracking-tighter mb-0.5">Rp {formatRupiah(Math.floor(Math.random() * 5000000) + 1000000)}</p>
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3 text-emerald-500" />
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Estimasi Kas</p>
+                        </div>
+                      </div>
+                   </div>
+                   <div className="mt-4 h-1.5 w-full bg-slate-200 rounded-full overflow-hidden border border-white">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(rt.value / totalWarga) * 100}%` }}
+                        className="h-full transition-all" 
+                        style={{ backgroundColor: COLORS[idx % COLORS.length] }} 
+                      />
+                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Aktivitas Terbaru Section */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center">
@@ -4119,6 +5138,7 @@ function ConfirmModal({
 
 function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUser, tenantId, handleFirestoreError, showNotification }: { bukuTamuData: any[], setBukuTamuData: any, wargaData: any[], currentUser: any, tenantId: string, handleFirestoreError: any, showNotification: any }) {
   const [activeSubTab, setActiveSubTab] = useState<'monitor' | 'registrasi' | 'log'>('monitor');
+  const [showQRModal, setShowQRModal] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [cameraOpen, setCameraOpen] = useState(true);
@@ -4283,8 +5303,68 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUs
               <span className="hidden sm:inline uppercase">{tab.label}</span>
             </button>
           ))}
+          <button
+            onClick={() => setShowQRModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all bg-amber-50 text-amber-600 hover:bg-amber-100 ml-1 border border-amber-100 shadow-sm"
+          >
+            <QrCode className="w-4 h-4" />
+            <span className="hidden sm:inline uppercase">Self-Scan QR</span>
+          </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showQRModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="bg-white rounded-[3rem] p-8 max-w-sm w-full shadow-2xl relative border-[6px] border-amber-400"
+            >
+              <button 
+                onClick={() => setShowQRModal(false)}
+                className="absolute -top-4 -right-4 w-10 h-10 bg-white shadow-xl rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:rotate-90 transition-all border border-slate-100"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              
+              <div className="text-center p-2">
+                <div className="w-20 h-20 bg-amber-100 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-inner ring-4 ring-amber-50">
+                  <QrCode className="w-10 h-10 text-amber-600" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-800 mb-1 uppercase tracking-tight">QR BUKU TAMU</h3>
+                <p className="text-[10px] font-black text-amber-500 mb-6 uppercase tracking-[0.3em]">Mandiri Digital v1.0</p>
+                
+                <div className="bg-white p-6 rounded-[2.5rem] mb-6 flex justify-center shadow-2xl ring-1 ring-slate-100">
+                  <GuestBookQRCode tenantId={tenantId} />
+                </div>
+                
+                <div className="bg-slate-50 p-4 rounded-2xl mb-8 border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-500 uppercase leading-relaxed text-center">
+                    Tamu dapat memindai kode ini untuk mengisi buku tamu secara mandiri tanpa harus menyentuh monitor admin.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => window.print()}
+                    className="py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
+                  >
+                    Cetak
+                  </button>
+                  <button
+                    onClick={() => setShowQRModal(false)}
+                    className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all font-black"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Content Area */}
@@ -4747,13 +5827,15 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUs
   );
 }
 
-function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification }: { wargaData: any[], currentTenant?: any, setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void }) {
+function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId, setIsLoadingDB, handleFirestoreError, handleFileUpload, showNotification, currentUser }: { wargaData: any[], currentTenant?: any, setWargaData: any, userRole: string, tenantId: string, setIsLoadingDB: any, handleFirestoreError: any, handleFileUpload: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, currentUser: any }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
   const [viewWarga, setViewWarga] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterRT, setFilterRT] = useState("Semua");
+  const isRTAdmin = currentUser?.role === 'RT';
+  const myRT = currentUser?.rtId || '01';
+  const [filterRT, setFilterRT] = useState(isRTAdmin ? myRT : "Semua");
   const [filterRW, setFilterRW] = useState("Semua");
   const [filterKategoriUmur, setFilterKategoriUmur] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
@@ -4908,14 +5990,40 @@ function WargaView({ wargaData, currentTenant, setWargaData, userRole, tenantId,
 
     if (currentTenant) {
       const maxWarga = currentTenant.maxWarga || 50;
-      if (wargaData.length + validData.length > maxWarga) {
-        showNotification(`Batas slot warga tercapai. Anda mencoba menambahkan ${validData.length} data, tetapi sisa slot hanya ${Math.max(0, maxWarga - wargaData.length)}. Silakan upgrade paket.`, "error");
+      if (wargaData.length >= maxWarga) {
+        showNotification(`Batas slot warga tercapai (Maks: ${maxWarga}). Silakan upgrade paket.`, "error");
         return;
+      }
+      
+      if (wargaData.length + validData.length > maxWarga) {
+        const allowedCount = maxWarga - wargaData.length;
+        showNotification(`Kuota terbatas! Hanya ${allowedCount} dari ${validData.length} data yang akan diimpor sesuai sisa slot paket Anda.`, "info");
+        // Kita tidak return, tapi biarkan proses berlanjut dengan data yang dipotong (slice) di bawah
       }
     }
 
-    const newData = validData.map((row: any) => ({
-      tenantId: (row['Tenant ID'] || row['tenantId'] || row['TenantId'] || (currentTenant?.id === 'MASTER' ? null : currentTenant?.id) || tenantId === 'MASTER' ? 'RW26_SMART' : tenantId).toString(),
+    const uniqueNIKs = new Set();
+    const finalDataToImport = [];
+    const maxLimit = currentTenant ? (currentTenant.maxWarga || 50) - wargaData.length : 10000;
+
+    for (const row of validData) {
+      if (finalDataToImport.length >= maxLimit) break;
+      
+      const nik = (row['NIK'] || row['nik'] || "").toString().trim();
+      if (!uniqueNIKs.has(nik)) {
+        uniqueNIKs.add(nik);
+        finalDataToImport.push(row);
+      }
+    }
+
+    if (finalDataToImport.length < validData.length) {
+      console.warn(`Ditemukan ${validData.length - finalDataToImport.length} data duplikat atau melebihi kuota.`);
+    }
+
+    const targetTenantId = currentTenant?.id || tenantId;
+    
+    const newData = finalDataToImport.map((row: any) => ({
+      tenantId: targetTenantId,
       nama: (row['Nama Lengkap'] || row['nama'] || "").toString(),
       nik: (row['NIK'] || row['nik'] || "").toString(),
       kk: (row['No. KK'] || row['no_kk'] || row['kk'] || "").toString(),
@@ -6202,8 +7310,8 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
                       </span>
                     </td>
                     <td className="px-5 py-3 text-center">
-                      {trx.buktiUrl ? (
-                        <a href={trx.buktiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded px-2 py-1 hover:bg-slate-200 transition-colors text-[10px] font-bold" title="Lihat Bukti">
+                      {trx.strukUrl ? (
+                        <a href={trx.strukUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded px-2 py-1 hover:bg-slate-200 transition-colors text-[10px] font-bold" title="Lihat Bukti">
                           <Image className="w-3 h-3" />
                         </a>
                       ) : '-'}

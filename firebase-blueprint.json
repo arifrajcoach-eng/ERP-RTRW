@@ -496,6 +496,36 @@
       },
       "required": ["id", "name", "price", "stock", "tenantId", "rtId"]
     },
+    "Notification": {
+      "title": "Notifikasi Internal",
+      "description": "Notifikasi in-app untuk warga dan admin",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "warning", "success", "error"] },
+        "read": { "type": "boolean" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "message", "tenantId"]
+    },
+    "UsageLog": {
+      "title": "Log Penggunaan (Quota)",
+      "description": "Tracking harian penggunaan API/Fitur untuk limitasi plan",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string", "description": "Format: {tenantId}_{date}" },
+        "date": { "type": "string" },
+        "transactionCount": { "type": "number" },
+        "wargaCount": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "tenantId", "date"]
+    },
     "TokoOrder": {
       "title": "Pesanan E-Toko",
       "description": "Catatan transaksi belanja warga",
@@ -513,9 +543,85 @@
         "address": { "type": "string" }
       },
       "required": ["id", "customerId", "tenantId", "items", "total", "status"]
+    },
+    "AIUsageLog": {
+      "title": "AI Usage Log",
+      "description": "Tracking harian penggunaan AI per user",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "count": { "type": "number" },
+        "lastUsage": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "userId", "date"]
+    },
+    "AIResponseCache": {
+      "title": "AI Response Cache",
+      "description": "Cache untuk jawaban AI populer",
+      "type": "object",
+      "properties": {
+        "queryHash": { "type": "string" },
+        "response": { "type": "string" },
+        "expiry": { "type": "string", "format": "date-time" }
+      },
+      "required": ["queryHash", "response", "expiry"]
+    },
+    "MonthlyReport": {
+      "title": "Laporan Bulanan",
+      "description": "Laporan otomatis yang digenerate sistem",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "periode": { "type": "string", "description": "MM-YYYY" },
+        "totalIuran": { "type": "number" },
+        "totalKas": { "type": "number" },
+        "aiSummary": { "type": "string", "description": "Ringkasan narasi oleh AI" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "fileUrl": { "type": "string" }
+      },
+      "required": ["tenantId", "periode", "generatedAt"]
+    },
+    "Region": {
+      "title": "Region/Wilayah",
+      "description": "Struktur hirarki wilayah (Kelurahan/RW/RT)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "parentId": { "type": "string", "description": "ID wilayah di atasnya" },
+        "type": { "type": "string", "enum": ["KELURAHAN", "RW", "RT"] },
+        "headName": { "type": "string" },
+        "stats": { "type": "object" }
+      },
+      "required": ["id", "name", "type"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Catatan aktivitas admin untuk tata kelola",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "action": { "type": "string" },
+        "resource": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "details": { "type": "string" },
+        "tenantId": { "type": "string" }
+      },
+      "required": ["userId", "action", "timestamp", "tenantId"]
     }
   },
   "firestore": {
+    "/regions/{id}": {
+      "schema": "Region",
+      "description": "Data peta wilayah"
+    },
+    "/audit_logs/{id}": {
+      "schema": "AuditLog",
+      "description": "Log keamanan"
+    },
     "/toko_products/{id}": {
       "schema": "TokoProduct",
       "description": "Koleksi produk e-toko"
@@ -628,9 +734,29 @@
       "schema": "Emergency",
       "description": "Koleksi sinyal darurat aktif"
     },
+    "/notifications/{id}": {
+      "schema": "Notification",
+      "description": "Koleksi notifikasi internal"
+    },
+    "/usage_logs/{id}": {
+      "schema": "UsageLog",
+      "description": "Tracking kuota penggunaan per tenant"
+    },
     "/chat_messages/{id}": {
       "schema": "Chat",
       "description": "Koleksi pesan chat warga"
+    },
+    "/ai_usage_logs/{id}": {
+      "schema": "AIUsageLog",
+      "description": "Tracking penggunaan AI"
+    },
+    "/ai_cache/{id}": {
+      "schema": "AIResponseCache",
+      "description": "Cache AI"
+    },
+    "/monthly_reports/{id}": {
+      "schema": "MonthlyReport",
+      "description": "Laporan bulanan otomatis"
     }
   }
 }
