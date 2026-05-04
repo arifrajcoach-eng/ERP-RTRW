@@ -208,6 +208,46 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /chat_messages/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow create: if isTenantMember(request.resource.data.tenantId);
+      allow update, delete: if isTenantMember(resource.data.tenantId) && isPengurus();
+    }
+
+    match /regions/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /audit_logs/{docId} {
+      allow read: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /notifications/{docId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMember(resource.data.tenantId));
+      allow write: if isTenantMember(resource.data.tenantId) && isPengurus();
+    }
+
+    match /usage_logs/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isAdmin();
+    }
+
+    match /ai_usage_logs/{docId} {
+      allow read, write: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /monthly_reports/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isAdmin();
+    }
+
+    match /ai_cache/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
     // Default deny (Must be last)
     match /{document=**} {
       allow read, write: if false;

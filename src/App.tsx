@@ -100,103 +100,63 @@ const INITIAL_INVENTARIS_DATA = [
 const PLAN_FEATURES: Record<string, any> = {
   TRIAL: {
     maxWarga: 50,
-    maxAdmins: 1,
-    dailyTransactionLimit: 100,
+    price: "Gratis",
+    coreFeatures: ["Pencatatan Warga", "Keuangan Dasar", "Surat Standar"],
     keuangan: "DASAR",
     surat: "STANDAR",
-    chatMode: "NONE",
-    bankSampah: false,
-    posyandu: false,
-    eLapak: false,
-    ePemilu: false,
-    analytics: false,
-    ai: false,
-    description: "Cocok untuk uji coba sistem di lingkungan RT kecil."
+    multiRT: false, posyandu: false, bankSampah: false, ePemilu: false, eLapak: "READ", cctv: false, sos: false, analytics: false, multiRegion: false, governance: 'LOW', predictiveAI: false
   },
   BASIC: {
     maxWarga: 150,
-    maxAdmins: 3,
-    dailyTransactionLimit: 800,
+    price: "Rp 25rb",
+    coreFeatures: ["Keuangan Lengkap", "Custom Layanan Surat", "E-Lapak Basic"],
     keuangan: "FULL",
     surat: "FULL",
-    chatMode: "POLLING",
-    bankSampah: false,
-    posyandu: false,
-    eLapak: "BASIC",
-    ePemilu: false,
-    analytics: false,
-    ai: false,
-    description: "BASIC PLAN (RT DIGITAL) - Operasional Lengkap untuk 1 RT."
+    multiRT: true, posyandu: false, bankSampah: false, ePemilu: false, eLapak: "FULL", cctv: false, sos: false, analytics: false, multiRegion: false, governance: 'LOW', predictiveAI: false
   },
   PRO: {
     maxWarga: 500,
-    maxAdmins: 10,
-    dailyTransactionLimit: 5000,
+    price: "Rp 149rb",
+    coreFeatures: ["Bank Sampah & Posyandu", "PPOB & E-Voting", "AI Insights Dasar"],
     keuangan: "PPOB",
     surat: "CUSTOM",
-    chatMode: "REALTIME",
-    bankSampah: true,
-    posyandu: true,
-    eLapak: "PREMIUM",
-    ePemilu: true,
-    analytics: true,
-    multiRT: true,
-    ai: "BASIC", // Rule-based insights
-    description: "PRO PLAN - Solusi Lengkap untuk RW & Sistem Otomatis."
+    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "FULL", cctv: false, sos: false, analytics: false, multiRegion: false, governance: 'MEDIUM', predictiveAI: false
   },
   PREMIUM: {
     maxWarga: 5000,
-    maxAdmins: 50,
-    dailyTransactionLimit: 20000,
+    price: "Rp 499rb",
+    coreFeatures: ["Integrasi CCTV & SOS", "Strategic AI Agent", "Predictive Analytics"],
     keuangan: "FULL_AUTO",
     surat: "SMART",
-    chatMode: "REALTIME_UNLIMITED",
-    bankSampah: true,
-    posyandu: true,
-    eLapak: "ENTERPRISE",
-    ePemilu: true,
-    analytics: "PREDICTIVE",
-    multiRT: true,
-    ai: "FULL", // AI Agent & Automation
-    cctv: true,
-    sos: "ADVANCED",
-    description: "PREMIUM PLAN - Integrasi AI, CCTV, & Otomasi Penuh."
+    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "FULL", cctv: true, sos: true, analytics: true, multiRegion: false, governance: 'MEDIUM', predictiveAI: true
   },
   ENTERPRISE: {
     maxWarga: 20000,
-    maxAdmins: 200,
-    dailyTransactionLimit: 100000,
+    price: "Custom",
+    coreFeatures: ["Multi-Region Monit", "Governance & Audit", "Strategic AI"],
     keuangan: "ENTERPRISE",
     surat: "DYNAMIC",
-    chatMode: "REALTIME_UNLIMITED",
-    bankSampah: true,
-    posyandu: true,
-    eLapak: "GOV_LEVEL",
-    ePemilu: true,
-    analytics: "GOV_DASHBOARD", // Regional analytics
-    multiRegion: true, // Kelurahan -> RW -> RT
-    governance: "HIGH", // Audit logs, multi-layered approval
-    ai: "STRATEGIC", // Regional decision support AI
-    cctv: true,
-    description: "ENTERPRISE - Platform Smart Village & Dashboard Monitoring Kelurahan."
+    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "FULL", cctv: true, sos: true, analytics: true, multiRegion: true, governance: 'HIGH', predictiveAI: true
   }
 };
 
-// Aliases for backward compatibility and status variations
-PLAN_FEATURES.ACTIVE = PLAN_FEATURES.TRIAL;
-PLAN_FEATURES.FREE = PLAN_FEATURES.TRIAL;
-PLAN_FEATURES.LITE = PLAN_FEATURES.BASIC;
-PLAN_FEATURES.RT = PLAN_FEATURES.BASIC;
-PLAN_FEATURES.FLASH = PLAN_FEATURES.PRO;
-PLAN_FEATURES.RW = PLAN_FEATURES.PRO;
-PLAN_FEATURES.GOLD = PLAN_FEATURES.PREMIUM;
-PLAN_FEATURES.DIAMOND = PLAN_FEATURES.ENTERPRISE;
-PLAN_FEATURES.GOV = PLAN_FEATURES.ENTERPRISE;
+const PLAN_ALIASES: Record<string, string> = {
+  ACTIVE: 'TRIAL',
+  FREE: 'TRIAL',
+  LITE: 'BASIC',
+  RT: 'BASIC',
+  FLASH: 'PRO',
+  RW: 'PRO',
+  GOLD: 'PREMIUM',
+  DIAMOND: 'ENTERPRISE',
+  GOV: 'ENTERPRISE'
+};
 
 const getPlanFeatures = (status: string | undefined) => {
   if (!status) return PLAN_FEATURES.TRIAL;
   const normalizedStatus = status.toUpperCase().replace('V4.0 ', '').replace('PLAN', '').trim();
-  return PLAN_FEATURES[normalizedStatus] || PLAN_FEATURES.TRIAL;
+  const basePlan = PLAN_ALIASES[normalizedStatus] || normalizedStatus;
+  return PLAN_FEATURES[basePlan] || PLAN_FEATURES.TRIAL;
 };
 
 // Shared Helper for Document Generation
@@ -777,12 +737,18 @@ export default function App() {
 
     setIsLoadingDB(true);
     let loadedSections = 0;
-    const totalSections = currentUser?.isSuperAdmin ? 17 : (currentUser?.role === 'ADMIN' ? 16 : (hasFullAccess ? 15 : 3)); // Updated for Audit logs
+    const requiredSections = hasFullAccess ? 4 : 2; // Hanya tunggu data utama: Warga, Kas, Surat, Iuran
+
+    // Safety fallback agar aplikasi tidak freeze selamanya
+    const fallbackTimer = setTimeout(() => {
+      setIsLoadingDB(false);
+    }, 4500);
 
     const onDataLoaded = () => {
       loadedSections++;
-      if (loadedSections >= totalSections) {
+      if (loadedSections >= requiredSections) {
         setIsLoadingDB(false);
+        clearTimeout(fallbackTimer);
       }
     };
 
@@ -12844,79 +12810,60 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
              </div>
            </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-             {Object.entries(PLAN_FEATURES).map(([key, features]: [string, any]) => (
-               <div key={key} className={`p-6 rounded-[2rem] border transition-all hover:scale-[1.02] duration-500 flex flex-col ${
-                 key === 'ENTERPRISE' ? 'bg-orange-50/20 border-orange-100 shadow-lg shadow-orange-100/10' : 
-                 key === 'PRO' ? 'bg-purple-50/20 border-purple-100 shadow-lg shadow-purple-100/10' : 
-                 key === 'RT' ? 'bg-cyan-50/20 border-cyan-100 shadow-lg shadow-cyan-100/10' :
-                 key === 'BASIC' ? 'bg-blue-50/20 border-blue-100' :
-                 'bg-slate-50/50 border-slate-100'
-               }`}>
-                 <div className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${
-                   key === 'ENTERPRISE' ? 'text-orange-500' : 
-                   key === 'PRO' ? 'text-purple-500' : 
-                   key === 'RT' ? 'text-cyan-500' :
-                   'text-blue-500'
-                 }`}>{key === 'TRIAL' ? 'ACTIVE' : (key === 'RT' ? 'LITE' : (key === 'BASIC' ? 'FLASH' : key))}</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+              {Object.entries(PLAN_FEATURES).map(([key, features]: [string, any]) => {
+                const isEnterprise = key === 'ENTERPRISE';
+                const isPremium = key === 'PREMIUM';
+                const isPro = key === 'PRO';
+                
+                return (
+                  <div key={key} className={`p-5 rounded-3xl border flex flex-col relative overflow-hidden transition-all ${
+                    isEnterprise ? 'bg-slate-900 border-slate-800 text-white shadow-xl' : 
+                    isPremium ? 'bg-indigo-50 border-indigo-100 shadow-lg shadow-indigo-50' : 
+                    'bg-white border-slate-100'
+                  }`}>
+                    <div className="mb-4">
+                      <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isEnterprise ? 'text-orange-400' : 'text-indigo-600'}`}>
+                        {key === 'TRIAL' ? 'STARTER' : (key === 'RT' ? 'LITE' : (key === 'BASIC' ? 'FLASH' : key))}
+                      </p>
+                      <div className="flex items-baseline gap-1">
+                        <h5 className="text-2xl font-black tracking-tighter leading-none">{features.price}</h5>
+                        {!isEnterprise && <span className="text-[10px] opacity-40 font-bold uppercase tracking-tight">/bln</span>}
+                      </div>
+                    </div>
+
+                    <div className="mb-4 flex items-center gap-2 p-2 bg-black/5 rounded-xl border border-black/5">
+                      <Users className="w-3 h-3 opacity-40" />
+                      <span className="text-[10px] font-black tracking-tight">{features.maxWarga} Warga</span>
+                    </div>
+
+                    <div className="space-y-2 mb-6">
+                      {features.coreFeatures.map((f: string, idx: number) => (
+                        <div key={idx} className="flex items-center gap-1.5">
+                          <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${isEnterprise ? 'text-emerald-400' : 'text-emerald-500'}`} />
+                          <span className="text-[10px] font-bold leading-none">{f}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button className={`mt-auto w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      isEnterprise ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg' :
+                      isPremium ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' :
+                      'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                    }`}>
+                      {key === 'TRIAL' ? 'Sewa' : 'Upgrade'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+
+
+
+
                  
-                 <div className="flex items-baseline gap-1 mb-2">
-                   <h5 className="font-black text-slate-800 text-3xl tracking-tighter leading-none">{features.maxWarga}</h5>
-                   <span className="text-[10px] text-slate-400 font-bold uppercase">Warga</span>
-                 </div>
-                 
-                 <p className="text-[11px] text-slate-500 mb-6 leading-relaxed font-medium min-h-[44px]">
-                   {features.description}
-                 </p>
 
-                 <div className="space-y-4 mt-auto">
-                   <div className="flex items-start gap-2.5">
-                     <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                       <CheckCircle2 className="w-3 h-3 text-green-500" />
-                     </div>
-                     <div className="flex flex-col">
-                       <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Keuangan</span>
-                       <span className="text-[10px] text-slate-500 font-medium">{features.keuangan === 'FULL' ? 'Laporan Kas & Iuran Lengkap' : 'Pencatatan Dasar'}</span>
-                     </div>
-                   </div>
-                   
-                   <div className="flex items-start gap-2.5">
-                     <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                       <CheckCircle2 className="w-3 h-3 text-green-500" />
-                     </div>
-                     <div className="flex flex-col">
-                       <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Layanan Surat</span>
-                       <span className="text-[10px] text-slate-500 font-medium">{features.surat === 'STANDAR' ? 'Template RT/RW Standar' : 'Full Custom Kop & TTD'}</span>
-                     </div>
-                   </div>
-
-                   {features.bankSampah && (
-                     <div className="flex items-start gap-2.5">
-                       <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                         <CheckCircle2 className="w-3 h-3 text-green-500" />
-                       </div>
-                       <div className="flex flex-col">
-                         <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Bank Sampah</span>
-                         <span className="text-[10px] text-slate-500 font-medium">Tabungan & Transaksi Sampah</span>
-                       </div>
-                     </div>
-                   )}
-
-                   {features.kesehatan && (
-                     <div className="flex items-start gap-2.5">
-                       <div className="w-4 h-4 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                         <CheckCircle2 className="w-3 h-3 text-green-500" />
-                       </div>
-                       <div className="flex flex-col">
-                         <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Posyandu</span>
-                         <span className="text-[10px] text-slate-500 font-medium">{features.kesehatan === 'FULL+AI' ? 'Analisis Gizi & Prediksi AI' : 'Pencatatan Dasar'}</span>
-                       </div>
-                     </div>
-                   )}
-                 </div>
-               </div>
-             ))}
-           </div>
 
            <div className="mt-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
