@@ -413,17 +413,19 @@
       "properties": {
         "tenantId": { "type": "string" },
         "id": { "type": "string" },
+        "rt": { "type": "string" },
         "nama": { "type": "string" },
-        "alamat": { "type": "string" },
-        "noHp": { "type": "string" },
+        "asal": { "type": "string" },
         "tujuan": { "type": "string", "description": "Blok/No Rumah yang dituju" },
         "keperluan": { "type": "string" },
-        "fotoUrl": { "type": "string", "description": "Foto wajah/identitas tamu" },
-        "waktuDatang": { "type": "string", "format": "date-time" },
-        "waktuKeluar": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Bertamu", "Selesai"] }
+        "catatan": { "type": "string", "description": "Catatan tamu" },
+        "foto": { "type": "string", "description": "Foto wajah/identitas tamu" },
+        "tanggal": { "type": "string", "format": "date-time" },
+        "waktuKeluar": { "type": ["string", "null"], "format": "date-time" },
+        "status": { "type": "string", "enum": ["Check-in", "Check-out"] },
+        "petugas": { "type": "string" }
       },
-      "required": ["id", "nama", "tujuan", "waktuDatang", "tenantId", "status"]
+      "required": ["id", "nama", "tujuan", "tanggal", "tenantId", "status"]
     },
     "VotingCandidate": {
       "title": "Kandidat Voting",

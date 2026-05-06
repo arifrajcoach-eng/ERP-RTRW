@@ -29,27 +29,37 @@ import { ConfirmModal } from './ui/ConfirmModal';
 interface SuratViewProps {
   suratData: any[];
   setSuratData: React.Dispatch<React.SetStateAction<any[]>>;
-  wargaData: any[];
+  wargaData?: any[];
+  usersData?: any[];
   userRole: string;
   currentUser: any;
   getSetting: (key: string) => any;
+  kopSettings?: any;
   tenantId: string;
+  isLoadingDB?: boolean;
   setIsLoadingDB: React.Dispatch<React.SetStateAction<boolean>>;
   handleFirestoreError: (error: any, operation: string, path: string) => void;
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
+  settings?: any;
+  handleFileUpload?: any;
 }
 
 export function SuratView({ 
   suratData, 
   setSuratData, 
-  wargaData, 
+  wargaData = [], 
+  usersData = [],
   userRole, 
   currentUser, 
   getSetting, 
+  kopSettings,
   tenantId, 
+  isLoadingDB,
   setIsLoadingDB, 
   handleFirestoreError, 
-  showNotification 
+  showNotification,
+  settings,
+  handleFileUpload
 }: SuratViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'berjalan' | 'arsip'>('berjalan');
   const [showForm, setShowForm] = useState(false);

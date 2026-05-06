@@ -64,6 +64,7 @@ export default function WargaView({
   const [wargaToDelete, setWargaToDelete] = useState<any>(null);
   const [isDeletingWarga, setIsDeletingWarga] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredWargaData = useMemo(() => {
@@ -111,6 +112,92 @@ export default function WargaView({
     setShowEditForm(true);
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedWargaIds.length === 0) return;
+    if (!window.confirm(`Yakin ingin menghapus ${selectedWargaIds.length} data warga terpilih?`)) return;
+    
+    setIsLoadingDB(true);
+    try {
+      const batch = writeBatch(db);
+      selectedWargaIds.forEach(id => {
+        batch.delete(doc(db, 'data_warga', id));
+      });
+      await batch.commit();
+      setSelectedWargaIds([]);
+      showNotification(`${selectedWargaIds.length} data warga berhasil dihapus`, 'success');
+    } catch (error: any) {
+      handleFirestoreError(error, 'delete', '/data_warga');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0) {
+      setSelectedWargaIds([]);
+    } else {
+      setSelectedWargaIds(displayedWarga.map((w: any) => w.docId || w.nik || w.id));
+    }
+  };
+
+  const toggleSelectWarga = (id: string) => {
+    setSelectedWargaIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const processImport = (file: File) => {
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const parsedData = XLSX.utils.sheet_to_json(sheet);
+        
+        let successCount = 0;
+        const batch = writeBatch(db);
+        
+        parsedData.forEach((row: any) => {
+          if (row.nik && row.nama) {
+            const id = row.nik.toString();
+            const docRef = doc(db, 'data_warga', id);
+            batch.set(docRef, {
+              nik: id,
+              nama: row.nama,
+              rt: row.rt?.toString()?.padStart(2, '0') || '01',
+              rw: row.rw?.toString()?.padStart(2, '0') || '26',
+              status: row.status || 'Warga Tetap',
+              tenantId: tenantId,
+              tglLahir: row.tglLahir || '',
+              jenisKelamin: row.jenisKelamin || 'Laki-laki',
+              agama: row.agama || 'Islam',
+              pekerjaan: row.pekerjaan || '',
+              telepon: row.telepon ? row.telepon.toString() : ''
+            }, { merge: true });
+            successCount++;
+          }
+        });
+        
+        if (successCount > 0) {
+          await batch.commit();
+          showNotification(`${successCount} data berhasil diimpor`, 'success');
+        } else {
+          showNotification('Tidak ada data valid yang ditemukan', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showNotification('Gagal memproses file', 'error');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const handleDeleteWarga = async () => {
     if (!wargaToDelete) return;
     setIsDeletingWarga(true);
@@ -125,6 +212,25 @@ export default function WargaView({
     }
   };
 
+  const handleExportExcel = () => {
+    const dataToExport = filteredWargaData.map((w: any) => ({
+      NIK: w.nik,
+      Nama: w.nama,
+      RT: w.rt,
+      RW: w.rw,
+      Status: w.status,
+      'Jenis Kelamin': w.jenisKelamin,
+      Agama: w.agama,
+      Pekerjaan: w.pekerjaan,
+      'Tanggal Lahir': w.tglLahir,
+      Telepon: w.telepon
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Warga");
+    XLSX.writeFile(workbook, `Data_Warga_${new Date().getTime()}.xlsx`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -135,14 +241,25 @@ export default function WargaView({
           </h2>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredWargaData.length} Warga Terdaftar</p>
         </div>
-        <button onClick={() => setShowAddForm(true)} className="bg-brand-blue hover:bg-brand-blue/90 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-blue/25">
-          <UserPlus size={18} /> Tambah Warga
-        </button>
+        <div className="flex gap-2">
+          {selectedWargaIds.length > 0 && (
+            <button onClick={handleBulkDelete} className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+              <Trash size={18} /> Hapus ({selectedWargaIds.length})
+            </button>
+          )}
+          <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
+          <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 text-emerald-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+            <Download size={18} className="rotate-180" /> {isUploading ? 'Loading...' : 'Import Data'}
+          </button>
+          <button onClick={() => setShowAddForm(true)} className="bg-brand-blue hover:bg-brand-blue/90 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-blue/25">
+            <UserPlus size={18} /> Tambah Warga
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
-         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="relative">
+         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div className="relative md:col-span-2">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input type="text" placeholder="Cari Nama / NIK..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-12 pr-4 outline-none text-sm font-bold text-slate-600" />
             </div>
@@ -150,16 +267,22 @@ export default function WargaView({
               <option value="Semua">RT: Semua</option>
               {Array.from({length: 10}, (_, i) => String(i+1).padStart(2, '0')).map(rt => <option key={rt} value={rt}>{`RT ${rt}`}</option>)}
             </select>
-            <div className="flex items-center gap-2 md:col-span-2">
-               <button className="flex-1 bg-indigo-50 text-indigo-600 h-full rounded-2xl font-black uppercase text-[10px] tracking-widest border border-indigo-100 flex items-center justify-center gap-2 py-4"> <Download size={14} /> Ekspor </button>
-               <button className="flex-1 bg-emerald-50 text-emerald-600 h-full rounded-2xl font-black uppercase text-[10px] tracking-widest border border-emerald-100 flex items-center justify-center gap-2 py-4"> <Printer size={14} /> Cetak </button>
+            <select value={filterRW} onChange={(e) => setFilterRW(e.target.value)} className="bg-slate-50 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600">
+              <option value="Semua">RW: Semua</option>
+              {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => <option key={rw} value={rw}>{`RW ${rw}`}</option>)}
+            </select>
+            <div className="flex items-center gap-2">
+               <button onClick={handleExportExcel} className="flex-1 bg-indigo-50 text-indigo-600 h-full rounded-2xl font-black uppercase text-[10px] tracking-widest border border-indigo-100 flex items-center justify-center gap-2 py-4 shadow-sm hover:bg-indigo-100 transition-colors"> <Download size={14} /> Ekspor </button>
             </div>
          </div>
 
          <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-slate-50">
+                <tr className="border-b border-slate-50 bg-slate-50/50">
+                  <th className="py-4 px-4 w-12 text-center">
+                    <input type="checkbox" checked={selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded text-brand-blue border-slate-300 focus:ring-brand-blue" />
+                  </th>
                   <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 tracking-[0.2em]">Nama / NIK</th>
                   <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 tracking-[0.2em]">RT/RW</th>
                   <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 tracking-[0.2em]">Status</th>
@@ -167,8 +290,14 @@ export default function WargaView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {displayedWarga.map((w: any) => (
-                  <tr key={w.docId || w.id} className="hover:bg-slate-50/50 group transition-all">
+                {displayedWarga.map((w: any) => {
+                  const idWarga = w.docId || w.nik || w.id;
+                  const isSelected = selectedWargaIds.includes(idWarga);
+                  return (
+                  <tr key={idWarga} className={`hover:bg-slate-50/50 group transition-all ${isSelected ? 'bg-blue-50/30' : ''}`}>
+                    <td className="py-5 px-4 text-center">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelectWarga(idWarga)} className="w-4 h-4 rounded text-brand-blue border-slate-300 focus:ring-brand-blue" />
+                    </td>
                     <td className="py-5 px-4">
                       <div className="flex items-center gap-3">
                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-brand-blue font-black shadow-inner overflow-hidden">
@@ -192,17 +321,202 @@ export default function WargaView({
                     </td>
                     <td className="py-5 px-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => setViewWarga(w)} className="p-2 text-slate-400 hover:text-brand-blue bg-white shadow-sm border border-slate-100 rounded-xl transition-all"> <Eye size={16} /> </button>
-                        <button onClick={() => startEdit(w)} className="p-2 text-slate-400 hover:text-brand-blue bg-white shadow-sm border border-slate-100 rounded-xl transition-all"> <Edit2 size={16} /> </button>
-                        <button onClick={() => setWargaToDelete(w)} className="p-2 text-slate-400 hover:text-red-500 bg-white shadow-sm border border-slate-100 rounded-xl transition-all"> <Trash2 size={16} /> </button>
+                        <button onClick={() => setViewWarga(w)} title="Lihat Profil" className="p-2 text-blue-500 hover:text-white bg-blue-50 hover:bg-blue-500 shadow-sm border border-blue-100 rounded-xl transition-all"> <Eye size={16} /> </button>
+                        {(['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(currentUser?.role) || currentUser?.isSuperAdmin) && (
+                          <>
+                            <button onClick={() => startEdit(w)} title="Edit Warga" className="p-2 text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-500 shadow-sm border border-emerald-100 rounded-xl transition-all"> <Edit2 size={16} /> </button>
+                            <button onClick={() => setWargaToDelete(w)} title="Hapus Warga" className="p-2 text-red-500 hover:text-white bg-red-50 hover:bg-red-500 shadow-sm border border-red-100 rounded-xl transition-all"> <Trash2 size={16} /> </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
-         </div>
+          </div>
       </div>
+
+      {/* ADD / EDIT WARGA MODAL */}
+      <AnimatePresence>
+        {(showAddForm || showEditForm) && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
+                   <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight flex items-center gap-2">
+                     {showEditForm ? <><Edit2 size={20} className="text-brand-blue" /> Edit Data Warga</> : <><UserPlus size={20} className="text-brand-blue" /> Tambah Warga Baru</>}
+                   </h3>
+                   <button onClick={() => { setShowAddForm(false); setShowEditForm(false); setEditingWarga(null); }} className="p-2 hover:bg-slate-200 text-slate-400 rounded-xl transition-colors"><X size={20} /></button>
+                </div>
+                <div className="p-6 overflow-y-auto w-full text-left">
+                   <form id="wargaForm" onSubmit={async (e) => {
+                      e.preventDefault();
+                      const fd = new FormData(e.currentTarget as HTMLFormElement);
+                      const data = {
+                        nik: fd.get('nik'),
+                        nama: fd.get('nama'),
+                        rt: fd.get('rt'),
+                        rw: fd.get('rw'),
+                        status: fd.get('status'),
+                        jenisKelamin: fd.get('jenisKelamin'),
+                        agama: fd.get('agama'),
+                        pekerjaan: fd.get('pekerjaan'),
+                        tglLahir: fd.get('tglLahir'),
+                        telepon: fd.get('telepon'),
+                        tenantId,
+                        role: 'WARGA'
+                      };
+                      setIsLoadingDB(true);
+                      try {
+                        if (showEditForm && editingWarga) {
+                          await updateDoc(doc(db, 'data_warga', editingWarga.docId || editingWarga.nik), { ...data });
+                          setWargaData(wargaData.map((w: any) => (w.docId || w.nik) === (editingWarga.docId || editingWarga.nik) ? { ...w, ...data } : w));
+                          showNotification('Data warga berhasil diubah', 'success');
+                        } else {
+                          await setDoc(doc(db, 'data_warga', data.nik as string), { ...data });
+                          setWargaData([...wargaData, data]);
+                          showNotification('Warga baru berhasil ditambahkan', 'success');
+                        }
+                        setShowAddForm(false);
+                        setShowEditForm(false);
+                        setEditingWarga(null);
+                      } catch (err) {
+                        handleFirestoreError(err, 'write', 'data_warga');
+                      } finally {
+                        setIsLoadingDB(false);
+                      }
+                   }} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">NIK</label>
+                            <input required name="nik" defaultValue={editingWarga?.nik} readOnly={!!showEditForm} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nama Lengkap</label>
+                            <input required name="nama" defaultValue={editingWarga?.nama} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="grid grid-cols-2 gap-4 text-left">
+                           <div className="flex flex-col">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RT</label>
+                              <input required name="rt" defaultValue={editingWarga?.rt || (isRTAdmin ? myRT : '')} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                           </div>
+                           <div className="flex flex-col">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RW</label>
+                              <input required name="rw" defaultValue={editingWarga?.rw || '26'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                           </div>
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status</label>
+                            <select name="status" defaultValue={editingWarga?.status || 'Warga Tetap'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="Warga Tetap">Warga Tetap</option>
+                               <option value="Warga Kontrakan">Warga Kontrakan/Kost</option>
+                            </select>
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Jenis Kelamin</label>
+                            <select name="jenisKelamin" defaultValue={editingWarga?.jenisKelamin || 'Laki-laki'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="Laki-laki">Laki-laki</option>
+                               <option value="Perempuan">Perempuan</option>
+                            </select>
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
+                            <input type="date" name="tglLahir" defaultValue={editingWarga?.tglLahir} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Agama</label>
+                            <input name="agama" defaultValue={editingWarga?.agama || 'Islam'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pekerjaan</label>
+                            <input name="pekerjaan" defaultValue={editingWarga?.pekerjaan} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Telepon/WhatsApp</label>
+                            <input name="telepon" defaultValue={editingWarga?.telepon} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                      </div>
+                   </form>
+                </div>
+                <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 justify-end items-center">
+                   <button onClick={() => { setShowAddForm(false); setShowEditForm(false); setEditingWarga(null); }} className="px-6 py-3 font-black text-slate-400 bg-slate-200 border border-slate-300 rounded-xl hover:bg-slate-300 transition-colors uppercase text-[10px] tracking-widest">Batal</button>
+                   <button form="wargaForm" type="submit" className="px-6 py-3 font-black text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-brand-blue/30 transition-all uppercase text-[10px] tracking-widest">Simpan Data</button>
+                </div>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* VIEW WARGA MODAL */}
+      <AnimatePresence>
+        {viewWarga && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 relative">
+                <button onClick={() => setViewWarga(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 text-slate-400 rounded-xl transition-colors"><X size={20} /></button>
+                <div className="flex flex-col items-center text-center mb-6">
+                   <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center text-brand-blue text-4xl font-black shadow-inner mb-4 overflow-hidden">
+                      {viewWarga.foto ? <img src={viewWarga.foto} className="w-full h-full object-cover" /> : viewWarga.nama.charAt(0)}
+                   </div>
+                   <h3 className="text-xl font-black text-slate-800 tracking-tight">{viewWarga.nama}</h3>
+                   <p className="text-sm font-bold text-slate-400 font-mono tracking-widest">{viewWarga.nik}</p>
+                   <span className={`px-3 py-1 mt-2 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                     viewWarga.status === 'Warga Tetap' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                   }`}>
+                     {viewWarga.status}
+                   </span>
+                </div>
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Alamat (RT/RW)</span>
+                      <span className="text-sm font-black text-slate-700">RT {viewWarga.rt} / RW {viewWarga.rw}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jenis Kelamin</span>
+                      <span className="text-sm font-black text-slate-700">{viewWarga.jenisKelamin || '-'}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tanggal Lahir/Umur</span>
+                      <span className="text-sm font-black text-slate-700">{viewWarga.tglLahir} ({calculateAge(viewWarga.tglLahir)}Th)</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Agama</span>
+                      <span className="text-sm font-black text-slate-700">{viewWarga.agama || '-'}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Telepon</span>
+                      <span className="text-sm font-black text-slate-700 font-mono">{viewWarga.telepon || '-'}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pekerjaan</span>
+                      <span className="text-sm font-black text-slate-700">{viewWarga.pekerjaan || '-'}</span>
+                   </div>
+                </div>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DELETE WARGA MODAL */}
+      <AnimatePresence>
+        {wargaToDelete && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Trash2 size={32} />
+                </div>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2">Hapus Warga?</h3>
+                <p className="text-sm font-medium text-slate-500 mb-6">Yakin ingin menghapus data <b>{wargaToDelete.nama}</b> secara permanen? Data yang dihapus tidak dapat dipulihkan.</p>
+                <div className="flex gap-2 justify-center">
+                   <button onClick={() => setWargaToDelete(null)} className="px-6 py-3 font-black text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors uppercase text-[10px] tracking-widest flex-1">Batal</button>
+                   <button onClick={handleDeleteWarga} disabled={isDeletingWarga} className="px-6 py-3 font-black text-white bg-red-500 rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors uppercase text-[10px] tracking-widest flex-1">
+                     {isDeletingWarga ? 'Menghapus...' : 'Hapus'}
+                   </button>
+                </div>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

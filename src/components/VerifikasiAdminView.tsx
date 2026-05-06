@@ -165,7 +165,7 @@ export function VerifikasiAdminView({
     
     if (!reason) {
       if (isModalOpen) {
-        showNotification("Harap isi Catatan Verifikasi di atas untuk alasan penolakan.", "warning");
+        showNotification("Harap isi Catatan Verifikasi di atas untuk alasan penolakan.", "error");
         return;
       }
       
@@ -176,7 +176,7 @@ export function VerifikasiAdminView({
       const promptReason = prompt(promptTitle, "");
       if (promptReason === null) return;
       if (promptReason.trim().length === 0) {
-        showNotification("Alasan penolakan wajib diisi.", "warning");
+        showNotification("Alasan penolakan wajib diisi.", "error");
         return;
       }
       reason = promptReason.trim();
