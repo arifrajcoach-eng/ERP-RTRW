@@ -100,44 +100,69 @@ const INITIAL_INVENTARIS_DATA = [
 const PLAN_FEATURES: Record<string, any> = {
   TRIAL: {
     maxWarga: 50,
-    price: "Gratis",
+    price: "Free",
     coreFeatures: ["Pencatatan Warga", "Keuangan Dasar", "Surat Standar"],
     keuangan: "DASAR",
     surat: "STANDAR",
+    maxAiChats: 0,
     multiRT: false, posyandu: false, bankSampah: false, ePemilu: false, eLapak: "READ", cctv: false, sos: false, analytics: false, multiRegion: false, governance: 'LOW', predictiveAI: false
   },
   BASIC: {
-    maxWarga: 150,
-    price: "Rp 25rb",
-    coreFeatures: ["Keuangan Lengkap", "Custom Layanan Surat", "E-Lapak Basic"],
-    keuangan: "FULL",
-    surat: "FULL",
-    multiRT: true, posyandu: false, bankSampah: false, ePemilu: false, eLapak: "FULL", cctv: false, sos: false, analytics: false, multiRegion: false, governance: 'LOW', predictiveAI: false
+    maxWarga: 300,
+    price: "Rp 55rb",
+    oldPrice: "Rp 85rb",
+    coreFeatures: ["Data, Iuran & Buku Tamu", "Surat, SOS & Inventaris", "AI Chatbot (Max 50)"],
+    keuangan: "DASAR", // No advanced PPOB
+    surat: "STANDAR",
+    maxAiChats: 50,
+    multiRT: false, posyandu: false, bankSampah: false, ePemilu: false, eLapak: "NONE", cctv: false, sos: true, analytics: false, multiRegion: false, governance: 'LOW', predictiveAI: false, inventaris: true
   },
   PRO: {
-    maxWarga: 500,
-    price: "Rp 149rb",
-    coreFeatures: ["Bank Sampah & Posyandu", "PPOB & E-Voting", "AI Insights Dasar"],
-    keuangan: "PPOB",
+    maxWarga: 1000,
+    price: "Rp 129rb",
+    oldPrice: "Rp 169rb",
+    coreFeatures: ["Buku Tamu & E-Voting", "Bank Sampah & Posyandu", "AI Chatbot (max 200/bln)"],
+    keuangan: "FULL",
     surat: "CUSTOM",
-    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "FULL", cctv: false, sos: false, analytics: false, multiRegion: false, governance: 'MEDIUM', predictiveAI: false
+    maxAiChats: 200,
+    multiRT: false, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "NONE", cctv: false, sos: false, analytics: true, multiRegion: false, governance: 'MEDIUM', predictiveAI: false, inventaris: true
   },
   PREMIUM: {
-    maxWarga: 5000,
-    price: "Rp 499rb",
-    coreFeatures: ["Integrasi CCTV & SOS", "Strategic AI Agent", "Predictive Analytics"],
-    keuangan: "FULL_AUTO",
-    surat: "SMART",
-    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "FULL", cctv: true, sos: true, analytics: true, multiRegion: false, governance: 'MEDIUM', predictiveAI: true
+    maxWarga: 1000,
+    price: "Rp 239rb",
+    oldPrice: "Rp 479rb",
+    coreFeatures: ["Multi-Tenant (Max 6)", "Buku Tamu & E-Pemilu", "Posyandu & Bank Sampah"],
+    keuangan: "FULL",
+    surat: "CUSTOM",
+    maxAiChats: 0,
+    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "NONE", cctv: false, sos: true, analytics: false, multiRegion: false, governance: 'MEDIUM', predictiveAI: false, inventaris: true
   },
   ENTERPRISE: {
     maxWarga: 20000,
-    price: "Custom",
-    coreFeatures: ["Multi-Region Monit", "Governance & Audit", "Strategic AI"],
+    price: "Rp 2.5jt",
+    oldPrice: "Rp 4.9jt",
+    coreFeatures: ["Multi-RW / Skala Kelurahan", "White Label & Custom DB", "Big Data & Strategic AI"],
     keuangan: "ENTERPRISE",
     surat: "DYNAMIC",
-    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "FULL", cctv: true, sos: true, analytics: true, multiRegion: true, governance: 'HIGH', predictiveAI: true
+    maxAiChats: -1, // Unlimited
+    multiRT: true, posyandu: true, bankSampah: true, ePemilu: true, eLapak: "FULL", cctv: true, sos: true, analytics: true, multiRegion: true, governance: 'HIGH', predictiveAI: true, inventaris: true
   }
+};
+
+const ADDON_CONFIG = {
+  AI_CHAT: { id: 'addon_ai', name: 'Extra AI Chat Quota (+100)', priceMonthly: 25000, featureKey: 'extraAi_100' },
+  POSYANDU: { id: 'addon_posyandu', name: 'Modul Kesehatan (Posyandu)', priceMonthly: 15000, featureKey: 'posyandu' },
+  EVOTING: { id: 'addon_evoting', name: 'Modul E-Voting & Pemilu', priceMonthly: 20000, featureKey: 'ePemilu' },
+  BANK_SAMPAH: { id: 'addon_banksampah', name: 'Modul Bank Sampah', priceMonthly: 15000, featureKey: 'bankSampah' },
+  CCTV: { id: 'addon_cctv', name: 'CCTV Integration', priceMonthly: 50000, featureKey: 'cctv' },
+  ELAPAK: { id: 'addon_elapak', name: 'E-Lapak (Pasar Warga)', priceMonthly: 30000, featureKey: 'eLapakFull' },
+  JUMLAH_WARGA: { id: 'addon_warga', name: 'Jumlah Warga', priceMonthly: 0, featureKey: 'jumlahWarga' },
+  SOS: { id: 'addon_sos', name: 'Modul SOS', priceMonthly: 0, featureKey: 'modulSos' },
+  BUKU_TAMU: { id: 'addon_buku_tamu', name: 'Buku Tamu', priceMonthly: 0, featureKey: 'bukuTamu' },
+  INVENTARIS: { id: 'addon_inventaris', name: 'Inventaris', priceMonthly: 0, featureKey: 'inventaris' },
+  PPOB: { id: 'addon_ppob', name: 'PPOB', priceMonthly: 0, featureKey: 'ppob' },
+  AI_AGENT: { id: 'addon_ai_agent', name: 'AI Agent', priceMonthly: 0, featureKey: 'aiAgent' },
+  GRUP_CHAT: { id: 'addon_grup_chat', name: 'Grup Chat', priceMonthly: 0, featureKey: 'grupChat' },
 };
 
 const PLAN_ALIASES: Record<string, string> = {
@@ -152,11 +177,26 @@ const PLAN_ALIASES: Record<string, string> = {
   GOV: 'ENTERPRISE'
 };
 
-const getPlanFeatures = (status: string | undefined) => {
+const getPlanFeatures = (tenantOrStatus: any) => {
+  const status = typeof tenantOrStatus === 'string' ? tenantOrStatus : tenantOrStatus?.status;
+  const addons = typeof tenantOrStatus === 'object' && tenantOrStatus?.addons ? tenantOrStatus.addons : [];
+  
   if (!status) return PLAN_FEATURES.TRIAL;
   const normalizedStatus = status.toUpperCase().replace('V4.0 ', '').replace('PLAN', '').trim();
   const basePlan = PLAN_ALIASES[normalizedStatus] || normalizedStatus;
-  return PLAN_FEATURES[basePlan] || PLAN_FEATURES.TRIAL;
+  const features = { ...(PLAN_FEATURES[basePlan] || PLAN_FEATURES.TRIAL) };
+
+  // Apply Add-ons
+  if (addons.includes('extraAi_100')) {
+    features.maxAiChats = (features.maxAiChats || 0) + 100;
+  }
+  if (addons.includes('posyandu')) features.posyandu = true;
+  if (addons.includes('ePemilu')) features.ePemilu = true;
+  if (addons.includes('bankSampah')) features.bankSampah = true;
+  if (addons.includes('cctv')) features.cctv = true;
+  if (addons.includes('eLapakFull')) features.eLapak = "FULL";
+
+  return features;
 };
 
 // Shared Helper for Document Generation
@@ -1256,7 +1296,7 @@ export default function App() {
 
     // 7. Audit Log Listener (Enterprise)
     let unsubAudit = () => {};
-    if (hasFullAccess && getPlanFeatures(currentTenant?.status).governance === 'HIGH') {
+    if (hasFullAccess && getPlanFeatures(currentTenant).governance === 'HIGH') {
       unsubAudit = onSnapshot(query(collection(db, 'audit_logs'), where('tenantId', 'in', tIds), limit(100)), 
         (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1896,7 +1936,7 @@ export default function App() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
                 <p className="text-slate-500 mt-2">Fitur Kesehatan/Posyandu tersedia untuk paket PRO, PREMIUM, dan ENTERPRISE.</p>
-                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-brand-pink text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Upgrade Paket</button>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-brand-pink text-white rounded-xl font-bold uppercase text-[15px] tracking-widest">Upgrade Paket</button>
               </div>
             )
           )}
@@ -1919,7 +1959,7 @@ export default function App() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
                 <p className="text-slate-500 mt-2">Fitur Bank Sampah lingkungan tersedia untuk paket PRO, PREMIUM, dan ENTERPRISE.</p>
-                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-brand-green text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Upgrade Paket</button>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-brand-green text-white rounded-xl font-bold uppercase text-[15px] tracking-widest">Upgrade Paket</button>
               </div>
             )
           )}
@@ -1959,7 +1999,7 @@ export default function App() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-800">Fitur Terbatas</h3>
                 <p className="text-slate-500 mt-2">Fitur E-Voting tersedia untuk paket PRO, PREMIUM, dan ENTERPRISE.</p>
-                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Upgrade Paket</button>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-6 px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-[15px] tracking-widest">Upgrade Paket</button>
               </div>
             )
           )}
@@ -1985,7 +2025,7 @@ export default function App() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 tracking-tight">Analitik Premium</h3>
                 <p className="text-slate-500 mt-2 max-w-sm mx-auto font-medium">Visualisasi tren, prediksi iuran, dan insight aktivitas warga berbasis AI hanya tersedia di paket 🚀 PREMIUM.</p>
-                <button onClick={() => setShowUpgradeModal(true)} className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-blue-100">Upgrade ke Premium</button>
+                <button onClick={() => setShowUpgradeModal(true)} className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-[15px] tracking-widest shadow-lg shadow-blue-100">Upgrade ke Premium</button>
               </div>
             )
           )}
@@ -1999,7 +2039,7 @@ export default function App() {
                  </div>
                  <h3 className="text-lg font-bold">Integrasi CCTV</h3>
                  <p className="text-slate-500 mt-2">Pantauan kamera keamanan lingkungan langsung dari dashboard tersedia di paket PREMIUM.</p>
-                 <button onClick={() => setShowUpgradeModal(true)} className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-blue-100">Upgrade Paket</button>
+                 <button onClick={() => setShowUpgradeModal(true)} className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-[15px] tracking-widest shadow-lg shadow-blue-100">Upgrade Paket</button>
                </div>
              )
           )}
@@ -4560,7 +4600,7 @@ function DashboardView({
           </motion.div>
         )}
 
-        {!(currentTenant?.status === 'PRO' || currentTenant?.status === 'PREMIUM' || currentTenant?.status === 'ENTERPRISE' || currentTenant?.status === 'GOV') && (
+        {(true) && (
           <motion.div 
             whileHover={{ y: -4 }}
             className="md:w-72 bg-gradient-to-br from-indigo-600 to-brand-blue p-6 rounded-[2.5rem] text-white flex flex-col justify-between shadow-xl shadow-indigo-200 relative overflow-hidden group border-4 border-white/10"
@@ -12783,6 +12823,8 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
     
     let maxWarga = (PLAN_FEATURES as any)[planKey]?.maxWarga || 50;
 
+    const addons = formData.getAll('addons[]');
+
     const tenant = {
       id: tenantId,
       name: name,
@@ -12791,6 +12833,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
       status: paket,
       isActive: isActive,
       maxWarga,
+      addons,
       rtTarget: rtCount,
       rwTarget: rwNumber,
       createdAt: editingTenant ? editingTenant.createdAt : new Date().toISOString()
@@ -12924,6 +12967,18 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                                  </div>
                                )}
                              </div>
+                             {tenant.addons && tenant.addons.length > 0 && (
+                               <div className="flex flex-wrap gap-1 mt-1.5">
+                                 {tenant.addons.map((addonCode: string) => {
+                                   const addonDetails = Object.values(ADDON_CONFIG).find(a => a.featureKey === addonCode);
+                                   return addonDetails ? (
+                                     <span key={addonCode} className="text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">
+                                       +{addonDetails.name.split(' ')[0]} {/* Short name */}
+                                     </span>
+                                   ) : null;
+                                 })}
+                               </div>
+                             )}
                           </div>
                        </div>
                     </td>
@@ -13025,12 +13080,12 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
 
                   <div className="col-span-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Paket Sistem</label>
-                    <select name="status" defaultValue={editingTenant?.status || 'Trial'} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700">
-                       <option value="Trial">Trial (Max 50 Warga)</option>
-                       <option value="RT">RT (Max 200 Warga)</option>
-                       <option value="Active">Basic (Max 500 Warga)</option>
-                       <option value="Pro">Professional (Max 2000 Warga)</option>
-                       <option value="Enterprise">Enterprise (Max 10000 Warga)</option>
+                    <select name="status" defaultValue={editingTenant?.status || 'STARTER'} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700">
+                       <option value="STARTER">Starter / Free (Max 50 Warga)</option>
+                       <option value="FLASH">Flash / RT (Max 300 Warga)</option>
+                       <option value="PRO">Pro / RW (Max 1000 Warga)</option>
+                       <option value="PREMIUM">Premium (Max 1000 Warga)</option>
+                       <option value="ENTERPRISE">Enterprise (Max 20.000 Warga)</option>
                     </select>
                   </div>
 
@@ -13055,6 +13110,27 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                        <option value="true">Aktif</option>
                        <option value="false">Tidak Aktif (Suspended)</option>
                     </select>
+                  </div>
+
+                  <div className="col-span-2 mt-2 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PlusCircle className="w-4 h-4 text-blue-600" />
+                      <label className="text-[11px] font-black uppercase text-slate-800 tracking-widest block">Add-ons (Fitur Ekstra)</label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                       {Object.values(ADDON_CONFIG).map((addon) => (
+                          <label key={addon.id} className="flex items-center gap-2 cursor-pointer bg-white p-2.5 rounded-lg border border-slate-200 hover:border-blue-300 transition-colors">
+                            <input 
+                              type="checkbox" 
+                              name="addons[]" 
+                              value={addon.featureKey} 
+                              defaultChecked={editingTenant?.addons?.includes?.(addon.featureKey)}
+                              className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" 
+                            />
+                            <span className="text-[10px] font-bold text-slate-700">{addon.name}</span>
+                          </label>
+                       ))}
+                    </div>
                   </div>
 
                   <div className="col-span-2 flex gap-4 mt-2">
@@ -13098,35 +13174,39 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                     'bg-white border-slate-100'
                   }`}>
                     <div className="mb-4">
-                      <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isEnterprise ? 'text-orange-400' : 'text-indigo-600'}`}>
+                      <p className={`text-[22px] font-black uppercase tracking-widest mb-1 ${isEnterprise ? 'text-orange-400' : 'text-indigo-600'}`}>
                         {key === 'TRIAL' ? 'STARTER' : (key === 'RT' ? 'LITE' : (key === 'BASIC' ? 'FLASH' : key))}
                       </p>
-                      <div className="flex items-baseline gap-1">
-                        <h5 className="text-2xl font-black tracking-tighter leading-none">{features.price}</h5>
-                        {!isEnterprise && <span className="text-[10px] opacity-40 font-bold uppercase tracking-tight">/bln</span>}
+                      <div className="flex flex-col gap-0.5">
+                        {features.oldPrice && <span className="text-[15px] line-through opacity-50">{features.oldPrice}</span>}
+                        <div className="flex items-baseline gap-1">
+                          <h5 className="text-2xl font-black tracking-tighter leading-none">{features.price}</h5>
+                          {!isEnterprise && features.price !== 'Free' && <span className="text-[15px] opacity-40 font-bold uppercase tracking-tight">/bln</span>}
+                        </div>
+                        {features.price === 'Free' && <h5 className="text-xl font-black tracking-tighter leading-none text-brand-blue mt-1">Rp. 0/Bln</h5>}
                       </div>
                     </div>
 
                     <div className="mb-4 flex items-center gap-2 p-2 bg-black/5 rounded-xl border border-black/5">
                       <Users className="w-3 h-3 opacity-40" />
-                      <span className="text-[10px] font-black tracking-tight">{features.maxWarga} Warga</span>
+                      <span className="text-[15px] font-black tracking-tight">{features.maxWarga} Warga</span>
                     </div>
 
                     <div className="space-y-2 mb-6">
                       {features.coreFeatures.map((f: string, idx: number) => (
                         <div key={idx} className="flex items-center gap-1.5">
                           <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${isEnterprise ? 'text-emerald-400' : 'text-emerald-500'}`} />
-                          <span className="text-[10px] font-bold leading-none">{f}</span>
+                          <span className="text-[15px] font-bold leading-none">{f}</span>
                         </div>
                       ))}
                     </div>
 
                     <button 
                       onClick={() => {
-                        const waText = encodeURIComponent(`Halo Tim Nexapps, saya tertarik untuk berlangganan/upgrade ke paket ${key} (${features.price}). Mohon info proses selanjutnya.`);
-                        window.open(`https://wa.me/6285155455667?text=${waText}`, '_blank');
+                        const waText = encodeURIComponent("Hi Ka, Saya mau Upgrade Paket E-RTRW boleh dibantu, Trima Kasih");
+                        window.open(`https://wa.me/6287726741143?text=${waText}`, '_blank');
                       }}
-                      className={`mt-auto w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      className={`mt-auto w-full py-2.5 rounded-xl text-[15px] font-black uppercase tracking-widest transition-all ${
                       isEnterprise ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg' :
                       isPremium ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' :
                       'bg-slate-100 hover:bg-slate-200 text-slate-600'

@@ -47,9 +47,12 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
           userId: currentUser?.uid,
           role: currentUser?.role || 'Warga',
           dataSummary: { financial: fin, health, activity },
-          history: messages.map(m => ({ 
+          history: messages
+            .filter(m => m.role === 'user' || m.role === 'bot')
+            .filter((m, i, arr) => i > 0 || m.role !== 'bot')
+            .map(m => ({ 
             role: m.role === 'user' ? 'user' : 'model', 
-            parts: [{ text: m.text }] 
+            parts: [{ text: m.text as string }] 
           }))
         })
       });
@@ -72,7 +75,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
       <div className="p-4 border-b border-slate-200 bg-slate-50 font-bold flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-blue-600" />
-          <span>AI Asisten RW (Premium)</span>
+          <span className="text-blue-900 font-bold tracking-tight">AI Asisten RW (Premium)</span>
         </div>
         <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-slate-100">
            <div className={`w-2 h-2 rounded-full ${usageCount >= maxUsage ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></div>

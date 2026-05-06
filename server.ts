@@ -2,10 +2,11 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { checkFeatureAccess } from "./src/services/subscriptionService";
 
-dotenv.config();
+// dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,8 +17,14 @@ async function startServer() {
 
   app.use(express.json());
 
-  // AI SDK Initialization
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+  // AI SDK Lazy Initialization
+  let ai: GoogleGenAI | null = null;
+  function getAI(): GoogleGenAI {
+    if (!ai) {
+      ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+    }
+    return ai;
+  }
 
   // Simple in-memory cache for popular questions
   const aiCache = new Map<string, { response: string, expiry: number }>();
@@ -33,6 +40,12 @@ async function startServer() {
 
     if (!message) return res.status(400).json({ error: "Message is required" });
 
+    // Mock: Get subscription based on tenantId
+    const subscription = { planId: 'flash', addons: [] }; 
+    if (!checkFeatureAccess(subscription, 'ai_chat')) {
+        return res.status(403).json({ error: "Fitur tidak tersedia dalam paket Anda. Silakan upgrade plan Anda." });
+    }
+
     // 1. Quota Check (In a real app, use Firestore)
     // For demo/prototype, we'll use a simple in-memory session limit
     // Citizens: 5 requests, Admin: unlimited (for Premium)
@@ -45,24 +58,19 @@ async function startServer() {
     }
 
     try {
-      const model = genAI.getGenerativeModel({ 
+      const chat = getAI().chats.create({
         model: "gemini-1.5-flash",
-        systemInstruction: role === 'Admin' 
-          ? "Anda adalah AI Admin Assistant untuk RW Digital. Tugas Anda membantu pengurus menganalisis data, membuat laporan, dan memberikan insight efisiensi. Gunakan data berikut: " + JSON.stringify(dataSummary)
-          : "Anda adalah AI Chatbot Warga RW Digital. Tugas Anda menjawab pertanyaan warga tentang iuran, jadwal posyandu, dan informasi umum. Bersikaplah ramah dan sopan. Gunakan data berikut: " + JSON.stringify(dataSummary)
-      });
-      
-      const chat = model.startChat({
         history: history || [],
-        generationConfig: {
-          maxOutputTokens: 800,
+        config: {
+          systemInstruction: role === 'Admin' 
+            ? "Anda adalah AI Admin Assistant untuk RW Digital. Tugas Anda membantu pengurus menganalisis data, membuat laporan, dan memberikan insight efisiensi. Gunakan data berikut: " + JSON.stringify(dataSummary)
+            : "Anda adalah AI Chatbot Warga RW Digital. Tugas Anda menjawab pertanyaan warga tentang iuran, jadwal posyandu, dan informasi umum. Bersikaplah ramah dan sopan. Gunakan data berikut: " + JSON.stringify(dataSummary),
           temperature: 0.7,
         },
       });
 
-      const result = await chat.sendMessage(message);
-      const response = await result.response;
-      const text = response.text();
+      const result = await chat.sendMessage({ message });
+      const text = result.text || "";
 
       // 3. Save to Cache (popular queries like "kapan posyandu?")
       if (message.length < 50) {
@@ -83,20 +91,21 @@ async function startServer() {
     const { tenantId, dataSummary } = req.body;
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Buatkan laporan bulanan yang profesional untuk RW Digital berdasarkan data berikut: ${JSON.stringify(dataSummary)}. 
+      const result = await getAI().models.generateContent({ 
+        model: "gemini-1.5-flash",
+        contents: `Buatkan laporan bulanan yang profesional untuk RW Digital berdasarkan data berikut: ${JSON.stringify(dataSummary)}. 
       Laporan harus mencakup: 
       1. Ringkasan Keuangan (Saldo Akhir). 
       2. Statistik Aktivitas Warga. 
       3. Insight/Rekomendasi untuk bulan depan. 
-      Gunakan format Markdown yang rapi.`;
+      Gunakan format Markdown yang rapi.`
+      });
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const text = result.text || "";
 
       res.json({ report: text });
     } catch (error: any) {
-      res.status(500).json({ error: "Gagal membuat laporan" });
+      res.status(500).json({ error: "Gagal membuat laporan", details: error.message });
     }
   });
 
@@ -104,13 +113,12 @@ async function startServer() {
     const { regionsData } = req.body;
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `Anda adalah Strategist Pemerintah (Smart Village). Berdasarkan data agregasi wilayah berikut: ${JSON.stringify(regionsData)}. 
       Berikan analisis perbandingan antar RW, identifikasi wilayah dengan risiko iuran rendah, dan berikan 3 rekomendasi kebijakan strategis untuk tingkat Kelurahan. 
       Gunakan gaya bahasa formal dan data-driven. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await getAI().models.generateContent({ model: "gemini-1.5-flash", contents: prompt });
+      const text = result.text || "";
 
       res.json({ insight: text });
     } catch (error: any) {
@@ -123,7 +131,6 @@ async function startServer() {
     if (!imageBase64) return res.status(400).json({ error: "Image is required" });
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `Anda adalah AI pendeteksi struk/invoice/kwitansi. Ekstrak informasi dari gambar struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: 
       {
         "nominal": 150000, 
@@ -133,17 +140,20 @@ async function startServer() {
       }
       Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Tipe biasanya "Keluar" jika itu struk belanja/pengeluaran, atau "Masuk" jika kwitansi penerimaan. Return HANYA JSON block.`;
 
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: imageBase64,
-            mimeType: "image/jpeg"
-          }
-        }
-      ]);
+      const result = await getAI().models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: [
+            {
+                role: 'user',
+                parts: [
+                    { text: prompt },
+                    { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
+                ]
+            }
+        ]
+      });
 
-      const text = result.response.text();
+      const text = result.text || "";
       const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
 
@@ -151,6 +161,29 @@ async function startServer() {
     } catch (error: any) {
       console.error("Scan Receipt Error:", error);
       res.status(500).json({ error: "Gagal mendeteksi struk", details: error.message });
+    }
+  });
+
+  // PPOB Revenue Sharing
+  app.post("/api/ppob/transaction", async (req, res) => {
+    const { total_paid, admin_fee, tenantId } = req.body;
+    const share = admin_fee / 2;
+    // Logic to save to Firestore would go here, 
+    // referencing the transaction structure requested.
+    res.json({ status: 'success', share_owner: share, share_community: share });
+  });
+
+  // Monthly Insight via Gemini
+  app.post("/api/ai/monthly-insight", async (req, res) => {
+    const { tenantId, financialData } = req.body;
+    try {
+      const result = await getAI().models.generateContent({ 
+        model: "gemini-1.5-flash", 
+        contents: `Buatkan 3 baris ringkasan keuangan profesional untuk RW/RT. Data: ${JSON.stringify(financialData)}.` 
+      });
+      res.json({ insight: result.text || "" });
+    } catch (error: any) {
+      res.status(500).json({ error: "Gagal membuat insight", details: error.message });
     }
   });
 
