@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight, Smartphone, Zap, Droplets, Train, QrCode, BarChart3, Video, FileCheck, Globe } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight, Smartphone, Zap, Droplets, Train, QrCode, BarChart3, Video, FileCheck, Globe, Volume2, VolumeX } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -31,6 +31,7 @@ import { GuestBookFormPublic } from './components/GuestBookFormPublic';
 import { GuestBookQRCode } from './components/GuestBookQRCode';
 import { MessageSquare, Bot } from 'lucide-react';
 import { checkFeatureAccess } from './services/subscriptionService';
+import { generateAIReport, generateRegionalInsight, textToSpeech, scanReceiptAI } from './services/aiService';
 
 const APP_LOGO = "/logo_rw.png";
 
@@ -1402,10 +1403,19 @@ export default function App() {
   // Centralized Error Handler for Firestore
   const handleFirestoreError = (err: any, op: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write', path: string) => {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    if (errorMessage.toLowerCase().includes('quota') || err?.code === 'resource-exhausted') {
-      setQuotaExceeded(true);
-      setIsLoadingDB(false);
-      showNotification("Batas penggunaan harian (Quota) tercapai. Silakan coba lagi besok.", "error");
+    const isQuotaError = errorMessage.toLowerCase().includes('quota') || 
+                         errorMessage.toLowerCase().includes('resource-exhausted') ||
+                         err?.code === 'resource-exhausted' ||
+                         errorMessage.includes('quota metric');
+
+    if (isQuotaError) {
+      if (!quotaExceeded) {
+        setQuotaExceeded(true);
+        setIsLoadingDB(false);
+        showNotification("Batas penggunaan harian (Quota) tercapai. Aplikasi akan masuk mode offline.", "error");
+        console.warn("Firestore Quota Exceeded. Reading/Writing disabled until tomorrow.");
+      }
+      return; // Stop execution without throwing to avoid mounting uncaught errors
     }
     const errInfo = {
       error: errorMessage,
@@ -1510,6 +1520,30 @@ export default function App() {
   useEffect(() => { localStorage.setItem('rw26_suratData', JSON.stringify(suratData)); }, [suratData]);
   useEffect(() => { localStorage.setItem('rw26_iuranData', JSON.stringify(iuranData)); }, [iuranData]);
 
+  useEffect(() => {
+    // DEV AUTO-ACTIVATE: Ensure our main developer has all features enabled
+    const autoActivate = async () => {
+      if (currentUser?.email === 'arifrajcoach@gmail.com' && currentTenant && currentTenant.status !== 'PREMIUM' && currentTenant.status !== 'ENTERPRISE') {
+        const tId = currentUser.tenantId || 'RW26_SMART';
+        if (tId === 'MASTER') return; // Skip virtual tenant update
+        console.log("Auto-activating PREMIUM for dev account...");
+        try {
+          await updateDoc(doc(db, 'tenants', tId), {
+            status: 'PREMIUM',
+            updatedAt: new Date().toISOString()
+          });
+          // Also set as super admin for this login session
+          if (!currentUser.isSuperAdmin) {
+            setCurrentUser(prev => prev ? { ...prev, isSuperAdmin: true, role: 'SUPER_ADMIN' } : null);
+          }
+        } catch (e) {
+          console.error("Auto-activation failed", e);
+        }
+      }
+    };
+    autoActivate();
+  }, [currentUser?.email, currentTenant?.status]);
+
   const handleLinkToWarga = async (nik: string, pin: string) => {
     setIsLoadingDB(true);
     try {
@@ -1567,6 +1601,33 @@ export default function App() {
   if (window.location.pathname.startsWith('/guestbook/')) {
     const tenantId = window.location.pathname.split('/')[2];
     return <GuestBookFormPublic tenantId={tenantId} />;
+  }
+
+  if (quotaExceeded) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-24 h-24 bg-red-500/20 rounded-3xl flex items-center justify-center mb-8 animate-pulse border border-red-500/30">
+          <AlertTriangle className="w-12 h-12 text-red-500" />
+        </div>
+        <h1 className="text-3xl font-black text-white uppercase tracking-[0.2em] mb-4">Quota Terlampaui</h1>
+        <div className="max-w-md bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-sm mb-8">
+          <p className="text-slate-300 leading-relaxed font-medium">
+            Batas penggunaan gratis harian (Firestore Quota) untuk sistem ini telah tercapai.
+          </p>
+          <p className="text-slate-400 text-sm mt-4 italic">
+            Akses data akan dipulihkan secara otomatis besok saat limit direset oleh Google Cloud. Detail dapat dilihat di konsol Firebase (Spark Plan).
+          </p>
+        </div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-3"
+        >
+          <RefreshCw className="w-5 h-5" />
+          Refresh Halaman
+        </button>
+        <p className="mt-12 text-white/20 font-mono text-[10px] uppercase tracking-[0.5em]">System Offline Mode v1.0</p>
+      </div>
+    );
   }
 
   if (isAuthInitializing) {
@@ -1655,7 +1716,7 @@ export default function App() {
           <div className="flex-1">
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Kuota Firestore Terlampaui</h3>
             <p className="text-xs text-slate-500 leading-relaxed mt-1">
-              Batas penggunaan gratis harian telah tercapai. Data mungkin tidak muncul atau tidak dapat disimpan hingga besok saat limit direset.
+              Batas penggunaan gratis harian (Quota) telah tercapai. Kuota akan direset besok. Informasi detail kuota dapat ditemukan di konsol Firebase (Spark Plan).
             </p>
           </div>
           <button 
@@ -1930,6 +1991,10 @@ export default function App() {
               setShowUpgradeModal={setShowUpgradeModal}
               setShowQRModal={setShowQRModal}
               settings={settings}
+              currentUser={currentUser}
+              setIsLoadingDB={setIsLoadingDB}
+              showNotification={showNotification}
+              handleFirestoreError={handleFirestoreError}
             />
           )}
           {activeTab === 'warga' && <WargaView wargaData={wargaData} currentTenant={currentTenant} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} currentUser={currentUser} />}
@@ -2268,23 +2333,60 @@ function AnalyticsPremiumView({ tenantId, kasData, wargaData, iuranData }: any) 
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState('');
 
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  const handleToggleSpeak = async () => {
+    if (isSpeaking) {
+      sourceRef.current?.stop();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!report) return;
+
+    try {
+      setIsSpeaking(true);
+      const base64Audio = await textToSpeech(report);
+      
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      audioContextRef.current = audioContext;
+      
+      const binary = atob(base64Audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      
+      const buffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
+      const data = buffer.getChannelData(0);
+      const view = new DataView(bytes.buffer);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = view.getInt16(i * 2, true) / 32768;
+      }
+      
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.onended = () => setIsSpeaking(false);
+      source.start();
+      sourceRef.current = source;
+    } catch (error) {
+      console.error('Speech Error:', error);
+      setIsSpeaking(false);
+    }
+  };
+
   const generateReport = async () => {
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/ai/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId,
-          dataSummary: {
-            financial: kasData.slice(-20),
-            warga: wargaData.length,
-            iuran: iuranData.slice(-20)
-          }
-        })
-      });
-      const result = await response.json();
-      setReport(result.report);
+      const dataSummary = {
+        financial: kasData.slice(-20),
+        warga: wargaData.length,
+        iuran: iuranData.slice(-20)
+      };
+      
+      const aiReportText = await generateAIReport(dataSummary);
+      setReport(aiReportText);
       
       // Save to Firestore
       try {
@@ -2293,7 +2395,7 @@ function AnalyticsPremiumView({ tenantId, kasData, wargaData, iuranData }: any) 
           tenantId,
           month: new Date().getMonth() + 1,
           year: new Date().getFullYear(),
-          content: result.report,
+          content: aiReportText,
           createdAt: new Date().toISOString(),
           generatedBy: 'AI_SYSTEM'
         });
@@ -2363,6 +2465,12 @@ function AnalyticsPremiumView({ tenantId, kasData, wargaData, iuranData }: any) 
           </div>
           <div className="mt-6 flex gap-4">
              <button className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-bold text-[10px] uppercase tracking-widest">Cetak PDF</button>
+             <button 
+                onClick={handleToggleSpeak}
+                className={`px-6 py-3 border-2 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg ${isSpeaking ? 'bg-red-500 border-red-500 text-white animate-pulse' : 'bg-white text-indigo-600 border-indigo-600 hover:bg-indigo-50'}`}>
+                {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                {isSpeaking ? 'Berhenti' : 'Dengarkan Analisis'}
+             </button>
              <button className="px-6 py-3 bg-indigo-100/10 text-white border border-indigo-500 rounded-xl font-bold text-[10px] uppercase tracking-widest">Bagikan ke Grup Pengurus</button>
           </div>
         </motion.div>
@@ -2507,6 +2615,45 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
   const [insight, setInsight] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  const handleToggleSpeak = async () => {
+    if (isSpeaking) {
+      sourceRef.current?.stop();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!insight) return;
+
+    try {
+      setIsSpeaking(true);
+      const base64Audio = await textToSpeech(insight);
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      audioContextRef.current = audioContext;
+      const binary = atob(base64Audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const buffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
+      const data = buffer.getChannelData(0);
+      const view = new DataView(bytes.buffer);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = view.getInt16(i * 2, true) / 32768;
+      }
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.onended = () => setIsSpeaking(false);
+      source.start();
+      sourceRef.current = source;
+    } catch (error) {
+      console.error('Speech Error:', error);
+      setIsSpeaking(false);
+    }
+  };
+
   // Simulated hierarchical data
   const regionalData = [
     { name: 'RW 05', status: 'SANGAT AKTIF', budget: 12500000, compliance: 95, health: 88 },
@@ -2515,16 +2662,11 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
     { name: 'RW 03', status: 'STABIL', budget: 10100000, compliance: 88, health: 92 },
   ];
 
-  const generateRegionalInsight = async () => {
+  const handleGenerateRegionalInsight = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/ai/regional-insight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ regionsData: regionalData })
-      });
-      const result = await response.json();
-      setInsight(result.insight);
+      const result = await generateRegionalInsight(regionalData);
+      setInsight(result);
     } catch (e) {
       alert('Gagal mengambil insight AI');
     } finally {
@@ -2544,7 +2686,7 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
         </div>
         <div className="flex gap-4">
           <button 
-            onClick={generateRegionalInsight}
+            onClick={handleGenerateRegionalInsight}
             disabled={isLoading}
             className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-3"
           >
@@ -2571,6 +2713,17 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
                  <p key={i} className="mb-4">{line}</p>
                ))}
              </div>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-4">
+             <button 
+               onClick={handleToggleSpeak}
+               className={`px-8 py-4 rounded-[2rem] font-black uppercase text-[10px] tracking-widest flex items-center gap-3 transition-all shadow-2xl border-2 ${isSpeaking ? 'bg-red-500 border-red-500 text-white animate-pulse' : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'}`}>
+               {isSpeaking ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+               {isSpeaking ? 'Berhenti' : 'Dengarkan Rekomendasi AI'}
+             </button>
+             <button className="px-8 py-4 bg-white text-slate-900 rounded-[2rem] font-black uppercase text-[10px] tracking-widest hover:bg-slate-100 transition-all shadow-xl flex items-center gap-2">
+               <Download className="w-4 h-4" /> Export Report
+             </button>
           </div>
         </motion.div>
       )}
@@ -4363,7 +4516,11 @@ function DashboardView({
   currentTenant,
   setShowUpgradeModal,
   setShowQRModal,
-  settings
+  settings,
+  currentUser,
+  setIsLoadingDB,
+  showNotification,
+  handleFirestoreError
 }: { 
   kasData: any[], 
   wargaData: any[], 
@@ -4386,7 +4543,11 @@ function DashboardView({
   currentTenant: any,
   setShowUpgradeModal: (v: boolean) => void,
   setShowQRModal: (v: boolean) => void,
-  settings: any
+  settings: any,
+  currentUser: any,
+  setIsLoadingDB: any,
+  showNotification: any,
+  handleFirestoreError: any
 }) {
   const [kasPeriod, setKasPeriod] = useState('yearly');
   const [piePeriod, setPiePeriod] = useState('30days');
@@ -4660,7 +4821,29 @@ function DashboardView({
               <h4 className="font-black text-lg leading-tight mb-4 tracking-tighter">UPGRADE KE PREMIUM UNTUK FITUR OTOMATIS</h4>
             </div>
             <button 
-              onClick={() => setActiveTab('super-admin')}
+              onClick={async () => {
+                if (currentUser?.isSuperAdmin || currentUser?.email === 'arifrajcoach@gmail.com') {
+                  setIsLoadingDB(true);
+                  try {
+                    const tenantId = currentUser?.tenantId || 'RW26_SMART';
+                    if (tenantId === 'MASTER') {
+                      showNotification("Akun Master sudah memiliki akses enterprise.", "info");
+                      return;
+                    }
+                    await updateDoc(doc(db, 'tenants', tenantId), {
+                      status: 'PREMIUM',
+                      updatedAt: new Date().toISOString()
+                    });
+                    showNotification("Tenant berhasil di-upgrade ke PREMIUM! Nikmati fitur otomatis.", "success");
+                  } catch (err) {
+                    handleFirestoreError(err, 'update', `tenants/${currentUser?.tenantId}`);
+                  } finally {
+                    setIsLoadingDB(false);
+                  }
+                } else {
+                  setActiveTab('super-admin');
+                }
+              }}
               className="w-full py-3 bg-white text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-lg relative z-10"
             >
               UPGRADE SEKARANG
@@ -4808,22 +4991,22 @@ function DashboardView({
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
-          <div className="absolute right-4 top-4 w-24 h-24 bg-brand-green/5 rounded-full blur-2xl group-hover:bg-brand-green/10 transition-colors flex items-center justify-center text-white">
-            <div className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500">
+        <div className="bg-[#3994f6] p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
+          <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
+            <div className="w-10 h-10 opacity-30 -rotate-12 group-hover:rotate-0 group-hover:opacity-50 transition-all duration-500">
               <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
           </div>
-          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
+          <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-soft-green flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-brand-green" />
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <CreditCard className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-black text-slate-800 leading-none mb-1">
+              <p className="text-2xl font-black text-white leading-none mb-1">
                 Rp {formatRupiah(saldoTotal)}
               </p>
-              <p className="text-[10px] font-bold text-brand-green uppercase tracking-tighter animate-pulse">Sinkronisasi Realtime</p>
+              <p className="text-[10px] font-bold text-white/80 uppercase tracking-tighter animate-pulse">Sinkronisasi Realtime</p>
             </div>
           </div>
         </div>
@@ -5350,7 +5533,7 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUs
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${
                 activeSubTab === tab.id ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
@@ -5360,7 +5543,7 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUs
           ))}
           <button
             onClick={() => setShowQRModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all bg-amber-50 text-amber-600 hover:bg-amber-100 ml-1 border border-amber-100 shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all bg-amber-50 text-amber-600 hover:bg-amber-100 ml-1 border border-amber-100 shadow-sm"
           >
             <QrCode className="w-4 h-4" />
             <span className="hidden sm:inline uppercase">Self-Scan QR</span>
@@ -5404,13 +5587,13 @@ function BukuTamuView({ bukuTamuData, setBukuTamuData, wargaData = [], currentUs
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => window.print()}
-                    className="py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
+                    className="py-4 bg-[#fff3b5] text-amber-700 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-amber-200 shadow-lg shadow-amber-100 transition-all"
                   >
                     Cetak
                   </button>
                   <button
                     onClick={() => setShowQRModal(false)}
-                    className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all font-black"
+                    className="py-4 bg-[#fef29a] text-amber-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-amber-100 transition-all font-black"
                   >
                     Tutup
                   </button>
@@ -7396,7 +7579,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
       <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit">
         <button
           onClick={() => setActiveSubTab('pembayaran')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <CreditCard className="w-4 h-4" />
           <span className="uppercase">Riwayat Pembayaran</span>
@@ -7404,7 +7587,7 @@ function IuranView({ iuranData, setIuranData, kasData, setKasData, wargaData = [
         {isPengurus && (
           <button
             onClick={() => setActiveSubTab('rekap')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${activeSubTab === 'rekap' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'rekap' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
           >
             <Users className="w-4 h-4" />
             <span className="uppercase">Rekap Iuran Warga</span>
@@ -8441,13 +8624,13 @@ function SuratView({ suratData, setSuratData, wargaData = [], usersData = [], us
           <div className="flex bg-slate-100 p-1 rounded-xl">
             <button 
               onClick={() => setActiveView('manajemen')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'manajemen' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-4 py-1.5 rounded-lg text-[15px] font-bold transition-all ${activeView === 'manajemen' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Manajemen (Active)
             </button>
             <button 
               onClick={() => setActiveView('arsip')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'arsip' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-4 py-1.5 rounded-lg text-[15px] font-bold transition-all ${activeView === 'arsip' ? 'bg-white shadow-sm text-blue-600 uppercase' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Arsip Digital
             </button>
@@ -9562,36 +9745,27 @@ function KasView({ kasData, setKasData, iuranData, setIuranData, wargaData = [],
                         reader.onloadend = async () => {
                           try {
                             const base64data = (reader.result as string).split(',')[1];
-                            const res = await fetch('/api/ai/scan-receipt', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ imageBase64: base64data })
-                            });
+                            const result = await scanReceiptAI(base64data);
                             
-                            if (res.ok) {
-                              const result = await res.json();
-                              showNotification("Struk berhasil dipindai dengan AI!", "success");
-                              
-                              if (result.tipe === 'Masuk' || result.tipe === 'Keluar') {
-                                setTrxType(result.tipe);
+                            showNotification("Struk berhasil dipindai dengan AI!", "success");
+                            
+                            if (result.tipe === 'Masuk' || result.tipe === 'Keluar') {
+                              setTrxType(result.tipe);
+                            }
+                            
+                            if (formRef.current) {
+                              if (result.nominal) {
+                                const nomInput = formRef.current.elements.namedItem('nominal') as HTMLInputElement;
+                                if (nomInput) nomInput.value = result.nominal;
                               }
-                              
-                              if (formRef.current) {
-                                if (result.nominal) {
-                                  const nomInput = formRef.current.elements.namedItem('nominal') as HTMLInputElement;
-                                  if (nomInput) nomInput.value = result.nominal;
-                                }
-                                if (result.keterangan) {
-                                  const ketInput = formRef.current.elements.namedItem('keterangan') as HTMLInputElement;
-                                  if (ketInput && !ketInput.value) ketInput.value = result.keterangan;
-                                }
-                                if (result.nama) {
-                                  const namaInput = formRef.current.elements.namedItem('nama') as HTMLInputElement;
-                                  if (namaInput && !namaInput.value) namaInput.value = result.nama;
-                                }
+                              if (result.keterangan) {
+                                const ketInput = formRef.current.elements.namedItem('keterangan') as HTMLInputElement;
+                                if (ketInput && !ketInput.value) ketInput.value = result.keterangan;
                               }
-                            } else {
-                              showNotification("Gagal memindai struk dengan AI.", "error");
+                              if (result.nama) {
+                                const namaInput = formRef.current.elements.namedItem('nama') as HTMLInputElement;
+                                if (namaInput && !namaInput.value) namaInput.value = result.nama;
+                              }
                             }
                           } catch (err) {
                             console.error(err);
@@ -10030,154 +10204,105 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
       </div>
 
       {/* Pengaturan Utama */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center">
-            <Settings className="w-4 h-4 mr-2 text-blue-600" />
-            Pengaturan Sistem
-          </h3>
-          {userRole === 'ADMIN' && (
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">Mode Editor</span>
-          )}
-        </div>
-        
-        <form onSubmit={handleSaveSettings} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Informasi RT & Kop Surat</h4>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama Instansi / RT (Kop)</label>
-              <input name="nama_rt" defaultValue={settings.nama_rt} placeholder="Contoh: PENGURUS RUKUN TETANGGA 04" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">RT</label>
-                <input name="rt" defaultValue={settings.rt} placeholder="04" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">RW</label>
-                <input name="rw" defaultValue={settings.rw} placeholder="09" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kelurahan</label>
-              <input name="kelurahan" defaultValue={settings.kelurahan} placeholder="Kebalen" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kecamatan</label>
-              <input name="kecamatan" defaultValue={settings.kecamatan} placeholder="Babelan" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kabupaten/Kota</label>
-              <input name="kabupaten" defaultValue={settings.kabupaten} placeholder="KABUPATEN BEKASI" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Alamat Sekretariat</label>
-              <textarea name="alamat" defaultValue={settings.alamat} rows={2} placeholder="Jl. Merdeka No. 123..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo RT/RW (Kop Surat)</label>
-              <div className="flex gap-3 items-center">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const url = await handleFileUpload(file, 'logo_rt_rw');
-                        const input = document.getElementById('logo_url_input') as HTMLInputElement;
-                        if (input) {
-                          input.value = url;
-                          showNotification("Logo Kop Surat berhasil diupload. Simpan untuk menerapkan.", "info");
-                        }
-                      } catch (err) {
-                        showNotification("Gagal upload logo", "error");
-                      }
-                    }
-                  }}
-                  className="flex-1 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer" 
-                />
-                <input name="logo_url" id="logo_url_input" type="hidden" defaultValue={settings.logo_url} />
-                <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                  {settings.logo_url ? <img src={settings.logo_url} className="w-full h-full object-contain" /> : <Image className="w-5 h-5 text-slate-400" />}
-                </div>
-              </div>
-              <p className="text-[9px] text-slate-400 mt-1 italic">*Tampil di kop surat pengantar.</p>
-            </div>
-
-            {/* Logo Organisasi Utama Dashboard */}
-            {checkFeatureAccess({ planId: currentTenant?.status?.toLowerCase() || 'starter', addons: Array.isArray(currentTenant?.addons) ? currentTenant.addons : [] }, 'custom_logo') ? (
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo Organisasi Utama (Dashboard)</label>
-                <div className="flex gap-3 items-center">
-                  <div className="flex-1 relative">
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const url = await handleFileUpload(file, 'org_logo');
-                            const input = document.getElementById('org_logo_url_input') as HTMLInputElement;
-                            const previewImg = document.getElementById('org_logo_preview') as HTMLImageElement;
-                            if (input) {
-                              input.value = url;
-                              if (previewImg) previewImg.src = url;
-                              showNotification("Logo Dashboard berhasil di-upload. Simpan untuk menerapkan.", "info");
-                            }
-                          } catch (err) {
-                            showNotification("Gagal upload logo", "error");
-                          }
-                        }
-                      }}
-                      className="w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer" 
-                    />
-                  </div>
-                  <input name="org_logo_url" id="org_logo_url_input" type="hidden" key={settings.org_logo_url} defaultValue={settings.org_logo_url || settings.logo_url} />
-                  <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden shrink-0">
-                    <img id="org_logo_preview" src={settings.org_logo_url || settings.logo_url || APP_LOGO} className="w-full h-full object-contain" />
-                  </div>
-                </div>
-                <p className="text-[9px] text-slate-400 mt-1 italic font-medium">*Khusus Paket FLASH ke atas. Mengganti logo di sidebar & loading screen secara mandiri.</p>
-              </div>
-            ) : (
-              <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-[10px] font-bold text-slate-500 flex items-center gap-2">
-                    <Lock className="w-3 h-3 text-slate-400" /> Logo Organisasi Utama (Halaman Utama)
-                  </p>
-                  <p className="text-[9px] text-slate-400 mt-1 italic">Fitur ganti logo mandiri memerlukan paket <b>PRO / PREMIUM / FLASH / ENTERPRISE</b>. <button type="button" onClick={() => setActiveTab('super-admin')} className="text-blue-600 hover:underline font-bold">Upgrade Sekarang</button></p>
-              </div>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+        <form onSubmit={handleSaveSettings}>
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center">
+              <Settings className="w-4 h-4 mr-2 text-blue-600" />
+              Pengaturan Sistem
+            </h3>
+            {userRole === 'ADMIN' && (
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">Mode Editor</span>
             )}
           </div>
+          
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Informasi RT & Kop Surat</h4>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama Instansi / RT (Kop)</label>
+                <input name="nama_rt" defaultValue={settings.nama_rt} placeholder="Contoh: PENGURUS RUKUN TETANGGA 04" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">RT</label>
+                  <input name="rt" defaultValue={settings.rt} placeholder="04" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">RW</label>
+                  <input name="rw" defaultValue={settings.rw} placeholder="09" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kelurahan</label>
+                <input name="kelurahan" defaultValue={settings.kelurahan} placeholder="Kebalen" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Alamat Sekretariat</label>
+                <textarea name="alamat" defaultValue={settings.alamat} rows={2} placeholder="Jl. Merdeka No. 123..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo RT/RW (Kop Surat)</label>
+                <div className="flex gap-3 items-center">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const url = await handleFileUpload(file, 'logo_rt_rw');
+                          const input = document.getElementById('logo_url_input') as HTMLInputElement;
+                          if (input) {
+                            input.value = url;
+                            showNotification("Logo Kop Surat berhasil diupload. Simpan untuk menerapkan.", "info");
+                          }
+                        } catch (err) {
+                          showNotification("Gagal upload logo", "error");
+                        }
+                      }
+                    }}
+                    className="flex-1 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer" 
+                  />
+                  <input name="logo_url" id="logo_url_input" type="hidden" defaultValue={settings.logo_url} />
+                  <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                    {settings.logo_url ? <img src={settings.logo_url} className="w-full h-full object-contain" /> : <Image className="w-5 h-5 text-slate-400" />}
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <div className="space-y-4">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Konfigurasi WhatsApp</h4>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Status Integrasi</label>
-              <select name="STATUS_WA" defaultValue={settings.STATUS_WA || "Nonaktif"} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold">
-                <option value="Aktif">Aktif</option>
-                <option value="Nonaktif">Nonaktif</option>
-              </select>
+            <div className="space-y-4">
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Konfigurasi Sistem & WhatsApp</h4>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nominal Iuran Tetap (Rp)</label>
+                <input name="NOMINAL_IURAN" type="number" defaultValue={settings.NOMINAL_IURAN || "50000"} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold font-mono" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Status Integrasi WA</label>
+                <select name="STATUS_WA" defaultValue={settings.STATUS_WA || "Nonaktif"} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold">
+                  <option value="Aktif">Aktif</option>
+                  <option value="Nonaktif">Nonaktif</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Token API / WA Gateway</label>
+                <input name="TOKEN_WA" defaultValue={settings.TOKEN_WA} type="password" placeholder="••••••••••••" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-mono" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Template Pesan WhatsApp</label>
+                <textarea name="TEMPLATE_WA" defaultValue={settings.TEMPLATE_WA} rows={3} placeholder="Halo {nama}, iuran bulan ini belum lunas..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
+              </div>
+              <div className="pt-4 flex justify-end">
+                <button 
+                  type="submit" 
+                  disabled={isSaving || userRole !== 'ADMIN'}
+                  className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
+                >
+                  {isSaving ? 'Menyimpan...' : 'Simpan Semua Pengaturan'}
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Token API / WA Gateway</label>
-              <input name="TOKEN_WA" defaultValue={settings.TOKEN_WA} type="password" placeholder="••••••••••••" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-mono" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Template Pesan ({'{nama}'} otomatis)</label>
-              <textarea name="TEMPLATE_WA" defaultValue={settings.TEMPLATE_WA} rows={3} placeholder="Halo {nama}, iuran bulan ini belum lunas..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
-            </div>
-          </div>
-
-          <div className="md:col-span-2 pt-4 border-t border-slate-50 flex justify-end">
-            <button 
-              type="submit" 
-              disabled={isSaving || userRole !== 'ADMIN'}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
-            >
-              {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
-            </button>
           </div>
         </form>
       </div>
@@ -10208,67 +10333,7 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col">
-        <h3 className="text-sm font-bold text-slate-800 mb-6 flex items-center">
-          <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-          Pengaturan Sistem & Database
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Konfigurasi Umum */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Konfigurasi Umum</h4>
-            
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Nominal Iuran Tetap (Rp)</label>
-              <input type="number" defaultValue="50000" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
-            </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Lingkungan (RT/RW)</label>
-              <input type="text" defaultValue="RT 04 / RW 09" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
-            </div>
-            
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Nama Ketua</label>
-              <input type="text" defaultValue="Bpk. Bambang" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
-            </div>
-          </div>
-
-          {/* Konfigurasi Integrasi */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Integrasi WhatsApp API</h4>
-            
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Status Automasi</label>
-              <select className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                <option value="aktif">Aktif (Tiap Tgl 5)</option>
-                <option value="nonaktif">Non-Aktif</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Token API (Bearer)</label>
-              <input type="password" defaultValue="TOKEN_RAHASIA_123" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono" />
-              <p className="text-[10px] text-slate-400 mt-1">Jangan bagikan token ini kepada siapapun.</p>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">Template Pesan Reminder</label>
-              <textarea rows={3} defaultValue="Halo Bpk/Ibu {nama}, ini adalah pengingat dari Sistem RT..." className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
-          <button className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg text-sm font-bold transition-colors">
-            Reset Default
-          </button>
-          <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95">
-            Simpan Pengaturan
-          </button>
-        </div>
-      </div>
 
       {/* Database Schema Map Info */}
       <div className="bg-slate-900 rounded-xl p-6 text-white shadow-lg flex flex-col">

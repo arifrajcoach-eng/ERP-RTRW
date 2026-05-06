@@ -597,6 +597,37 @@
       },
       "required": ["id", "name", "type"]
     },
+    "WargaSakit": {
+      "title": "Warga Sakit",
+      "description": "Data warga yang sedang sakit untuk pemantauan",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nik": { "type": "string" },
+        "nama": { "type": "string" },
+        "penyakit": { "type": "string" },
+        "kondisi": { "type": "string" },
+        "rt": { "type": "string" },
+        "tanggalLapor": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "nama", "tenantId"]
+    },
+    "Lansia": {
+      "title": "Lansia",
+      "description": "Data warga lanjut usia",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "id": { "type": "string" },
+        "nik": { "type": "string" },
+        "nama": { "type": "string" },
+        "tglLahir": { "type": "string", "format": "date" },
+        "kondisi": { "type": "string" },
+        "kontakDarurat": { "type": "string" }
+      },
+      "required": ["id", "nama", "tenantId"]
+    },
     "AuditLog": {
       "title": "Audit Log",
       "description": "Catatan aktivitas admin untuk tata kelola",
@@ -674,7 +705,7 @@
       "schema": "PublicUsername",
       "description": "Collection for username-to-email lookup"
     },
-    "/warga/{nik}": {
+    "/data_warga/{nik}": {
       "schema": "Warga",
       "description": "Koleksi data warga"
     },
@@ -757,6 +788,14 @@
     "/monthly_reports/{id}": {
       "schema": "MonthlyReport",
       "description": "Laporan bulanan otomatis"
+    },
+    "/lansia/{id}": {
+      "schema": "Lansia",
+      "description": "Koleksi data lansia"
+    },
+    "/warga_sakit/{id}": {
+      "schema": "WargaSakit",
+      "description": "Koleksi data warga sakit"
     }
   }
 }
