@@ -42,6 +42,7 @@ interface SuratViewProps {
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   settings?: any;
   handleFileUpload?: any;
+  generateSuratHTML?: any;
 }
 
 export function SuratView({ 
@@ -59,7 +60,8 @@ export function SuratView({
   handleFirestoreError, 
   showNotification,
   settings,
-  handleFileUpload
+  handleFileUpload,
+  generateSuratHTML
 }: SuratViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'berjalan' | 'arsip'>('berjalan');
   const [showForm, setShowForm] = useState(false);
@@ -89,6 +91,20 @@ export function SuratView({
   });
 
   const generateSuratPDF = (surat: any) => {
+    if (generateSuratHTML) {
+      const kopSettingsObj = getSetting("KOP_SURAT") || {};
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        showNotification("Gagal membuka jendela cetak. Pastikan pop-up diizinkan.", 'error');
+        return;
+      }
+      
+      const htmlContent = generateSuratHTML(surat, kopSettingsObj, settings || {});
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      return;
+    }
+
     const doc = new jsPDF();
     const settings = getSetting("KOP_SURAT") || {};
     
@@ -193,15 +209,23 @@ export function SuratView({
     try {
       if (editingSurat) {
         await updateDoc(doc(db, 'surat', id), payload);
-        setSuratData((prev: any) => prev.map((s: any) => s.id === id ? payload : s));
+        setSuratData((prev: any) => prev.map((s: any) => s.id === id ? { ...s, ...payload } : s));
         showNotification('Surat berhasil diperbarui', 'success');
       } else {
         await setDoc(doc(db, 'surat', id), payload);
-        setSuratData((prev: any) => [payload, ...prev]);
+        setSuratData((prev: any) => {
+          if (prev.some((s: any) => s.id === id)) return prev;
+          return [payload, ...prev];
+        });
         showNotification('Permohonan surat berhasil dikirim', 'success');
       }
       setShowForm(false);
       setEditingSurat(null);
+      if (payload.status === 'Selesai' || payload.status === 'Ditolak') {
+        setActiveSubTab('arsip');
+      } else {
+        setActiveSubTab('berjalan');
+      }
     } catch (err: any) {
       handleFirestoreError(err, editingSurat ? 'update' : 'create', 'surat');
       showNotification('Gagal menyimpan surat', 'error');
@@ -308,9 +332,9 @@ export function SuratView({
                <p className="font-bold">Tidak ada permohonan surat ditemukan.</p>
             </div>
           )}
-          {filteredSurat.map((s) => (
+          {filteredSurat.map((s, index) => (
             <motion.div 
-              layout key={s.id} 
+              layout key={s.id || s.docId || `fsurat-${index}`} 
               className="group bg-white border border-slate-100 rounded-[2rem] p-5 shadow-sm hover:shadow-xl hover:border-blue-200 hover:ring-1 hover:ring-blue-100 transition-all cursor-pointer relative flex flex-col"
               onClick={() => setViewingSurat(s)}
             >
@@ -401,9 +425,9 @@ export function SuratView({
                 {isPengurus && (
                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
                     <label className="block text-[10px] font-black text-blue-800 uppercase tracking-widest">Pilih Warga Pemohon</label>
-                    <select name="wargaId" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <select name="wargaId" defaultValue={editingSurat?.nik ? (wargaData.find((w:any) => w.nik === editingSurat.nik)?.docId || wargaData.find((w:any) => w.nik === editingSurat.nik)?.id || '') : ''} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
                       <option value="">-- Manual/Luar Warga --</option>
-                      {wargaData.map((w:any) => <option key={w.id} value={w.id} selected={editingSurat?.nik === w.nik}>{w.nama} ({w.nik})</option>)}
+                      {wargaData.map((w:any, index: number) => <option key={'suratwopt-'+index} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
                     </select>
                   </div>
                 )}

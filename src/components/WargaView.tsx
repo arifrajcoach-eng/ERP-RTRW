@@ -353,22 +353,50 @@ export default function WargaView({
                    <form id="wargaForm" onSubmit={async (e) => {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget as HTMLFormElement);
-                      const data = {
-                        nik: fd.get('nik'),
-                        nama: fd.get('nama'),
-                        rt: fd.get('rt'),
-                        rw: fd.get('rw'),
-                        status: fd.get('status'),
-                        jenisKelamin: fd.get('jenisKelamin'),
-                        agama: fd.get('agama'),
-                        pekerjaan: fd.get('pekerjaan'),
-                        tglLahir: fd.get('tglLahir'),
-                        telepon: fd.get('telepon'),
-                        tenantId,
-                        role: 'WARGA'
-                      };
                       setIsLoadingDB(true);
+                      
                       try {
+                        let fotoKTPUrl = editingWarga?.fotoKTP || '';
+                        let fotoKKUrl = editingWarga?.fotoKK || '';
+
+                        const fileKTP = fd.get('fileKTP') as File;
+                        const fileKK = fd.get('fileKK') as File;
+
+                        if (fileKTP && fileKTP.size > 0) {
+                          fotoKTPUrl = await handleFileUpload(fileKTP, `warga_docs/KTP_${fd.get('nik')}`);
+                        }
+                        if (fileKK && fileKK.size > 0) {
+                          fotoKKUrl = await handleFileUpload(fileKK, `warga_docs/KK_${fd.get('nik')}`);
+                        }
+
+                        const data = {
+                          nik: fd.get('nik'),
+                          nama: fd.get('nama'),
+                          kk: fd.get('kk'),
+                          tempatLahir: fd.get('tempatLahir'),
+                          tglLahir: fd.get('tglLahir'),
+                          jenisKelamin: fd.get('jenisKelamin'),
+                          kewarganegaraan: fd.get('kewarganegaraan'),
+                          agama: fd.get('agama'),
+                          statusKawin: fd.get('statusKawin'),
+                          pendidikan: fd.get('pendidikan'),
+                          pekerjaan: fd.get('pekerjaan'),
+                          posisiKeluarga: fd.get('posisiKeluarga'),
+                          alamat: fd.get('alamat'),
+                          rt: fd.get('rt'),
+                          rw: fd.get('rw'),
+                          kelurahan: fd.get('kelurahan'),
+                          kecamatan: fd.get('kecamatan'),
+                          kabupaten: fd.get('kabupaten'),
+                          telepon: fd.get('telepon'),
+                          email: fd.get('email'),
+                          status: fd.get('status'),
+                          fotoKTP: fotoKTPUrl,
+                          fotoKK: fotoKKUrl,
+                          tenantId,
+                          role: 'WARGA'
+                        };
+                        
                         if (showEditForm && editingWarga) {
                           await updateDoc(doc(db, 'data_warga', editingWarga.docId || editingWarga.nik), { ...data });
                           setWargaData(wargaData.map((w: any) => (w.docId || w.nik) === (editingWarga.docId || editingWarga.nik) ? { ...w, ...data } : w));
@@ -389,29 +417,28 @@ export default function WargaView({
                    }} className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="flex flex-col text-left">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">NIK</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">NIK <span className="text-red-500">*</span></label>
                             <input required name="nik" defaultValue={editingWarga?.nik} readOnly={!!showEditForm} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          <div className="flex flex-col text-left">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nama Lengkap</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sesuai KTP: Nama Lengkap <span className="text-red-500">*</span></label>
                             <input required name="nama" defaultValue={editingWarga?.nama} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
-                         <div className="grid grid-cols-2 gap-4 text-left">
-                           <div className="flex flex-col">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RT</label>
-                              <input required name="rt" defaultValue={editingWarga?.rt || (isRTAdmin ? myRT : '')} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
-                           </div>
-                           <div className="flex flex-col">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RW</label>
-                              <input required name="rw" defaultValue={editingWarga?.rw || '26'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
-                           </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nomor Kartu Keluarga (KK)</label>
+                            <input name="kk" defaultValue={editingWarga?.kk} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          <div className="flex flex-col text-left">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status</label>
-                            <select name="status" defaultValue={editingWarga?.status || 'Warga Tetap'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
-                               <option value="Warga Tetap">Warga Tetap</option>
-                               <option value="Warga Kontrakan">Warga Kontrakan/Kost</option>
-                            </select>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Telepon/WhatsApp</label>
+                            <input name="telepon" defaultValue={editingWarga?.telepon} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tempat Lahir</label>
+                            <input name="tempatLahir" defaultValue={editingWarga?.tempatLahir} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
+                            <input type="date" name="tglLahir" defaultValue={editingWarga?.tglLahir} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Jenis Kelamin</label>
@@ -421,20 +448,113 @@ export default function WargaView({
                             </select>
                          </div>
                          <div className="flex flex-col text-left">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
-                            <input type="date" name="tglLahir" defaultValue={editingWarga?.tglLahir} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">kewarganegaraan <span className="text-red-500">*</span></label>
+                            <select name="kewarganegaraan" defaultValue={editingWarga?.kewarganegaraan || 'WNI'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="WNI">WNI (Warga Negara Indonesia)</option>
+                               <option value="WNA">WNA (Warga Negara Asing)</option>
+                            </select>
                          </div>
+                         <div className="flex flex-col text-left border-t border-slate-100 pt-4 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Alamat Lengkap KTP</label>
+                            <textarea name="alamat" defaultValue={editingWarga?.alamat} rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue"></textarea>
+                         </div>
+                         <div className="grid grid-cols-2 gap-4 text-left">
+                           <div className="flex flex-col">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RT KTP/Domisili <span className="text-red-500">*</span></label>
+                              <input required name="rt" defaultValue={editingWarga?.rt || (isRTAdmin ? myRT : '')} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                           </div>
+                           <div className="flex flex-col">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RW KTP/Domisili <span className="text-red-500">*</span></label>
+                              <input required name="rw" defaultValue={editingWarga?.rw || '26'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                           </div>
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kelurahan</label>
+                            <input name="kelurahan" defaultValue={editingWarga?.kelurahan} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kecamatan</label>
+                            <input name="kecamatan" defaultValue={editingWarga?.kecamatan} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kabupaten/Kota</label>
+                            <input name="kabupaten" defaultValue={editingWarga?.kabupaten} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         
+                         <div className="flex flex-col text-left border-t border-slate-100 pt-4 md:col-span-2"></div>
+                         
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Agama</label>
-                            <input name="agama" defaultValue={editingWarga?.agama || 'Islam'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                            <select name="agama" defaultValue={editingWarga?.agama || 'Islam'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="Islam">Islam</option>
+                               <option value="Kristen">Kristen</option>
+                               <option value="Katolik">Katolik</option>
+                               <option value="Hindu">Hindu</option>
+                               <option value="Buddha">Buddha</option>
+                               <option value="Konghucu">Konghucu</option>
+                               <option value="Lainnya">Lainnya</option>
+                            </select>
                          </div>
                          <div className="flex flex-col text-left">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pekerjaan</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status Kawin</label>
+                            <select name="statusKawin" defaultValue={editingWarga?.statusKawin || 'Belum Kawin'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="Belum Kawin">Belum Kawin</option>
+                               <option value="Kawin">Kawin</option>
+                               <option value="Cerai Hidup">Cerai Hidup</option>
+                               <option value="Cerai Mati">Cerai Mati</option>
+                            </select>
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pendidikan Terakhir</label>
+                            <select name="pendidikan" defaultValue={editingWarga?.pendidikan || 'SMA/Sederajat'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="Tidak/Belum Sekolah">Tidak/Belum Sekolah</option>
+                               <option value="SD/Sederajat">SD/Sederajat</option>
+                               <option value="SMP/Sederajat">SMP/Sederajat</option>
+                               <option value="SMA/Sederajat">SMA/Sederajat</option>
+                               <option value="Diploma">Diploma (D1/D2/D3)</option>
+                               <option value="S1/D4">S1/D4</option>
+                               <option value="S2">S2</option>
+                               <option value="S3">S3</option>
+                            </select>
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Posisi Dalam Keluarga</label>
+                            <select name="posisiKeluarga" defaultValue={editingWarga?.posisiKeluarga || 'Anak'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="Kepala Keluarga">Kepala Keluarga</option>
+                               <option value="Istri">Istri</option>
+                               <option value="Suami">Suami</option>
+                               <option value="Anak">Anak</option>
+                               <option value="Mertua">Mertua</option>
+                               <option value="Famili Lain">Famili Lain</option>
+                            </select>
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Profesi/Pekerjaan</label>
                             <input name="pekerjaan" defaultValue={editingWarga?.pekerjaan} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          <div className="flex flex-col text-left">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Telepon/WhatsApp</label>
-                            <input name="telepon" defaultValue={editingWarga?.telepon} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Email</label>
+                            <input type="email" name="email" defaultValue={editingWarga?.email} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status Tinggal</label>
+                            <select name="status" defaultValue={editingWarga?.status || 'Warga Tetap'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="Warga Tetap">Warga Tetap (Milik Sendiri)</option>
+                               <option value="Warga Kontrakan">Warga Kontrakan/Kost</option>
+                            </select>
+                         </div>
+                         
+                         <div className="flex flex-col text-left border-t border-slate-100 pt-4 md:col-span-2"></div>
+
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Upload Foto KTP</label>
+                            <input type="file" name="fileKTP" accept="image/*" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-blue file:text-white hover:file:bg-brand-blue/90" />
+                            {editingWarga?.fotoKTP && <p className="text-xs text-emerald-600 font-bold mt-2 truncate">File tersimpan: {editingWarga.fotoKTP.substring(0,25)}...</p>}
+                         </div>
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Upload Foto KK</label>
+                            <input type="file" name="fileKK" accept="image/*" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-blue file:text-white hover:file:bg-brand-blue/90" />
+                            {editingWarga?.fotoKK && <p className="text-xs text-emerald-600 font-bold mt-2 truncate">File tersimpan: {editingWarga.fotoKK.substring(0,25)}...</p>}
                          </div>
                       </div>
                    </form>
@@ -452,45 +572,111 @@ export default function WargaView({
       <AnimatePresence>
         {viewWarga && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 relative">
-                <button onClick={() => setViewWarga(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 text-slate-400 rounded-xl transition-colors"><X size={20} /></button>
-                <div className="flex flex-col items-center text-center mb-6">
+             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden p-6 relative">
+                <button onClick={() => setViewWarga(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 text-slate-400 rounded-xl transition-colors z-10"><X size={20} /></button>
+                <div className="flex flex-col items-center text-center mb-6 shrink-0">
                    <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center text-brand-blue text-4xl font-black shadow-inner mb-4 overflow-hidden">
                       {viewWarga.foto ? <img src={viewWarga.foto} className="w-full h-full object-cover" /> : viewWarga.nama.charAt(0)}
                    </div>
                    <h3 className="text-xl font-black text-slate-800 tracking-tight">{viewWarga.nama}</h3>
                    <p className="text-sm font-bold text-slate-400 font-mono tracking-widest">{viewWarga.nik}</p>
-                   <span className={`px-3 py-1 mt-2 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                     viewWarga.status === 'Warga Tetap' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
-                   }`}>
-                     {viewWarga.status}
-                   </span>
+                   {viewWarga.kk && <p className="text-[10px] font-bold text-slate-400 font-mono tracking-widest mt-1">KK: {viewWarga.kk}</p>}
+                   <div className="flex gap-2 mt-2">
+                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                       viewWarga.status === 'Warga Tetap' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                     }`}>
+                       {viewWarga.status}
+                     </span>
+                     {viewWarga.kewarganegaraan && (
+                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-100`}>
+                         {viewWarga.kewarganegaraan}
+                       </span>
+                     )}
+                   </div>
                 </div>
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Alamat (RT/RW)</span>
-                      <span className="text-sm font-black text-slate-700">RT {viewWarga.rt} / RW {viewWarga.rw}</span>
+                <div className="overflow-y-auto pr-2 space-y-4 pt-4 border-t border-slate-100 flex-1">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tempat, Tanggal Lahir</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.tempatLahir || '-'}, {viewWarga.tglLahir} ({calculateAge(viewWarga.tglLahir)}Th)</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jenis Kelamin</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.jenisKelamin || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Agama</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.agama || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status Kawin</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.statusKawin || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pendidikan Terakhir</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.pendidikan || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Profesi/Pekerjaan</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.pekerjaan || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hubungan Keluarga</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.posisiKeluarga || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.email || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Telepon</span>
+                        <span className="text-sm font-black text-slate-700 font-mono">{viewWarga.telepon || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RT / RW</span>
+                        <span className="text-sm font-black text-slate-700">RT {viewWarga.rt} / RW {viewWarga.rw}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50 md:col-span-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alamat Lengkap</span>
+                        <span className="text-sm font-black text-slate-700 leading-relaxed">{viewWarga.alamat || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kelurahan</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.kelurahan || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kecamatan</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.kecamatan || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50 md:col-span-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kabupaten/Kota</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.kabupaten || '-'}</span>
+                     </div>
                    </div>
-                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jenis Kelamin</span>
-                      <span className="text-sm font-black text-slate-700">{viewWarga.jenisKelamin || '-'}</span>
-                   </div>
-                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tanggal Lahir/Umur</span>
-                      <span className="text-sm font-black text-slate-700">{viewWarga.tglLahir} ({calculateAge(viewWarga.tglLahir)}Th)</span>
-                   </div>
-                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Agama</span>
-                      <span className="text-sm font-black text-slate-700">{viewWarga.agama || '-'}</span>
-                   </div>
-                   <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Telepon</span>
-                      <span className="text-sm font-black text-slate-700 font-mono">{viewWarga.telepon || '-'}</span>
-                   </div>
-                   <div className="flex justify-between items-center py-2">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pekerjaan</span>
-                      <span className="text-sm font-black text-slate-700">{viewWarga.pekerjaan || '-'}</span>
-                   </div>
+
+                   {(viewWarga.fotoKTP || viewWarga.fotoKK) && (
+                     <div className="pt-4 mt-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Dokumen Lampiran</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           {viewWarga.fotoKTP && (
+                             <div className="flex flex-col gap-2">
+                                <span className="text-xs font-bold text-slate-600">Foto KTP</span>
+                                <a href={viewWarga.fotoKTP} target="_blank" rel="noopener noreferrer" className="overflow-hidden rounded-xl border border-slate-200 block">
+                                   <img src={viewWarga.fotoKTP} alt="KTP" className="w-full h-32 object-cover hover:scale-105 transition-transform" />
+                                </a>
+                             </div>
+                           )}
+                           {viewWarga.fotoKK && (
+                             <div className="flex flex-col gap-2">
+                                <span className="text-xs font-bold text-slate-600">Foto KK</span>
+                                <a href={viewWarga.fotoKK} target="_blank" rel="noopener noreferrer" className="overflow-hidden rounded-xl border border-slate-200 block">
+                                   <img src={viewWarga.fotoKK} alt="KK" className="w-full h-32 object-cover hover:scale-105 transition-transform" />
+                                </a>
+                             </div>
+                           )}
+                        </div>
+                     </div>
+                   )}
                 </div>
              </motion.div>
           </motion.div>

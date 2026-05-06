@@ -437,8 +437,8 @@ export function IuranView({
                 </tr>
               </thead>
               <tbody className="font-medium text-slate-600 text-xs">
-                {wargaData.filter((w:any) => w.posisi === 'Kepala Keluarga' || !w.posisi).map((w: any) => (
-                  <tr key={w.id} className="hover:bg-blue-50/30 transition-colors">
+                {wargaData.filter((w:any) => w.posisi === 'Kepala Keluarga' || !w.posisi).map((w: any, index: number) => (
+                  <tr key={`kk-${index}`} className="hover:bg-blue-50/30 transition-colors">
                     <td className="px-4 py-3 border border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50/10 z-10 shadow-[1px_0_0_#f1f5f9]">
                       <div className="font-bold text-slate-800">{w.nama}</div>
                       <div className="text-[9px] text-slate-400 truncate max-w-[180px]">{w.alamat}</div>
@@ -490,7 +490,7 @@ export function IuranView({
                   <label className="block text-xs font-black text-blue-800 uppercase tracking-widest">Identitas Penyetor (Admin Mode)</label>
                   <select name="wargaId" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="">-- Bukan warga terdaftar --</option>
-                    {wargaData.map((w:any) => <option key={w.id} value={w.id}>{w.nama} ({w.nik})</option>)}
+                    {wargaData.map((w:any, index: number) => <option key={`wopt-${index}`} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
                   </select>
                   <input type="text" name="namaPenyetor" placeholder="Tulis manual nama penyetor (jika luar warga)" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" />
                 </div>
