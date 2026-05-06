@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Zap, Check, Building2, Sparkles, Home, User } from 'lucide-react';
+import { Zap, Check, Building2, Sparkles, Home, User, ShieldCheck } from 'lucide-react';
 import { PLAN_CONFIG } from '../constants';
 
 const icons: Record<string, any> = {
@@ -42,10 +42,10 @@ export const PricingSection: React.FC = () => {
                 key={plan.id}
                 whileHover={{ y: -10 }}
                 className={`relative p-6 rounded-3xl backdrop-blur-md bg-white/5 border border-white/10 flex flex-col ${
-                  plan.isBestSeller ? 'border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.3)]' : ''
+                  (plan as any).isBestSeller ? 'border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.3)]' : ''
                 }`}
               >
-              {plan.isBestSeller && (
+              {(plan as any).isBestSeller && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-black font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
                   Rekomendasi Pengurus RW
                 </div>
@@ -70,7 +70,7 @@ export const PricingSection: React.FC = () => {
               </ul>
 
               <button className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                plan.isBestSeller ? 'bg-[#D4AF37] text-black hover:bg-white' : 'bg-transparent border border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black'
+                (plan as any).isBestSeller ? 'bg-[#D4AF37] text-black hover:bg-white' : 'bg-transparent border border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black'
               }`}>
                 {plan.priceMonthly === 0 ? 'Mulai Sekarang' : 'Pilih Paket'}
               </button>

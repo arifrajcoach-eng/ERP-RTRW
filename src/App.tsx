@@ -30,16 +30,24 @@ import UpgradeModal from './components/UpgradeModal';
 import { GuestBookFormPublic } from './components/GuestBookFormPublic';
 import { GuestBookQRCode } from './components/GuestBookQRCode';
 import { MessageSquare, Bot } from 'lucide-react';
+import { checkFeatureAccess } from './services/subscriptionService';
 
 const APP_LOGO = "/logo_rw.png";
 
-const AppLogo = ({ className, size = 12 }: { className?: string, size?: number }) => {
+const AppLogo = ({ className, size = 12, logoUrl }: { className?: string, size?: number, logoUrl?: string }) => {
   const [hasError, setHasError] = useState(false);
+  const displayLogo = logoUrl || APP_LOGO;
+  
+  useEffect(() => {
+    setHasError(false);
+  }, [logoUrl]);
+
   return !hasError ? (
     <img 
-      src={APP_LOGO} 
+      key={displayLogo}
+      src={displayLogo} 
       alt="Logo" 
-      className={className || `w-${size} h-${size}`}
+      className={className || `w-${size} h-${size} object-contain`}
       onError={() => setHasError(true)}
       referrerPolicy="no-referrer"
       draggable={false}
@@ -599,6 +607,7 @@ export default function App() {
   const [kopSettings, setKopSettings] = useState<Record<string, any>>({});
 
   const [isLoadingDB, setIsLoadingDB] = useState(true);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [currentTenant, setCurrentTenant] = useState<any>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -1392,8 +1401,14 @@ export default function App() {
 
   // Centralized Error Handler for Firestore
   const handleFirestoreError = (err: any, op: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write', path: string) => {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    if (errorMessage.toLowerCase().includes('quota') || err?.code === 'resource-exhausted') {
+      setQuotaExceeded(true);
+      setIsLoadingDB(false);
+      showNotification("Batas penggunaan harian (Quota) tercapai. Silakan coba lagi besok.", "error");
+    }
     const errInfo = {
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage,
       operationType: op,
       path: path,
       authInfo: {
@@ -1559,7 +1574,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="relative">
           <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
-          <AppLogo size={8} className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          <AppLogo size={8} className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" logoUrl={settings?.org_logo_url || settings?.logo_url} />
         </div>
         <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyiapkan Sesi Keamanan...</p>
@@ -1592,7 +1607,7 @@ export default function App() {
   }
 
   if (!wargaAuth && (!currentUser || (currentUser.role === 'Warga' && currentUser.name === 'Warga (Anonymous)'))) {
-    return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} verifikasiWargaData={verifikasiWargaData} isLoadingDB={isLoadingDB} onSelfRegister={() => setIsSelfRegistering(true)} />;
+    return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} verifikasiWargaData={verifikasiWargaData} isLoadingDB={isLoadingDB} onSelfRegister={() => setIsSelfRegistering(true)} settings={settings} />;
   }
 
   if (wargaAuth && !currentUser?.isSuperAdmin) {
@@ -1632,13 +1647,33 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {quotaExceeded && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] bg-white border-2 border-red-500 rounded-2xl shadow-2xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500 max-w-md w-full mx-auto">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-6 h-6 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Kuota Firestore Terlampaui</h3>
+            <p className="text-xs text-slate-500 leading-relaxed mt-1">
+              Batas penggunaan gratis harian telah tercapai. Data mungkin tidak muncul atau tidak dapat disimpan hingga besok saat limit direset.
+            </p>
+          </div>
+          <button 
+            onClick={() => setQuotaExceeded(false)}
+            className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       {isLoadingDB && (
         <div className="fixed inset-0 z-[9999] bg-white/95 flex flex-col items-center justify-center p-6 text-center select-none backdrop-blur-md">
           <div className="absolute inset-0 bg-mesh opacity-50 -z-10 animate-pulse"></div>
           <div className="relative mb-8 pt-4">
             <div className="w-24 h-24 border-8 border-brand-blue/10 border-t-brand-blue border-r-brand-pink rounded-full animate-spin"></div>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-              <AppLogo size={12} className="w-12 h-12 drop-shadow-lg" />
+              <AppLogo size={12} className="w-12 h-12 drop-shadow-lg" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-3 py-0.5 rounded-full shadow-sm border border-slate-100 text-[10px] font-bold text-brand-blue animate-bounce">LOADING</div>
           </div>
@@ -1664,8 +1699,19 @@ export default function App() {
         <div className="p-8 border-b border-slate-50 flex-shrink-0 flex items-center justify-between bg-white relative overflow-hidden group rounded-tr-[2.5rem] md:rounded-none">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-pink/10 transition-all duration-700"></div>
           <div className="relative z-10 flex flex-col items-center w-full">
-            <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
-              <AppLogo size={12} className="w-12 h-12" />
+            <div className="relative group/logo">
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+                <AppLogo size={12} className="w-12 h-12" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+              </div>
+              {checkFeatureAccess({ planId: currentTenant?.status?.toLowerCase() || 'starter', addons: Array.isArray(currentTenant?.addons) ? currentTenant.addons : [] }, 'custom_logo') && (
+                <button 
+                  onClick={() => setActiveTab('pengaturan')}
+                  className="absolute bottom-2 -right-1 bg-white p-1.5 rounded-full shadow-lg border border-slate-100 text-brand-blue hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/logo:opacity-100"
+                  title="Ganti Logo"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <h1 className="text-xl font-black tracking-tighter text-slate-800 flex items-center justify-center gap-1 leading-none font-elegant uppercase">
               <span className="text-brand-blue">RW26</span>
@@ -1783,7 +1829,7 @@ export default function App() {
                   )}
                 </div>
                 <div className="flex-1 text-left flex flex-col">
-                  <span className={`text-[11px] font-black uppercase tracking-widest ${isLocked ? 'text-slate-400' : ''}`}>
+                  <span className={`text-[15px] font-black uppercase tracking-widest ${isLocked ? 'text-slate-400' : ''}`}>
                     {item.label}
                   </span>
                   {isLocked && (
@@ -1883,6 +1929,7 @@ export default function App() {
               currentTenant={currentTenant}
               setShowUpgradeModal={setShowUpgradeModal}
               setShowQRModal={setShowQRModal}
+              settings={settings}
             />
           )}
           {activeTab === 'warga' && <WargaView wargaData={wargaData} currentTenant={currentTenant} setWargaData={setWargaData} userRole={currentUser.role} tenantId={currentUser.tenantId || 'RW26_SMART'} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} handleFileUpload={handleFileUpload} showNotification={showNotification} currentUser={currentUser} />}
@@ -4315,7 +4362,8 @@ function DashboardView({
   handleLinkToWarga,
   currentTenant,
   setShowUpgradeModal,
-  setShowQRModal
+  setShowQRModal,
+  settings
 }: { 
   kasData: any[], 
   wargaData: any[], 
@@ -4337,7 +4385,8 @@ function DashboardView({
   handleLinkToWarga: (nik: string, pin: string) => void,
   currentTenant: any,
   setShowUpgradeModal: (v: boolean) => void,
-  setShowQRModal: (v: boolean) => void
+  setShowQRModal: (v: boolean) => void,
+  settings: any
 }) {
   const [kasPeriod, setKasPeriod] = useState('yearly');
   const [piePeriod, setPiePeriod] = useState('30days');
@@ -4608,7 +4657,7 @@ function DashboardView({
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
             <div className="relative z-10">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-80">🔥 Boost System</p>
-              <h4 className="font-black text-lg leading-tight mb-4 tracking-tighter">UPGRADE KE PRO UNTUK FITUR OTOMATIS</h4>
+              <h4 className="font-black text-lg leading-tight mb-4 tracking-tighter">UPGRADE KE PREMIUM UNTUK FITUR OTOMATIS</h4>
             </div>
             <button 
               onClick={() => setActiveTab('super-admin')}
@@ -4742,7 +4791,7 @@ function DashboardView({
         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
           <div className="absolute right-4 top-4 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-blue/10 transition-colors flex items-center justify-center text-white">
             <div className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500">
-              <AppLogo size={10} className="w-full h-full" />
+              <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
           </div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
@@ -4762,7 +4811,7 @@ function DashboardView({
         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
           <div className="absolute right-4 top-4 w-24 h-24 bg-brand-green/5 rounded-full blur-2xl group-hover:bg-brand-green/10 transition-colors flex items-center justify-center text-white">
             <div className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500">
-              <AppLogo size={10} className="w-full h-full" />
+              <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
           </div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
@@ -4782,7 +4831,7 @@ function DashboardView({
         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
           <div className="absolute right-4 top-4 w-24 h-24 bg-brand-pink/5 rounded-full blur-2xl group-hover:bg-brand-pink/10 transition-colors flex items-center justify-center text-white">
             <div className="w-10 h-10 opacity-10 -rotate-12 group-hover:rotate-0 group-hover:opacity-20 transition-all duration-500">
-              <AppLogo size={10} className="w-full h-full" />
+              <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
           </div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
@@ -10026,7 +10075,7 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
               <textarea name="alamat" defaultValue={settings.alamat} rows={2} placeholder="Jl. Merdeka No. 123..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo RT/RW (Ganti Image)</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo RT/RW (Kop Surat)</label>
               <div className="flex gap-3 items-center">
                 <input 
                   type="file" 
@@ -10039,7 +10088,7 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
                         const input = document.getElementById('logo_url_input') as HTMLInputElement;
                         if (input) {
                           input.value = url;
-                          showNotification("Logo berhasil diupload. Klik 'Simpan Pengaturan' untuk menerapkan.", "info");
+                          showNotification("Logo Kop Surat berhasil diupload. Simpan untuk menerapkan.", "info");
                         }
                       } catch (err) {
                         showNotification("Gagal upload logo", "error");
@@ -10053,8 +10102,53 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
                   {settings.logo_url ? <img src={settings.logo_url} className="w-full h-full object-contain" /> : <Image className="w-5 h-5 text-slate-400" />}
                 </div>
               </div>
-              <p className="text-[9px] text-slate-400 mt-1 italic">*Maksimal 2MB. Logo akan tampil di kop surat pengantar.</p>
+              <p className="text-[9px] text-slate-400 mt-1 italic">*Tampil di kop surat pengantar.</p>
             </div>
+
+            {/* Logo Organisasi Utama Dashboard */}
+            {checkFeatureAccess({ planId: currentTenant?.status?.toLowerCase() || 'starter', addons: Array.isArray(currentTenant?.addons) ? currentTenant.addons : [] }, 'custom_logo') ? (
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo Organisasi Utama (Dashboard)</label>
+                <div className="flex gap-3 items-center">
+                  <div className="flex-1 relative">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const url = await handleFileUpload(file, 'org_logo');
+                            const input = document.getElementById('org_logo_url_input') as HTMLInputElement;
+                            const previewImg = document.getElementById('org_logo_preview') as HTMLImageElement;
+                            if (input) {
+                              input.value = url;
+                              if (previewImg) previewImg.src = url;
+                              showNotification("Logo Dashboard berhasil di-upload. Simpan untuk menerapkan.", "info");
+                            }
+                          } catch (err) {
+                            showNotification("Gagal upload logo", "error");
+                          }
+                        }
+                      }}
+                      className="w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer" 
+                    />
+                  </div>
+                  <input name="org_logo_url" id="org_logo_url_input" type="hidden" key={settings.org_logo_url} defaultValue={settings.org_logo_url || settings.logo_url} />
+                  <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden shrink-0">
+                    <img id="org_logo_preview" src={settings.org_logo_url || settings.logo_url || APP_LOGO} className="w-full h-full object-contain" />
+                  </div>
+                </div>
+                <p className="text-[9px] text-slate-400 mt-1 italic font-medium">*Khusus Paket FLASH ke atas. Mengganti logo di sidebar & loading screen secara mandiri.</p>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <p className="text-[10px] font-bold text-slate-500 flex items-center gap-2">
+                    <Lock className="w-3 h-3 text-slate-400" /> Logo Organisasi Utama (Halaman Utama)
+                  </p>
+                  <p className="text-[9px] text-slate-400 mt-1 italic">Fitur ganti logo mandiri memerlukan paket <b>PRO / PREMIUM / FLASH / ENTERPRISE</b>. <button type="button" onClick={() => setActiveTab('super-admin')} className="text-blue-600 hover:underline font-bold">Upgrade Sekarang</button></p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -11881,7 +11975,7 @@ function TenantRegistrationView({ onClose, showNotification, handleFirestoreErro
   );
 }
 
-function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, onSelfRegister }: { setWargaAuth: any, wargaData: any[], verifikasiWargaData: any[], isLoadingDB: boolean, onSelfRegister: () => void }) {
+function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, onSelfRegister, settings }: { setWargaAuth: any, wargaData: any[], verifikasiWargaData: any[], isLoadingDB: boolean, onSelfRegister: () => void, settings?: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -12269,7 +12363,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
           <div className="inline-flex items-center justify-center w-28 h-28 rounded-[3rem] bg-white shadow-2xl shadow-brand-blue/20 mb-8 relative group isolate overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/20 via-brand-yellow/20 to-brand-pink/20 animate-spin-slow"></div>
             <div className="absolute inset-0.5 bg-white rounded-[2.9rem] -z-10"></div>
-            <AppLogo size={18} className="w-18 h-18 relative z-10 transition-transform group-hover:scale-110 duration-500" />
+            <AppLogo size={18} className="w-18 h-18 relative z-10 transition-transform group-hover:scale-110 duration-500" logoUrl={settings?.org_logo_url || settings?.logo_url} />
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 uppercase leading-none mb-2 font-elegant">
             RW26 <span className="text-brand-pink">BERJUANG</span>

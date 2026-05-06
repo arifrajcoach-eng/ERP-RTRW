@@ -21,6 +21,12 @@ export const checkFeatureAccess = (subscription: TenantSubscription, featureKey:
      // Based on constants, it seems it might be an addon, but let's check
   }
 
+  if (featureKey === 'custom_logo') {
+     // FLASH, PRO, PREMIUM, ENTERPRISE have custom logo
+     // Basically everything except STARTER (Free Trial)
+     return ['flash', 'pro', 'premium', 'enterprise', 'gov'].includes(plan.id);
+  }
+
   // 3. Check Addons
   const hasAddon = subscription.addons.some(addonId => {
     const addon = Object.values(ADDON_CONFIG).find(a => a.id === addonId);
