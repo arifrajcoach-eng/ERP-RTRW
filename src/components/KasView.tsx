@@ -398,8 +398,8 @@ export function KasView({
               {currentMonthTransactions.length === 0 && (
                 <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Tidak ada data transaksi di bulan ini.</td></tr>
               )}
-              {currentMonthTransactions.map((trx: any) => (
-                <tr key={trx.id} className="hover:bg-slate-50 transition-colors">
+              {currentMonthTransactions.map((trx: any, idx: number) => (
+                <tr key={`kas-trx-${trx.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3 text-xs">{trx.tanggal}</td>
                   <td className="px-5 py-3">
                     <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${trx.tipe === 'Masuk' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

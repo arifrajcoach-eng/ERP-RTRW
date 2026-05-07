@@ -246,8 +246,8 @@ export function BukuTamuView({
               {filteredTamu.length === 0 && (
                 <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Belum ada kunjungan tamu.</td></tr>
               )}
-              {filteredTamu.map((tamu: any) => (
-                <tr key={tamu.id} className="hover:bg-slate-50 transition-colors">
+              {filteredTamu.map((tamu: any, idx: number) => (
+                <tr key={`tamu-row-${tamu.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3">
                     <div className="text-xs font-black text-slate-800">
                       Datang: {new Date(tamu.tanggal).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}

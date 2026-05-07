@@ -100,9 +100,9 @@ const INITIAL_KAS_DATA = [
 ];
 
 const INITIAL_SURAT_DATA = [
-  { id: "SRT-1004", tanggal: "19 Apr 2026", pemohon: "Ibu Siti Aminah", jenisSurat: "Surat Domisili", status: "Diajukan" },
+  { id: "SRT-1004", tanggal: "19 Apr 2026", pemohon: "Ibu Siti Aminah", jenisSurat: "Surat Domisili", status: "Menunggu Persetujuan RT" },
   { id: "SRT-1003", tanggal: "17 Apr 2026", pemohon: "Bpk. Ahmad Suhendar", jenisSurat: "Pengantar Kelurahan", status: "Selesai" },
-  { id: "SRT-1002", tanggal: "16 Apr 2026", pemohon: "Sdr. Bayu Pratama", jenisSurat: "Surat Keterangan Usaha", status: "Diajukan" },
+  { id: "SRT-1002", tanggal: "16 Apr 2026", pemohon: "Sdr. Bayu Pratama", jenisSurat: "Surat Keterangan Usaha", status: "Menunggu Persetujuan RT" },
   { id: "SRT-1001", tanggal: "10 Apr 2026", pemohon: "Bpk. Joko Anas", jenisSurat: "Surat Domisili", status: "Selesai" },
 ];
 
@@ -4558,6 +4558,7 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
 
       let generatedWargas: any[] = [];
       let wIdx = 1;
+      const nowWARGA = Date.now();
 
       for (const kel of keluargaData) {
         const familyMembers = [
@@ -4568,11 +4569,11 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
         ];
 
         for (const member of familyMembers) {
-          const wId = `WARGA-${Date.now()}-${wIdx}`;
+          const wId = `WARGA-${nowWARGA}-${wIdx}-${Math.floor(Math.random() * 10000)}`;
           const newWarga = {
             id: wId,
             tenantId: tenantId,
-            nik: `321606${Date.now().toString().slice(-6)}${wIdx.toString().padStart(4, '0')}`,
+            nik: `321606${nowWARGA.toString().slice(-6)}${wIdx.toString().padStart(4, '0')}`,
             kk: kel.kk,
             nama: member.nama,
             tempatLahir: member.ttl.split(', ')[0],
@@ -4604,6 +4605,7 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
       setGenerateMsg('Warga berhasil di-generate. Membuat transaksi & kas...');
 
       // --- 2. DATA TRANSAKSI (IURAN & KAS) (50 Item) ---
+      const nowTX = Date.now();
       for (let i = 1; i <= 50; i++) {
         const RandomWarga = generatedWargas[Math.floor(Math.random() * generatedWargas.length)];
         const isKeluar = i % 4 === 0; // 25% pengeluaran
@@ -4613,8 +4615,8 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
         const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
         const formattedDateTime = formattedDate + ', ' + dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
         
-        const kasId = `TRX-DUMMY-${Date.now()}-${i}`;
-        const iuranId = `INV-DUMMY-${Date.now()}-${i}`;
+        const kasId = `TRX-DUMMY-${nowTX}-${i}`;
+        const iuranId = `INV-DUMMY-${nowTX}-${i}`;
         
         let jenis = '';
         let keterangan = '';
@@ -4683,6 +4685,7 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
 
       // --- 3. DATA SURAT (50 Item) ---
       const jenisSurat = ['Surat Pengantar KTP', 'Surat Keterangan Domisili', 'Surat Pengantar SKCK', 'Surat Keterangan Usaha (SKU)'];
+      const nowSRT = Date.now();
       for (let i = 1; i <= 50; i++) {
         const RandomWarga = generatedWargas[Math.floor(Math.random() * generatedWargas.length)];
         const jSurat = jenisSurat[i % jenisSurat.length];
@@ -4691,7 +4694,7 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
         dateObj.setDate(dateObj.getDate() - Math.floor(Math.random() * 30)); // random within last 30 days
         const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
         
-        const suratId = `SRT-DUMMY-${Date.now()}-${i}`;
+        const suratId = `SRT-DUMMY-${nowSRT}-${i}`;
         
         batch.set(doc(db, 'surat', suratId), {
           tenantId: tenantId,
@@ -7578,8 +7581,8 @@ function PosyanduView({
               <tbody className="divide-y divide-slate-100">
                 {pemeriksaanPosbinduData
                   .filter((item: any) => item.nama?.toLowerCase().includes(searchQuery.toLowerCase()) || item.nik?.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((item: any) => (
-                  <tr key={item.id}>
+                  .map((item: any, idx: number) => (
+                  <tr key={`posbindu-${item.id || idx}-${idx}`}>
                     <td className="px-6 py-3 font-bold">{item.nama}</td>
                     <td className="px-6 py-3">{item.tanggal}</td>
                     <td className="px-6 py-3">{item.tekananDarah}</td>
@@ -7743,10 +7746,10 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {balitaData.filter(b => (b.nama || '').toLowerCase().includes(searchQuery.toLowerCase())).map(balita => {
+                {balitaData.filter(b => (b.nama || '').toLowerCase().includes(searchQuery.toLowerCase())).map((balita, idx) => {
                   const age = calculateAgeMonths(balita.tglLahir);
                   return (
-                    <tr key={balita.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr key={`balita-row-${balita.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors group">
                       <td className="px-6 py-4">
                         <p className="text-sm font-bold text-slate-800">{balita.nama}</p>
                         <p className="text-[10px] text-slate-400 uppercase font-black">{balita.jk}</p>
@@ -8035,8 +8038,8 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {ibuHamilData.filter((mil: any) => (mil.nama || '').toLowerCase().includes(searchQuery.toLowerCase())).map((mil: any) => (
-                  <tr key={mil.id} className="hover:bg-slate-50 transition-all group">
+                {ibuHamilData.filter((mil: any) => (mil.nama || '').toLowerCase().includes(searchQuery.toLowerCase())).map((mil: any, idx: number) => (
+                  <tr key={`mil-row-${mil.id || idx}-${idx}`} className="hover:bg-slate-50 transition-all group">
                     <td className="px-6 py-4">
                        <p className="text-sm font-bold text-slate-800">{mil.nama}</p>
                        <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter">NIK: {mil.nik}</p>
@@ -8154,7 +8157,7 @@ function PosyanduView({
                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Orang Tua (Pilih dari Data Warga)</label>
                        <input type="text" name="orangTuaId" list="wargaList" required defaultValue={editingItem?.orangTuaId} placeholder="Ketik NIK atau Nama Orang Tua..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-pink-500" />
                        <datalist id="wargaList">
-                          {wargaData.map((w: any, idx: number) => <option key={`${w.nik || 'w'}-${idx}`} value={w.nik}>{w.nama} - RT {w.rt}</option>)}
+                          {wargaData.map((w: any, idx: number) => <option key={`w-list-opt-${w.id || w.nik || idx}-${idx}`} value={w.nik}>{w.nama} - RT {w.rt}</option>)}
                        </datalist>
                     </div>
                     <div className="col-span-1">
@@ -8868,8 +8871,8 @@ function BankSampahView({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
-                      {sampahSetoranData.slice(0, 5).map((item: any) => (
-                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      {sampahSetoranData.slice(0, 5).map((item: any, idx: number) => (
+                        <tr key={`sampah-item-${item.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4 font-bold text-slate-700">{item.namaNasabah}</td>
                           <td className="px-6 py-4">
                             <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
@@ -8948,8 +8951,8 @@ function BankSampahView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium whitespace-nowrap">
-                  {sampahSetoranData.filter((s: any) => s.namaNasabah?.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
+                  {sampahSetoranData.filter((s: any) => s.namaNasabah?.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any, idx: number) => (
+                    <tr key={`sampah-setoran-row-${item.id || idx}-${idx}`} className="hover:bg-slate-50">
                       <td className="px-6 py-4 font-bold text-slate-700">{item.namaNasabah}</td>
                       <td className="px-6 py-4">{item.namaKategori}</td>
                       <td className="px-6 py-4 text-right font-bold">{item.berat} kg</td>
@@ -9027,8 +9030,8 @@ function BankSampahView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {sampahTarikSaldoData.filter((t: any) => t.namaNasabah?.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
+                  {sampahTarikSaldoData.filter((t: any) => t.namaNasabah?.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any, idx: number) => (
+                    <tr key={`sampah-tarik-row-${item.id || idx}-${idx}`} className="hover:bg-slate-50">
                       <td className="px-6 py-4 font-bold text-slate-700">{item.namaNasabah}</td>
                       <td className="px-6 py-4 text-right font-black text-blue-600">Rp {item.nominal.toLocaleString()}</td>
                       <td className="px-6 py-4 text-slate-500 text-xs">{item.tanggal}</td>
@@ -9216,10 +9219,10 @@ function BankSampahView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium whitespace-nowrap">
-                  {nasabahSummary.filter((n: any) => n.nama?.toLowerCase().includes(searchQuery.toLowerCase()) || n.nik?.includes(searchQuery)).map((n: any) => {
+                  {nasabahSummary.filter((n: any) => n.nama?.toLowerCase().includes(searchQuery.toLowerCase()) || n.nik?.includes(searchQuery)).map((n: any, idx: number) => {
                     const totalDitarik = sampahTarikSaldoData.filter((t: any) => t.nasabahId === n.nik).reduce((acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0), 0);
                     return (
-                      <tr key={n.nik} className="hover:bg-slate-50 group">
+                      <tr key={`nasabah-row-${n.nik || idx}-${idx}`} className="hover:bg-slate-50 group">
                         <td className="px-6 py-4 font-bold text-slate-700">{n.nama}</td>
                         <td className="px-6 py-4 text-slate-400 text-xs">{n.nik}</td>
                         <td className="px-6 py-4 text-right font-bold text-emerald-600">Rp {n.totalSetoran.toLocaleString()}</td>
@@ -9348,8 +9351,8 @@ function BankSampahView({
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Pilih Nasabah (Warga)</label>
                       <select name="nasabahId" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500">
                          <option value="">-- Pilih Nasabah --</option>
-                         {wargaData.map((w: any) => (
-                           <option key={w.nik} value={w.nik}>{w.nama} ({w.blok})</option>
+                         {wargaData.map((w: any, idx: number) => (
+                           <option key={`nasabah-opt-${w.id || w.nik || idx}-${idx}`} value={w.nik}>{w.nama} ({w.blok})</option>
                          ))}
                       </select>
                    </div>
@@ -9357,8 +9360,8 @@ function BankSampahView({
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Kategori Sampah</label>
                       <select name="kategoriId" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500">
                          <option value="">-- Pilih Kategori --</option>
-                         {sampahKategoriData.map((k: any) => (
-                           <option key={k.id} value={k.id}>{k.nama} (Rp {k.hargaBeli}/{k.satuan})</option>
+                         {sampahKategoriData.map((k: any, idx: number) => (
+                           <option key={`cat-sampah-${k.id || idx}-${idx}`} value={k.id}>{k.nama} (Rp {k.hargaBeli}/{k.satuan})</option>
                          ))}
                       </select>
                    </div>
@@ -9396,8 +9399,8 @@ function BankSampahView({
                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Pilih Nasabah (Aktif)</label>
                    <select name="nasabahId" required defaultValue={editingItem?.nasabahId} disabled={!!editingItem} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-blue-500 disabled:opacity-50">
                       <option value="">-- Pilih Nasabah --</option>
-                      {nasabahSummary.filter((n:any) => n.saldo > 0 || (editingItem && editingItem.nasabahId === n.nik)).map((n: any) => (
-                        <option key={n.nik} value={n.nik}>{n.nama} (Saldo: Rp {n.saldo.toLocaleString()})</option>
+                      {nasabahSummary.filter((n:any) => n.saldo > 0 || (editingItem && editingItem.nasabahId === n.nik)).map((n: any, idx: number) => (
+                        <option key={`tarik-nasabah-${n.nik || idx}-${idx}`} value={n.nik}>{n.nama} (Saldo: Rp {n.saldo.toLocaleString()})</option>
                       ))}
                    </select>
                 </div>
@@ -9453,8 +9456,8 @@ function BankSampahView({
                      }
                    }} placeholder="Masukkan Nama Lengkap" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500" />
                    <datalist id="wargaListNasabah">
-                     {wargaData.map((w: any) => (
-                       <option key={w.nik} value={w.nama} />
+                     {wargaData.map((w: any, idx: number) => (
+                       <option key={`nasabah-list-${w.id || w.nik || idx}-${idx}`} value={w.nama} />
                      ))}
                    </datalist>
                 </div>
@@ -9792,8 +9795,8 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
               {filteredData.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-12 text-center text-slate-400 text-sm italic">Tidak ada data inventaris</td></tr>
               ) : (
-                filteredData.map((item: any) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                filteredData.map((item: any, idx: number) => (
+                  <tr key={`inv-row-${item.id || idx}-${idx}`} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {item.foto_url ? (

@@ -347,8 +347,8 @@ export function VerifikasiAdminView({
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold">Tidak ada pengajuan data.</td>
                 </tr>
               ) : (
-                filteredData.map((item: any) => (
-                  <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                filteredData.map((item: any, idx: number) => (
+                  <tr key={`verif-row-${item.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">

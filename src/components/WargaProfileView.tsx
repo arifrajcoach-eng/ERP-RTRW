@@ -146,7 +146,7 @@ export function WargaProfileView({
         nik: wargaData.nik,
         alamat: wargaData.blok || wargaData.alamat || "-",
         ttl: `${wargaData.tempatLahir}, ${wargaData.tglLahir}`,
-        status: 'Menunggu Persetujuan',
+        status: 'Menunggu Persetujuan RT',
         keterangan: `Permohonan mandiri via aplikasi warga`,
         userId: wargaData.uid || wargaData.id_user || null,
         nomorSurat: getAutoNomorSurat(wargaData.rt || '01', wargaData.rw || '05')

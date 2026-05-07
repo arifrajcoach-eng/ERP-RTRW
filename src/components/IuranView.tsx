@@ -490,7 +490,7 @@ export function IuranView({
                   <label className="block text-xs font-black text-blue-800 uppercase tracking-widest">Identitas Penyetor (Admin Mode)</label>
                   <select name="wargaId" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="">-- Bukan warga terdaftar --</option>
-                    {wargaData.map((w:any, index: number) => <option key={`wopt-${index}`} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
+                    {wargaData.map((w:any, index: number) => <option key={`w-iuran-opt-${w.docId || w.id || w.nik || index}-${index}`} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
                   </select>
                   <input type="text" name="namaPenyetor" placeholder="Tulis manual nama penyetor (jika luar warga)" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" />
                 </div>

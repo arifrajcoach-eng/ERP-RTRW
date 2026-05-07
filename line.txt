@@ -1,0 +1,3 @@
+                   <datalist id="wargaListNasabah">
+                     {wargaData.map((w: any) => (
+                       <option key={w.nik} value={w.nama} />

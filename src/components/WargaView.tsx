@@ -53,7 +53,7 @@ export default function WargaView({
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
   const [viewWarga, setViewWarga] = useState<any>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+
   const isRTAdmin = currentUser?.role === 'RT';
   const myRT = currentUser?.rt || '01';
   const [filterRT, setFilterRT] = useState(isRTAdmin ? myRT : "Semua");
@@ -63,14 +63,15 @@ export default function WargaView({
   const [selectedWargaIds, setSelectedWargaIds] = useState<string[]>([]);
   const [wargaToDelete, setWargaToDelete] = useState<any>(null);
   const [isDeletingWarga, setIsDeletingWarga] = useState(false);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
+
   const [isUploading, setIsUploading] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredWargaData = useMemo(() => {
     const uniqueMap: Record<string, any> = {};
     wargaData.forEach(w => {
-      const id = w.nik || w.docId || w.id || Math.random().toString();
+      const id = w.docId || w.nik || w.id || Math.random().toString();
       const existing = uniqueMap[id];
       if (!existing || (w.terverifikasi && !existing.terverifikasi)) {
         uniqueMap[id] = w;
@@ -105,18 +106,22 @@ export default function WargaView({
     });
   }, [wargaData, filterRT, filterRW, filterKategoriUmur, searchQuery]);
 
-  const displayedWarga = filteredWargaData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const displayedWarga = filteredWargaData;
 
   const startEdit = (warga: any) => {
     setEditingWarga(warga);
     setShowEditForm(true);
   };
 
-  const handleBulkDelete = async () => {
+  const promptBulkDelete = () => {
     if (selectedWargaIds.length === 0) return;
-    if (!window.confirm(`Yakin ingin menghapus ${selectedWargaIds.length} data warga terpilih?`)) return;
+    setShowBulkDeleteModal(true);
+  };
+
+  const executeBulkDelete = async () => {
+    if (selectedWargaIds.length === 0) return;
     
-    setIsLoadingDB(true);
+    setIsDeletingWarga(true);
     try {
       const batch = writeBatch(db);
       selectedWargaIds.forEach(id => {
@@ -125,10 +130,11 @@ export default function WargaView({
       await batch.commit();
       setSelectedWargaIds([]);
       showNotification(`${selectedWargaIds.length} data warga berhasil dihapus`, 'success');
+      setShowBulkDeleteModal(false);
     } catch (error: any) {
       handleFirestoreError(error, 'delete', '/data_warga');
     } finally {
-      setIsLoadingDB(false);
+      setIsDeletingWarga(false);
     }
   };
 
@@ -148,34 +154,43 @@ export default function WargaView({
 
   const processImport = (file: File) => {
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
+    
+    // Fallback handler if not CSV or if we're using FileReader
+    const handleParsedData = async (parsedData: any[]) => {
       try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const parsedData = XLSX.utils.sheet_to_json(sheet);
-        
         let successCount = 0;
         const batch = writeBatch(db);
         
         parsedData.forEach((row: any) => {
-          if (row.nik && row.nama) {
-            const id = row.nik.toString();
+          const nik = row.nik || row.NIK || row['No. KTP'] || row['NIK/No. KTP'];
+          const nama = row.nama || row.Nama || row['Nama Lengkap'] || row['NAMA'];
+          
+          if (nik && nama) {
+            const id = nik.toString();
             const docRef = doc(db, 'data_warga', id);
             batch.set(docRef, {
               nik: id,
-              nama: row.nama,
-              rt: row.rt?.toString()?.padStart(2, '0') || '01',
-              rw: row.rw?.toString()?.padStart(2, '0') || '26',
-              status: row.status || 'Warga Tetap',
+              nama: nama,
+              kk: row.kk || row['No. KK'] || row.KK || '',
+              rt: (row.rt || row.RT || row['RT.'] || '')?.toString()?.padStart(2, '0') || '01',
+              rw: (row.rw || row.RW || row['RW.'] || '')?.toString()?.padStart(2, '0') || '26',
+              status: row.status || row.Status || 'Warga Tetap',
               tenantId: tenantId,
-              tglLahir: row.tglLahir || '',
-              jenisKelamin: row.jenisKelamin || 'Laki-laki',
-              agama: row.agama || 'Islam',
-              pekerjaan: row.pekerjaan || '',
-              telepon: row.telepon ? row.telepon.toString() : ''
+              tglLahir: row.tglLahir || row['Tanggal Lahir'] || row['Tanggal Lahir '] || '',
+              tempatLahir: row.tempatLahir || row['Tempat Lahir'] || '',
+              jenisKelamin: row.jenisKelamin || row['Jenis Kelamin'] || row.jk || row.JK || 'Laki-laki',
+              agama: row.agama || row.Agama || 'Islam',
+              pekerjaan: row.pekerjaan || row.Pekerjaan || row['Profesi/ Pekerjaan'] || '',
+              pendidikan: row.pendidikan || row.Pendidikan || row['Pendidikan Terakhir'] || '',
+              statusKawin: row.statusKawin || row['Status Kawin'] || row.pernikahan || '',
+              posisiKeluarga: row.posisiKeluarga || row['Posisi Dalam Keluarga'] || row.posisi || '',
+              kewarganegaraan: row.kewarganegaraan || row['WNi/ WNA'] || row.kwn || 'WNI',
+              telepon: row.telepon || row.Telepon || row['No. Hp'] || row.hp || row.phone || '',
+              email: row.email || row.Email || '',
+              alamat: row.alamat || row.Alamat || row.blok || '',
+              kelurahan: row.kelurahan || row.Kelurahan || '',
+              kecamatan: row.kecamatan || row.Kecamatan || '',
+              kabupaten: row.kabupaten || row.kota || row['Kabupaten/ Kota'] || row.kota_kab || ''
             }, { merge: true });
             successCount++;
           }
@@ -195,7 +210,39 @@ export default function WargaView({
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     };
-    reader.readAsBinaryString(file);
+
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          handleParsedData(results.data);
+        },
+        error: (error) => {
+          console.error('Error parsing CSV:', error);
+          showNotification('Gagal memparsing CSV', 'error');
+          setIsUploading(false);
+        }
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const parsedData = XLSX.utils.sheet_to_json(sheet);
+          handleParsedData(parsedData);
+        } catch (err) {
+          console.error(err);
+          showNotification('Gagal memproses file Excel', 'error');
+          setIsUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+      };
+      reader.readAsBinaryString(file);
+    }
   };
 
   const handleDeleteWarga = async () => {
@@ -214,16 +261,28 @@ export default function WargaView({
 
   const handleExportExcel = () => {
     const dataToExport = filteredWargaData.map((w: any) => ({
-      NIK: w.nik,
-      Nama: w.nama,
-      RT: w.rt,
-      RW: w.rw,
-      Status: w.status,
-      'Jenis Kelamin': w.jenisKelamin,
-      Agama: w.agama,
-      Pekerjaan: w.pekerjaan,
-      'Tanggal Lahir': w.tglLahir,
-      Telepon: w.telepon
+      'NIK': w.nik || '-',
+      'Nama': w.nama || '-',
+      'No. KK': w.kk || w.kodeKeluarga || '-',
+      'Jenis Kelamin': w.jenisKelamin || w.jk || '-',
+      'Kelurahan': w.kelurahan || '-',
+      'Kecamatan': w.kecamatan || '-',
+      'Kabupaten/ Kota': w.kabupaten || w.kota || w.kota_kab || '-',
+      'No. Hp': w.telepon || w.phone || w.hp || w.noHp || '-',
+      'Email': w.email || '-',
+      'Foto KTP': w.ktpUrl || '-',
+      'Foto KK': w.kkUrl || '-',
+      'Agama': w.agama || '-',
+      'Alamat': w.alamat || w.blok || '-',
+      'RT': w.rt || '-',
+      'RW': w.rw || '-',
+      'Profesi/ Pekerjaan': w.pekerjaan || w.profesi || '-',
+      'Posisi Dalam Keluarga': w.posisi || w.posisiKeluarga || '-',
+      'Pendidikan Terakhir': w.pendidikan || w.pendidikanTerakhir || '-',
+      'Status Kawin': w.statusKawin || w.pernikahan || '-',
+      'Tempat Lahir': w.tempatLahir || '-',
+      'Tanggal Lahir': w.tglLahir || '-',
+      'WNi/ WNA': w.kewarganegaraan || w.kwn || '-'
     }));
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
@@ -243,7 +302,7 @@ export default function WargaView({
         </div>
         <div className="flex gap-2">
           {selectedWargaIds.length > 0 && (
-            <button onClick={handleBulkDelete} className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+            <button onClick={promptBulkDelete} className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
               <Trash size={18} /> Hapus ({selectedWargaIds.length})
             </button>
           )}
@@ -276,10 +335,10 @@ export default function WargaView({
             </div>
          </div>
 
-         <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-slate-50 bg-slate-50/50">
+         <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
+            <table className="w-full text-left relative">
+              <thead className="sticky top-0 bg-white z-10">
+                <tr className="border-b border-slate-50 bg-slate-50/90 backdrop-blur-sm">
                   <th className="py-4 px-4 w-12 text-center">
                     <input type="checkbox" checked={selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded text-brand-blue border-slate-300 focus:ring-brand-blue" />
                   </th>
@@ -290,11 +349,11 @@ export default function WargaView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {displayedWarga.map((w: any) => {
-                  const idWarga = w.docId || w.nik || w.id;
+                {displayedWarga.map((w: any, idx: number) => {
+                  const idWarga = w.docId || w.id || w.nik || `w-idx-${idx}`;
                   const isSelected = selectedWargaIds.includes(idWarga);
                   return (
-                  <tr key={idWarga} className={`hover:bg-slate-50/50 group transition-all ${isSelected ? 'bg-blue-50/30' : ''}`}>
+                  <tr key={`wg-row-${idWarga}-${idx}`} className={`hover:bg-slate-50/50 group transition-all ${isSelected ? 'bg-blue-50/30' : ''}`}>
                     <td className="py-5 px-4 text-center">
                       <input type="checkbox" checked={isSelected} onChange={() => toggleSelectWarga(idWarga)} className="w-4 h-4 rounded text-brand-blue border-slate-300 focus:ring-brand-blue" />
                     </td>
@@ -506,15 +565,18 @@ export default function WargaView({
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pendidikan Terakhir</label>
-                            <select name="pendidikan" defaultValue={editingWarga?.pendidikan || 'SMA/Sederajat'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
-                               <option value="Tidak/Belum Sekolah">Tidak/Belum Sekolah</option>
-                               <option value="SD/Sederajat">SD/Sederajat</option>
-                               <option value="SMP/Sederajat">SMP/Sederajat</option>
-                               <option value="SMA/Sederajat">SMA/Sederajat</option>
-                               <option value="Diploma">Diploma (D1/D2/D3)</option>
-                               <option value="S1/D4">S1/D4</option>
+                            <select name="pendidikan" defaultValue={editingWarga?.pendidikan || 'SMA'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="SD">SD</option>
+                               <option value="SMP">SMP</option>
+                               <option value="SMA">SMA</option>
+                               <option value="S1">S1</option>
                                <option value="S2">S2</option>
                                <option value="S3">S3</option>
+                               <option value="DIPLOMA 1">DIPLOMA 1</option>
+                               <option value="DIPLOMA 2">DIPLOMA 2</option>
+                               <option value="DIPLOMA 3">DIPLOMA 3</option>
+                               <option value="DIPLOMA 4">DIPLOMA 4</option>
+                               <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
                             </select>
                          </div>
                          <div className="flex flex-col text-left">
@@ -597,12 +659,16 @@ export default function WargaView({
                 <div className="overflow-y-auto pr-2 space-y-4 pt-4 border-t border-slate-100 flex-1">
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No. KK</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.kk || viewWarga.kodeKeluarga || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tempat, Tanggal Lahir</span>
-                        <span className="text-sm font-black text-slate-700">{viewWarga.tempatLahir || '-'}, {viewWarga.tglLahir} ({calculateAge(viewWarga.tglLahir)}Th)</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.tempatLahir || '-'}, {viewWarga.tglLahir || '-'} ({calculateAge(viewWarga.tglLahir)}Th)</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jenis Kelamin</span>
-                        <span className="text-sm font-black text-slate-700">{viewWarga.jenisKelamin || '-'}</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.jenisKelamin || viewWarga.jk || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Agama</span>
@@ -610,35 +676,39 @@ export default function WargaView({
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status Kawin</span>
-                        <span className="text-sm font-black text-slate-700">{viewWarga.statusKawin || '-'}</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.statusKawin || viewWarga.pernikahan || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pendidikan Terakhir</span>
-                        <span className="text-sm font-black text-slate-700">{viewWarga.pendidikan || '-'}</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.pendidikan || viewWarga.pendidikanTerakhir || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Profesi/Pekerjaan</span>
-                        <span className="text-sm font-black text-slate-700">{viewWarga.pekerjaan || '-'}</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.pekerjaan || viewWarga.profesi || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hubungan Keluarga</span>
-                        <span className="text-sm font-black text-slate-700">{viewWarga.posisiKeluarga || '-'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Posisi Dalam Keluarga</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.posisiKeluarga || viewWarga.posisi || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
                         <span className="text-sm font-black text-slate-700">{viewWarga.email || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Telepon</span>
-                        <span className="text-sm font-black text-slate-700 font-mono">{viewWarga.telepon || '-'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No. Hp</span>
+                        <span className="text-sm font-black text-slate-700 font-mono">{viewWarga.telepon || viewWarga.phone || viewWarga.hp || viewWarga.noHp || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RT / RW</span>
-                        <span className="text-sm font-black text-slate-700">RT {viewWarga.rt} / RW {viewWarga.rw}</span>
+                        <span className="text-sm font-black text-slate-700">RT {viewWarga.rt || '-'} / RW {viewWarga.rw || '-'}</span>
+                     </div>
+                     <div className="flex flex-col py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">WNI / WNA</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.kewarganegaraan || viewWarga.kwn || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50 md:col-span-2">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alamat Lengkap</span>
-                        <span className="text-sm font-black text-slate-700 leading-relaxed">{viewWarga.alamat || '-'}</span>
+                        <span className="text-sm font-black text-slate-700 leading-relaxed">{viewWarga.alamat || viewWarga.blok || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kelurahan</span>
@@ -650,27 +720,27 @@ export default function WargaView({
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50 md:col-span-2">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kabupaten/Kota</span>
-                        <span className="text-sm font-black text-slate-700">{viewWarga.kabupaten || '-'}</span>
+                        <span className="text-sm font-black text-slate-700">{viewWarga.kabupaten || viewWarga.kota || viewWarga.kota_kab || '-'}</span>
                      </div>
                    </div>
 
-                   {(viewWarga.fotoKTP || viewWarga.fotoKK) && (
+                   {(viewWarga.fotoKTP || viewWarga.ktpUrl || viewWarga.fotoKK || viewWarga.kkUrl) && (
                      <div className="pt-4 mt-2">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Dokumen Lampiran</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                           {viewWarga.fotoKTP && (
+                           {(viewWarga.fotoKTP || viewWarga.ktpUrl) && (
                              <div className="flex flex-col gap-2">
                                 <span className="text-xs font-bold text-slate-600">Foto KTP</span>
-                                <a href={viewWarga.fotoKTP} target="_blank" rel="noopener noreferrer" className="overflow-hidden rounded-xl border border-slate-200 block">
-                                   <img src={viewWarga.fotoKTP} alt="KTP" className="w-full h-32 object-cover hover:scale-105 transition-transform" />
+                                <a href={viewWarga.fotoKTP || viewWarga.ktpUrl} target="_blank" rel="noopener noreferrer" className="overflow-hidden rounded-xl border border-slate-200 block">
+                                   <img src={viewWarga.fotoKTP || viewWarga.ktpUrl} alt="KTP" className="w-full h-32 object-cover hover:scale-105 transition-transform" />
                                 </a>
                              </div>
                            )}
-                           {viewWarga.fotoKK && (
+                           {(viewWarga.fotoKK || viewWarga.kkUrl) && (
                              <div className="flex flex-col gap-2">
                                 <span className="text-xs font-bold text-slate-600">Foto KK</span>
-                                <a href={viewWarga.fotoKK} target="_blank" rel="noopener noreferrer" className="overflow-hidden rounded-xl border border-slate-200 block">
-                                   <img src={viewWarga.fotoKK} alt="KK" className="w-full h-32 object-cover hover:scale-105 transition-transform" />
+                                <a href={viewWarga.fotoKK || viewWarga.kkUrl} target="_blank" rel="noopener noreferrer" className="overflow-hidden rounded-xl border border-slate-200 block">
+                                   <img src={viewWarga.fotoKK || viewWarga.kkUrl} alt="KK" className="w-full h-32 object-cover hover:scale-105 transition-transform" />
                                 </a>
                              </div>
                            )}
@@ -696,6 +766,26 @@ export default function WargaView({
                 <div className="flex gap-2 justify-center">
                    <button onClick={() => setWargaToDelete(null)} className="px-6 py-3 font-black text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors uppercase text-[10px] tracking-widest flex-1">Batal</button>
                    <button onClick={handleDeleteWarga} disabled={isDeletingWarga} className="px-6 py-3 font-black text-white bg-red-500 rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors uppercase text-[10px] tracking-widest flex-1">
+                     {isDeletingWarga ? 'Menghapus...' : 'Hapus'}
+                   </button>
+                </div>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* BULK DELETE MODAL */}
+      <AnimatePresence>
+        {showBulkDeleteModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Trash2 size={32} />
+                </div>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2">Hapus Sekaligus?</h3>
+                <p className="text-sm font-medium text-slate-500 mb-6">Yakin ingin menghapus <b>{selectedWargaIds.length} data warga</b> terpilih secara permanen? Data yang dihapus tidak dapat dipulihkan.</p>
+                <div className="flex gap-2 justify-center">
+                   <button onClick={() => setShowBulkDeleteModal(false)} className="px-6 py-3 font-black text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors uppercase text-[10px] tracking-widest flex-1">Batal</button>
+                   <button onClick={executeBulkDelete} disabled={isDeletingWarga} className="px-6 py-3 font-black text-white bg-red-500 rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors uppercase text-[10px] tracking-widest flex-1">
                      {isDeletingWarga ? 'Menghapus...' : 'Hapus'}
                    </button>
                 </div>
