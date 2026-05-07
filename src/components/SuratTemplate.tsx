@@ -8,7 +8,7 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
                     {surat?.show_logo !== 'no' && kop?.logo_url && <img src={kop.logo_url} alt="Logo" className="w-[90px] h-[90px] object-contain mr-4 ml-4" />}
                 </div>
                 <div className="flex-1 text-center px-4 flex flex-col justify-center items-center">
-                    <h2 className="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">{kop?.nama_rt || `RUKUN TETANGGA ${kop?.rt || '...'} / RUKUN WARGA ${kop?.rw || '...'}`}</h2>
+                    <h2 className="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">{`RUKUN TETANGGA ${surat?.rt || kop?.rt || '...'} / RUKUN WARGA ${kop?.rw || '...'}`}</h2>
                     <p className="font-['Arial'] text-[16px] leading-[24.8571px] font-bold w-[398.875px] h-[23.9792px]">KELURAHAN {kop?.kelurahan?.toUpperCase() || '...'} - KECAMATAN {kop?.kecamatan?.toUpperCase() || '...'}</p>
                     <p className="font-['Arial'] text-[16px] leading-[20px] font-bold">{kop?.kabupaten?.toUpperCase().includes('KABUPATEN') || kop?.kabupaten?.toUpperCase().includes('KOTA') ? '' : 'KABUPATEN '}{kop?.kabupaten?.toUpperCase() || 'BEKASI'}</p>
                     <p className="w-[347.242px] h-[23.2461px] text-[8px] leading-[11.14px]">Sekretariat : {kop?.alamat || '...'} | Email: {kop?.email || '...'} | Instagram: {kop?.instagram || '...'}</p>
@@ -27,7 +27,7 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
 
             {/* In a real app, logic for specific letter fields would be here based on surat.jenisSurat */}
             <div className="mt-6 leading-relaxed">
-              <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {surat?.rt || kop?.rt || '...'} / RW {surat?.rw || kop?.rw || '...'} Kelurahan {(kop?.kelurahan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())} Kecamatan {(kop?.kecamatan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())} {((kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kabupaten') || (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kota') ? '' : 'Kabupaten ') + (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())}</p>
+              <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {surat?.rt || kop?.rt || '...'} / RW {kop?.rw || '...'} Kelurahan {(kop?.kelurahan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())} Kecamatan {(kop?.kecamatan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())} {((kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kabupaten') || (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kota') ? '' : 'Kabupaten ') + (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())}</p>
               <p className="mb-4">Dengan ini menerangkan bahwa :</p>
               <div className="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
                  <div>Nama</div><div>:</div><div><strong>{surat?.pemohon || '...'}</strong></div>
@@ -46,7 +46,7 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
             <div className="mt-12 flex justify-between">
                 <div className="text-center">
                     <p>Mengetahui,</p>
-                    <p>Ketua RW {surat?.rw || kop?.rw || '....'}</p>
+                    <p>Ketua RW {kop?.rw || '....'}</p>
                     <div className="h-20 flex items-center justify-center relative">
                         {kop?.signature_rw_url && (
                           <img 

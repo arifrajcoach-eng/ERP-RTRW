@@ -154,64 +154,205 @@ export function SuratView({
   });
 
   const generateSuratPDF = (surat: any) => {
-    const doc = new jsPDF();
-    const settings = getSetting("KOP_SURAT") || {};
+    // Priority: use kopSettings (from tenant_settings), fallback to settings["KOP_SURAT"], then hardcoded defaults
+    const kop = kopSettings || getSetting("KOP_SURAT") || {};
     
-    // Kop Surat
-    if (settings.logo_url) {
-       // logic to add image would go here if needed, 
-       // but for now let's use text based kop
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showNotification("Gagal membuka jendela cetak. Pastikan popup tidak diblokir.", "error");
+      return;
     }
+
+    // Map kopSettings to the variables used in the template
+    // Default Bekasi logo if no logo provided. Using a more stable URL for default.
+    const defaultLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
+    const logoPemerintah = (kop.logo_url && kop.logo_url.startsWith('data:')) ? kop.logo_url : (kop.logo_url || defaultLogo);
+    const logoOrganisasi = kop.logo_rw_url || ""; // Right logo (RT/RW logo)
     
-    doc.setFontSize(14);
-    doc.setFont("times", "bold");
-    doc.text(settings.nama_organisasi?.toUpperCase() || "RUKUN TETANGGA 04 / RUKUN WARGA 09", 105, 15, { align: 'center' });
-    doc.text(settings.kelurahan?.toUpperCase() || "KELURAHAN KEBALEN - KECAMATAN BABELAN", 105, 22, { align: 'center' });
-    doc.setFontSize(10);
-    doc.setFont("times", "normal");
-    doc.text(settings.alamat || "Sekretariat: Blok AM No. 12, Kebalen, Bekasi", 105, 28, { align: 'center' });
-    doc.line(20, 32, 190, 32);
-    doc.line(20, 33, 190, 33);
-
-    // Nomor Surat
-    doc.setFontSize(12);
-    doc.setFont("times", "bold");
-    doc.text(surat.jenis?.toUpperCase() || "SURAT PENGANTAR", 105, 45, { align: 'center' });
-    doc.setFont("times", "normal");
-    doc.text(`Nomor: ${surat.nomorSurat || '... / RT.04 / RW.09 / ' + new Date().getFullYear()}`, 105, 51, { align: 'center' });
-
-    // Isi
-    doc.setFontSize(11);
-    doc.text("Yang bertanda tangan di bawah ini Ketua RT.04 / RW.09 Kelurahan Kebalen menerangkan bahwa:", 20, 65);
+    // User requirements: RT from data warga (surat.rt), RW from standard kop settings
+    const displayRT = surat.rt || "03"; 
+    const displayRW = kop.rw || "26"; // Standard RW from Kop Settings
     
-    const fields = [
-      ["Nama Lengkap", surat.pemohon],
-      ["NIK", surat.nik || "-"],
-      ["Tempat, Tgl Lahir", surat.ttl || "-"],
-      ["Alamat", surat.alamat || "-"],
-      ["Keperluan", surat.keterangan || "Administrasi"],
-    ];
-
-    let currentY = 75;
-    fields.forEach(f => {
-      doc.text(f[0], 30, currentY);
-      doc.text(": " + f[1], 70, currentY);
-      currentY += 8;
-    });
-
-    const bodyText = `Orang tersebut di atas adalah benar warga kami yang bertempat tinggal di alamat tersebut di atas. Demikian surat pengantar ini dibuat untuk dapat dipergunakan sebagaimana mestinya.`;
-    const splitText = doc.splitTextToSize(bodyText, 170);
-    doc.text(splitText, 20, currentY + 10);
-
-    // Tanda Tangan
-    const footerY = 220;
-    doc.text("Bekasi, " + new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }), 140, footerY);
-    doc.text("Ketua RT. 04 / RW. 09", 140, footerY + 7);
+    // Construct dynamic organization name according to RT of the citizen
+    const orgName = `RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}`;
     
-    doc.text("( ____________________ )", 140, footerY + 40);
+    const kelurahanText = kop.kelurahan && kop.kecamatan 
+      ? `KELURAHAN ${kop.kelurahan.toUpperCase()} - KECAMATAN ${kop.kecamatan.toUpperCase()}`
+      : "KELURAHAN KEBALEN - KECAMATAN BABELAN";
+      
+    const kabupaten = kop.kabupaten || "KABUPATEN BEKASI";
+    const displayKabupaten = kabupaten.toUpperCase().includes('KABUPATEN') || kabupaten.toUpperCase().includes('KOTA') 
+      ? kabupaten.toUpperCase() 
+      : `KABUPATEN ${kabupaten.toUpperCase()}`;
 
-    doc.save(`Surat_${surat.pemohon}_${Date.now()}.pdf`);
-    showNotification("Dokumen Surat siap diunduh.", "success");
+    const alamatText = kop.alamat 
+      ? `Sekretariat : ${kop.alamat} ${kop.email ? ' | Email: ' + kop.email : ''} ${kop.instagram ? ' | Instagram: ' + kop.instagram : ''}`
+      : "Sekretariat : Jl. Katala 3 Blok K3 No. 1 RT 02 / RW 26 | Email: kebalenrw26@gmail.com | Instagram: @kebalenrw26";
+
+    const content = `
+      <html>
+        <head>
+          <title>Cetak ${surat.jenis}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+            body { font-family: 'Times New Roman', serif; padding: 40px; margin: 0; color: #000; background: #fff; line-height: 1.4; }
+            .page { width: 210mm; min-height: 297mm; margin: auto; background: white; }
+            
+            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .logo-left { width: 80px; height: 80px; object-fit: contain; }
+            .logo-right { width: 90px; height: 90px; object-fit: contain; }
+            .header-text { text-align: center; flex: 1; padding: 0 10px; }
+            .header-text h1 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; line-height: 1.2; }
+            .header-text h2 { margin: 2px 0; font-size: 15px; font-weight: bold; text-transform: uppercase; line-height: 1.2; }
+            .header-text p { margin: 2px 0; font-size: 10px; font-weight: normal; }
+            
+            .title-section { text-align: center; margin-bottom: 25px; }
+            .title-section h3 { margin: 0; text-decoration: underline; font-size: 16px; font-weight: bold; text-transform: uppercase; }
+            .title-section p { margin: 5px 0; font-size: 13px; }
+            
+            .content-section { font-size: 13px; text-align: justify; }
+            .content-section p { margin-bottom: 12px; }
+            
+            .data-table { width: 100%; border-collapse: collapse; margin: 15px 0 15px 30px; }
+            .data-table td { padding: 4px 0; vertical-align: top; }
+            .data-table td.label { width: 160px; }
+            .data-table td.separator { width: 20px; text-align: center; }
+            .data-table td.value { font-weight: normal; }
+            
+            .footer-date { text-align: right; margin-top: 30px; margin-bottom: 5px; font-size: 13px; padding-right: 40px; }
+            .footer-section { display: flex; justify-content: space-between; padding: 0 40px; margin-top: 10px; }
+            .footer-column { text-align: center; width: 220px; }
+            .signature-space { height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
+            .signature-img { max-height: 80px; max-width: 150px; object-fit: contain; position: absolute; pointer-events: none; }
+            .signature-name { font-weight: bold; text-decoration: underline; }
+            
+            .verif-box-grid { margin-top: 50px; border-top: 1.5px solid #000; padding-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 10px; }
+            .verif-item { display: flex; flex-direction: column; }
+            .verif-box { border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px; }
+            
+            @media print {
+              body { padding: 0; }
+              .page { width: 100%; margin: 0; border: none; }
+              @page { margin: 1.5cm; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <div class="header">
+              <img src="${logoPemerintah}" class="logo-left" />
+              <div class="header-text">
+                <h1>${orgName}</h1>
+                <h2>${kelurahanText}</h2>
+                <h2>${displayKabupaten}</h2>
+                <p>${alamatText}</p>
+              </div>
+              ${logoOrganisasi ? `<img src="${logoOrganisasi}" class="logo-right" />` : '<div style="width:80px"></div>'}
+            </div>
+            
+            <div class="title-section">
+              <h3>SURAT PENGANTAR</h3>
+              <p>Nomor : ${surat.nomorSurat || `...... / RT ${displayRT} / RW ${displayRW} / Tahun ${new Date().getFullYear()}`}</p>
+            </div>
+            
+            <div class="content-section">
+              <p>Yang bertanda tangan di bawah ini Ketua RT ${displayRT} / RW ${displayRW} Kelurahan ${surat.kelurahan || kop.kelurahan || 'Kebalen'} Kecamatan ${surat.kecamatan || kop.kecamatan || 'Babelan'} ${surat.kota || displayKabupaten}</p>
+              <p>Dengan ini menerangkan bahwa :</p>
+              
+              <table class="data-table">
+                <tr><td class="label">Nama</td><td class="separator">:</td><td class="value"><b>${surat.pemohon}</b></td></tr>
+                <tr><td class="label">Tempat Tgl, Lahir</td><td class="separator">:</td><td class="value">${surat.ttl || '-'}</td></tr>
+                <tr><td class="label">Jenis Kelamin</td><td class="separator">:</td><td class="value">${surat.jenisKelamin || '-'}</td></tr>
+                <tr><td class="label">Pekerjaan</td><td class="separator">:</td><td class="value">${surat.pekerjaan || '-'}</td></tr>
+                <tr><td class="label">Kewarganegaraan</td><td class="separator">:</td><td class="value">${surat.kewarganegaraan || 'WNI'}</td></tr>
+                <tr><td class="label">No. KTP/NIK</td><td class="separator">:</td><td class="value">${surat.nik || '-'}</td></tr>
+                <tr><td class="label">Status Perkawinan</td><td class="separator">:</td><td class="value">${surat.statusKawin || '-'}</td></tr>
+                <tr><td class="label">Alamat</td><td class="separator">:</td><td class="value">${surat.alamat || '-'}</td></tr>
+                <tr><td class="label">Maksud / Keperluan</td><td class="separator">:</td><td class="value">${surat.keterangan || '-'}</td></tr>
+              </table>
+              
+              <p>Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
+            </div>
+            
+            <div class="footer-date">
+               ${(kop.kabupaten || 'Bekasi').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
+            </div>
+            
+            <div class="footer-section">
+              <div class="footer-column">
+                <p>Mengetahui,</p>
+                <p>Ketua RW ${displayRW}</p>
+                <div class="signature-space">
+                  ${kop.signature_rw_url ? `<img src="${kop.signature_rw_url}" class="signature-img" />` : ''}
+                </div>
+                <p class="signature-name">( ${kop.nama_ketua_rw || 'Tri Handoko P'} )</p>
+              </div>
+              <div class="footer-column">
+                <p>&nbsp;</p>
+                <p>Ketua RT ${displayRT}</p>
+                <div class="signature-space">
+                  ${kop.signature_rt_url ? `<img src="${kop.signature_rt_url}" class="signature-img" />` : ''}
+                </div>
+                <p class="signature-name">( ${kop.nama_ketua_rt || 'Fadhlan'} )</p>
+              </div>
+            </div>
+            
+            <div class="verif-box-grid">
+               <div class="verif-item">
+                 <span>Tl. Berkas / Surat No :</span>
+                 <span style="margin-top: 15px">Berkas Sesuai</span>
+                 <div class="verif-box"></div>
+               </div>
+               <div class="verif-item">
+                 <span>Hal :</span>
+                 <span style="margin-top: 15px">Berkas Kecamatan</span>
+                 <div class="verif-box"></div>
+               </div>
+               <div class="verif-item">
+                 <span>Tgl : ..............................</span>
+                 <span style="margin-top: 15px">Paraf Arsiparis</span>
+                 <div class="verif-box"></div>
+               </div>
+            </div>
+          </div>
+          
+          <script>
+            function checkImages() {
+              const images = document.getElementsByTagName('img');
+              let loadedCount = 0;
+              if (images.length === 0) {
+                setTimeout(() => { window.print(); window.close(); }, 800);
+                return;
+              }
+              for (let i = 0; i < images.length; i++) {
+                if (images[i].complete) {
+                  loadedCount++;
+                } else {
+                  images[i].addEventListener('load', () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 800);
+                  });
+                  images[i].addEventListener('error', (e) => {
+                    console.error('Image failing to load', e);
+                    loadedCount++;
+                    if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 800);
+                  });
+                }
+              }
+              if (loadedCount === images.length) {
+                setTimeout(() => { window.print(); window.close(); }, 800);
+              }
+            }
+            window.onload = checkImages;
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    showNotification("Pratinjau cetak terbuka di tab baru", "info");
   };
 
   const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'ktp' | 'kk') => {
@@ -240,7 +381,7 @@ export function SuratView({
   const handleSaveSurat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const id = editingSurat ? editingSurat.id : `SRT-${Date.now()}`;
+    const id = editingSurat ? editingSurat.id : `SRT-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     
     const type = formData.get('jenis') as string;
     const keterangan = formData.get('keterangan') as string;
@@ -532,7 +673,7 @@ export function SuratView({
                         onChange={(e) => setSelectedWargaId(e.target.value)}
                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                       >
-                        <option value="">-- Manual / Input Baru --</option>
+                        <option key="manual" value="">-- Manual / Input Baru --</option>
                         {wargaData.map((w:any) => <option key={w.id} value={w.id}>{w.nama} ({w.nik})</option>)}
                       </select>
                     </div>
@@ -542,12 +683,12 @@ export function SuratView({
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Surat</label>
                       <select name="jenis" defaultValue={editingSurat?.jenis || "Surat Pengantar KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
-                        <option value="Surat Pengantar KTP">Surat Pengantar KTP / KK</option>
-                        <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
-                        <option value="Surat Keterangan Tidak Mampu">Surat Keterangan Tidak Mampu (SKTM)</option>
-                        <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
-                        <option value="Surat Keterangan Usaha">Surat Keterangan Usaha (SKU)</option>
-                        <option value="Lainnya">Keperluan Lainnya</option>
+                        <option key="ktp" value="Surat Pengantar KTP">Surat Pengantar KTP / KK</option>
+                        <option key="domisili" value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
+                        <option key="sktm" value="Surat Keterangan Tidak Mampu">Surat Keterangan Tidak Mampu (SKTM)</option>
+                        <option key="skck" value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
+                        <option key="sku" value="Surat Keterangan Usaha">Surat Keterangan Usaha (SKU)</option>
+                        <option key="lainnya" value="Lainnya">Keperluan Lainnya</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -589,9 +730,9 @@ export function SuratView({
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Kelamin</label>
                       <select name="jenisKelamin" defaultValue={getInitialValue('jenisKelamin')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="">-- Pilih --</option>
-                        <option value="Laki-Laki">Laki-Laki</option>
-                        <option value="Perempuan">Perempuan</option>
+                        <option key="none" value="">-- Pilih --</option>
+                        <option key="l" value="Laki-Laki">Laki-Laki</option>
+                        <option key="p" value="Perempuan">Perempuan</option>
                       </select>
                     </div>
                   </div>
@@ -608,13 +749,13 @@ export function SuratView({
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Agama</label>
                       <select name="agama" defaultValue={getInitialValue('agama')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="">-- Pilih --</option>
-                        <option value="Islam">Islam</option>
-                        <option value="Kristen">Kristen</option>
-                        <option value="Katolik">Katolik</option>
-                        <option value="Hindu">Hindu</option>
-                        <option value="Budha">Budha</option>
-                        <option value="Konghucu">Konghucu</option>
+                        <option key="none" value="">-- Pilih --</option>
+                        <option key="islam" value="Islam">Islam</option>
+                        <option key="kristen" value="Kristen">Kristen</option>
+                        <option key="katolik" value="Katolik">Katolik</option>
+                        <option key="hindu" value="Hindu">Hindu</option>
+                        <option key="budha" value="Budha">Budha</option>
+                        <option key="konghucu" value="Konghucu">Konghucu</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -642,35 +783,35 @@ export function SuratView({
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Pendidikan Terakhir</label>
                       <select name="pendidikan" defaultValue={getInitialValue('pendidikan')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="">-- Pilih --</option>
-                        <option value="SD">SD</option>
-                        <option value="SMP">SMP</option>
-                        <option value="SMA/SMK">SMA/SMK</option>
-                        <option value="D3">D3</option>
-                        <option value="S1">S1</option>
-                        <option value="S2">S2</option>
-                        <option value="S3">S3</option>
-                        <option value="Tidak Sekolah">Tidak Sekolah</option>
+                        <option key="none" value="">-- Pilih --</option>
+                        <option key="sd" value="SD">SD</option>
+                        <option key="smp" value="SMP">SMP</option>
+                        <option key="sma" value="SMA/SMK">SMA/SMK</option>
+                        <option key="d3" value="D3">D3</option>
+                        <option key="s1" value="S1">S1</option>
+                        <option key="s2" value="S2">S2</option>
+                        <option key="s3" value="S3">S3</option>
+                        <option key="ts" value="Tidak Sekolah">Tidak Sekolah</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Perkawinan</label>
                       <select name="statusKawin" defaultValue={getInitialValue('statusKawin')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="">-- Pilih --</option>
-                        <option value="Belum Kawin">Belum Kawin</option>
-                        <option value="Kawin">Kawin</option>
-                        <option value="Cerai Hidup">Cerai Hidup</option>
-                        <option value="Cerai Mati">Cerai Mati</option>
+                        <option key="none" value="">-- Pilih --</option>
+                        <option key="bk" value="Belum Kawin">Belum Kawin</option>
+                        <option key="k" value="Kawin">Kawin</option>
+                        <option key="ch" value="Cerai Hidup">Cerai Hidup</option>
+                        <option key="cm" value="Cerai Mati">Cerai Mati</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Posisi Dalam Keluarga</label>
                       <select name="posisiKeluarga" defaultValue={getInitialValue('posisiKeluarga')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="">-- Pilih --</option>
-                        <option value="Kepala Keluarga">Kepala Keluarga</option>
-                        <option value="Istri">Istri</option>
-                        <option value="Anak">Anak</option>
-                        <option value="Famili Lain">Famili Lain</option>
+                        <option key="none" value="">-- Pilih --</option>
+                        <option key="kpl" value="Kepala Keluarga">Kepala Keluarga</option>
+                        <option key="istri" value="Istri">Istri</option>
+                        <option key="anak" value="Anak">Anak</option>
+                        <option key="famili" value="Famili Lain">Famili Lain</option>
                       </select>
                     </div>
                   </div>

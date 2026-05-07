@@ -103,6 +103,10 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
       }
       
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
       const binary = atob(base64Audio);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -178,16 +182,23 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     setIsLoading(true);
 
     try {
-      let history = messages
+      // Ensure the history alternates correctly and starts with 'user'
+      let history = [];
+      let lastRole = null;
+
+      const rawHistory = messages
         .filter(m => m.role === 'user' || m.role === 'bot')
         .map(m => ({ 
           role: m.role === 'user' ? 'user' : 'model' as 'user' | 'model', 
           parts: [{ text: m.text }] 
         }));
 
-      // Ensure the history doesn't start with 'model'
-      if (history.length > 0 && history[0].role === 'model') {
-        history = history.slice(1);
+      for (const entry of rawHistory) {
+        if (entry.role !== lastRole) {
+          if (history.length === 0 && entry.role === 'model') continue;
+          history.push(entry);
+          lastRole = entry.role;
+        }
       }
 
       const stream = await chatWithAI({
@@ -206,7 +217,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
       try {
         for await (const chunk of (stream as any)) {
           if (!mountedRef.current) break;
-          const chunkText = chunk.text();
+          const chunkText = chunk.text;
           fullText += chunkText;
           setMessages(prev => {
             const newMessages = [...prev];

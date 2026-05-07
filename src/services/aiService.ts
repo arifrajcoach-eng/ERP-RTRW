@@ -1,8 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GoogleGenAI, Modality } from "@google/genai";
 
 // Initialization
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export async function chatWithAI(params: {
@@ -12,9 +10,10 @@ export async function chatWithAI(params: {
   history: { role: 'user' | 'model', parts: { text: string }[] }[];
 }) {
   try {
-    const model = genAI.getGenerativeModel({
+    const stream = await ai.models.generateContentStream({
       model: "gemini-3-flash-preview",
-      systemInstruction: `Anda adalah seorang AI Asisten Pribadi Pa Ketua (asisten pribadi perempuan muda) yang pintar (jenius), islami, santun, dan sedikit jenaka.
+      config: {
+        systemInstruction: `Anda adalah seorang AI Asisten Pribadi Pa Ketua (asisten pribadi perempuan muda) yang pintar (jenius), islami, santun, dan sedikit jenaka.
           Kepribadian:
           - Ramah, hangat, dan asyik.
           - Gaya bicara santai seperti anak muda/remaja tapi tetap sangat sopan.
@@ -43,17 +42,11 @@ export async function chatWithAI(params: {
           Tetap sopan, mendidik, dan asyik diajak ngobrol.
           
           Gunakan data berikut sebagai referensi utama jawaban Anda: ${JSON.stringify(params.dataSummary)}`,
-    });
-
-    const chat = model.startChat({
-      history: params.history || [],
-      generationConfig: {
-        temperature: 0.8,
       },
+      contents: [...params.history, { role: 'user', parts: [{ text: params.message }] }]
     });
 
-    const result = await chat.sendMessageStream(params.message);
-    return result.stream;
+    return stream;
   } catch (error) {
     console.error("AI Chat Logic Error:", error);
     throw error;
@@ -62,8 +55,8 @@ export async function chatWithAI(params: {
 
 export async function generateAIReport(dataSummary: any) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    const result = await model.generateContent({ 
+    const response = await ai.models.generateContent({ 
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
       Laporan harus mencakup: 
       1. Ringkasan Keuangan (Saldo Akhir). 
@@ -72,7 +65,7 @@ export async function generateAIReport(dataSummary: any) {
       Gunakan format Markdown yang rapi, gaya bahasa yang santai tapi sopan, dan jangan lupa salam pembukanya ya!` }] }]
     });
 
-    return result.response.text() || "";
+    return response.text || "";
   } catch (error) {
     console.error("AI Report Logic Error:", error);
     throw error;
@@ -81,13 +74,15 @@ export async function generateAIReport(dataSummary: any) {
 
 export async function generateRegionalInsight(regionsData: any) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const prompt = `Hai! Kamu adalah AI Strategist yang pintar, ramah, and asyik. Berdasarkan data wilayah ini: ${JSON.stringify(regionsData)}. 
     Berikan analisis perbandingan antar RW, wilayah mana yang iurannya masih rendah, dan kasih 3 rekomendasi kebijakan yang cerdas buat Kelurahan. 
     Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text() || "";
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt
+    });
+    return response.text || "";
   } catch (error) {
     console.error("AI Regional Insight Logic Error:", error);
     throw error;
@@ -96,27 +91,26 @@ export async function generateRegionalInsight(regionsData: any) {
 
 export async function scanReceiptAI(imageBase64: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    const prompt = `Anda adalah AI pendeteksi struk/invoice/kwitansi. Ekstrak informasi dari gambar struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: 
-    {
-      "nominal": 150000, 
-      "keterangan": "Beli semen",
-      "tipe": "Keluar",
-      "nama": "Toko Bangunan XYZ"
-    }
-    Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Tipe biasanya "Keluar" jika itu struk belanja/pengeluaran, atau "Masuk" jika kwitansi penerimaan. Return HANYA JSON block.`;
-
-    const result = await model.generateContent([
-      { text: prompt },
-      { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
-    ]);
-
-    const text = result.response.text() || "";
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi. Ekstrak informasi dari gambar struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: 
+        {
+          "nominal": 150000, 
+          "keterangan": "Beli semen",
+          "tipe": "Keluar",
+          "nama": "Toko Bangunan XYZ"
+        }
+        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Tipe biasanya "Keluar" jika itu struk belanja/pengeluaran, atau "Masuk" jika kwitansi penerimaan. Return HANYA JSON block.` },
+        { inlineData: { data: imageBase64.split(',')[1] || imageBase64, mimeType: "image/jpeg" } }
+      ]
+    });
+    const text = response.text || "";
     const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim();
     return JSON.parse(cleanJson);
   } catch (error) {
-    console.error("Scan Receipt AI Error:", error);
-    throw error;
+    console.error("AI Scan Receipt Error:", error);
+    return null;
   }
 }
 
@@ -145,4 +139,3 @@ export async function textToSpeech(text: string) {
     return null;
   }
 }
-
