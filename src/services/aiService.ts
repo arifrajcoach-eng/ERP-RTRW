@@ -121,18 +121,21 @@ export async function textToSpeech(text: string) {
     
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: `Say clearly in a friendly, young, slightly witty, and polite feminine Indonesian voice: ${cleanedText}` }] }],
+      contents: [{ parts: [{ text: `Bacakan dengan suara yang jelas, natural, dan fasih berbahasa Indonesia: ${cleanedText}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Puck" }
+            prebuiltVoiceConfig: { voiceName: "Kore" }
           }
         }
       }
     });
 
     const audioPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.includes('audio'));
+    if (!audioPart?.inlineData?.data) {
+        console.warn('No audio data in response:', JSON.stringify(response));
+    }
     return audioPart?.inlineData?.data || null;
   } catch (error) {
     console.warn("TTS Generation Error:", error);

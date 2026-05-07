@@ -111,16 +111,21 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       
-      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer).catch(async () => {
-          // Fallback manual decode if needed
-          const buffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
-          const data = buffer.getChannelData(0);
-          const view = new DataView(bytes.buffer);
-          for (let i = 0; i < data.length; i++) {
-            data[i] = view.getInt16(i * 2, true) / 32768;
-          }
-          return buffer;
-      });
+      const rawBuffer = bytes.buffer;
+      
+      let audioBuffer;
+      try {
+        // We MUST clone the buffer before decodeAudioData since it detaches the buffer!
+        audioBuffer = await audioContext.decodeAudioData(rawBuffer.slice(0));
+      } catch (e) {
+        // Fallback manual decode for raw PCM 16-bit little-endian
+        audioBuffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
+        const data = audioBuffer.getChannelData(0);
+        const view = new DataView(rawBuffer);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = view.getInt16(i * 2, true) / 32768; // true for little-endian
+        }
+      }
 
       if (!audioBuffer || !mountedRef.current) {
           setIsSpeaking(false);

@@ -88,9 +88,9 @@ export default function DashboardView({
   // Memoized stats
   const stats = useMemo(() => {
     const totalWarga = wargaData.length;
-    const uniqueKK = new Set(wargaData.map((w: any) => w.kk).filter(kk => kk)).size;
+    const uniqueKK = new Set(wargaData.map((w: any) => w.kk || w.kodeKeluarga).filter(kk => kk)).size;
     const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
-    const suratPending = suratData.filter(s => s.status === 'Diajukan').length;
+    const suratPending = suratData.filter(s => s.status === 'Diajukan' || s.status.includes('Menunggu')).length;
     
     return {
       totalWarga,
@@ -100,7 +100,7 @@ export default function DashboardView({
     };
   }, [wargaData, kasData, suratData]);
 
-  const yearContext = "2026";
+  const yearContext = new Date().getFullYear().toString();
 
   const dataYearly = useMemo(() => months.map(m => {
     const monthlyData = kasData.filter(k => k.tanggal.includes(m.label));
@@ -132,8 +132,14 @@ export default function DashboardView({
   }, [kasPeriod, dataYearly, months, kasData]);
 
   const demographics = useMemo(() => {
-    const totalLaki = wargaData.filter(w => w.jk === 'Laki-Laki').length;
-    const totalPerempuan = wargaData.filter(w => w.jk === 'Perempuan').length;
+    const totalLaki = wargaData.filter(w => {
+      const jk = (w.jk || w.jenisKelamin || '').toLowerCase();
+      return jk === 'laki-laki' || jk === 'pria' || jk === 'l';
+    }).length;
+    const totalPerempuan = wargaData.filter(w => {
+      const jk = (w.jk || w.jenisKelamin || '').toLowerCase();
+      return jk === 'perempuan' || jk === 'wanita' || jk === 'p';
+    }).length;
     
     const getAge = (birthDate: string) => {
       if (!birthDate) return 0;
@@ -226,26 +232,20 @@ export default function DashboardView({
         type: 'toko',
         dateObj: new Date(o.timestamp || 0)
       })),
-      {
-        title: 'Kesehatan Warga',
-        desc: 'Update: Vaksinasi booster warga RT 02 selesai',
-        date: 'Hari Ini',
-        type: 'kesehatan',
-        dateObj: new Date()
-      }
     ].sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()).slice(0, 15);
   }, [kasData, suratData, bukuTamuData, posyanduKegiatanData, sampahSetoranData, userVotes, tokoOrders]);
 
   const activityChartData = useMemo(() => {
     const getActData = (period: string) => {
-      const filteredSurat = period === 'yearly' ? suratData : suratData.filter(s => s.tanggal.includes('Apr'));
-      const filteredKas = period === 'yearly' ? kasData : kasData.filter(k => k.tanggal.includes('Apr'));
+      const currentMonth = new Date().toLocaleDateString('id-ID', { month: 'short' });
+      const filteredSurat = period === 'yearly' ? suratData : suratData.filter(s => s.tanggal && s.tanggal.includes(currentMonth));
+      const filteredKas = period === 'yearly' ? kasData : kasData.filter(k => k.tanggal && k.tanggal.includes(currentMonth));
 
       return [
-        { name: 'Pemasukan Kas', value: filteredKas.filter(k => k.tipe === 'Masuk').length * 15 },
-        { name: 'Surat Pengantar', value: filteredSurat.length * 8 },
-        { name: 'Pengeluaran Kas', value: filteredKas.filter(k => k.tipe === 'Keluar').length * 12 },
-        { name: 'Data Warga', value: wargaData.length * 2 },
+        { name: 'Pemasukan Kas', value: filteredKas.filter(k => k.tipe === 'Masuk').length },
+        { name: 'Pengeluaran Kas', value: filteredKas.filter(k => k.tipe === 'Keluar').length },
+        { name: 'Surat Pengantar', value: filteredSurat.length },
+        { name: 'Data Warga', value: wargaData.length },
       ];
     };
     return piePeriod === 'yearly' ? getActData('yearly') : getActData('30days');
@@ -546,7 +546,7 @@ export default function DashboardView({
                 </button>
                 
                 <button 
-                  onClick={() => setActiveTab('warga')}
+                  onClick={() => setActiveTab('surat')}
                   className="w-full bg-white/10 hover:bg-white/20 text-white p-5 rounded-3xl flex items-center justify-between transition-all group/btn border border-white/10 backdrop-blur-sm"
                 >
                   <div className="flex items-center gap-4">

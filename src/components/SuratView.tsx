@@ -87,6 +87,8 @@ export function SuratView({
   const [kkUrl, setKkUrl] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedWargaId, setSelectedWargaId] = useState("");
+  const [wargaSearch, setWargaSearch] = useState("");
+  const [showWargaDropdown, setShowWargaDropdown] = useState(false);
   
   const formRef = useRef<HTMLFormElement>(null);
   
@@ -97,14 +99,20 @@ export function SuratView({
       setKtpUrl(editingSurat.ktpUrl || "");
       setKkUrl(editingSurat.kkUrl || "");
       setSelectedWargaId("");
+      setWargaSearch("");
     } else {
-      setKtpUrl("");
-      setKkUrl("");
-      setSelectedWargaId("");
+      const currentWargaFirst = wargaData.find((w: any) => (w.id || w.docId || w.nik) === selectedWargaId);
+      if (currentWargaFirst) {
+        setKtpUrl(currentWargaFirst.ktpUrl || currentWargaFirst.fotoKtp || currentWargaFirst.foto || "");
+        setKkUrl(currentWargaFirst.kkUrl || currentWargaFirst.fotoKk || "");
+      } else {
+        setKtpUrl("");
+        setKkUrl("");
+      }
     }
-  }, [editingSurat, showForm]);
+  }, [editingSurat, showForm, selectedWargaId, wargaData]);
 
-  const currentWarga = wargaData.find(w => w.id === selectedWargaId);
+  const currentWarga = wargaData.find((w: any) => (w.id || w.docId || w.nik) === selectedWargaId);
   
   const getInitialValue = (field: string) => {
     if (editingSurat) return editingSurat[field] || "";
@@ -123,11 +131,12 @@ export function SuratView({
       if (field === 'tempatLahir') return currentWarga.tempatLahir || "";
       if (field === 'tglLahir') return currentWarga.tglLahir || "";
       if (field === 'agama') return currentWarga.agama || "";
-      if (field === 'jenisKelamin') return currentWarga.jk || "";
-      if (field === 'pekerjaan') return currentWarga.profesi || "";
+      if (field === 'jenisKelamin') return currentWarga.jk || currentWarga.jenisKelamin || "";
+      if (field === 'pekerjaan') return currentWarga.profesi || currentWarga.pekerjaan || "";
       if (field === 'pendidikan') return currentWarga.pendidikan || "";
-      if (field === 'statusKawin') return currentWarga.status || "";
-      if (field === 'posisiKeluarga') return currentWarga.posisi || "";
+      if (field === 'statusKawin') return currentWarga.status || currentWarga.statusKawin || currentWarga.statusPerkawinan || "";
+      if (field === 'posisiKeluarga') return currentWarga.posisi || currentWarga.posisiKeluarga || "";
+      if (field === 'kewarganegaraan') return currentWarga.kewarganegaraan || "WNI";
     }
     // Fallback to currentUser for non-pengurus
     if (!isPengurus) {
@@ -590,7 +599,7 @@ export function SuratView({
                 className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
-            <button onClick={() => { setKtpUrl(""); setKkUrl(""); setShowForm(true); }} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">
+            <button onClick={() => { setSelectedWargaId(""); setWargaSearch(""); setKtpUrl(""); setKkUrl(""); setShowForm(true); }} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">
               <PlusCircle className="w-4 h-4" /> 
               Buat Permohonan
             </button>
@@ -723,29 +732,98 @@ export function SuratView({
                   </div>
                   
                   {isPengurus && (
-                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3 relative z-40">
                       <label className="block text-[10px] font-black text-blue-800 uppercase tracking-widest">Pilih Warga Pemohon</label>
-                      <select 
-                        value={selectedWargaId}
-                        onChange={(e) => setSelectedWargaId(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option key="manual" value="">-- Manual / Input Baru --</option>
-                        {wargaData.map((w:any, idx: number) => <option key={`w-opt-${w.id || w.docId || w.nik || idx}-${idx}`} value={w.id}>{w.nama} ({w.nik})</option>)}
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Cari nama atau NIK warga..."
+                          value={wargaSearch}
+                          onChange={(e) => {
+                            setWargaSearch(e.target.value);
+                            setShowWargaDropdown(true);
+                            if (!e.target.value) {
+                              setSelectedWargaId("");
+                            }
+                          }}
+                          onFocus={() => setShowWargaDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowWargaDropdown(false), 200)}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none placeholder:font-medium placeholder:text-slate-400 shadow-sm"
+                        />
+                        {showWargaDropdown && (
+                          <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                            <div 
+                              className="px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-100 font-bold transition-colors"
+                              onClick={() => {
+                                setSelectedWargaId("");
+                                setWargaSearch("");
+                                setShowWargaDropdown(false);
+                              }}
+                            >
+                              -- Manual / Input Baru --
+                            </div>
+                            {wargaData
+                              .filter((w: any) => 
+                                (w.nama || '').toLowerCase().includes(wargaSearch.toLowerCase()) || 
+                                (w.nik || '').toLowerCase().includes(wargaSearch.toLowerCase()) ||
+                                (w.kk || '').toLowerCase().includes(wargaSearch.toLowerCase())
+                              )
+                              .map((w: any, idx: number) => (
+                                <div 
+                                  key={`w-opt-search-${w.id || w.docId || w.nik || idx}-${idx}`}
+                                  className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
+                                  onClick={() => {
+                                    setSelectedWargaId(w.id || w.docId || w.nik);
+                                    setWargaSearch(`${w.nama} (${w.nik})`);
+                                    setShowWargaDropdown(false);
+                                  }}
+                                >
+                                  <div className="font-bold text-sm text-slate-800">{w.nama}</div>
+                                  <div className="text-xs text-slate-500 font-mono mt-0.5 tracking-tight">{w.nik}</div>
+                                </div>
+                              ))}
+                            {wargaData.filter((w: any) => 
+                                (w.nama || '').toLowerCase().includes(wargaSearch.toLowerCase()) || 
+                                (w.nik || '').toLowerCase().includes(wargaSearch.toLowerCase()) ||
+                                (w.kk || '').toLowerCase().includes(wargaSearch.toLowerCase())
+                              ).length === 0 && (
+                                <div className="px-4 py-4 text-center text-sm font-medium text-slate-500 bg-slate-50/50">
+                                  Warga tidak ditemukan
+                                </div>
+                              )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={selectedWargaId || editingSurat?.id || 'form-top'}>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Surat</label>
-                      <select name="jenis" defaultValue={editingSurat?.jenis || "Surat Pengantar KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
-                        <option key="ktp" value="Surat Pengantar KTP">Surat Pengantar KTP / KK</option>
-                        <option key="domisili" value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
-                        <option key="sktm" value="Surat Keterangan Tidak Mampu">Surat Keterangan Tidak Mampu (SKTM)</option>
-                        <option key="skck" value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
-                        <option key="sku" value="Surat Keterangan Usaha">Surat Keterangan Usaha (SKU)</option>
-                        <option key="lainnya" value="Lainnya">Keperluan Lainnya</option>
+                      <select name="jenis" defaultValue={editingSurat?.jenis || "Surat pengantar pembuatan KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
+                        <option value="Surat pengantar pembuatan KTP">Surat pengantar pembuatan KTP</option>
+                        <option value="Surat pengantar pembuatan KK">Surat pengantar pembuatan KK</option>
+                        <option value="Surat pengantar domisili">Surat pengantar domisili</option>
+                        <option value="Surat pengantar pindah / datang">Surat pengantar pindah / datang</option>
+                        <option value="Surat pengantar akta kelahiran">Surat pengantar akta kelahiran</option>
+                        <option value="Surat pengantar akta kematian">Surat pengantar akta kematian</option>
+                        <option value="Surat pengantar SKCK">Surat pengantar SKCK</option>
+                        <option value="Surat keterangan tidak mampu (SKTM)">Surat keterangan tidak mampu (SKTM)</option>
+                        <option value="Surat pengantar nikah">Surat pengantar nikah</option>
+                        <option value="Surat pengantar cerai">Surat pengantar cerai</option>
+                        <option value="Surat izin keramaian / acara">Surat izin keramaian / acara</option>
+                        <option value="Surat keterangan usaha (SKU)">Surat keterangan usaha (SKU)</option>
+                        <option value="Surat pengantar NPWP">Surat pengantar NPWP</option>
+                        <option value="Surat pengantar izin usaha kecil">Surat pengantar izin usaha kecil</option>
+                        <option value="Surat keterangan penghasilan">Surat keterangan penghasilan</option>
+                        <option value="Surat keterangan kepemilikan rumah / tanah">Surat keterangan kepemilikan rumah / tanah</option>
+                        <option value="Surat pengantar IMB/PBG">Surat pengantar IMB/PBG</option>
+                        <option value="Surat izin renovasi rumah">Surat izin renovasi rumah</option>
+                        <option value="Surat keterangan tidak sengketa">Surat keterangan tidak sengketa</option>
+                        <option value="Surat keterangan beasiswa">Surat keterangan beasiswa</option>
+                        <option value="Surat pengantar sekolah">Surat pengantar sekolah</option>
+                        <option value="Surat keterangan magang / kerja">Surat keterangan magang / kerja</option>
+                        <option value="Lainnya">Keperluan Lainnya</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -997,7 +1075,7 @@ export function SuratView({
                 <div className="flex gap-3 pt-6 border-t border-slate-100">
                   <button 
                     type="button" 
-                    onClick={() => { setShowForm(false); setEditingSurat(null); setSelectedWargaId(""); }} 
+                    onClick={() => { setShowForm(false); setEditingSurat(null); setSelectedWargaId(""); setWargaSearch(""); }} 
                     className="flex-1 py-4 px-6 text-xs font-black text-slate-400 uppercase tracking-widest bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
                   >
                     Batal
