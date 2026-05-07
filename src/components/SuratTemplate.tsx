@@ -2,8 +2,31 @@ import React from 'react';
 
 export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, settings: any }) => {
     return (
-        <div className="w-[210mm] min-h-[297mm] p-[15mm] bg-white text-black shadow-lg mx-auto text-sm font-serif">
-             <div className="flex items-center relative">
+        <div 
+          className="w-[210mm] min-h-[297mm] p-[15mm] bg-white text-black shadow-lg mx-auto text-sm font-serif relative"
+          style={{ 
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact' 
+          }}
+        >
+          {kop?.bg_kertas_url && (
+            <div 
+                className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
+            >
+                <div 
+                    style={{
+                        width: '100mm',
+                        height: '100mm',
+                        backgroundImage: `url(${kop.bg_kertas_url})`,
+                        backgroundSize: 'contain',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        filter: 'grayscale(100%) opacity(0.15)'
+                    }}
+                />
+            </div>
+          )}
+             <div className="flex items-center relative z-10">
                 <div className="flex items-center w-48">
                     {surat?.show_logo !== 'no' && kop?.logo_url && <img src={kop.logo_url} alt="Logo" className="w-[90px] h-[90px] object-contain mr-4 ml-4" />}
                 </div>

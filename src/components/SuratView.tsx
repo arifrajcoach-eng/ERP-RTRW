@@ -209,9 +209,31 @@ export function SuratView({
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
             body { font-family: 'Times New Roman', serif; padding: 40px; margin: 0; color: #000; background: #fff; line-height: 1.4; }
-            .page { width: 210mm; min-height: 297mm; margin: auto; background: white; }
+            .page { 
+              width: 210mm; 
+              min-height: 297mm; 
+              margin: auto; 
+              background: white; 
+              position: relative;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .watermark {
+              width: 100mm;
+              height: 100mm;
+              background-image: url('${kop.bg_kertas_url}');
+              background-size: contain;
+              background-position: center;
+              background-repeat: no-repeat;
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              filter: grayscale(100%) opacity(0.15);
+              z-index: 0;
+            }
             
-            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px; position: relative; z-index: 1; }
             .logo-left { width: 80px; height: 80px; object-fit: contain; }
             .logo-right { width: 90px; height: 90px; object-fit: contain; }
             .header-text { text-align: center; flex: 1; padding: 0 10px; }
@@ -253,6 +275,7 @@ export function SuratView({
         </head>
         <body>
           <div class="page">
+            ${kop.bg_kertas_url ? `<div class="watermark"></div>` : ''}
             <div class="header">
               <img src="${logoPemerintah}" class="logo-left" />
               <div class="header-text">

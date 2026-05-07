@@ -121,6 +121,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
   const [logoRwUrl, setLogoRwUrl] = useState('');
   const [signatureRtUrl, setSignatureRtUrl] = useState('');
   const [signatureRwUrl, setSignatureRwUrl] = useState('');
+  const [bgKertasUrl, setBgKertasUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -179,6 +180,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
               background: white;
               box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
               min-height: 297mm;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             @media print {
               @page { margin: 1.5cm; }
@@ -254,6 +257,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         setLogoRwUrl(data.logo_rw_url || '');
         setSignatureRtUrl(data.signature_rt_url || '');
         setSignatureRwUrl(data.signature_rw_url || '');
+        setBgKertasUrl(data.bg_kertas_url || '');
       }
     });
     return unsub;
@@ -266,7 +270,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     }));
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'logoRw' | 'signatureRt' | 'signatureRw' = 'logo') => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'logoRw' | 'signatureRt' | 'signatureRw' | 'bgKertas' = 'logo') => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
 
@@ -285,8 +289,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
       const img = new Image();
       img.onload = async () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 300;
-        const MAX_HEIGHT = 300;
+        const MAX_WIDTH = type === 'bgKertas' ? 1200 : 300;
+        const MAX_HEIGHT = type === 'bgKertas' ? 1600 : 300;
         let width = img.width;
         let height = img.height;
 
@@ -315,7 +319,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
           const updateKey = 
             type === 'logo' ? 'logo_url' : 
             type === 'logoRw' ? 'logo_rw_url' : 
-            type === 'signatureRt' ? 'signature_rt_url' : 'signature_rw_url';
+            type === 'signatureRt' ? 'signature_rt_url' : 
+            type === 'bgKertas' ? 'bg_kertas_url' : 'signature_rw_url';
             
           await setDoc(doc(db, 'tenant_settings', tenantId), { [updateKey]: dataUrl }, { merge: true });
           
@@ -323,6 +328,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
           else if (type === 'logoRw') setLogoRwUrl(dataUrl);
           else if (type === 'signatureRt') setSignatureRtUrl(dataUrl);
           else if (type === 'signatureRw') setSignatureRwUrl(dataUrl);
+          else if (type === 'bgKertas') setBgKertasUrl(dataUrl);
           
           showNotification("File berhasil disimpan", 'success');
         } catch (error: any) {
@@ -341,14 +347,15 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     e.target.value = ''; // Reset input
   };
 
-  const handleRemoveLogo = async (type: 'logo' | 'logoRw' | 'signatureRt' | 'signatureRw' = 'logo') => {
+  const handleRemoveLogo = async (type: 'logo' | 'logoRw' | 'signatureRt' | 'signatureRw' | 'bgKertas' = 'logo') => {
     if (!confirm("Hapus file ini?")) return;
     setUploading(true);
     try {
       const updateKey = 
         type === 'logo' ? 'logo_url' : 
         type === 'logoRw' ? 'logo_rw_url' : 
-        type === 'signatureRt' ? 'signature_rt_url' : 'signature_rw_url';
+        type === 'signatureRt' ? 'signature_rt_url' : 
+        type === 'bgKertas' ? 'bg_kertas_url' : 'signature_rw_url';
         
       await setDoc(doc(db, 'tenant_settings', tenantId), { [updateKey]: '' }, { merge: true });
       
@@ -356,6 +363,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
       else if (type === 'logoRw') setLogoRwUrl('');
       else if (type === 'signatureRt') setSignatureRtUrl('');
       else if (type === 'signatureRw') setSignatureRwUrl('');
+      else if (type === 'bgKertas') setBgKertasUrl('');
       
       showNotification("File berhasil dihapus", 'success');
     } catch (error) {
@@ -376,6 +384,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         logo_rw_url: logoRwUrl, 
         signature_rt_url: signatureRtUrl,
         signature_rw_url: signatureRwUrl,
+        bg_kertas_url: bgKertasUrl,
         tenantId 
       }, { merge: true });
       showNotification("Branding berhasil disimpan", 'success');
@@ -511,6 +520,39 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
             <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'signatureRw')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
         </div>
 
+        <div className="mb-4 pt-4 border-t border-slate-100">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Background Kertas KOP (Opsional)</label>
+            <p className="text-[10px] text-slate-500 mb-2">Gambar background kertas A4 penuh untuk surat cetak.</p>
+            {bgKertasUrl ? (
+              <div className="flex items-center gap-4 mb-3">
+                <img src={bgKertasUrl} alt="Background Kertas" className="w-20 h-28 object-cover border rounded p-1 bg-white" />
+                <button 
+                  onClick={() => handleRemoveLogo('bgKertas')}
+                  className="text-xs text-red-600 font-bold hover:underline"
+                  disabled={uploading}
+                >
+                  Hapus Background
+                </button>
+              </div>
+            ) : (
+              <div className="w-20 h-28 border-2 border-dashed border-slate-200 rounded flex items-center justify-center text-slate-400 mb-2">
+                <Upload size={20} />
+              </div>
+            )}
+            <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'bgKertas')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" disabled={uploading} />
+            
+            <div className="mt-4">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Atau Gunakan Link / URL Gambar</label>
+              <input 
+                 type="text" 
+                 value={bgKertasUrl} 
+                 onChange={(e) => setBgKertasUrl(e.target.value)} 
+                 placeholder="https://..." 
+                 className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+              />
+            </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700">Papan Nama RT/RW</label>
@@ -584,7 +626,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         <h3 className="text-lg font-semibold mb-4 text-slate-700">Live Preview</h3>
         <div ref={previewRef} className="p-4 bg-white overflow-x-auto">
           {/* Note: Dummy surat object for preview */}
-          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR', show_logo: 'yes' }} kop={{ ...formData, logo_url: logoUrl, logo_rw_url: logoRwUrl, signature_rt_url: signatureRtUrl, signature_rw_url: signatureRwUrl }} settings={settings} />
+          <SuratTemplate surat={{ pemohon: 'Preview Nama', jenisSurat: 'SURAT PENGANTAR', show_logo: 'yes' }} kop={{ ...formData, logo_url: logoUrl, logo_rw_url: logoRwUrl, signature_rt_url: signatureRtUrl, signature_rw_url: signatureRwUrl, bg_kertas_url: bgKertasUrl }} settings={settings} />
         </div>
       </div>
     </div>
