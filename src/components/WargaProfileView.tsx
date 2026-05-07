@@ -104,8 +104,8 @@ export function WargaProfileView({
         hp: formData.hp || wargaData.hp || "",
         blok: formData.blok || wargaData.blok || "",
         alamat: formData.alamat || wargaData.alamat || "",
-        rt: wargaData.rt || "01",
-        rw: wargaData.rw || "05",
+        rt: formData.rt || wargaData.rt || "01",
+        rw: formData.rw || wargaData.rw || "05",
         agama: formData.agama || wargaData.agama || "Islam",
         jk: formData.jk || wargaData.jk || "",
         tempatLahir: formData.tempatLahir || wargaData.tempatLahir || "",
@@ -115,6 +115,10 @@ export function WargaProfileView({
         kawin: formData.kawin || wargaData.kawin || "",
         posisi: formData.posisi || wargaData.posisi || "",
         kewarganegaraan: formData.kewarganegaraan || wargaData.kewarganegaraan || "WNI",
+        email: formData.email || wargaData.email || "",
+        kelurahan: formData.kelurahan || wargaData.kelurahan || "",
+        kecamatan: formData.kecamatan || wargaData.kecamatan || "",
+        kabupaten: formData.kabupaten || wargaData.kabupaten || "",
         ktpUrl,
         kkUrl,
         submittedAt: new Date().toISOString(),
@@ -379,12 +383,95 @@ export function WargaProfileView({
                             <input type="text" defaultValue={wargaData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
                          </div>
                          <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Nomor KK</label>
+                            <input type="text" defaultValue={wargaData.kk} onChange={e => setFormData({...formData, kk: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
                             <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Nomor HP</label>
                             <input type="text" defaultValue={wargaData.hp} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Email</label>
+                            <input type="email" defaultValue={wargaData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
                          </div>
                          <div className="col-span-2">
                             <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Alamat / Blok (Eks: Blok A No 12)</label>
                             <input type="text" defaultValue={wargaData.blok || wargaData.alamat} onChange={e => setFormData({...formData, blok: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Tempat Lahir</label>
+                            <input type="text" defaultValue={wargaData.tempatLahir} onChange={e => setFormData({...formData, tempatLahir: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Tanggal Lahir</label>
+                            <input type="date" defaultValue={wargaData.tglLahir} onChange={e => setFormData({...formData, tglLahir: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Agama</label>
+                            <select defaultValue={wargaData.agama} onChange={e => setFormData({...formData, agama: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                               <option value="Islam">Islam</option>
+                               <option value="Kristen">Kristen</option>
+                               <option value="Katolik">Katolik</option>
+                               <option value="Hindu">Hindu</option>
+                               <option value="Buddha">Buddha</option>
+                               <option value="Konghucu">Konghucu</option>
+                            </select>
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Posisi Dalam Keluarga</label>
+                            <select defaultValue={wargaData.posisi} onChange={e => setFormData({...formData, posisi: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                               <option value="Kepala Keluarga">Kepala Keluarga</option>
+                               <option value="Suami">Suami</option>
+                               <option value="Istri">Istri</option>
+                               <option value="Anak">Anak</option>
+                            </select>
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Profesi/Pekerjaan</label>
+                            <input type="text" defaultValue={wargaData.profesi} onChange={e => setFormData({...formData, profesi: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Pendidikan Terakhir</label>
+                            <select defaultValue={wargaData.pendidikanTerakhir} onChange={e => setFormData({...formData, pendidikanTerakhir: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                               <option value="SD">SD</option>
+                               <option value="SMP">SMP</option>
+                               <option value="SMA">SMA</option>
+                               <option value="S1">S1</option>
+                            </select>
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Status Kawin</label>
+                            <select defaultValue={wargaData.kawin} onChange={e => setFormData({...formData, kawin: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                               <option value="Belum Kawin">Belum Kawin</option>
+                               <option value="Kawin">Kawin</option>
+                            </select>
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Kelurahan</label>
+                            <input type="text" defaultValue={wargaData.kelurahan} onChange={e => setFormData({...formData, kelurahan: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Kecamatan</label>
+                            <input type="text" defaultValue={wargaData.kecamatan} onChange={e => setFormData({...formData, kecamatan: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Kabupaten/Kota</label>
+                            <input type="text" defaultValue={wargaData.kabupaten} onChange={e => setFormData({...formData, kabupaten: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">WNI/WNA</label>
+                            <select defaultValue={wargaData.kewarganegaraan} onChange={e => setFormData({...formData, kewarganegaraan: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                               <option value="WNI">WNI</option>
+                               <option value="WNA">WNA</option>
+                            </select>
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">RT</label>
+                            <input type="text" defaultValue={wargaData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">RW</label>
+                            <input type="text" defaultValue={wargaData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
                          </div>
                       </div>
 

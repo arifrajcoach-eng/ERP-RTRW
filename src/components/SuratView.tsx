@@ -443,8 +443,11 @@ export function SuratView({
     
     // Address & Contact
     const alamat = formData.get('alamat') as string || currentUser.alamat || "-";
-    const fieldRt = formData.get('rt') as string || currentUser.rt || "01";
-    const fieldRw = formData.get('rw') as string || currentUser.rw || "01";
+    
+    // Determine RT/RW from priority: KOP (for RW), Warga/Form/User (for RT)
+    const finalRw = kopSettings?.rw || currentWarga?.rw || formData.get('rw') as string || currentUser.rw || "01";
+    const finalRt = currentWarga?.rt || formData.get('rt') as string || currentUser.rt || "01";
+    
     const kelurahann = formData.get('kelurahan') as string || "";
     const kecamatann = formData.get('kecamatan') as string || "";
     const kota = formData.get('kota') as string || "";
@@ -454,8 +457,8 @@ export function SuratView({
     const payload = {
       id,
       tenantId: currentUser.tenantId,
-      rt: fieldRt,
-      rw: fieldRw,
+      rt: finalRt,
+      rw: finalRw,
       tanggal: new Date().toISOString(),
       jenis: type,
       pemohon,
@@ -483,7 +486,7 @@ export function SuratView({
       keterangan,
       userId: currentUser.uid || currentUser.id_user || null,
       authUid: currentUser.uid || currentUser.id_user || null,
-      nomorSurat: editingSurat?.nomorSurat || `${Math.floor(Math.random() * 999).toString().padStart(3, '0')}/RT.04/RW.09/${new Date().getFullYear()}`
+      nomorSurat: editingSurat?.nomorSurat || `${Math.floor(Math.random() * 999).toString().padStart(3, '0')}/RT.${finalRt}/RW.${finalRw}/${new Date().getFullYear()}`
     };
 
     setIsLoadingDB(true);
@@ -638,7 +641,7 @@ export function SuratView({
           )}
           {filteredSurat.map((s, idx) => (
             <motion.div 
-              layout key={`surat-${s.id || idx}-${idx}`} 
+              layout key={`surat-${s.id || idx}`} 
               className="group bg-white border border-slate-100 rounded-[2rem] p-5 shadow-sm hover:shadow-xl hover:border-blue-200 hover:ring-1 hover:ring-blue-100 transition-all cursor-pointer relative flex flex-col"
               onClick={() => setViewingSurat(s)}
             >
