@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 // Initialization
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export async function chatWithAI(params: {
   message: string;
@@ -11,7 +13,7 @@ export async function chatWithAI(params: {
 }) {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       systemInstruction: `Anda adalah seorang AI Asisten Pribadi Pa Ketua (asisten pribadi perempuan muda) yang pintar (jenius), islami, santun, dan sedikit jenaka.
           Kepribadian:
           - Ramah, hangat, dan asyik.
@@ -60,7 +62,7 @@ export async function chatWithAI(params: {
 
 export async function generateAIReport(dataSummary: any) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const result = await model.generateContent({ 
       contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
       Laporan harus mencakup: 
@@ -79,7 +81,7 @@ export async function generateAIReport(dataSummary: any) {
 
 export async function generateRegionalInsight(regionsData: any) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const prompt = `Hai! Kamu adalah AI Strategist yang pintar, ramah, and asyik. Berdasarkan data wilayah ini: ${JSON.stringify(regionsData)}. 
     Berikan analisis perbandingan antar RW, wilayah mana yang iurannya masih rendah, dan kasih 3 rekomendasi kebijakan yang cerdas buat Kelurahan. 
     Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
@@ -94,7 +96,7 @@ export async function generateRegionalInsight(regionsData: any) {
 
 export async function scanReceiptAI(imageBase64: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const prompt = `Anda adalah AI pendeteksi struk/invoice/kwitansi. Ekstrak informasi dari gambar struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: 
     {
       "nominal": 150000, 
@@ -121,34 +123,22 @@ export async function scanReceiptAI(imageBase64: string) {
 // AI Voice (TTS)
 export async function textToSpeech(text: string) {
   try {
-    // Note: Standard Gemini 1.5 doesn't directly return base64 audio in generateContent like some specific tts models.
-    // If the environment supports gemini-1.5-flash with audio modality as described in some docs:
-    
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const cleanedText = text.substring(0, 500).replace(/[*#_`]/g, ''); 
     
-    // In this environment, we might need to use a specific model or modality if available.
-    // However, regular gemini-1.5-flash doesn't output audio bytes.
-    // If we want TTS, we usually use a specialized API.
-    // If the user wants "no latency", and voice quota is an issue, a fallback is needed.
-    
-    // Attempt to use the modality if supported, else we must inform the quota is hit or it's unavailable.
-    // For now, let's keep it as is but fix the SDK usage.
-    
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Say clearly in a friendly, young, slightly witty, and polite feminine Indonesian voice: ${cleanedText}` }] }],
-      generationConfig: {
-        // @ts-ignore - responseModalities is a newer/preview feature in some SDK versions
-        responseModalities: ["audio"],
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-tts-preview",
+      contents: [{ parts: [{ text: `Say clearly in a friendly, young, slightly witty, and polite feminine Indonesian voice: ${cleanedText}` }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Puck" } // Puck or similar
+            prebuiltVoiceConfig: { voiceName: "Puck" }
           }
         }
       }
     });
 
-    const audioPart = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.includes('audio'));
+    const audioPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.includes('audio'));
     return audioPart?.inlineData?.data || null;
   } catch (error) {
     console.warn("TTS Generation Error:", error);

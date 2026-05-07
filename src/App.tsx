@@ -934,7 +934,7 @@ export default function App() {
       // Citizen listener: only their own letters
       const uid = auth.currentUser?.uid;
       if (uid) {
-        unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', 'in', tIds), where('userId', '==', uid)), 
+        unsubSurat = onSnapshot(query(collection(db, 'surat'), where('tenantId', 'in', tIds), where('authUid', '==', uid)), 
           (snap) => {
             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setSuratData(data);
@@ -2098,7 +2098,7 @@ export default function App() {
              setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} 
              handleFileUpload={handleFileUpload}
           />}
-          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} generateSuratHTML={generateSuratHTML} />}
+          {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} />}
           {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
 

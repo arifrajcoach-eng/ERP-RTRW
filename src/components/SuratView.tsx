@@ -19,7 +19,20 @@ import {
   ShieldCheck,
   User,
   MapPin,
-  Calendar
+  Calendar,
+  Smartphone,
+  Mail,
+  Image as ImageIcon,
+  CreditCard,
+  Map,
+  GraduationCap,
+  Briefcase,
+  Heart,
+  Baby,
+  Globe,
+  Files,
+  Camera,
+  RefreshCw
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -42,7 +55,6 @@ interface SuratViewProps {
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   settings?: any;
   handleFileUpload?: any;
-  generateSuratHTML?: any;
 }
 
 export function SuratView({ 
@@ -60,8 +72,7 @@ export function SuratView({
   handleFirestoreError, 
   showNotification,
   settings,
-  handleFileUpload,
-  generateSuratHTML
+  handleFileUpload
 }: SuratViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'berjalan' | 'arsip'>('berjalan');
   const [showForm, setShowForm] = useState(false);
@@ -70,10 +81,62 @@ export function SuratView({
   const [suratToDelete, setSuratToDelete] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploadingKTP, setIsUploadingKTP] = useState(false);
+  const [isUploadingKK, setIsUploadingKK] = useState(false);
+  const [ktpUrl, setKtpUrl] = useState("");
+  const [kkUrl, setKkUrl] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedWargaId, setSelectedWargaId] = useState("");
   
   const formRef = useRef<HTMLFormElement>(null);
   
   const isPengurus = userRole === 'Admin' || userRole === 'RW' || userRole === 'RT' || userRole === 'Bendahara' || currentUser?.isSuperAdmin;
+
+  useEffect(() => {
+    if (editingSurat) {
+      setKtpUrl(editingSurat.ktpUrl || "");
+      setKkUrl(editingSurat.kkUrl || "");
+      setSelectedWargaId("");
+    }
+  }, [editingSurat]);
+
+  const currentWarga = wargaData.find(w => w.id === selectedWargaId);
+  
+  const getInitialValue = (field: string) => {
+    if (editingSurat) return editingSurat[field] || "";
+    if (currentWarga) {
+      if (field === 'pemohon') return currentWarga.nama || "";
+      if (field === 'nik') return currentWarga.nik || "";
+      if (field === 'nokk') return currentWarga.kk || "";
+      if (field === 'alamat') return currentWarga.alamat || currentWarga.blok || "";
+      if (field === 'rt') return currentWarga.rt || "";
+      if (field === 'rw') return currentWarga.rw || "";
+      if (field === 'kelurahan') return currentWarga.kelurahan || "";
+      if (field === 'kecamatan') return currentWarga.kecamatan || "";
+      if (field === 'kota') return currentWarga.kota_kab || "";
+      if (field === 'phone') return currentWarga.hp || "";
+      if (field === 'email') return currentWarga.email || "";
+      if (field === 'tempatLahir') return currentWarga.tempatLahir || "";
+      if (field === 'tglLahir') return currentWarga.tglLahir || "";
+      if (field === 'agama') return currentWarga.agama || "";
+      if (field === 'jenisKelamin') return currentWarga.jk || "";
+      if (field === 'pekerjaan') return currentWarga.profesi || "";
+      if (field === 'pendidikan') return currentWarga.pendidikan || "";
+      if (field === 'statusKawin') return currentWarga.status || "";
+      if (field === 'posisiKeluarga') return currentWarga.posisi || "";
+    }
+    // Fallback to currentUser for non-pengurus
+    if (!isPengurus) {
+      if (field === 'pemohon') return currentUser.nama || currentUser.name || "";
+      if (field === 'nik') return currentUser.nik || "";
+      if (field === 'nokk') return currentUser.kk || "";
+      if (field === 'alamat') return currentUser.alamat || "";
+      if (field === 'rt') return currentUser.rt || "";
+      if (field === 'rw') return currentUser.rw || "";
+      if (field === 'email') return currentUser.email || "";
+    }
+    return "";
+  };
 
   const filteredSurat = suratData.filter(s => {
     // Role based access
@@ -91,20 +154,6 @@ export function SuratView({
   });
 
   const generateSuratPDF = (surat: any) => {
-    if (generateSuratHTML) {
-      const kopSettingsObj = getSetting("KOP_SURAT") || {};
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        showNotification("Gagal membuka jendela cetak. Pastikan pop-up diizinkan.", 'error');
-        return;
-      }
-      
-      const htmlContent = generateSuratHTML(surat, kopSettingsObj, settings || {});
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      return;
-    }
-
     const doc = new jsPDF();
     const settings = getSetting("KOP_SURAT") || {};
     
@@ -165,6 +214,29 @@ export function SuratView({
     showNotification("Dokumen Surat siap diunduh.", "success");
   };
 
+  const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'ktp' | 'kk') => {
+    const file = e.target.files?.[0];
+    if (!file || !handleFileUpload) return;
+
+    if (type === 'ktp') setIsUploadingKTP(true);
+    else setIsUploadingKK(true);
+    
+    setUploadProgress(0);
+
+    try {
+      const folder = `surat/${currentUser.uid || 'guest'}_${Date.now()}`;
+      const url = await handleFileUpload(file, folder, (pct: number) => setUploadProgress(pct));
+      if (type === 'ktp') setKtpUrl(url);
+      else setKkUrl(url);
+      showNotification(`${type.toUpperCase()} berhasil diunggah`, 'success');
+    } catch (err) {
+      showNotification(`Gagal mengunggah ${type.toUpperCase()}`, 'error');
+    } finally {
+      if (type === 'ktp') setIsUploadingKTP(false);
+      else setIsUploadingKK(false);
+    }
+  };
+
   const handleSaveSurat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -173,32 +245,63 @@ export function SuratView({
     const type = formData.get('jenis') as string;
     const keterangan = formData.get('keterangan') as string;
     
-    let pemohon = currentUser.nama || currentUser.name || "Warga";
-    let nik = currentUser.nik || "-";
-    let alamat = currentUser.alamat || "-";
-    let ttl = currentUser.ttl || "-";
-
-    if (isPengurus) {
-       const selectedWargaId = formData.get('wargaId') as string;
-       const w = wargaData.find((w:any) => w.id === selectedWargaId);
-       if (w) {
-          pemohon = w.nama;
-          nik = w.nik || "-";
-          alamat = w.alamat || w.blok || "-";
-          ttl = `${w.tempatLahir}, ${w.tglLahir}`;
-       }
-    }
+    // Core Identity
+    const pemohon = formData.get('pemohon') as string || currentUser.nama || currentUser.name || "Warga";
+    const nik = formData.get('nik') as string || currentUser.nik || "-";
+    const kk = formData.get('nokk') as string || "";
+    
+    // Personal Details
+    const tempatLahir = formData.get('tempatLahir') as string || "";
+    const tglLahir = formData.get('tglLahir') as string || "";
+    const ttl = (tempatLahir && tglLahir) ? `${tempatLahir}, ${tglLahir}` : (formData.get('ttl') as string || "-");
+    const agama = formData.get('agama') as string || "";
+    const jenisKelamin = formData.get('jenisKelamin') as string || "";
+    const kewarganegaraan = formData.get('kewarganegaraan') as string || "WNI";
+    
+    // Status & Education
+    const pendidikan = formData.get('pendidikan') as string || "";
+    const pekerjaan = formData.get('pekerjaan') as string || "";
+    const statusKawin = formData.get('statusKawin') as string || "";
+    const posisiKeluarga = formData.get('posisiKeluarga') as string || "";
+    
+    // Address & Contact
+    const alamat = formData.get('alamat') as string || currentUser.alamat || "-";
+    const fieldRt = formData.get('rt') as string || currentUser.rt || "01";
+    const fieldRw = formData.get('rw') as string || currentUser.rw || "01";
+    const kelurahann = formData.get('kelurahan') as string || "";
+    const kecamatann = formData.get('kecamatan') as string || "";
+    const kota = formData.get('kota') as string || "";
+    const phone = formData.get('phone') as string || "";
+    const email = formData.get('email') as string || "";
 
     const payload = {
       id,
       tenantId,
-      rt: currentUser.rt || '01',
+      rt: fieldRt,
+      rw: fieldRw,
       tanggal: new Date().toISOString(),
       jenis: type,
       pemohon,
       nik,
+      kk,
       alamat,
+      kelurahan: kelurahann,
+      kecamatan: kecamatann,
+      kota,
+      phone,
+      email,
+      tempatLahir,
+      tglLahir,
       ttl,
+      agama,
+      jenisKelamin,
+      kewarganegaraan,
+      pendidikan,
+      pekerjaan,
+      statusKawin,
+      posisiKeluarga,
+      ktpUrl,
+      kkUrl,
       status: isPengurus ? 'Selesai' : 'Menunggu Persetujuan',
       keterangan,
       userId: currentUser.uid || currentUser.id_user || null,
@@ -209,23 +312,15 @@ export function SuratView({
     try {
       if (editingSurat) {
         await updateDoc(doc(db, 'surat', id), payload);
-        setSuratData((prev: any) => prev.map((s: any) => s.id === id ? { ...s, ...payload } : s));
+        setSuratData((prev: any) => prev.map((s: any) => s.id === id ? payload : s));
         showNotification('Surat berhasil diperbarui', 'success');
       } else {
         await setDoc(doc(db, 'surat', id), payload);
-        setSuratData((prev: any) => {
-          if (prev.some((s: any) => s.id === id)) return prev;
-          return [payload, ...prev];
-        });
+        setSuratData((prev: any) => [payload, ...prev]);
         showNotification('Permohonan surat berhasil dikirim', 'success');
       }
       setShowForm(false);
       setEditingSurat(null);
-      if (payload.status === 'Selesai' || payload.status === 'Ditolak') {
-        setActiveSubTab('arsip');
-      } else {
-        setActiveSubTab('berjalan');
-      }
     } catch (err: any) {
       handleFirestoreError(err, editingSurat ? 'update' : 'create', 'surat');
       showNotification('Gagal menyimpan surat', 'error');
@@ -318,7 +413,7 @@ export function SuratView({
                 className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
-            <button onClick={() => setShowForm(true)} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">
+            <button onClick={() => { setKtpUrl(""); setKkUrl(""); setShowForm(true); }} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">
               <PlusCircle className="w-4 h-4" /> 
               Buat Permohonan
             </button>
@@ -332,9 +427,9 @@ export function SuratView({
                <p className="font-bold">Tidak ada permohonan surat ditemukan.</p>
             </div>
           )}
-          {filteredSurat.map((s, index) => (
+          {filteredSurat.map((s) => (
             <motion.div 
-              layout key={s.id || s.docId || `fsurat-${index}`} 
+              layout key={s.id} 
               className="group bg-white border border-slate-100 rounded-[2rem] p-5 shadow-sm hover:shadow-xl hover:border-blue-200 hover:ring-1 hover:ring-blue-100 transition-all cursor-pointer relative flex flex-col"
               onClick={() => setViewingSurat(s)}
             >
@@ -421,46 +516,304 @@ export function SuratView({
                 </h3>
                 <button onClick={() => { setShowForm(false); setEditingSurat(null); }} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
               </div>
-              <form onSubmit={handleSaveSurat} ref={formRef} className="p-6 overflow-y-auto space-y-5">
-                {isPengurus && (
-                   <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
-                    <label className="block text-[10px] font-black text-blue-800 uppercase tracking-widest">Pilih Warga Pemohon</label>
-                    <select name="wargaId" defaultValue={editingSurat?.nik ? (wargaData.find((w:any) => w.nik === editingSurat.nik)?.docId || wargaData.find((w:any) => w.nik === editingSurat.nik)?.id || '') : ''} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                      <option value="">-- Manual/Luar Warga --</option>
-                      {wargaData.map((w:any, index: number) => <option key={'suratwopt-'+index} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
-                    </select>
+              <form onSubmit={handleSaveSurat} ref={formRef} className="p-6 overflow-y-auto space-y-8">
+                {/* 1. Jenis Surat */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <FileText className="w-5 h-5" />
+                    <h4 className="text-sm font-black uppercase tracking-widest">Jenis Surat & Keperluan</h4>
                   </div>
-                )}
+                  
+                  {isPengurus && (
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
+                      <label className="block text-[10px] font-black text-blue-800 uppercase tracking-widest">Pilih Warga Pemohon</label>
+                      <select 
+                        value={selectedWargaId}
+                        onChange={(e) => setSelectedWargaId(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">-- Manual / Input Baru --</option>
+                        {wargaData.map((w:any) => <option key={w.id} value={w.id}>{w.nama} ({w.nik})</option>)}
+                      </select>
+                    </div>
+                  )}
 
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Jenis Surat / Keperluan</label>
-                  <select name="jenis" defaultValue={editingSurat?.jenis || "Surat Pengantar KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
-                    <option value="Surat Pengantar KTP">Surat Pengantar KTP / KK</option>
-                    <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
-                    <option value="Surat Keterangan Tidak Mampu">Surat Keterangan Tidak Mampu (SKTM)</option>
-                    <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
-                    <option value="Surat Keterangan Usaha">Surat Keterangan Usaha (SKU)</option>
-                    <option value="Lainnya">Keperluan Lainnya</option>
-                  </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={selectedWargaId || editingSurat?.id || 'form-top'}>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Surat</label>
+                      <select name="jenis" defaultValue={editingSurat?.jenis || "Surat Pengantar KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
+                        <option value="Surat Pengantar KTP">Surat Pengantar KTP / KK</option>
+                        <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
+                        <option value="Surat Keterangan Tidak Mampu">Surat Keterangan Tidak Mampu (SKTM)</option>
+                        <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
+                        <option value="Surat Keterangan Usaha">Surat Keterangan Usaha (SKU)</option>
+                        <option value="Lainnya">Keperluan Lainnya</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Keperluan Singkat</label>
+                      <input name="keterangan" defaultValue={editingSurat?.keterangan || ""} placeholder="Misal: Melamar Kerja" className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Keterangan / Alasan Tambahan</label>
-                  <textarea name="keterangan" defaultValue={editingSurat?.keterangan || ""} rows={3} placeholder="Contoh: Mengantar anak sekolah, Melamar pekerjaan, dll..." className="w-full px-4 py-3 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+                {/* 2. Identitas Diri */}
+                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId || editingSurat?.id || 'form-identity'}>
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <User className="w-5 h-5" />
+                    <h4 className="text-sm font-black uppercase tracking-widest">Identitas Diri</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Lengkap</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input name="pemohon" defaultValue={getInitialValue('pemohon')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" required />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">NIK (No. KTP)</label>
+                      <div className="relative">
+                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input name="nik" defaultValue={getInitialValue('nik')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" required />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">No. KK</label>
+                      <div className="relative">
+                        <Files className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input name="nokk" defaultValue={getInitialValue('nokk')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Kelamin</label>
+                      <select name="jenisKelamin" defaultValue={getInitialValue('jenisKelamin')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">-- Pilih --</option>
+                        <option value="Laki-Laki">Laki-Laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Tempat Lahir</label>
+                      <input name="tempatLahir" defaultValue={getInitialValue('tempatLahir')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal Lahir</label>
+                      <input type="date" name="tglLahir" defaultValue={getInitialValue('tglLahir')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Agama</label>
+                      <select name="agama" defaultValue={getInitialValue('agama')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">-- Pilih --</option>
+                        <option value="Islam">Islam</option>
+                        <option value="Kristen">Kristen</option>
+                        <option value="Katolik">Katolik</option>
+                        <option value="Hindu">Hindu</option>
+                        <option value="Budha">Budha</option>
+                        <option value="Konghucu">Konghucu</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Kewarganegaraan</label>
+                      <select name="kewarganegaraan" defaultValue={getInitialValue('kewarganegaraan') || "WNI"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="WNI">WNI</option>
+                        <option value="WNA">WNA</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                   <div className="flex items-center gap-2 text-blue-600 mb-2">
+                {/* 3. Status & Pekerjaan */}
+                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId || editingSurat?.id || 'form-status'}>
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <Briefcase className="w-5 h-5" />
+                    <h4 className="text-sm font-black uppercase tracking-widest">Status & Pekerjaan</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Pekerjaan</label>
+                      <input name="pekerjaan" defaultValue={getInitialValue('pekerjaan')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Pendidikan Terakhir</label>
+                      <select name="pendidikan" defaultValue={getInitialValue('pendidikan')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">-- Pilih --</option>
+                        <option value="SD">SD</option>
+                        <option value="SMP">SMP</option>
+                        <option value="SMA/SMK">SMA/SMK</option>
+                        <option value="D3">D3</option>
+                        <option value="S1">S1</option>
+                        <option value="S2">S2</option>
+                        <option value="S3">S3</option>
+                        <option value="Tidak Sekolah">Tidak Sekolah</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Perkawinan</label>
+                      <select name="statusKawin" defaultValue={getInitialValue('statusKawin')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">-- Pilih --</option>
+                        <option value="Belum Kawin">Belum Kawin</option>
+                        <option value="Kawin">Kawin</option>
+                        <option value="Cerai Hidup">Cerai Hidup</option>
+                        <option value="Cerai Mati">Cerai Mati</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Posisi Dalam Keluarga</label>
+                      <select name="posisiKeluarga" defaultValue={getInitialValue('posisiKeluarga')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">-- Pilih --</option>
+                        <option value="Kepala Keluarga">Kepala Keluarga</option>
+                        <option value="Istri">Istri</option>
+                        <option value="Anak">Anak</option>
+                        <option value="Famili Lain">Famili Lain</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Alamat & Kontak */}
+                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId || editingSurat?.id || 'form-address'}>
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <MapPin className="w-5 h-5" />
+                    <h4 className="text-sm font-black uppercase tracking-widest">Alamat & Kontak</h4>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Alamat Domisili (Jalan / Blok / No)</label>
+                    <textarea name="alamat" defaultValue={getInitialValue('alamat')} rows={2} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">RT</label>
+                      <input name="rt" defaultValue={getInitialValue('rt')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">RW</label>
+                      <input name="rw" defaultValue={getInitialValue('rw')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Kelurahan</label>
+                      <input name="kelurahan" defaultValue={getInitialValue('kelurahan')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Kecamatan</label>
+                      <input name="kecamatan" defaultValue={getInitialValue('kecamatan')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5 md:col-span-1">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Kabupaten / Kota</label>
+                       <input name="kota" defaultValue={getInitialValue('kota')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">No. HP / WhatsApp</label>
+                       <div className="relative">
+                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input name="phone" defaultValue={getInitialValue('phone')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</label>
+                       <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input type="email" name="email" defaultValue={getInitialValue('email')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Lampiran Dokumen */}
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <ImageIcon className="w-5 h-5" />
+                    <h4 className="text-sm font-black uppercase tracking-widest">Lampiran Dokumen</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Foto KTP</label>
+                      <label className="group relative block w-full aspect-video rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all cursor-pointer overflow-hidden bg-slate-50">
+                        {ktpUrl ? (
+                          <img src={ktpUrl} alt="KTP" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                            <Camera className="w-8 h-8 text-slate-300 mb-2 group-hover:text-blue-500 transition-colors" />
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Klik untuk upload KTP</p>
+                          </div>
+                        )}
+                        {isUploadingKTP && (
+                          <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center p-4">
+                            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mb-2" />
+                            <p className="text-[10px] font-black text-blue-600">{uploadProgress}%</p>
+                          </div>
+                        )}
+                        <input type="file" onChange={(e) => onFileUpload(e, 'ktp')} className="hidden" accept="image/*" />
+                      </label>
+                      {ktpUrl && <p className="text-[9px] text-green-600 font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Berhasil Diunggah</p>}
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Foto KK</label>
+                      <label className="group relative block w-full aspect-video rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all cursor-pointer overflow-hidden bg-slate-50">
+                        {kkUrl ? (
+                          <img src={kkUrl} alt="KK" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                            <Files className="w-8 h-8 text-slate-300 mb-2 group-hover:text-blue-500 transition-colors" />
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Klik untuk upload KK</p>
+                          </div>
+                        )}
+                        {isUploadingKK && (
+                          <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center p-4">
+                            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mb-2" />
+                            <p className="text-[10px] font-black text-blue-600">{uploadProgress}%</p>
+                          </div>
+                        )}
+                        <input type="file" onChange={(e) => onFileUpload(e, 'kk')} className="hidden" accept="image/*" />
+                      </label>
+                      {kkUrl && <p className="text-[9px] text-green-600 font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Berhasil Diunggah</p>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                   <div className="flex items-center gap-2 text-blue-600">
                      <Info className="w-4 h-4" />
-                     <span className="text-[10px] font-black uppercase tracking-widest">Informasi Penting</span>
+                     <span className="text-[10px] font-black uppercase tracking-widest">Ketentuan Layanan</span>
                    </div>
-                   <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic">Permohonan akan diproses oleh Ketua RT/RW. Anda dapat mengunduh dokumen secara mandiri di menu "Arsip" setelah status berubah menjadi <span className="text-green-600 font-bold">"Selesai"</span>.</p>
+                   <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic">
+                     Seluruh data yang Anda masukkan harus benar dan sesuai dengan dokumen asli. 
+                     Data akan diproses secara otomatis oleh sistem SmartRW dan diteruskan ke Ketua RT/RW 
+                     untuk verifikasi dan tanda tangan digital. Status dapat dipantau pada menu 
+                     <span className="text-blue-600 font-bold ml-1">"Sedang Berjalan"</span>.
+                   </p>
                 </div>
 
-                <div className="flex gap-2 pt-4">
-                  <button type="button" onClick={() => { setShowForm(false); setEditingSurat(null); }} className="flex-1 py-3 px-6 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">Batal</button>
-                  <button type="submit" className="flex-[2] py-3 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xl shadow-blue-200 uppercase tracking-widest active:scale-95">
-                    {editingSurat ? 'Simpan Perubahan' : 'Kirim Permohonan'}
+                <div className="flex gap-3 pt-6 border-t border-slate-100">
+                  <button 
+                    type="button" 
+                    onClick={() => { setShowForm(false); setEditingSurat(null); setSelectedWargaId(""); }} 
+                    className="flex-1 py-4 px-6 text-xs font-black text-slate-400 uppercase tracking-widest bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isUploadingKTP || isUploadingKK}
+                    className="flex-[2] py-4 text-xs font-black bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-2xl transition-all shadow-xl shadow-blue-200 uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    {isUploadingKTP || isUploadingKK ? (
+                      <><RefreshCw className="w-4 h-4 animate-spin" /> Menunggu Unggahan...</>
+                    ) : (
+                      editingSurat ? 'Simpan Perubahan' : 'Kirim Permohonan'
+                    )}
                   </button>
                 </div>
               </form>
@@ -472,8 +825,8 @@ export function SuratView({
       <AnimatePresence>
         {viewingSurat && (
           <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
-             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative">
-                <div className="p-6 pb-20">
+             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
+                <div className="p-6 overflow-y-auto">
                    <div className="flex justify-between items-start mb-6">
                       <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
                         <FileText className="w-6 h-6" />
@@ -481,41 +834,160 @@ export function SuratView({
                       <button onClick={() => setViewingSurat(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X className="w-5 h-5" /></button>
                    </div>
                    
-                   <div className="space-y-4">
+                   <div className="space-y-6">
                       <div>
                         <h4 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{viewingSurat.jenis}</h4>
                         <div className={`mt-2 inline-flex py-1 px-3 rounded-full text-[9px] font-black uppercase tracking-widest ${viewingSurat.status === 'Selesai' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                            {viewingSurat.status}
                         </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3 pt-4">
-                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0"><User className="w-4 h-4" /></div>
-                            <div>
-                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Pemohon</p>
-                               <p className="text-sm font-bold text-slate-700 mt-0.5">{viewingSurat.pemohon}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0"><MapPin className="w-4 h-4" /></div>
-                            <div>
-                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Alamat</p>
-                               <p className="text-sm font-bold text-slate-700 mt-0.5">{viewingSurat.alamat}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0"><Calendar className="w-4 h-4" /></div>
-                            <div>
-                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Diajukan Pada</p>
-                               <p className="text-sm font-bold text-slate-700 mt-0.5">{new Date(viewingSurat.tanggal).toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
-                            </div>
-                         </div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">ID: {viewingSurat.id}</p>
                       </div>
 
                       <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Keperluan / Keterangan</p>
-                         <p className="text-xs font-medium text-slate-600 italic">"{viewingSurat.keterangan || 'Tidak ada keterangan tambahan'}"</p>
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Keperluan / Keterangan</p>
+                         <p className="text-sm font-bold text-slate-700 italic">"{viewingSurat.keterangan || 'Tidak ada keterangan tambahan'}"</p>
+                      </div>
+
+                      <div className="space-y-4">
+                         <h5 className="text-[11px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                           <User className="w-4 h-4" /> Data Diri Pemohon
+                         </h5>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Nama Lengkap</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.pemohon}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">NIK</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.nik}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">No. KK</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.kk || '-'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Tempat, Tgl Lahir</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.ttl || '-'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Agama</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.agama || '-'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">WNI / WNA</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.kewarganegaraan || '-'}</p>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="space-y-4">
+                         <h5 className="text-[11px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                           <Briefcase className="w-4 h-4" /> Status & Pekerjaan
+                         </h5>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Pekerjaan</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.pekerjaan || '-'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Pendidikan</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.pendidikan || '-'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Status Kawin</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.statusKawin || '-'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Posisi Keluarga</p>
+                               <p className="text-sm font-bold text-slate-800">{viewingSurat.posisiKeluarga || '-'}</p>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="space-y-4">
+                         <h5 className="text-[11px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                           <MapPin className="w-4 h-4" /> Alamat & Kontak
+                         </h5>
+                         <div className="space-y-3">
+                            <div className="space-y-0.5">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Alamat</p>
+                               <p className="text-sm font-bold text-slate-800 leading-tight">{viewingSurat.alamat}</p>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div>
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">RT/RW</p>
+                                 <p className="text-sm font-bold text-slate-800">{viewingSurat.rt}/{viewingSurat.rw}</p>
+                              </div>
+                              <div>
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Kelurahan</p>
+                                 <p className="text-sm font-bold text-slate-800">{viewingSurat.kelurahan || '-'}</p>
+                              </div>
+                              <div>
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Kecamatan</p>
+                                 <p className="text-sm font-bold text-slate-800">{viewingSurat.kecamatan || '-'}</p>
+                              </div>
+                              <div>
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Kota</p>
+                                 <p className="text-sm font-bold text-slate-800">{viewingSurat.kota || '-'}</p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <div>
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">No. HP</p>
+                                 <p className="text-sm font-bold text-slate-800">{viewingSurat.phone || '-'}</p>
+                              </div>
+                              <div>
+                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Email</p>
+                                 <p className="text-sm font-bold text-slate-800">{viewingSurat.email || '-'}</p>
+                              </div>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="space-y-4">
+                         <h5 className="text-[11px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                           <ImageIcon className="w-4 h-4" /> Lampiran
+                         </h5>
+                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none text-center">Foto KTP</p>
+                               {viewingSurat.ktpUrl ? (
+                                 <a href={viewingSurat.ktpUrl} target="_blank" rel="noreferrer" className="block relative aspect-video rounded-xl overflow-hidden border border-slate-100">
+                                   <img src={viewingSurat.ktpUrl} alt="KTP" className="w-full h-full object-cover" />
+                                   <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-all">
+                                      <Eye className="w-4 h-4 text-white" />
+                                   </div>
+                                 </a>
+                               ) : (
+                                 <div className="aspect-video rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300">
+                                   <Smartphone className="w-6 h-6" />
+                                 </div>
+                               )}
+                            </div>
+                            <div className="space-y-2">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none text-center">Foto KK</p>
+                               {viewingSurat.kkUrl ? (
+                                 <a href={viewingSurat.kkUrl} target="_blank" rel="noreferrer" className="block relative aspect-video rounded-xl overflow-hidden border border-slate-100">
+                                   <img src={viewingSurat.kkUrl} alt="KK" className="w-full h-full object-cover" />
+                                   <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-all">
+                                      <Eye className="w-4 h-4 text-white" />
+                                   </div>
+                                 </a>
+                               ) : (
+                                 <div className="aspect-video rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300">
+                                   <Files className="w-6 h-6" />
+                                 </div>
+                               )}
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="pt-4 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0"><Calendar className="w-4 h-4" /></div>
+                        <div>
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Diajukan Pada</p>
+                           <p className="text-sm font-bold text-slate-700 mt-0.5">{new Date(viewingSurat.tanggal).toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
+                        </div>
                       </div>
                    </div>
                 </div>

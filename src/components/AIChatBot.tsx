@@ -178,12 +178,17 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     setIsLoading(true);
 
     try {
-      const history = messages
+      let history = messages
         .filter(m => m.role === 'user' || m.role === 'bot')
         .map(m => ({ 
           role: m.role === 'user' ? 'user' : 'model' as 'user' | 'model', 
           parts: [{ text: m.text }] 
         }));
+
+      // Ensure the history doesn't start with 'model'
+      if (history.length > 0 && history[0].role === 'model') {
+        history = history.slice(1);
+      }
 
       const stream = await chatWithAI({
         message: textToSend,
