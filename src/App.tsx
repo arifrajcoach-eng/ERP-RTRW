@@ -9838,7 +9838,7 @@ function InventarisView({ inventarisData, setInventarisData, inventarisLogs, set
                       <p className="text-[10px] text-slate-500 mt-0.5">{item.lokasi || '-'}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-[10px] font-bold text-slate-700">{item.tanggal_perolehan ? new Date(item.tanggal_perolehan).toLocaleDateString('id-ID') : '-'}</p>
+                      <p className="text-[10px] font-bold text-slate-700">{item.tanggal_perolehan && !isNaN(new Date(item.tanggal_perolehan).getTime()) ? new Date(item.tanggal_perolehan).toLocaleDateString('id-ID') : '-'}</p>
                       <p className="text-[10px] text-emerald-600 font-mono font-bold mt-0.5">Rp {(item.harga_perolehan || 0).toLocaleString('id-ID')}</p>
                     </td>
                     <td className="px-4 py-3 text-right">

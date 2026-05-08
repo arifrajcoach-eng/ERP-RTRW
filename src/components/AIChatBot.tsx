@@ -140,11 +140,20 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
+      
+      // Keep a strong reference to the source while playing
+      audioRef.current = source;
+      
       source.onended = () => { 
-        if (mountedRef.current) setIsSpeaking(false);
+        if (mountedRef.current) {
+            setIsSpeaking(false);
+            if (audioContextRef.current === audioContext) {
+                audioContextRef.current.close().catch(console.error);
+                audioContextRef.current = null;
+            }
+        }
       };
       
-      audioRef.current = source;
       source.start();
 
     } catch (error: any) {
@@ -179,7 +188,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     recognitionRef.current.start();
   };
 
-  const handleSend = async (manualInput?: string) => {
+  const handleSend = async (manualInput?: string, retries = 1) => {
     const textToSend = manualInput || input;
     if (!textToSend.trim() || isLoading) return;
     if (usageCount >= maxUsage) {
@@ -256,7 +265,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
           handleSpeak(fullText);
         }
       } catch (streamError) {
-        console.error("Stream error:", streamError);
+        throw streamError; // Rethrow to be caught by outer catch
       }
 
       if (mountedRef.current) {
@@ -264,9 +273,13 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
         refreshContext();
       }
     } catch (error: any) {
-      console.error('AI Chat Error:', error);
+      console.error('AI Chat Error (attempt ' + (2 - retries) + '):', error);
+      if (retries > 0) {
+        console.log('Retrying...');
+        return handleSend(textToSend, retries - 1);
+      }
       if (mountedRef.current) {
-        setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, ada gangguan pada otak saya. Coba lagi ya!' }]);
+        setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, ada gangguan pada koneksi atau AI saya. Coba lagi ya!' }]);
       }
     } finally {
       if (mountedRef.current) setIsLoading(false);
@@ -274,7 +287,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
   };
 
   return (
-    <div className="flex flex-col h-[600px] max-w-lg mx-auto bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="flex flex-col h-[80vh] max-h-[600px] w-full max-w-lg mx-auto bg-white rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden">
       {/* Header */}
       <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
