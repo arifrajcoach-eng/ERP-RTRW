@@ -6269,6 +6269,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const tenantId = formData.get('id') as string;
+    const parentId = formData.get('parentId') as string || null;
     const name = formData.get('name') as string;
     const email = formData.get('adminEmail') as string;
     const password = formData.get('adminPassword') as string;
@@ -6296,6 +6297,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
 
     const tenant = {
       id: tenantId,
+      parentId: parentId,
       name: name,
       address: formData.get('address') as string,
       adminEmail: email,
@@ -6516,6 +6518,13 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                       <div>
                         <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Nama Organisasi</label>
                         <input name="name" defaultValue={editingTenant?.name} required placeholder="Contoh: RT 01 / RW 26" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700" />
+                      </div>
+                      <div className="col-span-2">
+                         <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Tenant Induk / RW (Opsional)</label>
+                         <select name="parentId" defaultValue={editingTenant?.parentId || ""} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700">
+                            <option value="">Mandiri (Parent Tenant)</option>
+                            {tenantsData.map(t => <option key={t.id} value={t.id}>{t.name} ({t.id})</option>)}
+                         </select>
                       </div>
                     </div>
                   </div>
