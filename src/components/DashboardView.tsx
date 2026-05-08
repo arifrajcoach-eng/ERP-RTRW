@@ -615,7 +615,7 @@ export default function DashboardView({
             exit={{ opacity: 0, y: 100, scale: 0.9 }}
             className="fixed bottom-24 right-6 z-50 w-full max-w-md"
           >
-            <AIChatBot currentUser={currentUser} />
+            <AIChatBot currentUser={currentUser} agentType="cs" />
           </motion.div>
         )}
       </AnimatePresence>

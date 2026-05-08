@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // 1. KEUANGAN
@@ -165,9 +165,7 @@ export async function getInventorySummary(tenantId: string) {
   } catch (e) {
     return { totalBarang: 0 };
   }
-}
-
-// 10. ANALISIS AKTIVITAS WARGA & PERUBAHAN DATA
+}// 10. ANALISIS AKTIVITAS WARGA & PERUBAHAN DATA
 export async function getWargaActivitySummary(tenantId: string) {
   try {
     // Iuran check
@@ -209,6 +207,36 @@ export async function getWargaActivitySummary(tenantId: string) {
   } catch(e) {
     console.warn("Failed getWargaActivitySummary", e);
     return { totalWarga: 0, wargaSudahBayar: 0, wargaBelumBayar: 0, wargaSakit: 0, wargaMeninggal: 0 };
+  }
+}
+
+// 11. ACTIONS (FOR AI TOOL CALLING)
+export async function createSurat(data: { tenantId: string, pemohon: string, nik: string, noKK: string, keperluan: string }) {
+  try {
+    const docRef = await addDoc(collection(db, 'surat'), {
+      ...data,
+      jenisSurat: 'Pengantar',
+      status: 'PENDING',
+      createdAt: new Date()
+    });
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error("Failed createSurat", e);
+    return { success: false, error: 'Gagal membuat surat' };
+  }
+}
+
+export async function registerELapak(data: { tenantId: string, userId: string, namaToko: string, kategori: string }) {
+  try {
+    const docRef = await addDoc(collection(db, 'toko_products'), {
+        ...data,
+        status: 'PENDING',
+        createdAt: new Date()
+    });
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error("Failed registerELapak", e);
+    return { success: false, error: 'Gagal mendaftar e-lapak' };
   }
 }
 

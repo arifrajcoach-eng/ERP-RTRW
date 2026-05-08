@@ -11,13 +11,25 @@ import {
   getELapakSummary,
   getElectionSummary,
   getInventorySummary,
-  getRegistrationInfo
+  getRegistrationInfo,
+  createSurat,
+  registerELapak
 } from '../services/aiAgentTools';
 import { chatWithAI, textToSpeech } from '../services/aiService';
 
-export default function AIChatBot({ currentUser }: { currentUser: any }) {
+export default function AIChatBot({ currentUser, agentType = 'auto' }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto' }) {
+  const isPrivileged = agentType === 'cs' ? false :
+                       agentType === 'admin' ? true :
+                       ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
+  const agentName = isPrivileged ? "Aspri" : "Chaty";
+  const agentTitle = isPrivileged ? "AI Asisten Pribadi Pa Ketua" : "AI Customer Service Warga";
+
+  const welcomeMessage = isPrivileged 
+    ? `Assalamu’alaikum! 🫡 Aku Aspri, asisten pribadimu. Ada data rahasia, keuangan, atau tugas kepengurusan yang perlu aku bantu atau analisakan hari ini? hehe.`
+    : `Assalamu’alaikum! Haii, aku Chaty, AI Customer Service pintar buat warga kita 😊. Ada yang bisa aku bantu untuk info warga, surat pengantar, atau cara bayar iuran?`;
+
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
-    { role: 'bot', text: 'Assalamu’alaikum! Haii, aku asisten pintar buat lingkungan kita. Kenalin ya, aku yang bakal bantu urusan RW & RT di sini. Apa nih yang bisa aku bantu hari ini? Hehe.' }
+    { role: 'bot', text: welcomeMessage }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +41,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<any>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const lastSpokenTextRef = useRef<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const mountedRef = useRef(true);
   
@@ -40,13 +52,9 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (audioRef.current) {
-        try { 
-          audioRef.current.stop(); 
-        } catch (e) {}
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(console.error);
+      if (audioRef.current instanceof HTMLAudioElement) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
     };
   }, []);
@@ -94,11 +102,9 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     if (isMuted) return;
     
     if (isSpeaking) {
-      if (audioRef.current) {
-        try { 
-          audioRef.current.stop();
-        } catch (e) {}
-        audioRef.current = null;
+      if (audioRef.current instanceof HTMLAudioElement) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
       setIsSpeaking(false);
       return;
@@ -106,56 +112,38 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
 
     try {
       setIsSpeaking(true);
+      lastSpokenTextRef.current = text;
       const response = await textToSpeech(text);
       if (!response || !mountedRef.current) {
         setIsSpeaking(false);
         return;
       }
       
-      const { data: base64Audio } = response;
-      
-      const binary = atob(base64Audio);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      
-      // Close previous context if exists
-      if (audioContextRef.current) {
-          await audioContextRef.current.close();
+      const { data: base64Audio, mimeType } = response;
+      const byteCharacters = atob(base64Audio);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: mimeType });
+      const url = URL.createObjectURL(blob);
       
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      audioContextRef.current = audioContext;
+      const audio = new Audio(url);
+      audioRef.current = audio;
       
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-
-      const audioBuffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
-      const data = audioBuffer.getChannelData(0);
-      const view = new DataView(bytes.buffer);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = view.getInt16(i * 2, true) / 32768; // true for little-endian
-      }
-
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-      
-      // Keep a strong reference to the source while playing
-      audioRef.current = source;
-      
-      source.onended = () => { 
-        if (mountedRef.current) {
-            setIsSpeaking(false);
-            if (audioContextRef.current === audioContext) {
-                audioContextRef.current.close().catch(console.error);
-                audioContextRef.current = null;
-            }
-        }
+      audio.onended = () => { 
+        if (mountedRef.current) setIsSpeaking(false);
+        URL.revokeObjectURL(url);
       };
       
-      source.start();
-
+      try {
+        await audio.play();
+      } catch (playError) {
+        console.error("Autoplay failed, consider user interaction", playError);
+        // On mobile, the browser might block autoplay after async calls.
+        if (mountedRef.current) setIsSpeaking(false);
+      }
     } catch (error: any) {
       console.warn('AI Voice Error:', error);
       if (mountedRef.current) setIsSpeaking(false);
@@ -220,7 +208,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
         }
       }
 
-      const isSensitiveDataAllowed = ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
+      const isSensitiveDataAllowed = isPrivileged;
       
       const filteredContext = isSensitiveDataAllowed ? dataContext : {
         financial: { total: dataContext?.financial?.total }, // Keep only summary, hide details
@@ -240,7 +228,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
         role: currentUser?.role || 'Warga',
         dataSummary: filteredContext || {},
         history,
-        isPrivileged: isSensitiveDataAllowed
+        isPrivileged: isPrivileged
       } as any);
 
       if (!mountedRef.current) return;
@@ -262,7 +250,24 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
           });
         }
         if (fullText && mountedRef.current) {
-          handleSpeak(fullText);
+          try {
+            const jsonAction = JSON.parse(fullText.replace(/```json/g, '').replace(/```/g, '').trim());
+            if (jsonAction.action === 'createSurat') {
+              const res = await createSurat({ ...jsonAction.params, tenantId });
+              const msg = res.success ? `Alhamdulillah kak, surat pengantar berhasil dibuat (ID: ${res.id}).` : 'Maaf kak, ada kendala saat membuat surat.';
+              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
+              handleSpeak(msg);
+            } else if (jsonAction.action === 'registerELapak') {
+              const res = await registerELapak({ ...jsonAction.params, tenantId, userId: currentUser?.email || 'unknown' });
+              const msg = res.success ? `Alhamdulillah kak, pendaftaran e-lapak berhasil (ID: ${res.id}).` : 'Maaf kak, ada kendala saat mendaftar e-lapak.';
+              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
+              handleSpeak(msg);
+            } else {
+              handleSpeak(fullText);
+            }
+          } catch (e) {
+            handleSpeak(fullText);
+          }
         }
       } catch (streamError) {
         throw streamError; // Rethrow to be caught by outer catch
@@ -295,7 +300,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
             <Bot className="text-white w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">AI Asisten Pribadi Pa Ketua</h3>
+            <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">{agentTitle}</h3>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Sistem Cerdas Lingkungan
@@ -303,7 +308,13 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
           </div>
         </div>
         <button 
-          onClick={() => setIsMuted(!isMuted)} 
+          onClick={() => {
+            if (isMuted) {
+              setIsMuted(false);
+            } else if (lastSpokenTextRef.current) {
+              handleSpeak(lastSpokenTextRef.current);
+            }
+          }}
           className={`p-2 rounded-xl transition-all ${isMuted ? 'bg-slate-200 text-slate-400' : 'bg-brand-blue/10 text-brand-blue'}`}
         >
           {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
