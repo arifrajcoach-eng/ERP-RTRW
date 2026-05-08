@@ -61,7 +61,7 @@ service cloud.firestore {
     }
 
     match /tenant_registrations/{docId} {
-      allow read, write: if true;
+      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
     }
     
     match /tenants/{docId} {
@@ -213,14 +213,17 @@ service cloud.firestore {
       allow delete: if isPengurus();
     }
 
-    match /toko_products/{allPaths=**} {
-      allow read, write: if true;
+    match /toko_products/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
-    match /toko_products_seller/{allPaths=**} {
-      allow read, write: if true;
+    match /toko_products_seller/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
-    match /toko_orders/{allPaths=**} {
-      allow read, write: if true;
+    match /toko_orders/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isTenantMember(request.resource.data.tenantId);
     }
 
     match /chat_messages/{docId} {

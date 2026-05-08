@@ -10,7 +10,8 @@ import {
   getLettersSummary,
   getELapakSummary,
   getElectionSummary,
-  getInventorySummary
+  getInventorySummary,
+  getRegistrationInfo
 } from '../services/aiAgentTools';
 import { chatWithAI, textToSpeech } from '../services/aiService';
 
@@ -28,6 +29,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const recognitionRef = useRef<any>(null);
   const mountedRef = useRef(true);
   
@@ -39,7 +41,12 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     return () => {
       mountedRef.current = false;
       if (audioRef.current) {
-        try { audioRef.current.stop(); } catch (e) {}
+        try { 
+          audioRef.current.stop(); 
+        } catch (e) {}
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(console.error);
       }
     };
   }, []);
@@ -47,7 +54,7 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
   const refreshContext = async () => {
     try {
       const [
-        fin, health, activity, waste, guests, letters, lapak, election, inventory
+        fin, health, activity, waste, guests, letters, lapak, election, inventory, registrations
       ] = await Promise.all([
         getFinancialSummary(tenantId),
         getHealthSummary(tenantId),
@@ -57,14 +64,15 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
         getLettersSummary(tenantId),
         getELapakSummary(tenantId),
         getElectionSummary(tenantId),
-        getInventorySummary(tenantId)
+        getInventorySummary(tenantId),
+        getRegistrationInfo(tenantId)
       ]);
       
       if (mountedRef.current) {
         setDataContext({ 
           financial: fin, health, activity, wasteBank: waste, 
           guestBook: guests, letters, eLapak: lapak, 
-          election, inventory 
+          election, inventory, registrations 
         });
       }
     } catch (e) {
@@ -87,7 +95,9 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
     
     if (isSpeaking) {
       if (audioRef.current) {
-        try { audioRef.current.stop(); } catch (e) {}
+        try { 
+          audioRef.current.stop();
+        } catch (e) {}
         audioRef.current = null;
       }
       setIsSpeaking(false);
@@ -96,52 +106,47 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
 
     try {
       setIsSpeaking(true);
-      const base64Audio = await textToSpeech(text);
-      if (!base64Audio || !mountedRef.current) {
+      const response = await textToSpeech(text);
+      if (!response || !mountedRef.current) {
         setIsSpeaking(false);
         return;
       }
       
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
+      const { data: base64Audio } = response;
       
       const binary = atob(base64Audio);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       
-      const rawBuffer = bytes.buffer;
+      // Close previous context if exists
+      if (audioContextRef.current) {
+          await audioContextRef.current.close();
+      }
       
-      let audioBuffer;
-      try {
-        // We MUST clone the buffer before decodeAudioData since it detaches the buffer!
-        audioBuffer = await audioContext.decodeAudioData(rawBuffer.slice(0));
-      } catch (e) {
-        // Fallback manual decode for raw PCM 16-bit little-endian
-        audioBuffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
-        const data = audioBuffer.getChannelData(0);
-        const view = new DataView(rawBuffer);
-        for (let i = 0; i < data.length; i++) {
-          data[i] = view.getInt16(i * 2, true) / 32768; // true for little-endian
-        }
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      audioContextRef.current = audioContext;
+      
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
       }
 
-      if (!audioBuffer || !mountedRef.current) {
-          setIsSpeaking(false);
-          return;
+      const audioBuffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
+      const data = audioBuffer.getChannelData(0);
+      const view = new DataView(bytes.buffer);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = view.getInt16(i * 2, true) / 32768; // true for little-endian
       }
-      
+
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
-      source.onended = () => { if (mountedRef.current) setIsSpeaking(false); };
+      source.onended = () => { 
+        if (mountedRef.current) setIsSpeaking(false);
+      };
       
-      if (audioRef.current) {
-          try { audioRef.current.stop(); } catch (e) {}
-      }
       audioRef.current = source;
       source.start();
+
     } catch (error: any) {
       console.warn('AI Voice Error:', error);
       if (mountedRef.current) setIsSpeaking(false);
@@ -206,12 +211,27 @@ export default function AIChatBot({ currentUser }: { currentUser: any }) {
         }
       }
 
+      const isSensitiveDataAllowed = ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
+      
+      const filteredContext = isSensitiveDataAllowed ? dataContext : {
+        financial: { total: dataContext?.financial?.total }, // Keep only summary, hide details
+        health: dataContext?.health,
+        activity: dataContext?.activity,
+        wasteBank: dataContext?.wasteBank,
+        guestBook: dataContext?.guestBook,
+        letters: dataContext?.letters,
+        eLapak: dataContext?.eLapak,
+        election: dataContext?.election,
+        // Excluded: inventory, registrations, sensitive financial details
+      };
+
       const stream = await chatWithAI({
         message: textToSend,
         tenantId,
         role: currentUser?.role || 'Warga',
-        dataSummary: dataContext || {},
-        history
+        dataSummary: filteredContext || {},
+        history,
+        isPrivileged: isSensitiveDataAllowed
       } as any);
 
       if (!mountedRef.current) return;

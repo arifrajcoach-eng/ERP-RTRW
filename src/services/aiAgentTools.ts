@@ -100,15 +100,36 @@ export async function getLettersSummary(tenantId: string) {
     let approved = 0;
     let rejected = 0;
     let pending = 0;
+    const pendingLetters: any[] = [];
     snapshot.forEach(doc => {
-      const s = doc.data().status?.toLowerCase();
-      if (s === 'approved' || s === 'disetujui') approved++;
-      else if (s === 'rejected' || s === 'ditolak') rejected++;
-      else pending++;
+      const s = doc.data();
+      const status = s.status?.toLowerCase();
+      if (status === 'approved' || status === 'disetujui') approved++;
+      else if (status === 'rejected' || status === 'ditolak') rejected++;
+      else {
+        pending++;
+        pendingLetters.push({ id: doc.id, pemohon: s.pemohon, jenis: s.jenisSurat });
+      }
     });
-    return { total: snapshot.size, approved, rejected, pending };
+    return { total: snapshot.size, approved, rejected, pending, pendingLetters };
   } catch (e) {
-    return { total: 0, approved: 0, rejected: 0, pending: 0 };
+    return { total: 0, approved: 0, rejected: 0, pending: 0, pendingLetters: [] };
+  }
+}
+
+// NEW: WARGA REGISTRATIONS
+export async function getRegistrationInfo(tenantId: string) {
+  try {
+    const q = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId), where('status', '==', 'PENDING'));
+    const snapshot = await getDocs(q);
+    const registrations: any[] = [];
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      registrations.push({ id: doc.id, nama: d.nama, nik: d.nik });
+    });
+    return { totalPendingRegistration: snapshot.size, registrations };
+  } catch (e) {
+    return { totalPendingRegistration: 0, registrations: [] };
   }
 }
 

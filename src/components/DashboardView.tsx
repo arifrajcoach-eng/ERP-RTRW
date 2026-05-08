@@ -2,12 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
-  MapPin, Clock, CheckCircle2, QrCode, Smartphone 
+  MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, 
   Tooltip, PieChart, Pie, Cell, Legend 
 } from 'recharts';
+import AIChatBot from './AIChatBot';
 
 interface DashboardViewProps {
   kasData: any[];
@@ -71,6 +72,7 @@ export default function DashboardView({
   const [kasPeriod, setKasPeriod] = useState('yearly');
   const [piePeriod, setPiePeriod] = useState('30days');
   const [linkForm, setLinkForm] = useState({ nik: '', pin: '' });
+  const [showAIChat, setShowAIChat] = useState(false);
 
   const activeSOS = useMemo(() => emergenciesData?.find(e => e.status === 'ACTIVE'), [emergenciesData]);
 
@@ -593,6 +595,30 @@ export default function DashboardView({
           </div>
         </div>
       </div>
+      
+      {/* Floating AI Chat Button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setShowAIChat(!showAIChat)}
+        className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50"
+      >
+        <Bot className="w-8 h-8" />
+      </motion.button>
+
+      {/* AI Chat Window */}
+      <AnimatePresence>
+        {showAIChat && (
+          <motion.div
+            initial={{ opacity: 0, y: 100, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 100, scale: 0.9 }}
+            className="fixed bottom-24 right-6 z-50 w-full max-w-md"
+          >
+            <AIChatBot currentUser={currentUser} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

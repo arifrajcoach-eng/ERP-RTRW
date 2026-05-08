@@ -184,7 +184,18 @@ export function WargaProfileView({
                    </div>
                 )}
              </div>
-             <h2 className="text-xl font-black text-slate-800 leading-tight uppercase tracking-tight">{wargaData.nama}</h2>
+             <div className="mt-4 flex items-center justify-center gap-2">
+                <h2 className="text-xl font-black text-slate-800 leading-tight uppercase tracking-tight">{wargaData.nama}</h2>
+                {wargaData.terverifikasi ? (
+                   <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[9px] font-black uppercase flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Terverifikasi
+                   </span>
+                ) : (
+                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[9px] font-black uppercase flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Belum Verifikasi
+                   </span>
+                )}
+             </div>
              <p className="text-xs font-bold text-slate-400 mt-1">NIK: {wargaData.nik}</p>
              
              <div className="mt-6 w-full space-y-2">

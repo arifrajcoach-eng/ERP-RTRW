@@ -2363,7 +2363,9 @@ function AnalyticsPremiumView({ tenantId, kasData, wargaData, iuranData }: any) 
 
     try {
       setIsSpeaking(true);
-      const base64Audio = await textToSpeech(report);
+      const response = await textToSpeech(report);
+      if (!response) return;
+      const base64Audio = response.data;
       
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
@@ -2645,7 +2647,9 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
 
     try {
       setIsSpeaking(true);
-      const base64Audio = await textToSpeech(insight);
+      const response = await textToSpeech(insight);
+      if (!response) return;
+      const base64Audio = response.data;
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
       const binary = atob(base64Audio);
