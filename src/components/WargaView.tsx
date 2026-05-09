@@ -176,9 +176,12 @@ function WargaView({
             if (nama) {
               let nik = rawNik.replace(/[^0-9]/g, ''); 
               
-              // Fallback ID if NIK is missing or invalid to prevent overwriting
-              const uniqueSuffix = Math.random().toString(36).substring(2, 7);
-              const id = nik && nik.length >= 5 ? `${tenantId}_${nik}` : `${tenantId}_AUTO_${Date.now()}_${uniqueSuffix}`;
+              // STABLE ID: Use tenantId + NIK if available (>= 5 digits), 
+              // otherwise use tenantId + sanitized Name + short NIK to maintain stability across imports.
+              const cleanNama = nama.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+              const id = nik && nik.length >= 5 
+                ? `${tenantId}_${nik}` 
+                : `${tenantId}_STABLE_${cleanNama}_${nik}`;
               
               if (!nik) nik = 'Belum Ada'; // Visual marker for missing NIK
 
@@ -487,8 +490,16 @@ function WargaView({
                           role: 'WARGA'
                         };
                         
-                        const docId = `${tenantId}_${data.nik}`;
-                        const finalData = { ...data, docId };
+                        const rawNik = (data.nik as string || '').trim();
+                        const nik = rawNik.replace(/[^0-9]/g, '');
+                        const cleanNama = (data.nama as string || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                        
+                        // Use consistent ID logic with import process
+                        const docId = nik && nik.length >= 5 
+                          ? `${tenantId}_${nik}` 
+                          : `${tenantId}_STABLE_${cleanNama}_${nik}`;
+                        
+                        const finalData = { ...data, docId, nik: nik || 'Belum Ada' };
                         
                         if (showEditForm && editingWarga) {
                           const targetId = editingWarga.docId || editingWarga.id || `${tenantId}_${editingWarga.nik}`;
