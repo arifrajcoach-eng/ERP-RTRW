@@ -193,12 +193,12 @@ service cloud.firestore {
     }
 
     match /warga/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isTenantMember(resource.data.tenantId);
       allow write: if isTenantMember(request.resource.data.tenantId) || isTenantMember(resource.data.tenantId);
     }
 
     match /data_warga/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isTenantMember(resource.data.tenantId);
       allow write: if isTenantMember(request.resource.data.tenantId) || isTenantMember(resource.data.tenantId);
     }
 

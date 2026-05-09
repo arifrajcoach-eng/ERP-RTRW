@@ -441,8 +441,9 @@ export default function App() {
             let needsUpdate = false;
             
             // Fix missing or wrong tenantId for known client
-            if (isTrihUser && userData.tenantId !== 'RW_BERJUANG') {
+            if (isTrihUser && (userData.tenantId !== 'RW_BERJUANG' || userData.role === 'RT')) {
               userData.tenantId = 'RW_BERJUANG';
+              userData.role = 'ADMIN';
               needsUpdate = true;
             }
             
@@ -495,6 +496,7 @@ export default function App() {
             let tenantId = 'RW26_SMART';
             if (user.email?.toLowerCase().includes('trihprw26')) {
               tenantId = 'RW_BERJUANG';
+              role = 'ADMIN';
             } else if (user.email?.includes('@')) {
               // Extract potential tenantId from email if it's a custom domain or structured
               const domain = user.email.split('@')[1];
@@ -2766,7 +2768,7 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
         // Example: Count warga per RW or similar to populate compliance.
         // For now, I'll fetch data_warga and aggregate it.
         const wargaRef = collection(db, 'data_warga');
-        const q = query(wargaRef); // Should ideally be filtered by tenantId
+        const q = query(wargaRef, where('tenantId', '==', currentUser?.tenantId || 'MASTER'));
         const querySnapshot = await getDocs(q);
         
         // This is a placeholder for actual aggregation logic
@@ -5016,8 +5018,9 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
             if (confirm("Apakah Anda yakin ingin menghapus SELURUH data warga? Tindakan ini tidak dapat dibatalkan!")) {
               try {
                 // Delete batch
-                const { collection, getDocs, writeBatch, doc } = await import('firebase/firestore');
-                const wargaSnapshot = await getDocs(collection(db, 'data_warga'));
+                const { collection, getDocs, writeBatch, doc, query, where } = await import('firebase/firestore');
+                const q = query(collection(db, 'data_warga'), where('tenantId', '==', currentUser?.tenantId));
+                const wargaSnapshot = await getDocs(q);
                 const batch = writeBatch(db);
                 wargaSnapshot.forEach((docSnapshot) => batch.delete(docSnapshot.ref));
                 await batch.commit();
@@ -5604,6 +5607,7 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                  for (const value of variants) {
                    if (found) break;
                    const q = query(collection(db, 'data_warga'), 
+                        where('tenantId', '==', currentTenant?.id || currentUser?.tenantId),
                         where(field, '==', value), 
                         limit(5));
                    const snap = await getDocs(q);

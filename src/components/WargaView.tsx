@@ -162,16 +162,18 @@ function WargaView({
         const batch = writeBatch(db);
         
         parsedData.forEach((row: any) => {
-          const nik = row.nik || row.NIK || row['No. KTP'] || row['NIK/No. KTP'];
-          const nama = row.nama || row.Nama || row['Nama Lengkap'] || row['NAMA'];
+          const nikValue = (row.nik || row.NIK || row['No. KTP'] || row['NIK/No. KTP'] || row['NOMOR KTP'] || row['Nomor KTP'] || row['No KTP'] || row['NIK '] || row['nik '] || row['N.I.K'] || '')?.toString()?.trim();
+          const nama = row.nama || row.Nama || row['Nama Lengkap'] || row['NAMA'] || row['Nama Warga'] || row['NAMA LENGKAP'];
           
-          if (nik && nama) {
-            const id = nik.toString();
+          if (nikValue && nama) {
+            const nik = nikValue.replace(/[^0-9]/g, ''); // Use only digits for ID
+            const id = `${tenantId}_${nik}`;
             const docRef = doc(db, 'data_warga', id);
             batch.set(docRef, {
-              nik: id,
+              nik: nik,
+              docId: id,
               nama: nama,
-              kk: row.kk || row['No. KK'] || row.KK || '',
+              kk: (row.kk || row['No. KK'] || row.KK || row['No KK'] || row['Nomor KK'] || row['KODE KK'] || '')?.toString()?.trim() || '',
               rt: (row.rt || row.RT || row['RT.'] || '')?.toString()?.padStart(2, '0') || '01',
               rw: (row.rw || row.RW || row['RW.'] || '')?.toString()?.padStart(2, '0') || '26',
               status: row.status || row.Status || 'Warga Tetap',
@@ -456,13 +458,17 @@ function WargaView({
                           role: 'WARGA'
                         };
                         
+                        const docId = `${tenantId}_${data.nik}`;
+                        const finalData = { ...data, docId };
+                        
                         if (showEditForm && editingWarga) {
-                          await updateDoc(doc(db, 'data_warga', editingWarga.docId || editingWarga.nik), { ...data });
-                          setWargaData(wargaData.map((w: any) => (w.docId || w.nik) === (editingWarga.docId || editingWarga.nik) ? { ...w, ...data } : w));
+                          const targetId = editingWarga.docId || editingWarga.id || `${tenantId}_${editingWarga.nik}`;
+                          await updateDoc(doc(db, 'data_warga', targetId), finalData);
+                          setWargaData(wargaData.map((w: any) => (w.docId || w.id || `${tenantId}_${w.nik}`) === targetId ? { ...w, ...finalData } : w));
                           showNotification('Data warga berhasil diubah', 'success');
                         } else {
-                          await setDoc(doc(db, 'data_warga', data.nik as string), { ...data });
-                          setWargaData([...wargaData, data]);
+                          await setDoc(doc(db, 'data_warga', docId), finalData);
+                          setWargaData([...wargaData, finalData]);
                           showNotification('Warga baru berhasil ditambahkan', 'success');
                         }
                         setShowAddForm(false);
