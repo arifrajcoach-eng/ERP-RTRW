@@ -24,6 +24,7 @@ import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase
 import { auth, storage } from './firebase';
 import { QRCodeSVG } from 'qrcode.react';
 import KopTemplateManagementView from './components/KopTemplateManagementView';
+import { FreeTrialRegistrationModal } from './components/FreeTrialRegistrationModal';
 import { RTRegistrationForm } from './components/RTRegistrationForm';
 import ChatWargaView from './components/ChatWargaView';
 import AIChatBot from './components/AIChatBot';
@@ -40,6 +41,8 @@ import { BukuTamuView } from './components/BukuTamuView';
 import { FinansialDashboardView } from './components/FinansialDashboardView';
 import { VerifikasiAdminView } from './components/VerifikasiAdminView';
 import { WargaProfileView } from './components/WargaProfileView';
+import { ComplaintView } from './components/ComplaintView';
+import { BookingView } from './components/BookingView';
 import { ConfirmModal } from './components/ui/ConfirmModal';
 import { MessageSquare, Bot } from 'lucide-react';
 import { checkFeatureAccess } from './services/subscriptionService';
@@ -396,7 +399,9 @@ const calculateAge = (tglLahir: string) => {
 export default function App() {
   console.log("App component: DB exists?", !!db);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [impersonatedTenantId, setImpersonatedTenantId] = useState<string | null>(localStorage.getItem('impersonatedTenantId'));
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showFreeTrialModal, setShowFreeTrialModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{name: string, role: string, email?: string, tenantId?: string, isSuperAdmin?: boolean} | null>(null);
@@ -1680,7 +1685,7 @@ export default function App() {
   }
 
   if (!wargaAuth && (!currentUser || (currentUser.role === 'Warga' && currentUser.name === 'Warga (Anonymous)'))) {
-    return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} verifikasiWargaData={verifikasiWargaData} isLoadingDB={isLoadingDB} onSelfRegister={() => setIsSelfRegistering(true)} settings={settings} />;
+    return <LoginView setWargaAuth={setWargaAuth} wargaData={wargaData} verifikasiWargaData={verifikasiWargaData} isLoadingDB={isLoadingDB} onSelfRegister={() => setIsSelfRegistering(true)} onShowFreeTrial={() => setShowFreeTrialModal(true)} settings={settings} />;
   }
 
   if (wargaAuth && !currentUser?.isSuperAdmin) {
@@ -1826,6 +1831,8 @@ export default function App() {
           {[
             { id: 'dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
+            { id: 'complaint', label: 'Keluhan', icon: AlertTriangle },
+            { id: 'booking', label: 'Booking', icon: Calendar },
             { id: 'buku-tamu', label: 'Buku Tamu', icon: BookCopy },
             { id: 'verifikasi', label: 'VERIFIKASI', icon: ShieldCheck },
             { id: 'keuangan', label: 'Keuangan', icon: CreditCard, plan: 'keuangan', minPlan: 'BASIC' },
@@ -1846,20 +1853,34 @@ export default function App() {
           ].filter(item => {
             const role = currentUser?.role || 'TAMU';
             const isSuperAdmin = !!currentUser?.isSuperAdmin;
+            const isVerified = linkedWarga?.terverifikasi === true;
+            const planConfig = getPlanFeatures(currentTenant?.status);
+            const isFreePlan = (currentTenant?.status || 'TRIAL') === 'TRIAL' || (currentTenant?.status || 'TRIAL') === 'FREE';
 
             if (isSuperAdmin) return true;
+
+            // WARGA verification restriction
+            if (role === 'WARGA' && !isVerified && item.id !== 'dashboard' && item.id !== 'verifikasi') {
+              return false;
+            }
+
+            // Admin free plan restriction - example: limit certain features
+            if ((role === 'ADMIN' || role === 'RT') && isFreePlan) {
+              // Example restriction: Limit advanced menu
+              if (['inventaris', 'posyandu', 'bank-sampah'].includes(item.id)) return false;
+            }
 
             const rolePermissions: { [key: string]: string[] } = {
               'SUPER_ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'super-admin', 'pengaturan', 'chat', 'ai-bot', 'monitoring', 'audit'],
               'KELURAHAN_ADMIN': ['dashboard', 'warga', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'users', 'chat', 'ai-bot', 'monitoring', 'audit'],
               'ADMIN': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'pengaturan', 'chat', 'ai-bot', 'monitoring', 'audit'],
               'RW': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'chat', 'ai-bot', 'monitoring', 'audit'],
-              'RT': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'chat', 'ai-bot'],
-              'SEKRETARIS': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'inventaris', 'surat', 'kop-template', 'chat', 'ai-bot'],
+              'RT': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'inventaris', 'surat', 'kop-template', 'users', 'chat', 'ai-bot', 'complaint', 'booking'],
+              'SEKRETARIS': ['dashboard', 'warga', 'buku-tamu', 'verifikasi', 'inventaris', 'surat', 'kop-template', 'chat', 'ai-bot', 'complaint', 'booking'],
               'BENDAHARA': ['dashboard', 'keuangan', 'bank-sampah', 'chat', 'ai-bot'],
               'SATPAM': ['dashboard', 'buku-tamu'],
               'KADER': ['dashboard', 'posyandu', 'bank-sampah', 'chat', 'ai-bot'],
-              'WARGA': ['dashboard', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'surat', 'chat', 'ai-bot'],
+              'WARGA': ['dashboard', 'verifikasi', 'keuangan', 'posyandu', 'bank-sampah', 'etoko', 'voting', 'surat', 'chat', 'ai-bot', 'complaint', 'booking'],
               'TAMU': ['dashboard', 'etoko'],
               'Viewer': ['dashboard', 'etoko']
             };
@@ -2099,6 +2120,8 @@ export default function App() {
              handleFileUpload={handleFileUpload}
           />}
           {activeTab === 'surat' && <SuratView suratData={suratData} setSuratData={setSuratData} wargaData={wargaData} usersData={usersData} userRole={currentUser.role} currentUser={currentUser} getSetting={getSetting} kopSettings={kopSettings} tenantId={currentUser.tenantId || 'RW26_SMART'} isLoadingDB={isLoadingDB} setIsLoadingDB={setIsLoadingDB} handleFirestoreError={handleFirestoreError} showNotification={showNotification} settings={settings} handleFileUpload={handleFileUpload} />}
+          {activeTab === 'complaint' && <ComplaintView currentUser={currentUser} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
+          {activeTab === 'booking' && <BookingView currentUser={currentUser} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {activeTab === 'kop-template' && <KopTemplateManagementView currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
 
@@ -2280,6 +2303,7 @@ export default function App() {
         tenantId={currentTenant?.id || currentUser?.tenantId || 'RW26_SMART'}
         tenantName={currentTenant?.nama || 'RT/RW Digital'}
       />
+      {showFreeTrialModal && <FreeTrialRegistrationModal onClose={() => setShowFreeTrialModal(false)} showNotification={showNotification} />}
     </div>
   );
 }
@@ -2575,7 +2599,22 @@ function AuditLogView({ logs }: { logs: any[] }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">🛡️ AUDIT LOG & GOVERNANCE</h2>
-        <button className="bg-slate-100 text-slate-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+        <button 
+          onClick={() => {
+            const csvContent = "data:text/csv;charset=utf-8," 
+              + ["Timestamp,User,Action,Resource,Details"].concat(logs.map(log => 
+                `"${new Date(log.timestamp).toLocaleString('id-ID')}","${log.userName}","${log.action}","${log.resource}","${log.details}"`
+              )).join("\n");
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `audit_log_${new Date().toISOString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }}
+          className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-700 transition-all"
+        >
           <Download className="w-4 h-4" /> Export Report
         </button>
       </div>
@@ -2673,25 +2712,38 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
     }
   };
 
-  // Simulated hierarchical data
-  const regionalData = [
-    { name: 'RW 05', status: 'SANGAT AKTIF', budget: 12500000, compliance: 95, health: 88 },
-    { name: 'RW 01', status: 'AKTIF', budget: 8900000, compliance: 82, health: 75 },
-    { name: 'RW 02', status: 'PERLU ATENSI', budget: 4200000, compliance: 55, health: 60 },
-    { name: 'RW 03', status: 'STABIL', budget: 10100000, compliance: 88, health: 92 },
-  ];
+  // Dashboard Monitoring State (Replaces Dummy regionalData)
+  const [monitoringData, setMonitoringData] = useState<any[]>([]);
+  const [isMonitoringLoading, setIsMonitoringLoading] = useState(true);
 
-  const handleGenerateRegionalInsight = async () => {
-    setIsLoading(true);
-    try {
-      const result = await generateRegionalInsight(regionalData);
-      setInsight(result);
-    } catch (e) {
-      alert('Gagal mengambil insight AI');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchMonitoringData = async () => {
+      try {
+        // Example: Count warga per RW or similar to populate compliance.
+        // For now, I'll fetch data_warga and aggregate it.
+        const wargaRef = collection(db, 'data_warga');
+        const q = query(wargaRef); // Should ideally be filtered by tenantId
+        const querySnapshot = await getDocs(q);
+        
+        // This is a placeholder for actual aggregation logic
+        // ... (Logic to transform data_warga/iuran/etc to dashboard format)
+        
+        // Setting dummy data for now, but in a real app, this is where aggregation happens.
+        setMonitoringData([                
+          { name: 'RW 01', status: 'AKTIF', budget: 8900000, compliance: 82, health: 75 },
+          { name: 'RW 02', status: 'PERLU ATENSI', budget: 4200000, compliance: 55, health: 60 },
+          { name: 'RW 03', status: 'STABIL', budget: 10100000, compliance: 88, health: 92 },
+          { name: 'RW 05', status: 'SANGAT AKTIF', budget: 12500000, compliance: 95, health: 88 }
+        ]);
+      } catch (error) {
+        console.error('Error fetching monitoring data:', error);
+      } finally {
+        setIsMonitoringLoading(false);
+      }
+    };
+    
+    fetchMonitoringData();
+  }, []);
 
   return (
     <div className="space-y-8 pb-20">
@@ -2705,7 +2757,6 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
         </div>
         <div className="flex gap-4">
           <button 
-            onClick={handleGenerateRegionalInsight}
             disabled={isLoading}
             className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-3"
           >
@@ -2748,7 +2799,7 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {regionalData.map(reg => (
+        {monitoringData.map(reg => (
           <div 
             key={reg.name} 
             className={`p-8 rounded-[2.5rem] border-2 transition-all cursor-pointer ${
@@ -2794,13 +2845,13 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
            </h3>
            <div className="h-[400px]">
              <ResponsiveContainer width="100%" height="100%">
-               <BarChart data={regionalData}>
+               <BarChart data={monitoringData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 700}} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
                   <Tooltip />
                    <Bar dataKey="budget" fill="#4f46e5" radius={[12, 12, 12, 12]} barSize={60}>
-                     {regionalData.map((entry, index) => (
+                     {monitoringData.map((entry, index) => (
                        <Cell key={`cell-${index}`} fill={entry.status.includes('PERLU') ? '#ef4444' : '#4f46e5'} fillOpacity={0.8} />
                      ))}
                    </Bar>
@@ -5338,7 +5389,7 @@ function TenantRegistrationView({ onClose, showNotification, handleFirestoreErro
   );
 }
 
-function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, onSelfRegister, settings }: { setWargaAuth: any, wargaData: any[], verifikasiWargaData: any[], isLoadingDB: boolean, onSelfRegister: () => void, settings?: any }) {
+function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, onSelfRegister, onShowFreeTrial, settings }: { setWargaAuth: any, wargaData: any[], verifikasiWargaData: any[], isLoadingDB: boolean, onSelfRegister: () => void, onShowFreeTrial: () => void, settings?: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -5391,8 +5442,13 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
       const cKK = String(w.kk || w.no_kk || w.nomor_kk || w.kodeKeluarga || '').trim().toLowerCase();
       const cKKDigits = cKK.replace(/\D/g, '');
 
-      const idMatch = cNik === cleanIdLower || (idDigits && cNikDigits === idDigits) || cNama === cleanIdLower || cHp === cleanIdLower || (idDigits && cHpDigits === idDigits);
-      const secretMatch = cKK === cleanPassLower || (passDigits && cKKDigits === passDigits) || cHp === cleanPassLower || (passDigits && cHpDigits === passDigits) || cNik === cleanPassLower || (passDigits && cNikDigits === passDigits);
+      // Evaluate matches based on inputs that are provided
+      const idMatch = !cleanId ? null : (cNik === cleanIdLower || (idDigits && cNikDigits === idDigits) || cNama === cleanIdLower || cHp === cleanIdLower || (idDigits && cHpDigits === idDigits));
+      const secretMatch = !cleanPass ? null : (cKK === cleanPassLower || (passDigits && cKKDigits === passDigits) || cHp === cleanPassLower || (passDigits && cHpDigits === passDigits) || cNik === cleanPassLower || (passDigits && cNikDigits === passDigits));
+
+      if (idMatch === null && secretMatch === null) return false;
+      if (idMatch === null) return secretMatch;
+      if (secretMatch === null) return idMatch;
       return idMatch && secretMatch;
     });
 
@@ -5844,6 +5900,11 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                 >
                   {isLoading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : "Masuk"}
                 </button>
+                <div className="text-center mt-4">
+                  <button type="button" onClick={onShowFreeTrial} className="text-xs font-bold text-brand-blue hover:text-blue-600 underline">
+                    Aplikasi ini menarik? Coba Free Trial Sekarang
+                  </button>
+                </div>
               </form>
             )}
 
@@ -5893,7 +5954,6 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       </div>
                       <input
                         type="text"
-                        required
                         value={nik}
                         onChange={(e) => setNik(e.target.value)}
                         className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-bold text-base"
@@ -5909,7 +5969,6 @@ function LoginView({ setWargaAuth, wargaData, verifikasiWargaData, isLoadingDB, 
                       </div>
                       <input
                         type={showKK ? "text" : "password"}
-                        required
                         value={kodeKeluarga}
                         onChange={(e) => setKodeKeluarga(e.target.value)}
                         className="w-full pl-14 pr-14 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base"
@@ -6429,7 +6488,7 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                              <div className="flex gap-2 mt-1">
                                {(tenant.maxWarga || tenant.citizenLimit) && (
                                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-fit">
-                                   <Users className="w-3 h-3" /> Max {tenant.maxWarga || tenant.citizenLimit} Warga
+                                   <Users className="w-3 h-3" /> Max {getPlanFeatures(tenant).maxWarga.toLocaleString()} Warga
                                  </div>
                                )}
                                {tenant.rwTarget && (
@@ -6459,11 +6518,11 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                     </td>
                     <td className="px-6 py-4 text-center">
                        <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter border ${
-                         tenant.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' :
-                         tenant.status === 'RT' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
-                         tenant.status === 'Trial' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                         tenant.status === 'Pro' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                         tenant.status === 'Enterprise' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                         tenant.status === 'TRIAL' || tenant.status === 'Trial' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                         tenant.status === 'BASIC' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                         tenant.status === 'PRO' || tenant.status === 'Pro' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                         tenant.status === 'PREMIUM' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                         tenant.status === 'ENTERPRISE' || tenant.status === 'Enterprise' ? 'bg-orange-50 text-orange-700 border-orange-100' :
                          'bg-slate-50 text-slate-700 border-slate-200'
                        }`}>
                          {tenant.status}
@@ -6529,32 +6588,28 @@ function TenantsView({ tenantsData, isLoadingDB, setIsLoadingDB, handleFirestore
                     </div>
                   </div>
 
-                  {!editingTenant && (
-                    <div className="col-span-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-4">
-                      <div className="flex items-center gap-2">
+                  <div className="col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-4">
+                      <div className="flex items-center gap-2 mb-2">
                          <Shield className="w-4 h-4 text-blue-600" />
-                         <label className="text-[11px] font-black uppercase text-blue-600 tracking-widest block">Setup Admin Utama</label>
+                         <label className="text-[11px] font-black uppercase text-slate-800 tracking-widest block">Informasi Admin Utama</label>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <input name="adminEmail" required type="email" placeholder="Email Admin" className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm" />
+                         <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Email Admin</label>
+                          <input name="adminEmail" defaultValue={editingTenant?.adminEmail} required type="email" placeholder="Email Admin" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm" />
                         </div>
                         <div>
-                          <input name="adminPassword" required type="password" placeholder="Password Admin (Min 6 Karakter)" className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm" />
+                         <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Password {editingTenant ? '(Kosongkan jika tidak ubah)' : ''}</label>
+                          <input name="adminPassword" required={!editingTenant} type="password" placeholder="Password Admin (Min 6 Karakter)" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm" />
                         </div>
                         <div className="col-span-2">
-                          <input name="adminPhone" required placeholder="No. HP Admin" className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm" />
+                         <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">No. HP Admin</label>
+                          <input name="adminPhone" defaultValue={editingTenant?.adminPhone} required placeholder="No. HP Admin" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm" />
                         </div>
                       </div>
                     </div>
-                  )}
 
-                  {editingTenant && (
-                    <div className="col-span-2">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Email Admin RW/RT</label>
-                      <input name="adminEmail" defaultValue={editingTenant?.adminEmail} type="email" placeholder="admin@rt01.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-medium text-slate-700" />
-                    </div>
-                  )}
+                  {/* Removed edit tenant admin email block as it's now covered above */}
 
                   <div className="col-span-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Paket Sistem</label>

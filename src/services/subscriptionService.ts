@@ -27,6 +27,16 @@ export const checkFeatureAccess = (subscription: TenantSubscription, featureKey:
      return ['flash', 'pro', 'premium', 'enterprise', 'gov'].includes(plan.id);
   }
 
+  if (featureKey === 'complaint') {
+    // Complaint is free for all
+    return true;
+  }
+
+  if (featureKey === 'booking') {
+    // Booking is free for FLASH and above
+    return ['flash', 'pro', 'premium', 'enterprise', 'gov'].includes(plan.id);
+  }
+
   // 3. Check Addons
   const hasAddon = subscription.addons.some(addonId => {
     const addon = Object.values(ADDON_CONFIG).find(a => a.id === addonId);

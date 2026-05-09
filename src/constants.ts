@@ -20,4 +20,6 @@ export const ADDON_CONFIG = {
   PPOB: { id: 'addon_ppob', name: 'PPOB', priceMonthly: 0, featureKey: 'ppob' },
   AI_AGENT: { id: 'addon_ai_agent', name: 'AI Agent', priceMonthly: 0, featureKey: 'aiAgent' },
   GRUP_CHAT: { id: 'addon_grup_chat', name: 'Grup Chat', priceMonthly: 0, featureKey: 'grupChat' },
+  KELUHAN: { id: 'addon_keluhan', name: 'Lapor Keluhan (Warga)', priceMonthly: 0, featureKey: 'complaint' },
+  BOOKING: { id: 'addon_booking', name: 'Booking Fasilitas', priceMonthly: 5000, featureKey: 'booking' },
 };

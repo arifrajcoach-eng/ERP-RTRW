@@ -240,6 +240,35 @@ export async function registerELapak(data: { tenantId: string, userId: string, n
   }
 }
 
+// 12. KELUHAN & BOOKING
+export async function reportComplaint(data: { tenantId: string, userId: string, namaWarga: string, jenisKeluhan: string, deskripsi: string }) {
+  try {
+    const docRef = await addDoc(collection(db, 'complaints'), {
+      ...data,
+      status: 'PENDING',
+      createdAt: new Date()
+    });
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error("Failed reportComplaint", e);
+    return { success: false, error: 'Gagal mengirim keluhan' };
+  }
+}
+
+export async function bookFacility(data: { tenantId: string, userId: string, namaWarga: string, namaFasilitas: string, tanggal: string, keperluan: string }) {
+  try {
+    const docRef = await addDoc(collection(db, 'bookings'), {
+      ...data,
+      status: 'PENDING',
+      createdAt: new Date()
+    });
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error("Failed bookFacility", e);
+    return { success: false, error: 'Gagal melakukan booking' };
+  }
+}
+
 // 6. MONITORING & ALERT (Anomaly Detection)
 export async function detectAnomalies(tenantId: string) {
   try {

@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Zap, ChevronRight, CreditCard } from 'lucide-react';
+import { Lock, X, Zap, ChevronRight, CreditCard } from 'lucide-react';
 
-interface UpgradeModalProps {
+interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
+const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
@@ -83,4 +83,4 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default UpgradeModal;
+export default PaymentModal;

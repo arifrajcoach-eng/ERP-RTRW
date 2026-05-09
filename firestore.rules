@@ -166,6 +166,12 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /bookings/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
+      allow update, delete: if isTenantMember(resource.data.tenantId);
+    }
+
     match /posyandu_balita/{docId} {
       allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
     }
