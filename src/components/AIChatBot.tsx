@@ -292,16 +292,16 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
   };
 
   return (
-    <div className="flex flex-col h-[80vh] max-h-[600px] w-full max-w-lg mx-auto bg-white rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="flex flex-col h-[80vh] max-h-[600px] w-full max-w-lg mx-auto bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
       {/* Header */}
-      <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+      <div className="p-6 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between transition-colors">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-brand-blue rounded-2xl flex items-center justify-center shadow-lg shadow-brand-blue/20">
             <Bot className="text-white w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">{agentTitle}</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter flex items-center gap-1.5">
+            <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-widest">{agentTitle}</h3>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Sistem Cerdas Lingkungan
             </p>
@@ -333,13 +333,13 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-brand-blue' : 'bg-white border border-slate-100'}`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-brand-blue' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700'}`}>
                   {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-brand-blue" />}
                 </div>
                 <div className={`p-4 rounded-2xl text-sm font-medium leading-relaxed ${
                   msg.role === 'user' 
                     ? 'bg-brand-blue text-white rounded-tr-none shadow-md' 
-                    : 'bg-white text-slate-800 rounded-tl-none border border-slate-100 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm'
                 }`}>
                   {msg.text || (isLoading && idx === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : '...')}
                 </div>
@@ -351,8 +351,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
       </div>
 
       {/* Input */}
-      <div className="p-4 bg-white border-t border-slate-100">
-        <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200 focus-within:ring-2 focus-within:ring-brand-blue/10 focus-within:border-brand-blue transition-all">
+      <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 transition-colors">
+        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-brand-blue/10 focus-within:border-brand-blue transition-all">
           <button 
             type="button"
             onClick={startListening}

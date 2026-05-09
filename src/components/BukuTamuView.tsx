@@ -194,14 +194,14 @@ export function BukuTamuView({
         </div>
 
         <div className="space-y-4">
-           <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col items-center text-center group cursor-pointer hover:border-blue-500 transition-all" onClick={() => setShowQR(true)}>
-              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+           <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center text-center group cursor-pointer hover:border-blue-500 transition-all transition-colors" onClick={() => setShowQR(true)}>
+              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                  <QrCode className="w-8 h-8" />
               </div>
-              <h4 className="font-black text-slate-800 uppercase tracking-tighter text-sm">Mandiri QR</h4>
-              <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase leading-tight">Tamu Scan QR di Pos untuk Lapor Mandiri</p>
+              <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter text-sm">Mandiri QR</h4>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase leading-tight">Tamu Scan QR di Pos untuk Lapor Mandiri</p>
            </div>
-           <div className="bg-emerald-600 p-6 rounded-[2rem] shadow-xl shadow-emerald-100 flex flex-col items-center text-center text-white">
+           <div className="bg-emerald-600 dark:bg-emerald-700 p-6 rounded-[2rem] shadow-xl shadow-emerald-100 dark:shadow-none flex flex-col items-center text-center text-white transition-colors">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
                  <History className="w-8 h-8" />
               </div>
@@ -211,27 +211,27 @@ export function BukuTamuView({
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/50">
-          <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-            <span className="p-2 bg-blue-100 text-blue-600 rounded-xl"><Users className="w-5 h-5" /></span>
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/50 dark:bg-slate-800/50 transition-colors">
+          <h3 className="font-black text-slate-800 dark:text-slate-100 text-lg flex items-center gap-2">
+            <span className="p-2 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl"><Users className="w-5 h-5" /></span>
             Log Kunjungan Tamu
           </h3>
           <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input 
               type="text" 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Cari nama / tujuan..." 
-              className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold w-full focus:ring-2 focus:ring-blue-500 outline-none"
+              className="pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold w-full focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100 transition-colors"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-white text-slate-400 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100">
+            <thead className="bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100 dark:border-slate-800 transition-colors">
               <tr>
                 <th className="px-5 py-4">Waktu (Datang / Keluar)</th>
                 <th className="px-5 py-4">Tamu</th>
@@ -242,12 +242,12 @@ export function BukuTamuView({
                 <th className="px-5 py-4 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-600 dark:text-slate-400">
               {filteredTamu.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Belum ada kunjungan tamu.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 dark:text-slate-500 italic font-bold">Belum ada kunjungan tamu.</td></tr>
               )}
               {filteredTamu.map((tamu: any, idx: number) => (
-                <tr key={`tamu-row-${tamu.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors">
+                <tr key={`tamu-row-${tamu.id || idx}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   <td className="px-5 py-3">
                     <div className="text-xs font-black text-slate-800">
                       Datang: {new Date(tamu.tanggal).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}

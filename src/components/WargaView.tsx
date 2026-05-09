@@ -37,7 +37,7 @@ const calculateAge = (tglLahir: string) => {
   return age;
 };
 
-export default function WargaView({ 
+function WargaView({ 
   wargaData, 
   currentTenant, 
   setWargaData, 
@@ -316,60 +316,60 @@ export default function WargaView({
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div className="relative md:col-span-2">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input type="text" placeholder="Cari Nama / NIK..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-12 pr-4 outline-none text-sm font-bold text-slate-600" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
+              <input type="text" placeholder="Cari Nama / NIK..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors" />
             </div>
-            <select value={filterRT} onChange={(e) => setFilterRT(e.target.value)} className="bg-slate-50 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600">
-              <option value="Semua">RT: Semua</option>
-              {Array.from({length: 10}, (_, i) => String(i+1).padStart(2, '0')).map(rt => <option key={rt} value={rt}>{`RT ${rt}`}</option>)}
+            <select value={filterRT} onChange={(e) => setFilterRT(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors">
+              <option value="Semua" className="dark:bg-slate-800">RT: Semua</option>
+              {Array.from({length: 10}, (_, i) => String(i+1).padStart(2, '0')).map(rt => <option key={rt} value={rt} className="dark:bg-slate-800">{`RT ${rt}`}</option>)}
             </select>
-            <select value={filterRW} onChange={(e) => setFilterRW(e.target.value)} className="bg-slate-50 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600">
-              <option value="Semua">RW: Semua</option>
-              {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => <option key={rw} value={rw}>{`RW ${rw}`}</option>)}
+            <select value={filterRW} onChange={(e) => setFilterRW(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors">
+              <option value="Semua" className="dark:bg-slate-800">RW: Semua</option>
+              {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => <option key={rw} value={rw} className="dark:bg-slate-800">{`RW ${rw}`}</option>)}
             </select>
             <div className="flex items-center gap-2">
-               <button onClick={handleExportExcel} className="flex-1 bg-indigo-50 text-indigo-600 h-full rounded-2xl font-black uppercase text-[10px] tracking-widest border border-indigo-100 flex items-center justify-center gap-2 py-4 shadow-sm hover:bg-indigo-100 transition-colors"> <Download size={14} /> Ekspor </button>
+               <button onClick={handleExportExcel} className="flex-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 h-full rounded-2xl font-black uppercase text-[10px] tracking-widest border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center gap-2 py-4 shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"> <Download size={14} /> Ekspor </button>
             </div>
          </div>
 
-         <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
+         <div className="overflow-x-auto overflow-y-auto max-h-[65vh] scrollbar-hide">
             <table className="w-full text-left relative">
-              <thead className="sticky top-0 bg-white z-10">
-                <tr className="border-b border-slate-50 bg-slate-50/90 backdrop-blur-sm">
+              <thead className="sticky top-0 bg-white dark:bg-slate-900 z-10 transition-colors">
+                <tr className="border-b border-slate-50 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-sm">
                   <th className="py-4 px-4 w-12 text-center">
-                    <input type="checkbox" checked={selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded text-brand-blue border-slate-300 focus:ring-brand-blue" />
+                    <input type="checkbox" checked={selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded text-brand-blue border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-brand-blue" />
                   </th>
-                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 tracking-[0.2em]">Nama / NIK</th>
-                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 tracking-[0.2em]">RT/RW</th>
-                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 tracking-[0.2em]">Status</th>
-                  <th className="py-5 px-4 text-center font-black uppercase text-[10px] text-slate-400 tracking-[0.2em]">Aksi</th>
+                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">Nama / NIK</th>
+                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">RT/RW</th>
+                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">Status</th>
+                  <th className="py-5 px-4 text-center font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {displayedWarga.map((w: any, idx: number) => {
                   const idWarga = w.docId || w.id || w.nik || `w-idx-${idx}`;
                   const isSelected = selectedWargaIds.includes(idWarga);
                   return (
-                  <tr key={`wg-row-${idWarga}-${idx}`} className={`hover:bg-slate-50/50 group transition-all ${isSelected ? 'bg-blue-50/30' : ''}`}>
+                  <tr key={`wg-row-${idWarga}-${idx}`} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 group transition-all ${isSelected ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}`}>
                     <td className="py-5 px-4 text-center">
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelectWarga(idWarga)} className="w-4 h-4 rounded text-brand-blue border-slate-300 focus:ring-brand-blue" />
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelectWarga(idWarga)} className="w-4 h-4 rounded text-brand-blue border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-brand-blue" />
                     </td>
                     <td className="py-5 px-4">
                       <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-brand-blue font-black shadow-inner overflow-hidden">
+                         <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black shadow-inner overflow-hidden transition-colors">
                             {w.foto ? <img src={w.foto} className="w-full h-full object-cover" /> : w.nama.charAt(0)}
                          </div>
                          <div>
-                            <p className="text-sm font-black text-slate-800 tracking-tight leading-none mb-1">{w.nama}</p>
-                            <p className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter uppercase">{w.nik}</p>
+                            <p className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none mb-1 transition-colors">{w.nama}</p>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-mono tracking-tighter uppercase">{w.nik}</p>
                          </div>
                       </div>
                     </td>
                     <td className="py-5 px-4">
-                       <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-lg text-[10px] font-black font-mono">{w.rt}/{w.rw}</span>
+                       <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-lg text-[10px] font-black font-mono transition-colors">{w.rt}/{w.rw}</span>
                     </td>
                     <td className="py-5 px-4">
                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
@@ -796,3 +796,5 @@ export default function WargaView({
     </div>
   );
 }
+
+export default WargaView;

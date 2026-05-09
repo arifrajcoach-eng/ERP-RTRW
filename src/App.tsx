@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight, Smartphone, Zap, Droplets, Train, QrCode, BarChart3, Video, FileCheck, Globe, Volume2, VolumeX } from 'lucide-react';
+import { Siren, ShieldAlert, MapPin, LifeBuoy, Users, BookOpen, FileText, LayoutDashboard, CreditCard, PlusCircle, MinusCircle, Calendar, Search, Settings, Edit, Edit2, Edit3, Trash2, X, Download, Menu, Upload, LogOut, Lock, User, Printer, AlertTriangle, Eye, EyeOff, ChevronRight, Database, Shield, CheckCircle, XCircle, AlertCircle, Info, Package, History, ClipboardList, Baby, Stethoscope, Scale, Activity, HeartPulse, Recycle, Wallet, TrendingUp, HandCoins, Vote, ShoppingBag, ShoppingCart, Minus, LayoutGrid, Phone, FileSpreadsheet, BookCopy, Store, ShieldCheck, UserCheck, Image, Camera, Plus, BellOff, Monitor, UserPlus, Archive, CheckCircle2, Clock, RefreshCw, Files, ArrowRight, Smartphone, Zap, Droplets, Train, QrCode, BarChart3, Video, FileCheck, Globe, Volume2, VolumeX, Sun, Moon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -629,6 +629,33 @@ export default function App() {
   const [dbError, setDbError] = useState<string | null>(null);
   const [currentTenant, setCurrentTenant] = useState<any>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark' || 
+             (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    const nextMode = !darkMode;
+    setDarkMode(nextMode);
+    setNotification({
+      message: `Mode ${nextMode ? 'Malam' : 'Siang'} diaktifkan`,
+      type: 'info'
+    });
+    setTimeout(() => setNotification(null), 2000);
+  };
 
   const activeEmergency = emergenciesData.find(e => e.status === 'ACTIVE' && e.id !== hiddenEmergencyId);
 
@@ -1712,7 +1739,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans print:h-auto print:bg-white text-sm relative">
+    <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans print:h-auto print:bg-white text-sm relative transition-colors duration-300">
       {/* SOS EMERGENCY OVERLAY */}
       <AnimatePresence>
         {activeEmergency && (
@@ -1746,20 +1773,20 @@ export default function App() {
       )}
 
       {isLoadingDB && (
-        <div className="fixed inset-0 z-[9999] bg-white/95 flex flex-col items-center justify-center p-6 text-center select-none backdrop-blur-md">
+        <div className="fixed inset-0 z-[9999] bg-white/95 dark:bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center select-none backdrop-blur-md transition-colors">
           <div className="absolute inset-0 bg-mesh opacity-50 -z-10 animate-pulse"></div>
           <div className="relative mb-8 pt-4">
             <div className="w-24 h-24 border-8 border-brand-blue/10 border-t-brand-blue border-r-brand-pink rounded-full animate-spin"></div>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
               <AppLogo size={12} className="w-12 h-12 drop-shadow-lg" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-3 py-0.5 rounded-full shadow-sm border border-slate-100 text-[10px] font-bold text-brand-blue animate-bounce">LOADING</div>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-3 py-0.5 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 text-[10px] font-bold text-brand-blue animate-bounce transition-colors">LOADING</div>
           </div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tighter mb-1 uppercase font-elegant">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
-          <p className="text-sm font-bold text-slate-400 tracking-widest uppercase mb-6">Berdampak & Memberdayakan</p>
+          <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 uppercase font-elegant transition-colors">RW26 <span className="text-brand-pink">BERJUANG</span></h2>
+          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">Berdampak & Memberdayakan</p>
           <div className="flex flex-col gap-2">
-            <h3 className="text-lg font-bold text-slate-700 font-elegant tracking-tight">Powered by Nexapps</h3>
-            <p className="text-slate-500 max-w-xs mx-auto font-medium text-sm leading-relaxed">Mohon tunggu sebentar, kami sedang menyiapkan lingkungan yang ceria untuk Anda...</p>
+            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 font-elegant tracking-tight transition-colors">Powered by Nexapps</h3>
+            <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto font-medium text-sm leading-relaxed transition-colors">Mohon tunggu sebentar, kami sedang menyiapkan lingkungan yang ceria untuk Anda...</p>
           </div>
         </div>
       )}
@@ -1773,13 +1800,23 @@ export default function App() {
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white border-r border-slate-100 flex flex-col h-full print:hidden transition-all duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'} rounded-r-[2.5rem] md:rounded-none`}>
-        <div className="p-8 border-b border-slate-50 flex-shrink-0 flex items-center justify-between bg-white relative overflow-hidden group rounded-tr-[2.5rem] md:rounded-none">
+      <aside className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col h-full print:hidden transition-all duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl md:shadow-none'} rounded-r-[2.5rem] md:rounded-none`}>
+        <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex-shrink-0 flex items-center justify-between bg-white dark:bg-slate-900 relative overflow-hidden group rounded-tr-[2.5rem] md:rounded-none">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-pink/10 transition-all duration-700"></div>
           <div className="relative z-10 flex flex-col items-center w-full">
+            <div className="flex justify-between w-full mb-4">
+              <button 
+                onClick={toggleDarkMode}
+                className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm border border-slate-200 dark:border-slate-700"
+                title={darkMode ? "Switch to Light Mode" : "Switch to Night View"}
+              >
+                {darkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+              </button>
+              <div className="w-10 h-10 md:hidden"></div>
+            </div>
             <div className="relative group/logo">
-              <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
-                <AppLogo size={12} className="w-12 h-12" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
+                <AppLogo size={12} className="w-12 h-12" logoUrl={currentTenant?.logo_url || settings?.org_logo_url || settings?.logo_url} />
               </div>
               {checkFeatureAccess({ planId: currentTenant?.status?.toLowerCase() || 'starter', addons: Array.isArray(currentTenant?.addons) ? currentTenant.addons : [] }, 'custom_logo') && (
                 <button 
@@ -1791,7 +1828,7 @@ export default function App() {
                 </button>
               )}
             </div>
-            <h1 className="text-xl font-black tracking-tighter text-slate-800 flex items-center justify-center gap-1 leading-none font-elegant uppercase">
+            <h1 className="text-xl font-black tracking-tighter text-slate-800 dark:text-slate-100 flex items-center justify-center gap-1 leading-none font-elegant uppercase">
               <span className="text-brand-blue">RW26</span>
               <span className="text-brand-pink">BERJUANG</span>
             </h1>
@@ -1803,12 +1840,12 @@ export default function App() {
             <X className="w-6 h-6" />
           </button>
         </div>
-        <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 border-b border-slate-100">
+        <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 transition-colors">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-brand-green  shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI ACTIVE</p>
+            <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors">AI ACTIVE</p>
           </div>
-          <div className="p-2 bg-soft-blue rounded-xl border border-blue-100">
+          <div className="p-2 bg-soft-blue dark:bg-blue-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20 transition-colors">
              {getPlanFeatures(currentTenant?.status).multiRegion ? (
               <div className="space-y-1">
                 <p className="text-[8px] text-brand-blue font-black uppercase tracking-widest">Wilayah Kerja:</p>
@@ -1827,7 +1864,7 @@ export default function App() {
              )}
           </div>
         </div>
-        <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto pb-20 scrollbar-hide">
+        <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto pb-20 scrollbar-hide dark:bg-slate-900">
           {[
             { id: 'dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
             { id: 'warga', label: 'Data Warga', icon: Users },
@@ -1905,7 +1942,7 @@ export default function App() {
                 className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-300 relative group overflow-hidden ${
                   activeTab === item.id 
                     ? 'bg-brand-blue text-white shadow-xl shadow-brand-blue/30 scale-[1.02]' 
-                    : isLocked ? 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60' : 'text-slate-500 hover:bg-slate-50 hover:text-brand-blue font-black'
+                    : isLocked ? 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-blue font-black'
                 }`}
               >
                 {activeTab === item.id && (
@@ -1939,34 +1976,41 @@ export default function App() {
       </aside>
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full">
+      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
         {/* Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30">
+        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30">
           <div className="flex items-center space-x-4">
              <button 
                onClick={() => setIsSidebarOpen(true)}
-               className="p-3 -ml-2 text-slate-500 hover:text-brand-blue md:hidden bg-slate-50 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100"
+               className="p-3 -ml-2 text-slate-500 dark:text-slate-400 hover:text-brand-blue md:hidden bg-slate-50 dark:bg-slate-800 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100 dark:border-slate-700"
              >
                <Menu className="w-6 h-6" />
              </button>
              <div className="hidden sm:flex items-center gap-2">
-               <span className="bg-soft-yellow text-amber-600 text-[10px] px-2.5 py-1 rounded-full border border-amber-100 uppercase font-black tracking-widest shadow-sm">
+               <span className="bg-soft-yellow dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] px-2.5 py-1 rounded-full border border-amber-100 dark:border-amber-500/20 uppercase font-black tracking-widest shadow-sm transition-colors">
                  V4.0 Active
                </span>
-               <div className="flex items-center gap-2 bg-soft-green text-brand-green text-[10px] px-3 py-1 rounded-full border border-brand-green/20 uppercase font-black tracking-widest shadow-sm">
+               <div className="flex items-center gap-2 bg-soft-green dark:bg-emerald-500/10 text-brand-green dark:text-brand-green text-[10px] px-3 py-1 rounded-full border border-brand-green/20 dark:border-emerald-500/20 uppercase font-black tracking-widest shadow-sm transition-colors">
                  <div className="w-2 h-2 bg-brand-green rounded-full animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
                  Connected
                </div>
              </div>
              <div className="h-6 w-px bg-slate-100 mx-2 hidden md:block"></div>
-             <h2 className="text-xl font-black text-slate-800 capitalize tracking-tight hidden md:block">
+             <button 
+                onClick={toggleDarkMode}
+                className="p-3 text-slate-500 dark:text-slate-400 hover:text-brand-blue bg-slate-50 dark:bg-slate-800 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100 dark:border-slate-700 md:flex hidden items-center justify-center mr-4"
+                title={darkMode ? "Switch to Light Mode" : "Switch to Night View"}
+              >
+                {darkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+              </button>
+             <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 capitalize tracking-tight hidden md:block">
                {activeTab === 'etoko' ? 'E-LAPAK26' : (activeTab === 'posyandu' ? 'Kesehatan' : activeTab.replace('-', ' '))}
              </h2>
           </div>
           <div className="flex items-center space-x-3 md:space-x-6">
-             <div className="flex items-center space-x-3 md:space-x-4 pl-4 border-l border-slate-100">
+             <div className="flex items-center space-x-3 md:space-x-4 pl-4 border-l border-slate-100 dark:border-slate-800">
                <div className="text-right hidden sm:block">
-                 <p className="text-sm font-black leading-none text-slate-800 flex items-center justify-end gap-2 mb-1">
+                 <p className="text-sm font-black leading-none text-slate-800 dark:text-slate-100 flex items-center justify-end gap-2 mb-1">
                    {currentUser.name}
                    {currentUser.isSuperAdmin && <ShieldCheck className="w-4 h-4 text-brand-blue" />}
                  </p>
@@ -4585,7 +4629,16 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
     });
 
     try {
+      // Save General Settings
       await setDoc(doc(db, 'settings', tenantId), newSettings, { merge: true });
+      
+      // Save Tenant Logo if present in form
+      if (newSettings.tenant_system_logo) {
+        await setDoc(doc(db, 'tenants', tenantId), { 
+          logo_url: newSettings.tenant_system_logo 
+        }, { merge: true });
+      }
+
       showNotification("Pengaturan berhasil disimpan.", "success");
     } catch (error) {
       console.error(error);
@@ -4859,6 +4912,36 @@ function PengaturanView({ tenantId, currentTenant, wargaData, settings, userRole
                 <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Alamat Sekretariat</label>
                 <textarea name="alamat" defaultValue={settings.alamat} rows={2} placeholder="Jl. Merdeka No. 123..." className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all" />
               </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo Aplikasi (Sidebar)</label>
+                <div className="flex gap-3 items-center">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const url = await handleFileUpload(file, 'system_logo');
+                          const input = document.getElementById('tenant_system_logo_input') as HTMLInputElement;
+                          if (input) {
+                            input.value = url;
+                            showNotification("Logo Sistem berhasil diupload. Simpan untuk menerapkan.", "info");
+                          }
+                        } catch (err) {
+                          showNotification("Gagal upload logo sistem", "error");
+                        }
+                      }
+                    }}
+                    className="flex-1 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer" 
+                  />
+                  <input name="tenant_system_logo" id="tenant_system_logo_input" type="hidden" defaultValue={currentTenant?.logo_url} />
+                  <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                    {currentTenant?.logo_url ? <img src={currentTenant.logo_url} className="w-full h-full object-contain" /> : <Image className="w-5 h-5 text-slate-400" />}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Logo RT/RW (Kop Surat)</label>
                 <div className="flex gap-3 items-center">

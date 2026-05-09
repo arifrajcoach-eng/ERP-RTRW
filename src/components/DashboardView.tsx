@@ -280,7 +280,7 @@ export default function DashboardView({
             </div>
           </motion.div>
         ) : (
-          <div className="flex-1 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col justify-center relative overflow-hidden group">
+          <div className="flex-1 bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-colors">
             <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-blue/10 transition-colors"></div>
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-4">
@@ -288,11 +288,11 @@ export default function DashboardView({
                   <Smartphone className="w-7 h-7 text-brand-blue" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-800 tracking-tight mb-0.5">SISTEM AKTIF</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{currentTenant?.name || 'RW26_SMART'}</p>
+                  <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight mb-0.5 uppercase">SISTEM AKTIF</h3>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{currentTenant?.name || 'RW26_SMART'}</p>
                 </div>
               </div>
-              <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-2">
+              <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-2 transition-colors">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-200"></div>
                 Cloud Secured
               </div>
@@ -302,80 +302,80 @@ export default function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-[#e3ffee] p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
+        <div className="bg-[#e3ffee] dark:bg-emerald-500/10 p-6 rounded-[2rem] border border-white dark:border-emerald-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
           <div className="absolute right-4 top-4 w-24 h-24 bg-green-600/10 rounded-full blur-2xl group-hover:bg-green-600/20 transition-colors flex items-center justify-center text-white">
             <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
               <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
           </div>
-          <p className="text-[10px] text-green-800/70 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
+          <p className="text-[10px] text-green-800/70 dark:text-emerald-400 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-green-600/10 flex items-center justify-center backdrop-blur-sm">
-              <Users className="w-6 h-6 text-green-700" />
+            <div className="w-12 h-12 rounded-2xl bg-green-600/10 dark:bg-emerald-500/20 flex items-center justify-center backdrop-blur-sm">
+              <Users className="w-6 h-6 text-green-700 dark:text-emerald-400" />
             </div>
             <div>
-              <p className="text-3xl font-black text-green-900 leading-none mb-1">
+              <p className="text-3xl font-black text-green-900 dark:text-emerald-500 leading-none mb-1">
                 {stats.totalWarga}
               </p>
-              <p className="text-[10px] font-bold text-green-800/60 uppercase tracking-tighter">KK: {stats.kepalaKeluarga} Terdaftar</p>
+              <p className="text-[10px] font-bold text-green-800/60 dark:text-emerald-500/60 uppercase tracking-tighter">KK: {stats.kepalaKeluarga} Terdaftar</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#67a9e9] p-6 rounded-[2rem] border border-slate-50 shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
+        <div className="bg-[#67a9e9] dark:bg-blue-600/20 p-6 rounded-[2rem] border border-slate-50 dark:border-blue-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
           <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
             <div className="w-10 h-10 opacity-30 -rotate-12 group-hover:rotate-0 group-hover:opacity-50 transition-all duration-500">
               <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
           </div>
-          <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
+          <p className="text-[10px] text-white/70 dark:text-blue-200/70 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 dark:bg-blue-500/30 flex items-center justify-center backdrop-blur-md">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-black text-white leading-none mb-1">
+              <p className="text-2xl font-black text-white dark:text-blue-100 leading-none mb-1">
                 Rp {formatRupiah(stats.saldoTotal)}
               </p>
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">Update Real-time</p>
+              <p className="text-[10px] font-bold text-white/60 dark:text-blue-200/60 uppercase tracking-tighter">Update Real-time</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#fcf1f1] p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/40 flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all">
+        <div className="bg-[#fcf1f1] dark:bg-rose-500/10 p-6 rounded-[2rem] border border-white dark:border-rose-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
           <div className="absolute right-4 top-4 w-24 h-24 bg-red-600/10 rounded-full blur-2xl group-hover:bg-red-600/20 transition-colors flex items-center justify-center text-white">
             <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
               <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
             </div>
           </div>
-          <p className="text-[10px] text-red-800/70 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
+          <p className="text-[10px] text-red-800/70 dark:text-rose-400 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-600/10 flex items-center justify-center backdrop-blur-sm">
-              <FileText className="w-6 h-6 text-red-700" />
+            <div className="w-12 h-12 rounded-2xl bg-red-600/10 dark:bg-rose-500/20 flex items-center justify-center backdrop-blur-sm">
+              <FileText className="w-6 h-6 text-red-700 dark:text-rose-400" />
             </div>
             <div>
-              <p className="text-3xl font-black text-red-900 leading-none mb-1">
+              <p className="text-3xl font-black text-red-900 dark:text-rose-500 leading-none mb-1">
                 {stats.suratPending}
               </p>
-              <p className="text-[10px] font-bold text-red-800/60 uppercase tracking-tighter">Butuh Persetujuan</p>
+              <p className="text-[10px] font-bold text-red-800/60 dark:text-rose-500/60 uppercase tracking-tighter">Butuh Persetujuan</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-brand-blue" />
               </div>
-              <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase">Tren Kas RW</h3>
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Tren Kas RW</h3>
             </div>
             <select 
               value={kasPeriod}
               onChange={(e) => setKasPeriod(e.target.value)}
-              className="bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-500 px-3 py-2 outline-none focus:ring-2 ring-brand-blue/20"
+              className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 px-3 py-2 outline-none focus:ring-2 ring-brand-blue/20 transition-colors"
             >
               <option value="yearly">Seluruh Tahun 2026</option>
               {months.map(m => <option key={m.id} value={m.id}>Bulan {m.label}</option>)}
@@ -416,18 +416,18 @@ export default function DashboardView({
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-brand-pink/10 rounded-xl flex items-center justify-center">
                 <FileText className="w-5 h-5 text-brand-pink" />
               </div>
-              <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase">Persentase Aktivitas</h3>
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Persentase Aktivitas</h3>
             </div>
             <select 
               value={piePeriod}
               onChange={(e) => setPiePeriod(e.target.value)}
-              className="bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-500 px-3 py-2 outline-none focus:ring-2 ring-brand-blue/20"
+              className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 px-3 py-2 outline-none focus:ring-2 ring-brand-blue/20 transition-colors"
             >
               <option value="30days">Terakhir 30 Hari</option>
               <option value="yearly">Seluruh 2026</option>
@@ -465,18 +465,18 @@ export default function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center">
                 <Clock className="w-5 h-5 text-indigo-500" />
               </div>
-              <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase">Log Aktivitas Lingkungan</h3>
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Log Aktivitas Lingkungan</h3>
             </div>
           </div>
           <div className="space-y-4">
             {recentActivities.map((act, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
+              <div key={i} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                   act.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 
                   act.type === 'out' ? 'bg-rose-50 text-rose-600' :
@@ -498,7 +498,7 @@ export default function DashboardView({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-black text-slate-800 truncate uppercase tracking-tighter">{act.title}</h4>
+                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 truncate uppercase tracking-tighter">{act.title}</h4>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">{act.date}</span>
                   </div>
                   <p className="text-xs text-slate-500 font-medium truncate">{act.desc}</p>
