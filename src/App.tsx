@@ -3511,6 +3511,7 @@ export default function App() {
               userRole={currentUser.role}
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
+              handleFirestoreError={handleFirestoreError}
               currentUser={currentUser}
               setActiveTab={setActiveTab}
             />
@@ -6820,6 +6821,7 @@ function PengaturanView({
   userRole,
   handleFileUpload,
   showNotification,
+  handleFirestoreError,
   currentUser,
   setActiveTab,
 }: {
@@ -6830,6 +6832,7 @@ function PengaturanView({
   userRole: string;
   handleFileUpload: any;
   showNotification: any;
+  handleFirestoreError: any;
   currentUser: any;
   setActiveTab: any;
 }) {
@@ -6839,7 +6842,8 @@ function PengaturanView({
 
   const handleSaveSettings = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (userRole !== "ADMIN") {
+    const roleUpper = userRole?.toUpperCase();
+    if (roleUpper !== "ADMIN" && roleUpper !== "SUPER_ADMIN" && !currentUser?.isSuperAdmin) {
       showNotification("Hanya Admin yang dapat mengubah pengaturan.", "error");
       return;
     }
@@ -6848,7 +6852,9 @@ function PengaturanView({
     const formData = new FormData(e.currentTarget);
     const newSettings: Record<string, string> = {};
     formData.forEach((value, key) => {
-      newSettings[key] = value as string;
+      if (typeof value === "string") {
+        newSettings[key] = value;
+      }
     });
 
     try {
@@ -6874,8 +6880,12 @@ function PengaturanView({
 
       showNotification("Pengaturan berhasil disimpan.", "success");
     } catch (error) {
-      console.error(error);
-      showNotification("Gagal menyimpan pengaturan.", "error");
+      console.error("Save Settings Error:", error);
+      if (typeof handleFirestoreError === "function") {
+        handleFirestoreError(error, "update", `settings/${tenantId}`);
+      } else {
+        showNotification("Gagal menyimpan pengaturan. Periksa koneksi atau izin anda.", "error");
+      }
     } finally {
       setIsSaving(false);
     }
