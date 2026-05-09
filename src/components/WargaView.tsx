@@ -159,48 +159,77 @@ function WargaView({
     const handleParsedData = async (parsedData: any[]) => {
       try {
         let successCount = 0;
-        const batch = writeBatch(db);
+        let duplicateCount = 0;
+        const CHUNK_SIZE = 450; // Firestore limit is 500, use 450 to be safe
+        const uniqueIds = new Set();
         
-        parsedData.forEach((row: any) => {
-          const nikValue = (row.nik || row.NIK || row['No. KTP'] || row['NIK/No. KTP'] || row['NOMOR KTP'] || row['Nomor KTP'] || row['No KTP'] || row['NIK '] || row['nik '] || row['N.I.K'] || '')?.toString()?.trim();
-          const nama = row.nama || row.Nama || row['Nama Lengkap'] || row['NAMA'] || row['Nama Warga'] || row['NAMA LENGKAP'];
-          
-          if (nikValue && nama) {
-            const nik = nikValue.replace(/[^0-9]/g, ''); // Use only digits for ID
-            const id = `${tenantId}_${nik}`;
-            const docRef = doc(db, 'data_warga', id);
-            batch.set(docRef, {
-              nik: nik,
-              docId: id,
-              nama: nama,
-              kk: (row.kk || row['No. KK'] || row.KK || row['No KK'] || row['Nomor KK'] || row['KODE KK'] || '')?.toString()?.trim() || '',
-              rt: (row.rt || row.RT || row['RT.'] || '')?.toString()?.padStart(2, '0') || '01',
-              rw: (row.rw || row.RW || row['RW.'] || '')?.toString()?.padStart(2, '0') || '26',
-              status: row.status || row.Status || 'Warga Tetap',
-              tenantId: tenantId,
-              tglLahir: row.tglLahir || row['Tanggal Lahir'] || row['Tanggal Lahir '] || '',
-              tempatLahir: row.tempatLahir || row['Tempat Lahir'] || '',
-              jenisKelamin: row.jenisKelamin || row['Jenis Kelamin'] || row.jk || row.JK || 'Laki-laki',
-              agama: row.agama || row.Agama || 'Islam',
-              pekerjaan: row.pekerjaan || row.Pekerjaan || row['Profesi/ Pekerjaan'] || '',
-              pendidikan: row.pendidikan || row.Pendidikan || row['Pendidikan Terakhir'] || '',
-              statusKawin: row.statusKawin || row['Status Kawin'] || row.pernikahan || '',
-              posisiKeluarga: row.posisiKeluarga || row['Posisi Dalam Keluarga'] || row.posisi || '',
-              kewarganegaraan: row.kewarganegaraan || row['WNi/ WNA'] || row.kwn || 'WNI',
-              telepon: row.telepon || row.Telepon || row['No. Hp'] || row.hp || row.phone || '',
-              email: row.email || row.Email || '',
-              alamat: row.alamat || row.Alamat || row.blok || '',
-              kelurahan: row.kelurahan || row.Kelurahan || '',
-              kecamatan: row.kecamatan || row.Kecamatan || '',
-              kabupaten: row.kabupaten || row.kota || row['Kabupaten/ Kota'] || row.kota_kab || ''
-            }, { merge: true });
-            successCount++;
+        // Split data into chunks of 450
+        for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
+          const chunk = parsedData.slice(i, i + CHUNK_SIZE);
+          const batch = writeBatch(db);
+          let opsInBatch = 0;
+
+          chunk.forEach((row: any) => {
+            const rawNik = (row.nik || row.NIK || row['No. KTP'] || row['NIK/No. KTP'] || row['NOMOR KTP'] || row['Nomor KTP'] || row['No KTP'] || row['NIK '] || row['nik '] || row['N.I.K'] || '')?.toString()?.trim();
+            const nama = row.nama || row.Nama || row['Nama Lengkap'] || row['NAMA'] || row['Nama Warga'] || row['NAMA LENGKAP'];
+            
+            if (nama) {
+              let nik = rawNik.replace(/[^0-9]/g, ''); 
+              
+              // Fallback ID if NIK is missing or invalid to prevent overwriting
+              const uniqueSuffix = Math.random().toString(36).substring(2, 7);
+              const id = nik && nik.length >= 5 ? `${tenantId}_${nik}` : `${tenantId}_AUTO_${Date.now()}_${uniqueSuffix}`;
+              
+              if (!nik) nik = 'Belum Ada'; // Visual marker for missing NIK
+
+              if (uniqueIds.has(id)) {
+                duplicateCount++;
+              }
+              uniqueIds.add(id);
+
+              const docRef = doc(db, 'data_warga', id);
+              batch.set(docRef, {
+                nik: nik,
+                docId: id,
+                nama: nama,
+                kk: (row.kk || row['No. KK'] || row.KK || row['No KK'] || row['Nomor KK'] || row['KODE KK'] || '')?.toString()?.trim() || '',
+                rt: (row.rt || row.RT || row['RT.'] || '')?.toString()?.padStart(2, '0') || '01',
+                rw: (row.rw || row.RW || row['RW.'] || '')?.toString()?.padStart(2, '0') || '26',
+                status: row.status || row.Status || 'Warga Tetap',
+                tenantId: tenantId,
+                tglLahir: row.tglLahir || row['Tanggal Lahir'] || row['Tanggal Lahir '] || '',
+                tempatLahir: row.tempatLahir || row['Tempat Lahir'] || '',
+                jenisKelamin: row.jenisKelamin || row['Jenis Kelamin'] || row.jk || row.JK || 'Laki-laki',
+                agama: row.agama || row.Agama || 'Islam',
+                pekerjaan: row.pekerjaan || row.Pekerjaan || row['Profesi/ Pekerjaan'] || '',
+                pendidikan: row.pendidikan || row.Pendidikan || row['Pendidikan Terakhir'] || '',
+                statusKawin: row.statusKawin || row['Status Kawin'] || row.pernikahan || '',
+                posisiKeluarga: row.posisiKeluarga || row['Posisi Dalam Keluarga'] || row.posisi || '',
+                kewarganegaraan: row.kewarganegaraan || row['WNi/ WNA'] || row.kwn || 'WNI',
+                telepon: row.telepon || row.Telepon || row['No. Hp'] || row.hp || row.phone || '',
+                email: row.email || row.Email || '',
+                alamat: row.alamat || row.Alamat || row.blok || '',
+                kelurahan: row.kelurahan || row.Kelurahan || '',
+                kecamatan: row.kecamatan || row.Kecamatan || '',
+                kabupaten: row.kabupaten || row.kota || row['Kabupaten/ Kota'] || row.kota_kab || ''
+              }, { merge: true });
+              successCount++;
+              opsInBatch++;
+            }
+          });
+
+          if (opsInBatch > 0) {
+            await batch.commit();
           }
-        });
+        }
         
         if (successCount > 0) {
-          await batch.commit();
-          showNotification(`${successCount} data berhasil diimpor`, 'success');
+          const finalCount = uniqueIds.size;
+          if (duplicateCount > 0) {
+            showNotification(`${finalCount} warga unik diimpor (${duplicateCount} data duplikat dilewati/diupdate)`, 'success');
+          } else {
+            showNotification(`${successCount} data berhasil diimpor`, 'success');
+          }
         } else {
           showNotification('Tidak ada data valid yang ditemukan', 'error');
         }
