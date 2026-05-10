@@ -2784,7 +2784,7 @@ export default function App() {
                   <div className="flex flex-col leading-tight" title={currentTenant?.name || settings?.nama_rt}>
                     {(currentTenant?.name || settings?.nama_rt).includes('SUPER ADMIN') ? (
                       <>
-                        <span className="text-brand-pink text-[16px] font-bold tracking-widest opacity-80 ml-[11px] border border-white">SUPER ADMIN</span>
+                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border border-white leading-[24px] w-[138.91px] inline-block">SUPER ADMIN</span>
                         <span className="text-brand-blue text-[14px] truncate ml-[30px] mt-[6px] h-[18.5px] leading-[15.5px]">SmartRW AI</span>
                       </>
                     ) : (
