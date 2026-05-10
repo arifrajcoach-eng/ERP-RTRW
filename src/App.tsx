@@ -2706,8 +2706,8 @@ export default function App() {
               LOADING
             </div>
           </div>
-          <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 uppercase font-elegant transition-colors">
-            SmartRW <span className="text-brand-pink">AI</span>
+          <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors">
+            <span className="font-bold"><span className="text-[#89CFF0]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
           </h2>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">
             Berdampak & Memberdayakan
@@ -2756,7 +2756,7 @@ export default function App() {
               <div className="w-10 h-10 md:hidden"></div>
             </div>
             <div className="relative group/logo">
-              <div className="w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
+              <div className="w-[82.9931px] h-[69.9931px] rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
                 <AppLogo
                   size={12}
                   className="w-12 h-12 truncate"
@@ -2779,23 +2779,27 @@ export default function App() {
               )}
             </div>
             <div className="px-6 mb-2">
-              <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 flex flex-col leading-none font-elegant uppercase">
+              <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 flex flex-col leading-none font-elegant">
                 {(currentTenant?.name || settings?.nama_rt) ? (
                   <div className="flex flex-col leading-tight" title={currentTenant?.name || settings?.nama_rt}>
                     {(currentTenant?.name || settings?.nama_rt).includes('SUPER ADMIN') ? (
                       <>
-                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border border-white leading-[24px] w-[138.91px] inline-block">SUPER ADMIN</span>
-                        <span className="text-brand-blue text-[14px] truncate ml-[30px] mt-[6px] h-[18.5px] leading-[15.5px]">SmartRW AI</span>
+                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border border-white leading-[18px] w-[139.906px] inline-block uppercase">SUPER ADMIN</span>
+                        <span className="text-[14px] truncate ml-[30px] mt-[6px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center">
+                          <span className="text-[#89CFF0] font-bold border-[#1d3840]">Smart</span>
+                          <span className="text-brand-blue">RW</span>&nbsp;
+                          <span className="text-brand-pink">AI</span>
+                        </span>
                       </>
                     ) : (
-                      <span className="text-brand-pink text-lg truncate">
+                      <span className="text-brand-pink text-lg truncate uppercase">
                         {currentTenant?.name || settings?.nama_rt}
                       </span>
                     )}
                   </div>
                 ) : (
                   <>
-                    <span className="text-brand-blue">SmartRW</span>
+                    <span className="text-[#89CFF0]">Smart</span><span className="text-brand-blue">RW</span>
                     <span className="text-brand-pink">AI</span>
                   </>
                 )}
@@ -9020,8 +9024,8 @@ function LoginView({
               logoUrl={settings?.org_logo_url || settings?.logo_url}
             />
           </div>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-800 uppercase leading-none mb-2 font-elegant">
-            SmartRW <span className="text-brand-pink">AI</span>
+          <h1 className="text-5xl font-black tracking-tighter text-slate-800 leading-none mb-2 font-elegant">
+            <span className="font-bold"><span className="text-[#89CFF0]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
           </h1>
           <p className="text-brand-blue font-bold tracking-[0.2em] text-sm uppercase">
             BERDAMPAK &amp; MEMBERDAYAKAN
