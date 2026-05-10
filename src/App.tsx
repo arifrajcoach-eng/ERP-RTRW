@@ -1496,7 +1496,7 @@ export default function App() {
         ? (() => {
             setCurrentTenant({
               id: "MASTER",
-              name: "SUPER ADMIN RW26",
+              name: "SUPER ADMIN SmartRW AI",
               status: "ENTERPRISE",
               maxWarga: 999999,
             });
@@ -2573,7 +2573,7 @@ export default function App() {
           />
         </div>
         <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">
-          RW26 <span className="text-brand-pink">BERJUANG</span>
+          SmartRW <span className="text-brand-pink">AI</span>
         </h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
           Menyiapkan Sesi Keamanan...
@@ -2707,7 +2707,7 @@ export default function App() {
             </div>
           </div>
           <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 uppercase font-elegant transition-colors">
-            RW26 <span className="text-brand-pink">BERJUANG</span>
+            SmartRW <span className="text-brand-pink">AI</span>
           </h2>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">
             Berdampak & Memberdayakan
@@ -2780,22 +2780,31 @@ export default function App() {
             </div>
             <div className="px-6 mb-2">
               <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 flex flex-col leading-none font-elegant uppercase">
-                {currentTenant?.name ? (
-                  <>
-                    <span className="text-brand-blue truncate" title={currentTenant.name.split(' ')[0]}>
-                      {currentTenant.name.split(' ')[0]}
-                    </span>
-                    <span className="text-brand-pink truncate" title={currentTenant.name.split(' ').slice(1).join(' ')}>
-                      {currentTenant.name.split(' ').slice(1).join(' ') || 'DIGITAL'}
-                    </span>
-                  </>
+                {(currentTenant?.name || settings?.nama_rt) ? (
+                  <div className="flex flex-col leading-tight" title={currentTenant?.name || settings?.nama_rt}>
+                    {(currentTenant?.name || settings?.nama_rt).includes('SUPER ADMIN') ? (
+                      <>
+                        <span className="text-brand-blue text-[16px] font-bold tracking-widest opacity-80 ml-[11px] border border-[#06294d]">SUPER ADMIN</span>
+                        <span className="text-brand-pink text-[14px] truncate ml-[30px] mt-[6px] h-[18.5px]">SmartRW AI</span>
+                      </>
+                    ) : (
+                      <span className="text-brand-pink text-lg truncate">
+                        {currentTenant?.name || settings?.nama_rt}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <>
-                    <span className="text-brand-blue">RW26</span>
-                    <span className="text-brand-pink">BERJUANG</span>
+                    <span className="text-brand-blue">SmartRW</span>
+                    <span className="text-brand-pink">AI</span>
                   </>
                 )}
               </h1>
+              {currentTenant?.name && (
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-[3px] ml-[18px]">
+                  Eksosistem Digital
+                </p>
+              )}
             </div>
           </div>
           <button
@@ -3713,7 +3722,7 @@ export default function App() {
                 Kirimi Sinyal Darurat?
               </h2>
               <p className="text-slate-600 text-base font-medium leading-relaxed mb-8 px-2">
-                Tindakan ini akan memberitahukan seluruh pengurus dan warga RW26
+                Tindakan ini akan memberitahukan seluruh pengurus dan warga RW / RT
                 secara instan. Gunakan hanya untuk keadaan mendesak.
               </p>
               <div className="flex flex-col gap-4">
@@ -5005,7 +5014,7 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
         </div>
 
         <p className="mt-8 text-[10px] font-bold opacity-60 uppercase tracking-widest">
-          Sinyal ini terkirim ke seluruh warga RW26 BERJUANG
+          Sinyal ini terkirim ke seluruh pengurus dan warga
         </p>
       </div>
     </motion.div>
@@ -7304,16 +7313,22 @@ function PengaturanView({
               <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">
                 Informasi INSTANSI / RT / RW & Kop Surat
               </h4>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
-                  Nama Instansi / RT / RW (Kop)
+              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 mb-2">
+                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 block tracking-wider">
+                  Nama Organisasi / RT / RW (Muncul di Sidebar & Kop)
                 </label>
                 <input
                   name="nama_rt"
                   defaultValue={settings.nama_rt}
-                  placeholder="Contoh: PENGURUS RUKUN TETANGGA 04"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold"
+                  placeholder="Contoh: PENGURUS RT 04"
+                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
                 />
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
+                  <p className="text-[10px] text-slate-500 italic leading-tight">
+                    Nama ini akan menjadi identitas utama di sidebar menu dan kop surat dokumen warga.
+                  </p>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -8803,7 +8818,7 @@ function LoginView({
     } else {
       setTimeout(() => {
         setError(
-          'Data tidak ditemukan! Jika Anda adalah warga baru atau belum terdaftar di sistem RW26, silakan klik tombol "DAFTAR MANDIRI" di bawah untuk mendaftarkan data Anda.',
+          'Data tidak ditemukan! Jika Anda adalah warga baru atau belum terdaftar di sistem SmartRW AI, silakan klik tombol "DAFTAR MANDIRI" di bawah untuk mendaftarkan data Anda.',
         );
         setIsLoading(false);
       }, 500);
@@ -9006,7 +9021,7 @@ function LoginView({
             />
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 uppercase leading-none mb-2 font-elegant">
-            RW26 <span className="text-brand-pink">BERJUANG</span>
+            SmartRW <span className="text-brand-pink">AI</span>
           </h1>
           <p className="text-brand-blue font-bold tracking-[0.2em] text-sm uppercase">
             BERDAMPAK &amp; MEMBERDAYAKAN
@@ -10052,7 +10067,7 @@ function TenantsView({
               Manajemen Tenant (Client RW/RT)
             </h3>
             <p className="text-sm text-slate-500">
-              Ekosistem Multi-Tenant RW26 BERJUANG System.
+              Ekosistem Multi-Tenant SmartRW AI System.
             </p>
           </div>
         </div>

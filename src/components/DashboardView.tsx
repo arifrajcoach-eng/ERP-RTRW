@@ -219,7 +219,7 @@ export default function DashboardView({
         dateObj: new Date(s.tanggal || 0)
       })),
       ...userVotes.slice(-10).map(v => ({
-        title: 'E-Pemilu RW 26',
+        title: 'E-Pemilu SmartRW',
         desc: `${v.voterName} telah memberikan suara`,
         date: v.timestamp ? new Date(v.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: 'Suara Masuk',
@@ -227,7 +227,7 @@ export default function DashboardView({
         dateObj: new Date(v.timestamp || 0)
       })),
       ...tokoOrders.slice(-10).map(o => ({
-        title: 'Pesanan E-LAPAK26',
+        title: 'Pesanan E-LAPAK SmartRW',
         desc: `${o.customerName} memesan ${o.items.length} item`,
         date: o.timestamp ? new Date(o.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         amount: o.total,
@@ -289,7 +289,7 @@ export default function DashboardView({
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight mb-0.5 uppercase">SISTEM AKTIF</h3>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{currentTenant?.name || 'RW26_SMART'}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{currentTenant?.name || settings?.nama_rt || 'SmartRW AI'}</p>
                 </div>
               </div>
               <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-2 transition-colors">

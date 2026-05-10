@@ -63,7 +63,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     view.setUint16(20, 1, true); // AudioFormat (1 = PCM)
     view.setUint16(22, 1, true); // NumChannels
     view.setUint32(24, sampleRate, true); // SampleRate
-    view.setUint32(28, sampleRate * 2, true); // ByteRate
+    view.setUint32(28, sampleRate * 2, true); // ByteRate (16-bit mono = 2 bytes per sample)
     view.setUint16(32, 2, true); // BlockAlign
     view.setUint16(34, 16, true); // BitsPerSample
 
@@ -71,10 +71,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     view.setUint32(36, 0x64617461, false); // "data"
     view.setUint32(40, pcmData.length, true); // Subchunk2Size
 
-    // Write PCM data
-    for (let i = 0; i < pcmData.length; i++) {
-      view.setUint8(44 + i, pcmData[i]);
-    }
+    // Write PCM data efficiently
+    new Uint8Array(buffer, 44).set(pcmData);
 
     return new Blob([buffer], { type: 'audio/wav' });
   };
@@ -96,12 +94,28 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
 
   useEffect(() => {
     const resumeAudio = () => {
+      if (!audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContextRef.current = new AudioContextClass();
+        }
+      }
       if (audioContextRef.current?.state === 'suspended') {
         audioContextRef.current.resume().catch(() => {});
       }
+      // Keep channel open with a tiny silent buffer on first physical click
+      try {
+        if (audioContextRef.current && audioContextRef.current.state === 'running') {
+          const silence = audioContextRef.current.createBuffer(1, 1, 22050);
+          const source = audioContextRef.current.createBufferSource();
+          source.buffer = silence;
+          source.connect(audioContextRef.current.destination);
+          source.start(0);
+        }
+      } catch (e) {}
     };
-    window.addEventListener('click', resumeAudio);
-    window.addEventListener('touchstart', resumeAudio);
+    window.addEventListener('click', resumeAudio, { once: false });
+    window.addEventListener('touchstart', resumeAudio, { once: false });
     return () => {
       window.removeEventListener('click', resumeAudio);
       window.removeEventListener('touchstart', resumeAudio);
@@ -151,13 +165,13 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     if (isMuted) return;
     
     if (isSpeaking) {
-      if (sourceRef.current) {
-        try { sourceRef.current.stop(); } catch (e) {}
-        sourceRef.current = null;
-      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+      }
+      if (sourceRef.current) {
+        try { sourceRef.current.stop(); } catch (e) {}
+        sourceRef.current = null;
       }
       setIsSpeaking(false);
       return;
@@ -169,11 +183,23 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
       
       const response = await textToSpeech(text);
       if (!response || !mountedRef.current) {
-        setIsSpeaking(false);
+        console.warn("TTS Service returned no response. Check Gemini Key/Quota. Falling back to Browser TTS.");
+        // Fallback to browser TTS if Gemini fails
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'id-ID';
+          utterance.onend = () => { if (mountedRef.current) setIsSpeaking(false); };
+          utterance.onerror = () => { if (mountedRef.current) setIsSpeaking(false); };
+          window.speechSynthesis.speak(utterance);
+        } else {
+          setIsSpeaking(false);
+        }
         return;
       }
       
       const { data: base64Audio, mimeType } = response;
+      console.log(`TTS Response: ${mimeType}, Size: ${base64Audio?.length}`);
+      
       if (!base64Audio) throw new Error("No audio data received");
 
       // Robust base64 to binary
@@ -183,22 +209,19 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         bytes[i] = binaryString.charCodeAt(i);
       }
 
-      // Handle PCM
-      if (mimeType?.includes('pcm') || !mimeType) {
-        // Ensure AudioContext is ready
-        if (!audioContextRef.current) {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContextClass) {
-            audioContextRef.current = new AudioContextClass();
-          }
-        }
-        
-        const ctx = audioContextRef.current;
-        if (!ctx) throw new Error("AudioContext not supported");
+      // Ensure AudioContext is ready for any path we take
+      if (!audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) audioContextRef.current = new AudioContextClass();
+      }
+      const ctx = audioContextRef.current;
+      if (ctx && ctx.state === 'suspended') {
+        await ctx.resume().catch(() => {});
+      }
 
-        if (ctx.state === 'suspended') {
-          await ctx.resume().catch(() => {});
-        }
+      // Handle PCM specifically using AudioContext (Most direct path for Gemini's raw output)
+      if (mimeType?.includes('pcm') || !mimeType) {
+        if (!ctx) throw new Error("AudioContext not supported");
 
         // Decode PCM 16-bit to Float32
         const alignedLength = Math.floor(bytes.length / 2);
@@ -208,28 +231,42 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
           float32Array[i] = int16Array[i] / 32768;
         }
 
-        let sampleRate = 24000;
-        const rateMatch = mimeType?.match(/rate=(\d+)/);
-        if (rateMatch) {
-          sampleRate = parseInt(rateMatch[1], 10);
+        const sampleRate = parseInt(mimeType?.match(/rate=(\d+)/)?.[1] || '24000', 10);
+        console.log(`Playing PCM: ${sampleRate}Hz`);
+        
+        // Try playing via Audio Element (WAV Blob) first as it's more stable for mobile
+        try {
+          const wavBlob = pcmToWavBlob(bytes, sampleRate);
+          const url = URL.createObjectURL(wavBlob);
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          audio.onended = () => {
+            if (mountedRef.current) setIsSpeaking(false);
+            URL.revokeObjectURL(url);
+          };
+          await audio.play();
+        } catch (playError) {
+          console.warn("Audio Element play failed, trying AudioContext Source:", playError);
+          const audioBuffer = ctx.createBuffer(1, float32Array.length, sampleRate);
+          audioBuffer.getChannelData(0).set(float32Array);
+          
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          
+          const gainNode = ctx.createGain();
+          gainNode.gain.value = 1.0;
+          source.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          
+          sourceRef.current = source;
+          source.onended = () => {
+            if (mountedRef.current) setIsSpeaking(false);
+            sourceRef.current = null;
+          };
+          source.start(0);
         }
-
-        const audioBuffer = ctx.createBuffer(1, float32Array.length, sampleRate);
-        audioBuffer.getChannelData(0).set(float32Array);
-        
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(ctx.destination);
-        sourceRef.current = source;
-        
-        source.onended = () => {
-          if (mountedRef.current) setIsSpeaking(false);
-          sourceRef.current = null;
-        };
-        
-        source.start(0);
       } else {
-        // Fallback for encoded formats
+        // Fallback for encoded formats (MP3/WAV/etc)
         const blob = new Blob([bytes], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
@@ -241,8 +278,18 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         try {
           await audio.play();
         } catch (e) {
-          console.warn("Audio play failed:", e);
-          if (mountedRef.current) setIsSpeaking(false);
+          console.warn("Audio element playback failed, trying AudioContext decode:", e);
+          if (ctx) {
+            const decoded = await ctx.decodeAudioData(bytes.buffer.slice(0));
+            const source = ctx.createBufferSource();
+            source.buffer = decoded;
+            source.connect(ctx.destination);
+            source.onended = () => { if (mountedRef.current) setIsSpeaking(false); };
+            source.start(0);
+            sourceRef.current = source;
+          } else {
+            if (mountedRef.current) setIsSpeaking(false);
+          }
           URL.revokeObjectURL(url);
         }
       }
@@ -266,8 +313,9 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     recognitionRef.current.lang = 'id-ID';
 
     // Pre-warm AudioContext on start listening gesture
-    if (!isMuted) {
-      if (!audioContextRef.current) {
+    if (isMuted) setIsMuted(false);
+    
+    if (!audioContextRef.current) {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (AudioContextClass) {
           audioContextRef.current = new AudioContextClass();
@@ -286,7 +334,6 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
           source.start(0);
         } catch (e) {}
       }
-    }
 
     recognitionRef.current.onstart = () => setIsListening(true);
     recognitionRef.current.onresult = (event: any) => {
@@ -307,8 +354,9 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     if (!textToSend.trim() || isLoading) return;
     
     // Pre-warm AudioContext on user gesture
-    if (!isMuted) {
-      if (!audioContextRef.current) {
+    if (isMuted && manualInput === undefined) setIsMuted(false);
+    
+    if (!audioContextRef.current) {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (AudioContextClass) {
           audioContextRef.current = new AudioContextClass();
@@ -327,7 +375,6 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
           source.start(0);
         } catch (e) {}
       }
-    }
 
     if (usageCount >= maxUsage) {
       setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, kuota AI harian Anda telah habis.' }]);
@@ -400,8 +447,22 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
           });
         }
         if (fullText && mountedRef.current) {
+          // Speak clean version
+          const speakText = (text: string) => {
+             // Basic check if it looks like JSON
+             if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
+                 try {
+                     const parsed = JSON.parse(text);
+                     if (parsed.text) return parsed.text;
+                     return ""; // Don't speak raw action JSON
+                 } catch(e) { return text; }
+             }
+             return text.replace(/```json/g, '').replace(/```/g, '').trim();
+          };
+
           try {
-            const jsonAction = JSON.parse(fullText.replace(/```json/g, '').replace(/```/g, '').trim());
+            const cleanText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
+            const jsonAction = JSON.parse(cleanText);
             if (jsonAction.action === 'createSurat') {
               const res = await createSurat({ ...jsonAction.params, tenantId });
               const msg = res.success ? `Alhamdulillah kak, surat pengantar berhasil dibuat (ID: ${res.id}).` : 'Maaf kak, ada kendala saat membuat surat.';
@@ -413,10 +474,10 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
               setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
               handleSpeak(msg);
             } else {
-              handleSpeak(fullText);
+              handleSpeak(speakText(fullText));
             }
           } catch (e) {
-            handleSpeak(fullText);
+            handleSpeak(speakText(fullText));
           }
         }
       } catch (streamError) {
@@ -463,10 +524,11 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
             if (audioContextRef.current?.state === 'suspended') {
               try { await audioContextRef.current.resume(); } catch(e) {}
             }
-            if (isMuted) {
+            // Test audio if double clicked or just help diagnosing
+            if (!isMuted) {
+              handleSpeak("Tes suara AI Agen. Jika terdengar, maka sistem audio Anda sudah aktif.");
+            } else {
               setIsMuted(false);
-            } else if (lastSpokenTextRef.current) {
-              handleSpeak(lastSpokenTextRef.current);
             }
           }}
           className={`p-2 rounded-xl transition-all ${isMuted ? 'bg-slate-200 text-slate-400' : 'bg-brand-blue/10 text-brand-blue'}`}

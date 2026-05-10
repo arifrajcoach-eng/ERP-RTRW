@@ -143,7 +143,7 @@ export function KasView({
       // 3. Call Gemini
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: [
           {
             parts: [
@@ -290,7 +290,7 @@ export function KasView({
 
     // Header
     doc.setFontSize(16);
-    doc.text(settings.nama_organisasi || "RW26 BERJUANG", 105, 20, {
+    doc.text(settings.nama_organisasi || "SmartRW AI", 105, 20, {
       align: "center",
     });
     doc.setFontSize(10);
