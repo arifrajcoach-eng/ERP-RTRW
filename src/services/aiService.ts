@@ -123,14 +123,15 @@ export async function textToSpeech(text: string) {
     
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: `Bacakan dengan suara yang jelas, natural, dan fasih berbahasa Indonesia: ${cleanedText}` }] }],
+      contents: [{ role: 'user', parts: [{ text: `Bacakan teks berikut dengan suara perempuan yang santun, jelas, dan ramah: ${cleanedText}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName: "Kore" }
           }
-        }
+        },
+        temperature: 0.7
       }
     });
 

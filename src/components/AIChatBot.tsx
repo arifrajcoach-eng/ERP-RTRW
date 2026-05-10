@@ -46,6 +46,38 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
   const lastSpokenTextRef = useRef<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const mountedRef = useRef(true);
+
+  // Helper to convert PCM to WAV Blob
+  const pcmToWavBlob = (pcmData: Uint8Array, sampleRate: number) => {
+    const buffer = new ArrayBuffer(44 + pcmData.length);
+    const view = new DataView(buffer);
+
+    // RIFF identifier
+    view.setUint32(0, 0x52494646, false); // "RIFF"
+    view.setUint32(4, 36 + pcmData.length, true); // Length
+    view.setUint32(8, 0x57415645, false); // "WAVE"
+
+    // fmt chunk
+    view.setUint32(12, 0x666d7420, false); // "fmt "
+    view.setUint32(16, 16, true); // Subchunk1Size
+    view.setUint16(20, 1, true); // AudioFormat (1 = PCM)
+    view.setUint16(22, 1, true); // NumChannels
+    view.setUint32(24, sampleRate, true); // SampleRate
+    view.setUint32(28, sampleRate * 2, true); // ByteRate
+    view.setUint16(32, 2, true); // BlockAlign
+    view.setUint16(34, 16, true); // BitsPerSample
+
+    // data chunk
+    view.setUint32(36, 0x64617461, false); // "data"
+    view.setUint32(40, pcmData.length, true); // Subchunk2Size
+
+    // Write PCM data
+    for (let i = 0; i < pcmData.length; i++) {
+      view.setUint8(44 + i, pcmData[i]);
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+  };
   
   const tenantId = currentUser?.tenantId || 'RW26_SMART';
   const roleUpper = currentUser?.role?.toUpperCase();
@@ -59,6 +91,20 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const resumeAudio = () => {
+      if (audioContextRef.current?.state === 'suspended') {
+        audioContextRef.current.resume().catch(() => {});
+      }
+    };
+    window.addEventListener('click', resumeAudio);
+    window.addEventListener('touchstart', resumeAudio);
+    return () => {
+      window.removeEventListener('click', resumeAudio);
+      window.removeEventListener('touchstart', resumeAudio);
     };
   }, []);
 
@@ -109,6 +155,10 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         try { sourceRef.current.stop(); } catch (e) {}
         sourceRef.current = null;
       }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setIsSpeaking(false);
       return;
     }
@@ -116,6 +166,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     try {
       setIsSpeaking(true);
       lastSpokenTextRef.current = text;
+      
       const response = await textToSpeech(text);
       if (!response || !mountedRef.current) {
         setIsSpeaking(false);
@@ -125,33 +176,45 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
       const { data: base64Audio, mimeType } = response;
       if (!base64Audio) throw new Error("No audio data received");
 
-      // Handle PCM vs Encoded formats
+      // Robust base64 to binary
+      const binaryString = atob(base64Audio.replace(/\s/g, ""));
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Handle PCM
       if (mimeType?.includes('pcm') || !mimeType) {
-        // Init AudioContext on first use
+        // Ensure AudioContext is ready
         if (!audioContextRef.current) {
           const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
           if (AudioContextClass) {
             audioContextRef.current = new AudioContextClass();
           }
         }
-
+        
         const ctx = audioContextRef.current;
         if (!ctx) throw new Error("AudioContext not supported");
 
         if (ctx.state === 'suspended') {
-          await ctx.resume();
+          await ctx.resume().catch(() => {});
         }
 
-        // Decode PCM
-        const binary = atob(base64Audio.replace(/\s/g, ""));
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        
-        const int16Array = new Int16Array(bytes.buffer);
+        // Decode PCM 16-bit to Float32
+        const alignedLength = Math.floor(bytes.length / 2);
+        const int16Array = new Int16Array(bytes.buffer, 0, alignedLength);
         const float32Array = new Float32Array(int16Array.length);
-        for (let i = 0; i < int16Array.length; i++) float32Array[i] = int16Array[i] / 32768;
+        for (let i = 0; i < int16Array.length; i++) {
+          float32Array[i] = int16Array[i] / 32768;
+        }
 
-        const audioBuffer = ctx.createBuffer(1, float32Array.length, 24000);
+        let sampleRate = 24000;
+        const rateMatch = mimeType?.match(/rate=(\d+)/);
+        if (rateMatch) {
+          sampleRate = parseInt(rateMatch[1], 10);
+        }
+
+        const audioBuffer = ctx.createBuffer(1, float32Array.length, sampleRate);
         audioBuffer.getChannelData(0).set(float32Array);
         
         const source = ctx.createBufferSource();
@@ -166,10 +229,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         
         source.start(0);
       } else {
-        // Fallback for encoded formats (like WAV/MP3 if Gemini ever switches)
-        const binary = atob(base64Audio.replace(/\s/g, ""));
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        // Fallback for encoded formats
         const blob = new Blob([bytes], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
@@ -183,6 +243,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         } catch (e) {
           console.warn("Audio play failed:", e);
           if (mountedRef.current) setIsSpeaking(false);
+          URL.revokeObjectURL(url);
         }
       }
     } catch (error: any) {
@@ -203,6 +264,30 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
 
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.lang = 'id-ID';
+
+    // Pre-warm AudioContext on start listening gesture
+    if (!isMuted) {
+      if (!audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContextRef.current = new AudioContextClass();
+        }
+      }
+      if (audioContextRef.current) {
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(e => console.warn("Failed to resume audio on listening gesture:", e));
+        }
+        // Silence trick to keep channel open
+        try {
+          const silence = audioContextRef.current.createBuffer(1, 1, 22050);
+          const source = audioContextRef.current.createBufferSource();
+          source.buffer = silence;
+          source.connect(audioContextRef.current.destination);
+          source.start(0);
+        } catch (e) {}
+      }
+    }
+
     recognitionRef.current.onstart = () => setIsListening(true);
     recognitionRef.current.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
@@ -220,6 +305,30 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
   const handleSend = async (manualInput?: string, retries = 1) => {
     const textToSend = manualInput || input;
     if (!textToSend.trim() || isLoading) return;
+    
+    // Pre-warm AudioContext on user gesture
+    if (!isMuted) {
+      if (!audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContextRef.current = new AudioContextClass();
+        }
+      }
+      if (audioContextRef.current) {
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(e => console.warn("Failed to resume audio on gesture:", e));
+        }
+        // Silence trick to keep channel open
+        try {
+          const silence = audioContextRef.current.createBuffer(1, 1, 22050);
+          const source = audioContextRef.current.createBufferSource();
+          source.buffer = silence;
+          source.connect(audioContextRef.current.destination);
+          source.start(0);
+        } catch (e) {}
+      }
+    }
+
     if (usageCount >= maxUsage) {
       setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, kuota AI harian Anda telah habis.' }]);
       return;
@@ -349,7 +458,11 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
           </div>
         </div>
         <button 
-          onClick={() => {
+          onClick={async () => {
+            // Resume AudioContext on user gesture
+            if (audioContextRef.current?.state === 'suspended') {
+              try { await audioContextRef.current.resume(); } catch(e) {}
+            }
             if (isMuted) {
               setIsMuted(false);
             } else if (lastSpokenTextRef.current) {
@@ -377,12 +490,21 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-brand-blue' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700'}`}>
                   {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-brand-blue" />}
                 </div>
-                <div className={`p-4 rounded-2xl text-sm font-medium leading-relaxed ${
+                <div className={`group relative p-4 rounded-2xl text-sm font-medium leading-relaxed ${
                   msg.role === 'user' 
                     ? 'bg-brand-blue text-white rounded-tr-none shadow-md' 
                     : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm'
                 }`}>
                   {msg.text || (isLoading && idx === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : '...')}
+                  
+                  {msg.role === 'bot' && msg.text && (
+                    <button
+                      onClick={() => handleSpeak(msg.text)}
+                      className="absolute -right-2 -bottom-2 p-1.5 bg-white dark:bg-slate-700 rounded-lg shadow-md border border-slate-100 dark:border-slate-600 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                    >
+                      <Volume2 className="w-3 h-3 text-brand-blue" />
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>
