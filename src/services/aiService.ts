@@ -134,11 +134,15 @@ export async function textToSpeech(text: string) {
       }
     });
 
-    const audioPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.includes('audio'));
-    if (!audioPart?.inlineData?.data) {
-        console.warn('No audio data in response:', JSON.stringify(response));
+    const audioPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+    if (!audioPart) {
+      console.warn('TTS Response without audio part:', JSON.stringify(response));
+      return null;
     }
-    return audioPart?.inlineData?.data ? { data: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType } : null;
+    return { 
+      data: audioPart.inlineData.data, 
+      mimeType: audioPart.inlineData.mimeType || 'audio/pcm;rate=24000' 
+    };
   } catch (error) {
     console.warn("TTS Generation Error:", error);
     return null;

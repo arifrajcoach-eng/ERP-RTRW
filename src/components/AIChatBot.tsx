@@ -40,13 +40,16 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
   const [isMuted, setIsMuted] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenTextRef = useRef<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const mountedRef = useRef(true);
   
   const tenantId = currentUser?.tenantId || 'RW26_SMART';
-  const maxUsage = currentUser?.role === 'Admin' ? 999 : 10;
+  const roleUpper = currentUser?.role?.toUpperCase();
+  const maxUsage = (roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN' || roleUpper === 'SUPER ADMIN' || currentUser?.isSuperAdmin) ? 9999 : 25;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -102,9 +105,9 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     if (isMuted) return;
     
     if (isSpeaking) {
-      if (audioRef.current instanceof HTMLAudioElement) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      if (sourceRef.current) {
+        try { sourceRef.current.stop(); } catch (e) {}
+        sourceRef.current = null;
       }
       setIsSpeaking(false);
       return;
@@ -122,48 +125,65 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
       const { data: base64Audio, mimeType } = response;
       if (!base64Audio) throw new Error("No audio data received");
 
-      // Robust base64 to Blob conversion
-      const sliceSize = 512;
-      const byteCharacters = atob(base64Audio.replace(/\s/g, ""));
-      const byteArrays = [];
-
-      for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-        const slice = byteCharacters.slice(offset, offset + sliceSize);
-        const byteNumbers = new Array(slice.length);
-        for (let i = 0; i < slice.length; i++) {
-          byteNumbers[i] = slice.charCodeAt(i);
+      // Handle PCM vs Encoded formats
+      if (mimeType?.includes('pcm') || !mimeType) {
+        // Init AudioContext on first use
+        if (!audioContextRef.current) {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            audioContextRef.current = new AudioContextClass();
+          }
         }
-        const byteArray = new Uint8Array(byteNumbers);
-        byteArrays.push(byteArray);
-      }
 
-      const blob = new Blob(byteArrays, { type: mimeType || "audio/mpeg" });
-      const url = URL.createObjectURL(blob);
-      
-      const audio = new Audio();
-      audio.src = url;
-      audioRef.current = audio;
-      
-      audio.onended = () => { 
-        if (mountedRef.current) setIsSpeaking(false);
-        URL.revokeObjectURL(url);
-      };
+        const ctx = audioContextRef.current;
+        if (!ctx) throw new Error("AudioContext not supported");
 
-      audio.onerror = (e) => {
-        console.warn("Audio element failed to load source:", e);
-        if (mountedRef.current) setIsSpeaking(false);
-        URL.revokeObjectURL(url);
-      };
-      
-      try {
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          await playPromise;
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
         }
-      } catch (playError) {
-        console.warn("Autoplay was prevented or audio source is invalid:", playError);
-        // On some browsers, we might need a user gesture if this is called after an async task
-        if (mountedRef.current) setIsSpeaking(false);
+
+        // Decode PCM
+        const binary = atob(base64Audio.replace(/\s/g, ""));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        
+        const int16Array = new Int16Array(bytes.buffer);
+        const float32Array = new Float32Array(int16Array.length);
+        for (let i = 0; i < int16Array.length; i++) float32Array[i] = int16Array[i] / 32768;
+
+        const audioBuffer = ctx.createBuffer(1, float32Array.length, 24000);
+        audioBuffer.getChannelData(0).set(float32Array);
+        
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        sourceRef.current = source;
+        
+        source.onended = () => {
+          if (mountedRef.current) setIsSpeaking(false);
+          sourceRef.current = null;
+        };
+        
+        source.start(0);
+      } else {
+        // Fallback for encoded formats (like WAV/MP3 if Gemini ever switches)
+        const binary = atob(base64Audio.replace(/\s/g, ""));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => {
+          if (mountedRef.current) setIsSpeaking(false);
+          URL.revokeObjectURL(url);
+        };
+        try {
+          await audio.play();
+        } catch (e) {
+          console.warn("Audio play failed:", e);
+          if (mountedRef.current) setIsSpeaking(false);
+        }
       }
     } catch (error: any) {
       console.warn('AI Voice Error:', error);
@@ -324,7 +344,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
             <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-widest">{agentTitle}</h3>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Sistem Cerdas Lingkungan
+              Sistem Cerdas Lingkungan • {maxUsage > 100 ? 'Kuota Unlimited' : `Sisa Kuota: ${maxUsage - usageCount}`}
             </p>
           </div>
         </div>
