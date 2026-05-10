@@ -2784,8 +2784,8 @@ export default function App() {
                   <div className="flex flex-col leading-tight" title={currentTenant?.name || settings?.nama_rt}>
                     {(currentTenant?.name || settings?.nama_rt).includes('SUPER ADMIN') ? (
                       <>
-                        <span className="text-brand-blue text-[16px] font-bold tracking-widest opacity-80 ml-[11px] border border-[#06294d]">SUPER ADMIN</span>
-                        <span className="text-brand-pink text-[14px] truncate ml-[30px] mt-[6px] h-[18.5px]">SmartRW AI</span>
+                        <span className="text-brand-pink text-[16px] font-bold tracking-widest opacity-80 ml-[11px] border border-white">SUPER ADMIN</span>
+                        <span className="text-brand-blue text-[14px] truncate ml-[30px] mt-[6px] h-[18.5px] leading-[15.5px]">SmartRW AI</span>
                       </>
                     ) : (
                       <span className="text-brand-pink text-lg truncate">
@@ -2801,7 +2801,7 @@ export default function App() {
                 )}
               </h1>
               {currentTenant?.name && (
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-[3px] ml-[18px]">
+                <p className="text-[9px] font-bold text-[#5779ab] bg-white font-[Georgia] uppercase tracking-widest mt-[3px] ml-[18px]">
                   Eksosistem Digital
                 </p>
               )}
