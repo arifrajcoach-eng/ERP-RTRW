@@ -4713,62 +4713,78 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
   }, [emergency]);
 
   const [isMuted, setIsMuted] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    let audioCtx: AudioContext | null = null;
+
+    const playPulse = async () => {
+      // Vibrate for all supported devices
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try {
+          navigator.vibrate([1000, 500, 1000, 500]);
+        } catch (e) {}
+      }
+
+      if (isMuted) return;
+
+      // Sound Notification using Web Audio API (Suara Sinyal Perang)
+      try {
+        if (!audioCtxRef.current) {
+          const AudioContextClass =
+            window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtxRef.current = new AudioContextClass();
+          }
+        }
+
+        const audioCtx = audioCtxRef.current;
+        if (!audioCtx) return;
+
+        if (audioCtx.state === "suspended") {
+          setAudioBlocked(true);
+          try {
+            await audioCtx.resume();
+            setAudioBlocked(false);
+          } catch (err) {
+            // Still suspended, user gesture probably required
+            return;
+          }
+        }
+
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        // Sinyal Perang: Sweeping frequency
+        oscillator.type = "sawtooth";
+        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+        oscillator.frequency.linearRampToValueAtTime(
+          800,
+          audioCtx.currentTime + 1.5,
+        );
+        oscillator.frequency.linearRampToValueAtTime(
+          300,
+          audioCtx.currentTime + 3,
+        );
+
+        // Volume curve
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5);
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 2.5);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 3);
+      } catch (e) {
+        console.warn("Audio Context playback failed (likely autoplay):", e);
+      }
+    };
 
     if (!isMuted) {
-      const playPulse = () => {
-        // Vibrate for all supported devices
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-          try {
-            navigator.vibrate([1000, 500, 1000, 500]);
-          } catch (e) {}
-        }
-
-        // Sound Notification using Web Audio API (Suara Sinyal Perang)
-        try {
-          if (!audioCtx) {
-            audioCtx = new (
-              window.AudioContext || (window as any).webkitAudioContext
-            )();
-          }
-          if (audioCtx.state === "suspended") {
-            audioCtx.resume();
-          }
-
-          const oscillator = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-
-          oscillator.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-
-          // Sinyal Perang: Sweeping frequency
-          oscillator.type = "sawtooth";
-          oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-          oscillator.frequency.linearRampToValueAtTime(
-            800,
-            audioCtx.currentTime + 1.5,
-          );
-          oscillator.frequency.linearRampToValueAtTime(
-            300,
-            audioCtx.currentTime + 3,
-          );
-
-          // Volume curve
-          gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-          gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5);
-          gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 2.5);
-          gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
-
-          oscillator.start(audioCtx.currentTime);
-          oscillator.stop(audioCtx.currentTime + 3);
-        } catch (e) {
-          console.error("Audio API warning/not supported", e);
-        }
-      };
-
       // Play immediately
       playPulse();
       // Repeat every 3 seconds to match the siren length
@@ -4784,13 +4800,30 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
 
     return () => {
       if (interval) clearInterval(interval);
-      if (audioCtx && audioCtx.state !== "closed") {
+    };
+  }, [isMuted]);
+
+  // Cleanup audio context on unmount
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
         try {
-          audioCtx.close();
+          audioCtxRef.current.close();
         } catch (e) {}
       }
     };
-  }, [isMuted]);
+  }, []);
+
+  const enableAudioManually = async () => {
+    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+      try {
+        await audioCtxRef.current.resume();
+        setAudioBlocked(false);
+      } catch (e) {
+        console.error("Failed to enable audio manually:", e);
+      }
+    }
+  };
 
   return (
     <motion.div
@@ -4944,13 +4977,29 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
         )}
 
         {/* Local actions: Mute and Hide */}
-        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-2">
-          {!isMuted && (
+        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-2 flex-wrap">
+          {audioBlocked && !isMuted && (
+            <button
+              onClick={enableAudioManually}
+              className="px-6 py-4 bg-yellow-400 text-slate-900 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-yellow-300 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto shadow-xl"
+            >
+              <Volume2 className="w-5 h-5" /> AKTIFKAN SUARA ALARM
+            </button>
+          )}
+
+          {!isMuted ? (
             <button
               onClick={() => setIsMuted(true)}
-              className="px-6 py-4 bg-red-700/50  border border-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="px-6 py-4 bg-red-700/50 border border-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <BellOff className="w-5 h-5" /> Stop Suara/Getar
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsMuted(false)}
+              className="px-6 py-4 bg-emerald-600 border border-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+            >
+              <Volume2 className="w-5 h-5" /> Nyalakan Suara/Getar
             </button>
           )}
         </div>
@@ -6843,7 +6892,12 @@ function PengaturanView({
   const handleSaveSettings = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const roleUpper = userRole?.toUpperCase();
-    if (roleUpper !== "ADMIN" && roleUpper !== "SUPER_ADMIN" && !currentUser?.isSuperAdmin) {
+    if (
+      roleUpper !== "ADMIN" &&
+      roleUpper !== "SUPER_ADMIN" &&
+      roleUpper !== "SUPER ADMIN" &&
+      !currentUser?.isSuperAdmin
+    ) {
       showNotification("Hanya Admin yang dapat mengubah pengaturan.", "error");
       return;
     }
@@ -7238,7 +7292,7 @@ function PengaturanView({
               <Settings className="w-4 h-4 mr-2 text-blue-600" />
               Pengaturan Sistem
             </h3>
-            {userRole === "ADMIN" && (
+            {(userRole === "ADMIN" || userRole === "SUPER_ADMIN" || userRole === "SUPER ADMIN") && (
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
                 Mode Editor
               </span>
@@ -7248,11 +7302,11 @@ function PengaturanView({
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">
-                Informasi RT & Kop Surat
+                Informasi INSTANSI / RT / RW & Kop Surat
               </h4>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
-                  Nama Instansi / RT (Kop)
+                  Nama Instansi / RT / RW (Kop)
                 </label>
                 <input
                   name="nama_rt"
@@ -7468,7 +7522,12 @@ function PengaturanView({
               <div className="pt-4 flex justify-end">
                 <button
                   type="submit"
-                  disabled={isSaving || userRole !== "ADMIN"}
+                  disabled={
+                    isSaving ||
+                    (userRole !== "ADMIN" &&
+                      userRole !== "SUPER_ADMIN" &&
+                      userRole !== "SUPER ADMIN")
+                  }
                   className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
                 >
                   {isSaving ? "Menyimpan..." : "Simpan Semua Pengaturan"}

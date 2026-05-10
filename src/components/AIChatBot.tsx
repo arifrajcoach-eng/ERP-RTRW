@@ -120,28 +120,49 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
       }
       
       const { data: base64Audio, mimeType } = response;
-      const byteCharacters = atob(base64Audio);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      if (!base64Audio) throw new Error("No audio data received");
+
+      // Robust base64 to Blob conversion
+      const sliceSize = 512;
+      const byteCharacters = atob(base64Audio.replace(/\s/g, ""));
+      const byteArrays = [];
+
+      for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: mimeType });
+
+      const blob = new Blob(byteArrays, { type: mimeType || "audio/mpeg" });
       const url = URL.createObjectURL(blob);
       
-      const audio = new Audio(url);
+      const audio = new Audio();
+      audio.src = url;
       audioRef.current = audio;
       
       audio.onended = () => { 
         if (mountedRef.current) setIsSpeaking(false);
         URL.revokeObjectURL(url);
       };
+
+      audio.onerror = (e) => {
+        console.warn("Audio element failed to load source:", e);
+        if (mountedRef.current) setIsSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
       
       try {
-        await audio.play();
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
       } catch (playError) {
-        console.error("Autoplay failed, consider user interaction", playError);
-        // On mobile, the browser might block autoplay after async calls.
+        console.warn("Autoplay was prevented or audio source is invalid:", playError);
+        // On some browsers, we might need a user gesture if this is called after an async task
         if (mountedRef.current) setIsSpeaking(false);
       }
     } catch (error: any) {

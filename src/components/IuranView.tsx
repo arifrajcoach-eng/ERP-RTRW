@@ -56,6 +56,7 @@ export function IuranView({
   const [buktiUrl, setBuktiUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [jenisPembayaran, setJenisPembayaran] = useState('Iuran Warga');
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Simulated PG States
   const [showPgModal, setShowPgModal] = useState(false);
@@ -73,9 +74,22 @@ export function IuranView({
   const myTransactions = isPengurus ? iuranData : iuranData.filter((i: any) => i.nik === currentUser.nik || i.userId === currentUser.uid || i.userId === currentUser.id_user);
   
   const filteredTransactions = myTransactions.filter((i: any) => {
-    if (selectedMonth === -1) return new Date(i.tanggal).getFullYear() === selectedYear;
     const d = new Date(i.tanggal);
-    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    const matchesMonth = selectedMonth === -1 || d.getMonth() === selectedMonth;
+    const matchesYear = d.getFullYear() === selectedYear;
+    
+    if (!matchesMonth || !matchesYear) return false;
+    
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      i.namaPenyetor?.toLowerCase().includes(query) ||
+      i.jenis?.toLowerCase().includes(query) ||
+      i.keterangan?.toLowerCase().includes(query) ||
+      i.nik?.toLowerCase().includes(query) ||
+      i.alamat?.toLowerCase().includes(query)
+    );
   });
 
   const handleCreatePayment = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -344,7 +358,17 @@ export function IuranView({
               <span className="bg-blue-600 w-1.5 h-4 rounded-full"></span>
               {isPengurus ? "Semua Transaksi Masuk" : "Riwayat Pembayaran Saya"}
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Cari transaksi..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-4 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-full md:w-64"
+                />
+              </div>
               <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
                 <option value={-1}>Semua Bulan</option>
                 {months.map((m, i) => <option key={i} value={i}>{m}</option>)}

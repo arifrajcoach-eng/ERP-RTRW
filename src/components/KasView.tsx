@@ -73,6 +73,7 @@ export function KasView({
   const [strukUrl, setStrukUrl] = useState("");
   const [trxType, setTrxType] = useState<"Masuk" | "Keluar">("Masuk");
   const [isScanning, setIsScanning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const scanInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,7 +148,7 @@ export function KasView({
           {
             parts: [
               {
-                text: "Ekstrak data dari struk pembayaran ini. Masukkan dalam JSON. Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, Perbaikan, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika itu struk belanja/pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat barang/jasa).",
+                text: "Ekstrak data dari struk pembayaran atau invoice ini (bisa berupa gambar atau PDF). Masukkan dalam JSON. Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, Perbaikan, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika itu struk belanja/pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat barang/jasa).",
               },
               { inlineData: { data: base64Data, mimeType: file.type } },
             ],
@@ -436,12 +437,20 @@ export function KasView({
   };
 
   const currentMonthTransactions = kasData.filter((t) => {
-    // Assuming t.tanggal is formatted like "01 Jan 2026"
-    // This part might need better parsing but let's keep original logic
     const matchesYear = t.tanggal.includes(selectedYear);
     const monthStr = months[selectedMonth].substring(0, 3);
     const matchesMonth = t.tanggal.includes(monthStr);
-    return matchesYear && matchesMonth;
+
+    if (!matchesYear || !matchesMonth) return false;
+
+    if (searchQuery.trim() === "") return true;
+
+    const query = searchQuery.toLowerCase();
+    return (
+      t.transaksi?.toLowerCase().includes(query) ||
+      t.nama?.toLowerCase().includes(query) ||
+      t.keterangan?.toLowerCase().includes(query)
+    );
   });
 
   const totalMasuk = currentMonthTransactions.reduce(
@@ -523,9 +532,19 @@ export function KasView({
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50">
           <h3 className="font-bold text-slate-800 flex items-center gap-2">
             <span className="bg-blue-600 w-1.5 h-4 rounded-full"></span>
-            Buku Kas RT / RW
+            Buku Kas
           </h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Cari transaksi..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-full md:w-64"
+              />
+            </div>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
@@ -552,7 +571,7 @@ export function KasView({
               type="file"
               ref={scanInputRef}
               className="hidden"
-              accept="image/*"
+              accept="image/*,application/pdf"
               capture="environment"
               onChange={handleScanReceipt}
             />

@@ -44,7 +44,7 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
           onClick={() => setActiveFinTab('kas')}
           className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'kas' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 ring-2 ring-blue-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
         >
-          <Wallet className="w-5 h-5" /> Buku Kas RT
+          <Wallet className="w-5 h-5" /> Buku Kas
         </button>
         <button
           onClick={() => setActiveFinTab('ppob')}
