@@ -1548,7 +1548,7 @@ export default function App() {
       // Jika di Dashboard utama (MASTER), kita ambil hanya data yang berlabel MASTER atau tenantId yang aktif
       const constraints = [
         where("tenantId", "in", tIds),
-        limit(500), // Hard limit to prevent massive reads
+        limit(5000), // Increased from 500 to handle larger imports
       ];
 
       if (currentUser?.role === "RT") {
@@ -2152,7 +2152,7 @@ export default function App() {
             );
 
       unsubUsers = onSnapshot(
-        query(usersQuery, limit(500)),
+        query(usersQuery, limit(5000)),
         (snap) => {
           const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
           setUsersData(data);

@@ -6,8 +6,9 @@ const ai = new GoogleGenAI({ apiKey: (typeof process !== "undefined" && process.
 function checkApiKey() {
   const key = (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "";
   if (!key) {
-    throw new Error("GEMINI_API_KEY belum dikonfigurasi. Silakan tambahkan VITE_GEMINI_API_KEY atau GEMINI_API_KEY di dashboard Vercel Anda.");
+    throw new Error("Kunci AI belum terdeteksi. PENTING: Jika di Vercel, pastikan nama environment variable adalah VITE_GEMINI_API_KEY, bukan GEMINI_API_KEY saja. Setelah menyimpannya, kamu WAJIB melakukan Redeploy ulang agar perubahannya aktif di website.");
   }
+  return key;
 }
 
 export async function chatWithAI(params: {
