@@ -1,12 +1,23 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Initialization
-const ai = new GoogleGenAI({ apiKey: (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "" });
+const getApiKey = () => {
+  let key = "";
+  if (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) {
+    key = process.env.GEMINI_API_KEY;
+  } else if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) {
+    key = import.meta.env.VITE_GEMINI_API_KEY;
+  }
+  if (key === "undefined" || key === "null") key = "";
+  return key;
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 function checkApiKey() {
-  const key = (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "";
+  const key = getApiKey();
   if (!key) {
-    throw new Error("Kunci AI belum terdeteksi. PENTING: Jika di Vercel, pastikan nama environment variable adalah VITE_GEMINI_API_KEY, bukan GEMINI_API_KEY saja. Setelah menyimpannya, kamu WAJIB melakukan Redeploy ulang agar perubahannya aktif di website.");
+    throw new Error("Kunci AI belum terdeteksi. PENTING: Jika di Vercel, pastikan nama environment variable adalah VITE_GEMINI_API_KEY (huruf besar semua), lalu kamu WAJIB klik tombol 'Redeploy' agar environment terbaca.");
   }
   return key;
 }
