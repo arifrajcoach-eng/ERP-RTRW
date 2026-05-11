@@ -49,6 +49,7 @@ interface KasViewProps {
     message: string,
     type?: "success" | "error" | "info",
   ) => void;
+  plan?: string;
 }
 
 export function KasView({
@@ -66,6 +67,7 @@ export function KasView({
   handleFirestoreError,
   handleFileUpload,
   showNotification,
+  plan,
 }: KasViewProps) {
   const [showMasukForm, setShowMasukForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -121,6 +123,23 @@ export function KasView({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check Plan Limit (STARTER/TRIAL gets 3 scans per month)
+    const normalizedPlan = (plan || 'STARTER').toUpperCase();
+    if (normalizedPlan.includes('TRIAL') || normalizedPlan.includes('STARTER')) {
+      // Simple check: count how many transactions have 'AI Scan' in description or similar
+      // Or just track it in local state for the session if we don't want to persist count yet
+      // For a better UX, I'll just check kasData for this month
+      const currentMonth = new Date().toLocaleString('id-ID', { month: 'short', year: 'numeric' });
+      const aiScansThisMonth = kasData.filter(k => k.tanggal.includes(currentMonth) && (k.keterangan || '').includes('[AI Scan]')).length;
+      
+      if (aiScansThisMonth >= 3) {
+        showNotification("Kuota AI Scan Paket Gratis habis (Maks 3/bln). Silakan Upgrade!", "error");
+        return;
+      }
+    }
+
+    console.log("File detected:", file.name, file.type, file.size);
+
     setIsScanning(true);
     showNotification("AI sedang memindai struk...", "info");
 
@@ -131,11 +150,12 @@ export function KasView({
 
       // 2. Convert to base64 for Gemini
       const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
+      const base64Promise = new Promise<string>((resolve, reject) => {
         reader.onload = () => {
           const base64 = (reader.result as string).split(",")[1];
           resolve(base64);
         };
+        reader.onerror = reject;
         reader.readAsDataURL(file);
       });
       const base64Data = await base64Promise;
@@ -171,6 +191,8 @@ export function KasView({
       });
 
       const result = JSON.parse(response.text);
+      // Add a tag to track AI Scans for limit enforcement
+      result.keterangan = result.keterangan ? `${result.keterangan} [AI Scan]` : "[AI Scan]";
       setScannedData(result);
       setTrxType(result.tipe === "Masuk" ? "Masuk" : "Keluar");
 
@@ -178,8 +200,8 @@ export function KasView({
       setShowMasukForm(true);
       showNotification("Selesai! Periksa hasil pindaian AI.", "success");
     } catch (error) {
-      console.error("Scanning Error:", error);
-      showNotification("Gagal memindai struk dengan AI.", "error");
+      console.error("Scanning Error details:", error);
+      showNotification(`Gagal memindai struk dengan AI: ${error instanceof Error ? error.message : "Kesalahan tidak diketahui"}`, "error");
     } finally {
       setIsScanning(false);
       if (scanInputRef.current) scanInputRef.current.value = "";

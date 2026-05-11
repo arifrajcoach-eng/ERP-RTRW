@@ -121,6 +121,7 @@ import {
   getDocFromServer,
   writeBatch,
   limit,
+  orderBy,
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
@@ -528,10 +529,15 @@ const PLAN_FEATURES: Record<string, any> = {
   TRIAL: {
     maxWarga: 50,
     price: "Free",
-    coreFeatures: ["Pencatatan Warga", "Keuangan Dasar", "Surat Standar"],
+    coreFeatures: [
+      "Pencatatan Warga & Keuangan",
+      "AI Scan Struk (2-3/bln)",
+      "AI Chat (5/bln)",
+      "Surat Standar",
+    ],
     keuangan: "DASAR",
     surat: "STANDAR",
-    maxAiChats: 0,
+    maxAiChats: 5,
     multiRT: false,
     posyandu: false,
     bankSampah: false,
@@ -1540,7 +1546,10 @@ export default function App() {
 
       // Jika Super Admin, tapi ingin melihat data spesifik tenant, atau hanya data MASTER
       // Jika di Dashboard utama (MASTER), kita ambil hanya data yang berlabel MASTER atau tenantId yang aktif
-      const constraints = [where("tenantId", "in", tIds)];
+      const constraints = [
+        where("tenantId", "in", tIds),
+        limit(500), // Hard limit to prevent massive reads
+      ];
 
       if (currentUser?.role === "RT") {
         constraints.push(where("rt", "==", currentUser.rt || "01"));
@@ -1567,7 +1576,11 @@ export default function App() {
     if (hasFullAccess) {
       const getKasQuery = () => {
         const base = collection(db, "kas");
-        const constraints = [where("tenantId", "in", tIds)];
+        const constraints = [
+          where("tenantId", "in", tIds),
+          orderBy("tanggal", "desc"),
+          limit(100),
+        ];
         if (currentUser?.role === "RT") {
           constraints.push(where("rt", "==", currentUser.rt || "01"));
         }
@@ -1592,7 +1605,12 @@ export default function App() {
     let unsubSurat = () => {};
     if (hasFullAccess) {
       unsubSurat = onSnapshot(
-        query(collection(db, "surat"), where("tenantId", "in", tIds)),
+        query(
+          collection(db, "surat"),
+          where("tenantId", "in", tIds),
+          orderBy("createdAt", "desc"),
+          limit(100),
+        ),
         (snap) => {
           const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           const filtered =
@@ -1639,7 +1657,12 @@ export default function App() {
     let unsubIuran = () => {};
     if (hasFullAccess) {
       unsubIuran = onSnapshot(
-        query(collection(db, "iuran"), where("tenantId", "in", tIds)),
+        query(
+          collection(db, "iuran"),
+          where("tenantId", "in", tIds),
+          orderBy("expiredDate", "desc"),
+          limit(200),
+        ),
         (snap) => {
           const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           const filtered =
@@ -1683,7 +1706,12 @@ export default function App() {
     let unsubPpob = () => {};
     if (hasFullAccess) {
       unsubPpob = onSnapshot(
-        query(collection(db, "ppob_trx"), where("tenantId", "in", tIds)),
+        query(
+          collection(db, "ppob_trx"),
+          where("tenantId", "in", tIds),
+          orderBy("createdAt", "desc"),
+          limit(50),
+        ),
         (snap) => {
           const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           const filtered =
@@ -1821,7 +1849,7 @@ export default function App() {
       };
 
       unsubBalita = onSnapshot(
-        getRTFilter("balita"),
+        query(getRTFilter("balita"), limit(100)),
         (snap) => {
           setBalitaData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1834,7 +1862,7 @@ export default function App() {
         },
       );
       unsubIbuHamil = onSnapshot(
-        getRTFilter("ibu_hamil"),
+        query(getRTFilter("ibu_hamil"), limit(100)),
         (snap) => {
           setIbuHamilData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1847,7 +1875,7 @@ export default function App() {
         },
       );
       unsubPosyanduKegiatan = onSnapshot(
-        getRTFilter("posyandu_kegiatan"),
+        query(getRTFilter("posyandu_kegiatan"), limit(50)),
         (snap) => {
           setPosyanduKegiatanData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1860,7 +1888,7 @@ export default function App() {
         },
       );
       unsubPosbinduKegiatan = onSnapshot(
-        getRTFilter("posbindu_kegiatan"),
+        query(getRTFilter("posbindu_kegiatan"), limit(50)),
         (snap) => {
           setPosbinduKegiatanData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1873,7 +1901,7 @@ export default function App() {
         },
       );
       unsubPemeriksaanBalita = onSnapshot(
-        getRTFilter("pemeriksaan_balita"),
+        query(getRTFilter("pemeriksaan_balita"), limit(100)),
         (snap) => {
           setPemeriksaanBalitaData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1886,7 +1914,7 @@ export default function App() {
         },
       );
       unsubPemeriksaanPosbindu = onSnapshot(
-        getRTFilter("pemeriksaan_posbindu"),
+        query(getRTFilter("pemeriksaan_posbindu"), limit(100)),
         (snap) => {
           setPemeriksaanPosbinduData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1899,7 +1927,7 @@ export default function App() {
         },
       );
       unsubImunisasi = onSnapshot(
-        getRTFilter("imunisasi"),
+        query(getRTFilter("imunisasi"), limit(50)),
         (snap) => {
           setImunisasiData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1941,7 +1969,7 @@ export default function App() {
         },
       );
       unsubSampahSetoran = onSnapshot(
-        getRTFilter("sampah_setoran"),
+        query(getRTFilter("sampah_setoran"), limit(200)),
         (snap) => {
           setSampahSetoranData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -1954,7 +1982,7 @@ export default function App() {
         },
       );
       unsubSampahTarikSaldo = onSnapshot(
-        getRTFilter("sampah_tarik_saldo"),
+        query(getRTFilter("sampah_tarik_saldo"), limit(200)),
         (snap) => {
           setSampahTarikSaldoData(
             snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
@@ -2124,7 +2152,7 @@ export default function App() {
             );
 
       unsubUsers = onSnapshot(
-        usersQuery,
+        query(usersQuery, limit(500)),
         (snap) => {
           const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
           setUsersData(data);
@@ -2143,7 +2171,7 @@ export default function App() {
     let unsubTenants = () => {};
     if (currentUser?.isSuperAdmin) {
       unsubTenants = onSnapshot(
-        collection(db, "tenants"),
+        query(collection(db, "tenants"), limit(100)),
         (snap) => {
           const data = snap.docs.map((doc) => ({
             id: doc.id,
@@ -2522,6 +2550,66 @@ export default function App() {
 
   // --- VIEW SELECTION (Must be after all hooks) ---
 
+  const renderableNavItems = useMemo(() => {
+    return [
+      { id: "dashboard", label: "DASHBOARD", icon: LayoutDashboard },
+      { id: "warga", label: "Data Warga", icon: Users },
+      { id: "complaint", label: "Keluhan", icon: AlertTriangle },
+      { id: "booking", label: "Booking", icon: Calendar },
+      { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy },
+      { id: "verifikasi", label: "VERIFIKASI", icon: ShieldCheck },
+      { id: "keuangan", label: "Keuangan", icon: CreditCard, plan: "keuangan", minPlan: "BASIC" },
+      { id: "posyandu", label: "Kesehatan", icon: Baby, plan: "posyandu", minPlan: "PRO" },
+      { id: "bank-sampah", label: "Bank Sampah", icon: Recycle, plan: "bankSampah", minPlan: "PRO" },
+      { id: "etoko", label: "E-LAPAK26", icon: ShoppingBag, plan: "eLapak", minPlan: "BASIC" },
+      { id: "voting", label: "E-Pemilu", icon: Vote, plan: "ePemilu", minPlan: "PRO" },
+      { id: "inventaris", label: "Inventaris", icon: Package },
+      { id: "surat", label: "Surat", icon: FileText, plan: "surat", minPlan: "BASIC" },
+      { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
+      { id: "users", label: "Manage User", icon: User },
+      { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
+      { id: "pengaturan", label: "Pengaturan", icon: Settings },
+      { id: "chat", label: "Grup Chat", icon: MessageSquare, plan: "chatMode", minPlan: "BASIC" },
+      { id: "ai-bot", label: "AI Agent", icon: Bot, plan: "ai", minPlan: "PREMIUM" },
+      { id: "monitoring", label: "MONITORING", icon: LayoutGrid, plan: "multiRegion", minPlan: "ENTERPRISE" },
+      { id: "audit", label: "GOVERNANCE", icon: Shield, plan: "governance", minPlan: "ENTERPRISE" }
+    ].filter((item) => {
+      const role = currentUser?.role || "TAMU";
+      const isSuperAdmin = !!currentUser?.isSuperAdmin;
+      const isVerified = linkedWarga?.terverifikasi === true;
+      const planConfig = getPlanFeatures(currentTenant?.status);
+      const isFreePlan = (currentTenant?.status || "TRIAL") === "TRIAL" || (currentTenant?.status || "TRIAL") === "FREE";
+      
+      if (isSuperAdmin) return true;
+      if (role === "WARGA" && !isVerified && item.id !== "dashboard" && item.id !== "verifikasi") return false;
+      if ((role === "ADMIN" || role === "RT") && isFreePlan) {
+        if (["inventaris", "posyandu", "bank-sampah"].includes(item.id)) return false;
+      }
+      
+      const rolePermissions: { [key: string]: string[] } = {
+        SUPER_ADMIN: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "super-admin", "pengaturan", "chat", "ai-bot", "monitoring", "audit"],
+        KELURAHAN_ADMIN: ["dashboard", "warga", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "users", "chat", "ai-bot", "monitoring", "audit"],
+        ADMIN: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "pengaturan", "chat", "ai-bot", "monitoring", "audit"],
+        RW: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "chat", "ai-bot", "monitoring", "audit"],
+        RT: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "chat", "ai-bot", "complaint", "booking"],
+        SEKRETARIS: ["dashboard", "warga", "buku-tamu", "verifikasi", "inventaris", "surat", "kop-template", "chat", "ai-bot", "complaint", "booking"],
+        BENDAHARA: ["dashboard", "keuangan", "bank-sampah", "chat", "ai-bot"],
+        SATPAM: ["dashboard", "buku-tamu"],
+        KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot"],
+        WARGA: ["dashboard", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "surat", "chat", "ai-bot", "complaint", "booking"],
+        TAMU: ["dashboard", "etoko"],
+        Viewer: ["dashboard", "etoko"],
+      };
+      
+      const allowed = rolePermissions[role] || ["dashboard"];
+      return allowed.includes(item.id);
+    }).map(item => {
+      const planConfig = getPlanFeatures(currentTenant?.status);
+      const isLocked = item.plan && (!currentTenant || (planConfig as any)[item.plan] === false);
+      return { ...item, isLocked };
+    });
+  }, [currentUser, linkedWarga, currentTenant]);
+
   if (window.location.pathname.startsWith("/guestbook/")) {
     const tenantId = window.location.pathname.split("/")[2];
     return <GuestBookFormPublic tenantId={tenantId} />;
@@ -2805,9 +2893,17 @@ export default function App() {
                 )}
               </h1>
               {currentTenant?.name && (
-                <p className="text-[9px] font-bold text-[#5779ab] bg-white font-[Georgia] uppercase tracking-widest mt-[3px] ml-[18px]">
-                  Eksosistem Digital
-                </p>
+                <div className="mt-1.5 ml-[18px] space-y-1">
+                  <p className="text-[9px] font-bold text-[#5779ab] bg-white font-[Georgia] uppercase tracking-widest">
+                    Eksosistem Digital
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg">
+                    <Zap className="w-2.5 h-2.5 text-brand-blue" />
+                    <span className="text-[9px] font-black text-brand-blue uppercase tracking-tight">
+                      PAKET {currentTenant?.status || "STARTER"}
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -2851,272 +2947,8 @@ export default function App() {
           </div>
         </div>
         <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto pb-20 scrollbar-hide dark:bg-slate-900">
-          {[
-            { id: "dashboard", label: "DASHBOARD", icon: LayoutDashboard },
-            { id: "warga", label: "Data Warga", icon: Users },
-            { id: "complaint", label: "Keluhan", icon: AlertTriangle },
-            { id: "booking", label: "Booking", icon: Calendar },
-            { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy },
-            { id: "verifikasi", label: "VERIFIKASI", icon: ShieldCheck },
-            {
-              id: "keuangan",
-              label: "Keuangan",
-              icon: CreditCard,
-              plan: "keuangan",
-              minPlan: "BASIC",
-            },
-            {
-              id: "posyandu",
-              label: "Kesehatan",
-              icon: Baby,
-              plan: "posyandu",
-              minPlan: "PRO",
-            },
-            {
-              id: "bank-sampah",
-              label: "Bank Sampah",
-              icon: Recycle,
-              plan: "bankSampah",
-              minPlan: "PRO",
-            },
-            {
-              id: "etoko",
-              label: "E-LAPAK26",
-              icon: ShoppingBag,
-              plan: "eLapak",
-              minPlan: "BASIC",
-            },
-            {
-              id: "voting",
-              label: "E-Pemilu",
-              icon: Vote,
-              plan: "ePemilu",
-              minPlan: "PRO",
-            },
-            { id: "inventaris", label: "Inventaris", icon: Package },
-            {
-              id: "surat",
-              label: "Surat",
-              icon: FileText,
-              plan: "surat",
-              minPlan: "BASIC",
-            },
-            {
-              id: "kop-template",
-              label: "KOP & Template",
-              icon: FileSpreadsheet,
-            },
-            { id: "users", label: "Manage User", icon: User },
-            { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
-            { id: "pengaturan", label: "Pengaturan", icon: Settings },
-            {
-              id: "chat",
-              label: "Grup Chat",
-              icon: MessageSquare,
-              plan: "chatMode",
-              minPlan: "BASIC",
-            },
-            {
-              id: "ai-bot",
-              label: "AI Agent",
-              icon: Bot,
-              plan: "ai",
-              minPlan: "PREMIUM",
-            },
-            {
-              id: "monitoring",
-              label: "MONITORING",
-              icon: LayoutGrid,
-              plan: "multiRegion",
-              minPlan: "ENTERPRISE",
-            },
-            {
-              id: "audit",
-              label: "GOVERNANCE",
-              icon: Shield,
-              plan: "governance",
-              minPlan: "ENTERPRISE",
-            },
-          ]
-            .filter((item) => {
-              const role = currentUser?.role || "TAMU";
-              const isSuperAdmin = !!currentUser?.isSuperAdmin;
-              const isVerified = linkedWarga?.terverifikasi === true;
-              const planConfig = getPlanFeatures(currentTenant?.status);
-              const isFreePlan =
-                (currentTenant?.status || "TRIAL") === "TRIAL" ||
-                (currentTenant?.status || "TRIAL") === "FREE";
-
-              if (isSuperAdmin) return true;
-
-              // WARGA verification restriction
-              if (
-                role === "WARGA" &&
-                !isVerified &&
-                item.id !== "dashboard" &&
-                item.id !== "verifikasi"
-              ) {
-                return false;
-              }
-
-              // Admin free plan restriction - example: limit certain features
-              if ((role === "ADMIN" || role === "RT") && isFreePlan) {
-                // Example restriction: Limit advanced menu
-                if (["inventaris", "posyandu", "bank-sampah"].includes(item.id))
-                  return false;
-              }
-
-              const rolePermissions: { [key: string]: string[] } = {
-                SUPER_ADMIN: [
-                  "dashboard",
-                  "warga",
-                  "buku-tamu",
-                  "verifikasi",
-                  "keuangan",
-                  "posyandu",
-                  "bank-sampah",
-                  "etoko",
-                  "voting",
-                  "inventaris",
-                  "surat",
-                  "kop-template",
-                  "users",
-                  "super-admin",
-                  "pengaturan",
-                  "chat",
-                  "ai-bot",
-                  "monitoring",
-                  "audit",
-                ],
-                KELURAHAN_ADMIN: [
-                  "dashboard",
-                  "warga",
-                  "keuangan",
-                  "posyandu",
-                  "bank-sampah",
-                  "etoko",
-                  "voting",
-                  "inventaris",
-                  "surat",
-                  "users",
-                  "chat",
-                  "ai-bot",
-                  "monitoring",
-                  "audit",
-                ],
-                ADMIN: [
-                  "dashboard",
-                  "warga",
-                  "buku-tamu",
-                  "verifikasi",
-                  "keuangan",
-                  "posyandu",
-                  "bank-sampah",
-                  "etoko",
-                  "voting",
-                  "inventaris",
-                  "surat",
-                  "kop-template",
-                  "users",
-                  "pengaturan",
-                  "chat",
-                  "ai-bot",
-                  "monitoring",
-                  "audit",
-                ],
-                RW: [
-                  "dashboard",
-                  "warga",
-                  "buku-tamu",
-                  "verifikasi",
-                  "keuangan",
-                  "posyandu",
-                  "bank-sampah",
-                  "etoko",
-                  "voting",
-                  "inventaris",
-                  "surat",
-                  "kop-template",
-                  "users",
-                  "chat",
-                  "ai-bot",
-                  "monitoring",
-                  "audit",
-                ],
-                RT: [
-                  "dashboard",
-                  "warga",
-                  "buku-tamu",
-                  "verifikasi",
-                  "keuangan",
-                  "posyandu",
-                  "bank-sampah",
-                  "etoko",
-                  "voting",
-                  "inventaris",
-                  "surat",
-                  "kop-template",
-                  "users",
-                  "chat",
-                  "ai-bot",
-                  "complaint",
-                  "booking",
-                ],
-                SEKRETARIS: [
-                  "dashboard",
-                  "warga",
-                  "buku-tamu",
-                  "verifikasi",
-                  "inventaris",
-                  "surat",
-                  "kop-template",
-                  "chat",
-                  "ai-bot",
-                  "complaint",
-                  "booking",
-                ],
-                BENDAHARA: [
-                  "dashboard",
-                  "keuangan",
-                  "bank-sampah",
-                  "chat",
-                  "ai-bot",
-                ],
-                SATPAM: ["dashboard", "buku-tamu"],
-                KADER: [
-                  "dashboard",
-                  "posyandu",
-                  "bank-sampah",
-                  "chat",
-                  "ai-bot",
-                ],
-                WARGA: [
-                  "dashboard",
-                  "verifikasi",
-                  "keuangan",
-                  "posyandu",
-                  "bank-sampah",
-                  "etoko",
-                  "voting",
-                  "surat",
-                  "chat",
-                  "ai-bot",
-                  "complaint",
-                  "booking",
-                ],
-                TAMU: ["dashboard", "etoko"],
-                Viewer: ["dashboard", "etoko"],
-              };
-
-              const allowed = rolePermissions[role] || ["dashboard"];
-              return allowed.includes(item.id);
-            })
-            .map((item: any) => {
-              const planConfig = getPlanFeatures(currentTenant?.status);
-              const isLocked =
-                item.plan &&
-                (!currentTenant || (planConfig as any)[item.plan] === false);
-
+          {renderableNavItems.map((item: any) => {
+              const isLocked = item.isLocked;
               return (
                 <button
                   key={item.id}
@@ -3256,8 +3088,7 @@ export default function App() {
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
           {activeTab === "dashboard" && (
-            <DashboardView
-              kasData={kasData}
+            <DashboardView allowedMenuItems={renderableNavItems} kasData={kasData}
               wargaData={wargaData}
               suratData={suratData}
               iuranData={iuranData}
@@ -3336,7 +3167,7 @@ export default function App() {
               currentTenant={currentTenant}
             />
           )}
-          {activeTab === "ai-bot" && <AIChatBot currentUser={currentUser} />}
+          {activeTab === "ai-bot" && <AIChatBot currentUser={currentUser} plan={currentTenant?.status} />}
           {activeTab === "keuangan" && (
             <FinansialDashboardView
               ppobData={ppobData}
@@ -3354,6 +3185,7 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
+              plan={currentTenant?.status}
               isPengurus={["Admin", "RW", "RT", "Bendahara"].includes(
                 currentUser.role,
               )}

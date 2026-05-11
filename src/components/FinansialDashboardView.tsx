@@ -26,6 +26,7 @@ interface FinansialDashboardViewProps {
   handleFileUpload: (file: File, path: string) => Promise<string>;
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   isPengurus: boolean;
+  plan?: string;
 }
 
 export function FinansialDashboardView(props: FinansialDashboardViewProps) {

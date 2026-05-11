@@ -1,7 +1,14 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
 // Initialization
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = new GoogleGenAI({ apiKey: (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "" });
+
+function checkApiKey() {
+  const key = (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "";
+  if (!key) {
+    throw new Error("GEMINI_API_KEY belum dikonfigurasi. Silakan tambahkan VITE_GEMINI_API_KEY atau GEMINI_API_KEY di dashboard Vercel Anda.");
+  }
+}
 
 export async function chatWithAI(params: {
   isPrivileged: boolean;
@@ -11,6 +18,7 @@ export async function chatWithAI(params: {
   history: { role: 'user' | 'model', parts: { text: string }[] }[];
 }) {
   try {
+    checkApiKey();
     const stream = await ai.models.generateContentStream({
       model: "gemini-1.5-flash",
       config: {
@@ -57,6 +65,7 @@ export async function chatWithAI(params: {
 
 export async function generateAIReport(dataSummary: any) {
   try {
+    checkApiKey();
     const response = await ai.models.generateContent({ 
       model: "gemini-1.5-flash",
       contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
@@ -76,6 +85,7 @@ export async function generateAIReport(dataSummary: any) {
 
 export async function generateRegionalInsight(regionsData: any) {
   try {
+    checkApiKey();
     const prompt = `Hai! Kamu adalah AI Strategist yang pintar, ramah, and asyik. Berdasarkan data wilayah ini: ${JSON.stringify(regionsData)}. 
     Berikan analisis perbandingan antar RW, wilayah mana yang iurannya masih rendah, dan kasih 3 rekomendasi kebijakan yang cerdas buat Kelurahan. 
     Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
@@ -93,6 +103,7 @@ export async function generateRegionalInsight(regionsData: any) {
 
 export async function scanReceiptAI(imageBase64: string) {
   try {
+    checkApiKey();
     const response = await ai.models.generateContent({
       model: "gemini-1.5-flash",
       contents: [
@@ -119,6 +130,7 @@ export async function scanReceiptAI(imageBase64: string) {
 // AI Voice (TTS)
 export async function textToSpeech(text: string) {
   try {
+    checkApiKey();
     const cleanedText = text.substring(0, 500).replace(/[*#_`]/g, ''); 
     
     const response = await ai.models.generateContent({

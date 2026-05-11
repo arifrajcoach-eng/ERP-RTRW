@@ -17,7 +17,7 @@ import {
 } from '../services/aiAgentTools';
 import { chatWithAI, textToSpeech } from '../services/aiService';
 
-export default function AIChatBot({ currentUser, agentType = 'auto' }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto' }) {
+export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string }) {
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
                        ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
@@ -79,7 +79,19 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
   
   const tenantId = currentUser?.tenantId || 'RW26_SMART';
   const roleUpper = currentUser?.role?.toUpperCase();
-  const maxUsage = (roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN' || roleUpper === 'SUPER ADMIN' || currentUser?.isSuperAdmin) ? 9999 : 25;
+  
+  // Calculate maxUsage based on plan
+  const normalizedPlan = (plan || 'STARTER').toUpperCase();
+  let maxUsage = 5; // Default for STARTER/FREE (5 chats/month as requested)
+  if (roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN' || roleUpper === 'SUPER ADMIN' || currentUser?.isSuperAdmin) {
+    maxUsage = 9999;
+  } else if (normalizedPlan.includes('FLASH') || normalizedPlan.includes('BASIC')) {
+    maxUsage = 50;
+  } else if (normalizedPlan.includes('PRO')) {
+    maxUsage = 200;
+  } else if (normalizedPlan.includes('PREMIUM') || normalizedPlan.includes('ENTERPRISE')) {
+    maxUsage = 1000;
+  }
 
   useEffect(() => {
     mountedRef.current = true;
@@ -103,6 +115,16 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
       if (audioContextRef.current?.state === 'suspended') {
         audioContextRef.current.resume().catch(() => {});
       }
+
+      // Unlock HTMLAudioElement to bypass iOS Silent Switch reliably
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+      }
+      if (audioRef.current.paused && !audioRef.current.src.startsWith('blob:')) {
+        audioRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        audioRef.current.play().catch(() => {});
+      }
+
       // Keep channel open with a tiny silent buffer on first physical click
       try {
         if (audioContextRef.current && audioContextRef.current.state === 'running') {
@@ -219,34 +241,47 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         await ctx.resume().catch(() => {});
       }
 
-      // Handle PCM specifically using AudioContext (Most direct path for Gemini's raw output)
+      // Handle PCM specifically (Most direct path for Gemini's raw output)
       if (mimeType?.includes('pcm') || !mimeType) {
-        if (!ctx) throw new Error("AudioContext not supported");
-
-        // Decode PCM 16-bit to Float32
-        const alignedLength = Math.floor(bytes.length / 2);
-        const int16Array = new Int16Array(bytes.buffer, 0, alignedLength);
-        const float32Array = new Float32Array(int16Array.length);
-        for (let i = 0; i < int16Array.length; i++) {
-          float32Array[i] = int16Array[i] / 32768;
-        }
-
         const sampleRate = parseInt(mimeType?.match(/rate=(\d+)/)?.[1] || '24000', 10);
-        console.log(`Playing PCM: ${sampleRate}Hz`);
+        console.log(`Playing PCM via unlocked HTMLAudioElement: ${sampleRate}Hz`);
         
-        // Try playing via Audio Element (WAV Blob) first as it's more stable for mobile
         try {
           const wavBlob = pcmToWavBlob(bytes, sampleRate);
           const url = URL.createObjectURL(wavBlob);
-          const audio = new Audio(url);
-          audioRef.current = audio;
+          
+          if (!audioRef.current) audioRef.current = new Audio();
+          const audio = audioRef.current;
+          
+          // Cleanup previous blob URL
+          if (audio.src && audio.src.startsWith('blob:')) {
+            URL.revokeObjectURL(audio.src);
+          }
+          
+          audio.src = url;
           audio.onended = () => {
             if (mountedRef.current) setIsSpeaking(false);
-            URL.revokeObjectURL(url);
           };
+          audio.onerror = (e) => {
+            console.warn("Audio element error", e);
+            if (mountedRef.current) setIsSpeaking(false);
+          };
+          
+          // Play on the unlocked audio element (Bypasses iOS Silent switch)
           await audio.play();
         } catch (playError) {
-          console.warn("Audio Element play failed, trying AudioContext Source:", playError);
+          console.warn("HTMLAudioElement play failed, falling back to AudioContext:", playError);
+          if (!ctx) throw new Error("AudioContext not supported");
+
+          // Decode PCM 16-bit to Float32
+          const alignedLength = Math.floor(bytes.length / 2);
+          const int16Array = new Int16Array(bytes.buffer, 0, alignedLength);
+          const float32Array = new Float32Array(int16Array.length);
+          for (let i = 0; i < int16Array.length; i++) {
+            float32Array[i] = int16Array[i] / 32768;
+          }
+          
+          // Play directly via AudioContext
           const audioBuffer = ctx.createBuffer(1, float32Array.length, sampleRate);
           audioBuffer.getChannelData(0).set(float32Array);
           
@@ -269,11 +304,17 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         // Fallback for encoded formats (MP3/WAV/etc)
         const blob = new Blob([bytes], { type: mimeType });
         const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audioRef.current = audio;
+        
+        if (!audioRef.current) audioRef.current = new Audio();
+        const audio = audioRef.current;
+        
+        if (audio.src && audio.src.startsWith('blob:')) {
+          URL.revokeObjectURL(audio.src);
+        }
+        
+        audio.src = url;
         audio.onended = () => {
           if (mountedRef.current) setIsSpeaking(false);
-          URL.revokeObjectURL(url);
         };
         try {
           await audio.play();
@@ -353,7 +394,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
     const textToSend = manualInput || input;
     if (!textToSend.trim() || isLoading) return;
     
-    // Pre-warm AudioContext on user gesture
+    // Pre-warm AudioContext and Audio on user gesture
     if (isMuted && manualInput === undefined) setIsMuted(false);
     
     if (!audioContextRef.current) {
@@ -375,6 +416,15 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
           source.start(0);
         } catch (e) {}
       }
+
+    // Unlock HTMLAudioElement to bypass iOS Silent Switch reliably
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+    if (audioRef.current.paused && !audioRef.current.src.startsWith('blob:')) {
+      audioRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      audioRef.current.play().catch(() => {});
+    }
 
     if (usageCount >= maxUsage) {
       setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, kuota AI harian Anda telah habis.' }]);
@@ -495,7 +545,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
         return handleSend(textToSend, retries - 1);
       }
       if (mountedRef.current) {
-        setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, ada gangguan pada koneksi atau AI saya. Coba lagi ya!' }]);
+        setMessages(prev => [...prev, { role: 'bot', text: error.message?.includes('GEMINI_API_KEY') ? 'Aduh maaf, sistem kekurangan konfigurasi kunci AI (GEMINI_API_KEY belum dipasang di environment Vercel). Mohon lapor pengurus atau developer ya!' : 'Maaf, ada gangguan pada koneksi atau AI saya. Coba lagi ya!' }]);
       }
     } finally {
       if (mountedRef.current) setIsLoading(false);
@@ -602,7 +652,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto' }: { current
           </button>
         </div>
         <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest text-center mt-3">
-          AI Agent • Didukung oleh Nexapps
+          AI Agent • Didukung oleh Nexapps<br/>
+          <span className="text-[8px] text-slate-400 font-normal lowercase tracking-normal">(Pastikan volume HP tidak di-mute / silent switch off agar suara AI terdengar)</span>
         </p>
       </div>
     </div>

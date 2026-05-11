@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
-  MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot
+  MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot, LayoutGrid,
+  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, 
@@ -38,6 +39,7 @@ interface DashboardViewProps {
   showNotification: any;
   handleFirestoreError: any;
   AppLogo: any; // Passed from App.tsx or imported
+  allowedMenuItems?: Array<{id: string, label: string, icon: any, isLocked?: boolean}>;
 }
 
 export default function DashboardView({ 
@@ -67,7 +69,8 @@ export default function DashboardView({
   setIsLoadingDB,
   showNotification,
   handleFirestoreError,
-  AppLogo
+  AppLogo,
+  allowedMenuItems
 }: DashboardViewProps) {
   const [kasPeriod, setKasPeriod] = useState('yearly');
   const [piePeriod, setPiePeriod] = useState('30days');
@@ -300,6 +303,41 @@ export default function DashboardView({
           </div>
         )}
       </div>
+
+      {allowedMenuItems && allowedMenuItems.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
+          <div className="flex items-center gap-2 mb-4">
+            <LayoutGrid className="w-5 h-5 text-brand-blue" />
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase">Modul & Pintasan</h3>
+          </div>
+          <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+            {allowedMenuItems.filter(item => !['dashboard', 'pengaturan', 'super-admin', 'users', 'kop-template'].includes(item.id)).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.isLocked) {
+                    setShowUpgradeModal(true);
+                  } else {
+                    setActiveTab(item.id);
+                  }
+                }}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 gap-2 ${
+                  item.isLocked
+                    ? "bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-800 opacity-60 cursor-not-allowed"
+                    : "bg-slate-50 border-transparent hover:border-brand-blue/30 hover:shadow-lg hover:shadow-brand-blue/10 dark:bg-slate-800/50 dark:border-transparent dark:hover:border-brand-blue/30 group"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform ${item.isLocked ? "bg-slate-200 dark:bg-slate-800 text-slate-400" : "bg-brand-blue/10 text-brand-blue group-hover:scale-110 group-hover:bg-brand-blue/20"}`}>
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <span className={`text-[9px] font-black uppercase text-center tracking-tighter w-full line-clamp-1 ${item.isLocked ? 'text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                  {item.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#e3ffee] dark:bg-emerald-500/10 p-6 rounded-[2rem] border border-white dark:border-emerald-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
@@ -615,7 +653,7 @@ export default function DashboardView({
             exit={{ opacity: 0, y: 100, scale: 0.9 }}
             className="fixed bottom-24 right-6 z-50 w-full max-w-md"
           >
-            <AIChatBot currentUser={currentUser} agentType="cs" />
+            <AIChatBot currentUser={currentUser} agentType="cs" plan={currentTenant?.status} />
           </motion.div>
         )}
       </AnimatePresence>

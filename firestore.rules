@@ -118,8 +118,8 @@ service cloud.firestore {
     }
 
     match /emergencies/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn(); // Allow writing for SOS
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isTenantMember(request.resource.data.tenantId); // Allow writing for SOS, only for tenants
     }
 
     match /inventaris_logs/{docId} {
@@ -163,7 +163,7 @@ service cloud.firestore {
     }
 
     match /verifikasi_warga/{docId} {
-      allow read, write: if true;
+      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
     }
 
     match /bookings/{docId} {

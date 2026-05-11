@@ -65,15 +65,11 @@ export function PPOBView({
       return;
     }
     
-    // Skema Keuntungan: 
-    // 80% dari Biaya Admin dikumpulkan sebagai Total Komisi yang bisa dibagikan
-    const totalKomisiPool = Math.floor(adminFee * 0.8); 
-    
-    // Pemilik Aplikasi mendapatkan 15% dari Total Komisi tersebut
-    const komisiOwner = Math.floor(totalKomisiPool * 0.15);
-    
-    // RT/RW mendapatkan sisanya (85% dari Total Komisi tersebut)
-    const komisiRT = totalKomisiPool - komisiOwner;
+    // Skema Keuntungan Rekomendasi Owner: 
+    // Tenant (RT/RW) mendapatkan 60% dari Biaya Admin
+    // Pemilik Aplikasi (Owner) mendapatkan 40% dari Biaya Admin
+    const komisiRT = Math.floor(adminFee * 0.6);
+    const komisiOwner = Math.floor(adminFee * 0.4);
     
     const trxId = `PPOB-${Date.now()}`;
     const payload = {
@@ -256,9 +252,21 @@ export function PPOBView({
                   </span>
                 </div>
                 <p className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest mt-2 flex flex-col gap-1">
-                  <span className="flex items-center gap-1"><Info className="w-3 h-3"/> Komisi RT/RW: Rp {new Intl.NumberFormat('id-ID').format(Math.floor(adminFee * 0.8 * 0.85))}</span>
-                  <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-indigo-600"/> Profit Pemilik (Anda): Rp {new Intl.NumberFormat('id-ID').format(Math.floor(adminFee * 0.8 * 0.15))}</span>
+                  <span className="flex items-center gap-1"><Info className="w-3 h-3"/> Komisi RT/RW (60%): Rp {new Intl.NumberFormat('id-ID').format(Math.floor(adminFee * 0.6))}</span>
+                  <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-indigo-600"/> Profit Pemilik (40%): Rp {new Intl.NumberFormat('id-ID').format(Math.floor(adminFee * 0.4))}</span>
                 </p>
+              </div>
+
+              <div className="flex bg-slate-50 p-3 rounded-lg border border-slate-200 items-start gap-3">
+                <input 
+                  required 
+                  type="checkbox" 
+                  id="tos" 
+                  className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500" 
+                />
+                <label htmlFor="tos" className="text-[10px] sm:text-xs text-slate-600 font-medium leading-relaxed">
+                  Saya (Pengguna/Warga) menyetujui <span className="font-bold text-blue-600">Syarat & Ketentuan Layanan PPOB</span>. Saya memahami bahwa transaksi ini aman, dan sebagian dari biaya admin secara otomatis dipotong sistem dan dibagikan sebagai Kas/Keuntungan untuk operasional RT/RW saya.
+                </label>
               </div>
 
               <div className="pt-2 flex gap-3">
