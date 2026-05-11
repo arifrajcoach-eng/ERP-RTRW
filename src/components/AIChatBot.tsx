@@ -545,7 +545,9 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
         return handleSend(textToSend, retries - 1);
       }
       if (mountedRef.current) {
-        setMessages(prev => [...prev, { role: 'bot', text: error.message?.includes('GEMINI_API_KEY') ? 'Aduh maaf, sistem kekurangan konfigurasi kunci AI (GEMINI_API_KEY belum dipasang di environment Vercel). Mohon lapor pengurus atau developer ya!' : 'Maaf, ada gangguan pada koneksi atau AI saya. Coba lagi ya!' }]);
+        const errorMsg = error.message?.includes('GEMINI_API_KEY') ? 'Aduh maaf, sistem kekurangan konfigurasi kunci AI (GEMINI_API_KEY belum dipasang di environment Vercel). Mohon lapor pengurus atau developer ya!' : 'Maaf, ada gangguan pada koneksi atau AI saya. Coba lagi ya!';
+        setMessages(prev => [...prev, { role: 'bot', text: errorMsg }]);
+        handleSpeak(errorMsg);
       }
     } finally {
       if (mountedRef.current) setIsLoading(false);

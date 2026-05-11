@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 // Initialization
 const ai = new GoogleGenAI({ apiKey: (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "" });
@@ -19,8 +19,25 @@ export async function chatWithAI(params: {
 }) {
   try {
     checkApiKey();
+    
+    // Sanitize to ensure strict alternating roles and no empty parts
+    const rawContents = [...params.history, { role: 'user', parts: [{ text: params.message || " " }] }];
+    const sanitizedContents: any[] = [];
+    let lastRole = null;
+    
+    for (const item of rawContents) {
+      const clonedItem = { role: item.role, parts: [{ text: item.parts?.[0]?.text?.trim() || " " }] };
+      if (clonedItem.role !== lastRole) {
+        if (sanitizedContents.length === 0 && clonedItem.role === 'model') continue;
+        sanitizedContents.push(clonedItem);
+        lastRole = clonedItem.role;
+      } else if (sanitizedContents.length > 0) {
+        sanitizedContents[sanitizedContents.length - 1].parts[0].text += " \n " + clonedItem.parts[0].text;
+      }
+    }
+
     const stream = await ai.models.generateContentStream({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       config: {
         systemInstruction: `
           PERANAN: Kamu adalah ${params.isPrivileged ? "Aspri (Asisten Pribadi Pa Ketua / Admin)" : "Chaty (Customer Service Digital untuk lingkungan RT/RW)"}.
@@ -53,7 +70,7 @@ export async function chatWithAI(params: {
           
           Gunakan data berikut sebagai referensi utama jawaban Anda: ${JSON.stringify(params.dataSummary)}`,
       },
-      contents: [...params.history, { role: 'user', parts: [{ text: params.message }] }]
+      contents: sanitizedContents
     });
 
     return stream;
@@ -137,7 +154,7 @@ export async function textToSpeech(text: string) {
       model: "gemini-1.5-flash",
       contents: [{ role: 'user', parts: [{ text: `Bacakan teks berikut dengan suara perempuan yang santun, jelas, dan ramah: ${cleanedText}` }] }],
       config: {
-        responseModalities: [Modality.AUDIO],
+        responseModalities: ["AUDIO"],
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName: "Kore" }
