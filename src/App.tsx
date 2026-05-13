@@ -2155,7 +2155,6 @@ export default function App() {
         query(usersQuery, limit(5000)),
         (snap) => {
           const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
-          data.sort((a: any, b: any) => (a.nama || a.name || "").localeCompare(b.nama || b.name || ""));
           setUsersData(data);
           onDataLoaded();
         },
@@ -3189,8 +3188,8 @@ export default function App() {
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
               plan={currentTenant?.status}
-              isPengurus={["admin", "rw", "rt", "bendahara", "super_admin"].includes(
-                currentUser.role?.toLowerCase(),
+              isPengurus={["Admin", "RW", "RT", "Bendahara"].includes(
+                currentUser.role,
               )}
             />
           )}

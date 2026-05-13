@@ -107,7 +107,7 @@ function WargaView({
         w.nama?.toLowerCase().includes(searchLower) ||
         w.nik?.toLowerCase().includes(searchLower) ||
         w.kk?.toLowerCase().includes(searchLower));
-    }).sort((a: any, b: any) => (a.nama || "").localeCompare(b.nama || ""));
+    });
   }, [wargaData, filterRT, filterRW, filterKategoriUmur, searchQuery]);
 
   const displayedWarga = filteredWargaData;
