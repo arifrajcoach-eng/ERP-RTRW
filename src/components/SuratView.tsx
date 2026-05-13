@@ -460,6 +460,7 @@ export function SuratView({
       rt: finalRt,
       rw: finalRw,
       tanggal: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       jenis: type,
       pemohon,
       nik,

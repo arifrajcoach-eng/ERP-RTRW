@@ -50,7 +50,7 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
         </button>
         <button
           onClick={() => setActiveFinTab('ppob')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'ppob' ? 'bg-[#ef0cc5] text-white shadow-xl shadow-pink-100 ring-2 ring-pink-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'ppob' ? 'bg-[#ef0cc5] text-white shadow-xl shadow-pink-100 ring-2 ring-pink-100' : 'bg-[#f7f8b2] text-slate-400 hover:text-slate-600 border border-slate-200'}`}
         >
           <Smartphone className="w-5 h-5" /> Digital & PPOB
         </button>

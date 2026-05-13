@@ -58,6 +58,16 @@ export function IuranView({
   const [uploading, setUploading] = useState(false);
   const [jenisPembayaran, setJenisPembayaran] = useState('Iuran Warga');
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedWargaId, setSelectedWargaId] = useState<string>("");
+
+  React.useEffect(() => {
+    if (wargaData && wargaData.length > 0 && currentUser) {
+      const u = wargaData.find(w => w.nik === currentUser.nik || w.id === currentUser.id_user || w.id === currentUser.uid);
+      if (u) {
+        setSelectedWargaId(u.docId || u.id || u.nik);
+      }
+    }
+  }, [wargaData, currentUser]);
   
   // Simulated PG States
   const [showPgModal, setShowPgModal] = useState(false);
@@ -462,7 +472,7 @@ export function IuranView({
                 </tr>
               </thead>
               <tbody className="font-medium text-slate-600 text-xs">
-                {wargaData.filter((w:any) => w.posisi === 'Kepala Keluarga' || !w.posisi).sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || "")).map((w: any, index: number) => (
+                {wargaData.filter((w:any) => w.posisi === 'Kepala Keluarga').sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || "")).map((w: any, index: number) => (
                   <tr key={`kk-${index}`} className="hover:bg-blue-50/30 transition-colors">
                     <td className="px-4 py-3 border border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50/10 z-10 shadow-[1px_0_0_#f1f5f9]">
                       <div className="font-bold text-slate-800">{w.nama}</div>
@@ -513,7 +523,12 @@ export function IuranView({
               {isPengurus && (
                 <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
                   <label className="block text-xs font-black text-blue-800 uppercase tracking-widest">Identitas Penyetor (Admin Mode)</label>
-                  <select name="wargaId" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                  <select 
+                    name="wargaId" 
+                    value={selectedWargaId} 
+                    onChange={(e) => setSelectedWargaId(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
                     <option value="">-- Bukan warga terdaftar --</option>
                     {[...wargaData].sort((a: any, b: any) => (a.nama || '').localeCompare(b.nama || '')).map((w:any, index: number) => <option key={`w-iuran-opt-${w.docId || w.id || w.nik || index}-${index}`} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
                   </select>

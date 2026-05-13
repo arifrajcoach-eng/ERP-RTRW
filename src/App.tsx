@@ -1608,7 +1608,7 @@ export default function App() {
         query(
           collection(db, "surat"),
           where("tenantId", "in", tIds),
-          orderBy("createdAt", "desc"),
+          orderBy("tanggal", "desc"),
           limit(100),
         ),
         (snap) => {
