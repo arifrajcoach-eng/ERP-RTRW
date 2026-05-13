@@ -21,6 +21,7 @@ interface WargaViewProps {
   handleFileUpload: any;
   showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void;
   currentUser: any;
+  settings?: any;
 }
 
 const calculateAge = (tglLahir: string) => {
@@ -47,8 +48,11 @@ function WargaView({
   handleFirestoreError, 
   handleFileUpload, 
   showNotification, 
-  currentUser 
+  currentUser,
+  settings 
 }: WargaViewProps) {
+  const isApt = settings?.themeMode === 'apartemen';
+  
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
@@ -103,7 +107,7 @@ function WargaView({
         w.nama?.toLowerCase().includes(searchLower) ||
         w.nik?.toLowerCase().includes(searchLower) ||
         w.kk?.toLowerCase().includes(searchLower));
-    });
+    }).sort((a: any, b: any) => (a.nama || "").localeCompare(b.nama || ""));
   }, [wargaData, filterRT, filterRW, filterKategoriUmur, searchQuery]);
 
   const displayedWarga = filteredWargaData;
@@ -330,9 +334,9 @@ function WargaView({
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 uppercase">
             <Users className="w-8 h-8 text-brand-blue" />
-            Data Warga {currentTenant?.name || ''}
+            Data {isApt ? "Penghuni" : "Warga"} {currentTenant?.name || ''}
           </h2>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredWargaData.length} Warga Terdaftar</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredWargaData.length} {isApt ? "Penghuni" : "Warga"} Terdaftar</p>
         </div>
         <div className="flex gap-2">
           {selectedWargaIds.length > 0 && (
@@ -345,7 +349,7 @@ function WargaView({
             <Download size={18} className="rotate-180" /> {isUploading ? 'Loading...' : 'Import Data'}
           </button>
           <button onClick={() => setShowAddForm(true)} className="bg-brand-blue hover:bg-brand-blue/90 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-blue/25">
-            <UserPlus size={18} /> Tambah Warga
+            <UserPlus size={18} /> Tambah {isApt ? "Penghuni" : "Warga"}
           </button>
         </div>
       </div>

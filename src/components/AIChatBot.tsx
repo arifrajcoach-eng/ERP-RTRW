@@ -21,12 +21,12 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
                        ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
-  const agentName = isPrivileged ? "Aspri" : "Chaty";
-  const agentTitle = isPrivileged ? "AI Asisten Pribadi Pa Ketua" : "AI Customer Service Warga";
+  const agentName = isPrivileged ? "Aspri" : "Siska";
+  const agentTitle = isPrivileged ? "AI Asisten Ketua" : "AI Asisten Warga";
 
   const welcomeMessage = isPrivileged 
-    ? `Assalamu’alaikum! 🫡 Aku Aspri, asisten pribadimu. Ada data rahasia, keuangan, atau tugas kepengurusan yang perlu aku bantu atau analisakan hari ini? hehe.`
-    : `Assalamu’alaikum! Haii, aku Chaty, AI Customer Service pintar buat warga kita 😊. Ada yang bisa aku bantu untuk info warga, surat pengantar, atau cara bayar iuran?`;
+    ? `Assalamu’alaikum! 🫡 Aku Siska sebagai Aspri-mu. Ada data keuangan, laporan, atau tugas kepengurusan yang perlu aku bantu?`
+    : `Assalamu’alaikum! Haii, aku Siska, AI Asisten Kamu 😊. Ada yang bisa aku bantu untuk info warga, surat pengantar, atau keperluan lainnya?`;
 
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
     { role: 'bot', text: welcomeMessage }
@@ -546,7 +546,14 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       }
       if (mountedRef.current) {
         const checkMsg = error.message && error.message.includes('GEMINI') ? error.message : '';
-        const errorMsg = error.message?.includes('GEMINI_API_KEY') || error.message?.includes('VITE_GEMINI') ? 'Aduh maaf, kunci AI belum terdeteksi. Jika di Vercel, pastikan kamu menggunakan nama VITE_GEMINI_API_KEY, dan kamu WAJIB melakukan Redeploy setelah memasukkan kunci tersebut ya!' : `Maaf, ada gangguan pada koneksi atau AI saya. Detail: ${error.message || 'Error tidak diketahui'}`;
+        let errorMsg = `Maaf, ada gangguan pada koneksi atau AI saya. Detail: ${error.message || 'Error tidak diketahui'}`;
+        
+        if (error.message?.includes('GEMINI_API_KEY') || error.message?.includes('VITE_GEMINI')) {
+          errorMsg = 'Aduh maaf, kunci AI belum terdeteksi. Jika di Vercel, pastikan kamu menggunakan nama VITE_GEMINI_API_KEY, dan kamu WAJIB melakukan Redeploy setelah memasukkan kunci tersebut ya!';
+        } else if (error.message?.includes('429') || error.message?.includes('Quota exceeded') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+          errorMsg = 'Maaf, kuota penggunaan AI (Gemini API) kamu saat ini sudah habis limitnya. Silakan coba beberapa saat lagi, atau coba besok saat kuota harian di-reset. Kamu juga bisa mengatur tagihan di Google AI Studio untuk menambah kuota.';
+        }
+
         setMessages(prev => [...prev, { role: 'bot', text: errorMsg }]);
         handleSpeak(errorMsg);
       }

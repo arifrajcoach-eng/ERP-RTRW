@@ -2155,6 +2155,7 @@ export default function App() {
         query(usersQuery, limit(5000)),
         (snap) => {
           const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
+          data.sort((a: any, b: any) => (a.nama || a.name || "").localeCompare(b.nama || b.name || ""));
           setUsersData(data);
           onDataLoaded();
         },
@@ -2551,18 +2552,19 @@ export default function App() {
   // --- VIEW SELECTION (Must be after all hooks) ---
 
   const renderableNavItems = useMemo(() => {
+    const isApt = settings?.themeMode === 'apartemen';
     return [
       { id: "dashboard", label: "DASHBOARD", icon: LayoutDashboard },
-      { id: "warga", label: "Data Warga", icon: Users },
-      { id: "complaint", label: "Keluhan", icon: AlertTriangle },
-      { id: "booking", label: "Booking", icon: Calendar },
+      { id: "warga", label: isApt ? "Data Penghuni" : "Data Warga", icon: Users },
+      { id: "complaint", label: isApt ? "Keluhan/Defect" : "Keluhan", icon: AlertTriangle },
+      { id: "booking", label: isApt ? "Booking Fasilitas" : "Booking", icon: Calendar },
       { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy },
       { id: "verifikasi", label: "VERIFIKASI", icon: ShieldCheck },
-      { id: "keuangan", label: "Keuangan", icon: CreditCard, plan: "keuangan", minPlan: "BASIC" },
+      { id: "keuangan", label: isApt ? "Keuangan / IPL" : "Keuangan", icon: CreditCard, plan: "keuangan", minPlan: "BASIC" },
       { id: "posyandu", label: "Kesehatan", icon: Baby, plan: "posyandu", minPlan: "PRO" },
       { id: "bank-sampah", label: "Bank Sampah", icon: Recycle, plan: "bankSampah", minPlan: "PRO" },
       { id: "etoko", label: "E-LAPAK26", icon: ShoppingBag, plan: "eLapak", minPlan: "BASIC" },
-      { id: "voting", label: "E-Pemilu", icon: Vote, plan: "ePemilu", minPlan: "PRO" },
+      { id: "voting", label: isApt ? "Voting Penghuni" : "E-Pemilu", icon: Vote, plan: "ePemilu", minPlan: "PRO" },
       { id: "inventaris", label: "Inventaris", icon: Package },
       { id: "surat", label: "Surat", icon: FileText, plan: "surat", minPlan: "BASIC" },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
@@ -2608,7 +2610,7 @@ export default function App() {
       const isLocked = item.plan && (!currentTenant || (planConfig as any)[item.plan] === false);
       return { ...item, isLocked };
     });
-  }, [currentUser, linkedWarga, currentTenant]);
+  }, [currentUser, linkedWarga, currentTenant, settings]);
 
   if (window.location.pathname.startsWith("/guestbook/")) {
     const tenantId = window.location.pathname.split("/")[2];
@@ -3129,6 +3131,7 @@ export default function App() {
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
               currentUser={currentUser}
+              settings={settings}
             />
           )}
           {activeTab === "buku-tamu" && (
@@ -7146,7 +7149,26 @@ function PengaturanView({
 
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">
+              <div className="p-4 bg-orange-50/50 rounded-xl border border-orange-100 mb-2 mt-4">
+                <label className="text-[10px] font-black text-orange-600 uppercase mb-2 block tracking-wider">
+                  Mode Tema Aplikasi
+                </label>
+                <select
+                  name="themeMode"
+                  defaultValue={settings.themeMode || "rt_rw"}
+                  className="w-full px-4 py-3 bg-white border border-orange-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 transition-all font-bold text-slate-800 shadow-sm"
+                >
+                  <option value="rt_rw">Mode Lingkungan (RT/RW)</option>
+                  <option value="apartemen">Mode Apartemen / Perumahan Mandiri</option>
+                </select>
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="w-1 h-1 rounded-full bg-orange-400 mt-1.5 shrink-0"></div>
+                  <p className="text-[10px] text-slate-500 italic leading-tight">
+                    Mode Apartemen akan menyesuaikan beberapa istilah (misal: Kas Warga menjadi IPL, RT/RW menjadi Tower/Lantai, dsb).
+                  </p>
+                </div>
+              </div>
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 mt-6">
                 Informasi INSTANSI / RT / RW & Kop Surat
               </h4>
               <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 mb-2">

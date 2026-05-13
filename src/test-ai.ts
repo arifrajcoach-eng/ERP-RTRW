@@ -16,8 +16,8 @@ async function run() {
     console.log("Success! Responding...");
     let received = '';
     for await (const chunk of res) {
-      if (chunk.content) {
-          received += chunk.content;
+      if (chunk.text) {
+          received += chunk.text;
       }
     }
     console.log("Text:", received);
