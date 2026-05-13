@@ -1544,11 +1544,9 @@ export default function App() {
     const getWargaQuery = () => {
       const base = collection(db, "data_warga");
 
-      // Jika Super Admin, tapi ingin melihat data spesifik tenant, atau hanya data MASTER
-      // Jika di Dashboard utama (MASTER), kita ambil hanya data yang berlabel MASTER atau tenantId yang aktif
       const constraints = [
         where("tenantId", "in", tIds),
-        limit(5000), // Increased from 500 to handle larger imports
+        limit(5000),
       ];
 
       if (currentUser?.role === "RT") {
@@ -1600,7 +1598,7 @@ export default function App() {
         },
       );
     }
-
+    
     // 3. Surat Listener
     let unsubSurat = () => {};
     if (hasFullAccess) {
@@ -2919,7 +2917,10 @@ export default function App() {
         <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 transition-colors">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-brand-green  shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
-            <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors">
+            <p 
+              className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors"
+                style={{ width: '128.899px', lineHeight: '13.8571px' }}
+            >
               AI ACTIVE
             </p>
           </div>
