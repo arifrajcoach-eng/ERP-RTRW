@@ -69,7 +69,13 @@ export function IuranView({
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const years = [2024, 2025, 2026, 2027];
 
-  const canApprove = userRole === 'Admin' || userRole === 'RW' || userRole === 'RT' || userRole === 'Bendahara' || currentUser?.isSuperAdmin;
+  const canApprove = 
+    userRole?.toLowerCase() === 'admin' || 
+    userRole?.toLowerCase() === 'rw' || 
+    userRole?.toLowerCase() === 'rt' || 
+    userRole?.toLowerCase() === 'bendahara' || 
+    userRole?.toLowerCase() === 'super_admin' || 
+    currentUser?.isSuperAdmin;
   const isPengurus = canApprove;
   
   const myTransactions = isPengurus ? iuranData : iuranData.filter((i: any) => i.nik === currentUser.nik || i.userId === currentUser.uid || i.userId === currentUser.id_user);

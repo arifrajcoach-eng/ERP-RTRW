@@ -3189,8 +3189,8 @@ export default function App() {
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
               plan={currentTenant?.status}
-              isPengurus={["Admin", "RW", "RT", "Bendahara"].includes(
-                currentUser.role,
+              isPengurus={["admin", "rw", "rt", "bendahara", "super_admin"].includes(
+                currentUser.role?.toLowerCase(),
               )}
             />
           )}
