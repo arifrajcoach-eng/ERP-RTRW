@@ -161,7 +161,7 @@ export async function textToSpeech(text: string) {
     
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
-      contents: [{ role: 'user', parts: [{ text: cleanedText }] }],
+      contents: [{ role: 'user', parts: [{ text: `Bacakan teks berikut dengan gaya Siska: ceria, asyik, dan sangat personal sebagai asisten warga. Gunakan jeda alami agar terasa seperti mengobrol, dan sampaikan dengan nada yang ekspresif: ${cleanedText}` }] }],
       config: {
         responseModalities: ["AUDIO"],
         speechConfig: {
@@ -169,7 +169,7 @@ export async function textToSpeech(text: string) {
             prebuiltVoiceConfig: { voiceName: "Aoede" }
           }
         },
-        temperature: 0.7
+        temperature: 0.8
       }
     });
 

@@ -32,7 +32,6 @@ interface IuranViewProps {
   handleFirestoreError: (error: any, operation: string, path: string) => void;
   handleFileUpload: (file: File, path: string) => Promise<string>;
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
-  isPengurus: boolean;
 }
 
 export function IuranView({ 
@@ -48,8 +47,7 @@ export function IuranView({
   setIsLoadingDB, 
   handleFirestoreError, 
   handleFileUpload, 
-  showNotification,
-  isPengurus
+  showNotification 
 }: IuranViewProps) {
   const isApt = getSetting("themeMode") === "apartemen";
   const [activeSubTab, setActiveSubTab] = useState<'pembayaran' | 'rekap'>('pembayaran');
@@ -71,6 +69,9 @@ export function IuranView({
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const years = [2024, 2025, 2026, 2027];
 
+  const canApprove = userRole === 'Admin' || userRole === 'RW' || userRole === 'RT' || userRole === 'Bendahara' || currentUser?.isSuperAdmin;
+  const isPengurus = canApprove;
+  
   const myTransactions = isPengurus ? iuranData : iuranData.filter((i: any) => i.nik === currentUser.nik || i.userId === currentUser.uid || i.userId === currentUser.id_user);
   
   const filteredTransactions = myTransactions.filter((i: any) => {
