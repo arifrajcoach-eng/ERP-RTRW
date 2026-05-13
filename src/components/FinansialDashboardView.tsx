@@ -38,19 +38,19 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
       <div className="flex flex-wrap gap-2 mb-2">
         <button
           onClick={() => setActiveFinTab('iuran')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'iuran' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 ring-2 ring-blue-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'iuran' ? 'bg-[#a0f4f7] text-slate-800 shadow-xl shadow-cyan-100 ring-2 ring-cyan-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
         >
           <CreditCard className="w-5 h-5" /> {isApt ? "Buku Tagihan / IPL" : "Iuran Warga"}
         </button>
         <button
           onClick={() => setActiveFinTab('kas')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'kas' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 ring-2 ring-blue-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'kas' ? 'bg-[#fffea7] text-slate-800 shadow-xl shadow-yellow-100 ring-2 ring-yellow-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
         >
           <Wallet className="w-5 h-5" /> Buku Kas
         </button>
         <button
           onClick={() => setActiveFinTab('ppob')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'ppob' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 ring-2 ring-blue-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all uppercase tracking-wider ${activeFinTab === 'ppob' ? 'bg-[#ef0cc5] text-white shadow-xl shadow-pink-100 ring-2 ring-pink-100' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}
         >
           <Smartphone className="w-5 h-5" /> Digital & PPOB
         </button>

@@ -2155,6 +2155,7 @@ export default function App() {
         query(usersQuery, limit(5000)),
         (snap) => {
           const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
+          data.sort((a: any, b: any) => (a.nama || a.name || "").localeCompare(b.nama || b.name || ""));
           setUsersData(data);
           onDataLoaded();
         },

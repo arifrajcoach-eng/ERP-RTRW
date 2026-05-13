@@ -339,7 +339,7 @@ export function IuranView({
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <CreditCard className="w-4 h-4" />
-          <span className="uppercase">Riwayat Pembayaran</span>
+          <span className="uppercase text-[#15c3fc]">Riwayat Pembayaran</span>
         </button>
         {isPengurus && (
           <button
@@ -347,7 +347,7 @@ export function IuranView({
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'rekap' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
           >
             <Users className="w-4 h-4" />
-            <span className="uppercase">Rekap Iuran Warga</span>
+            <span className="uppercase text-[#27bcff]">Rekap Iuran Warga</span>
           </button>
         )}
       </div>
@@ -462,7 +462,7 @@ export function IuranView({
                 </tr>
               </thead>
               <tbody className="font-medium text-slate-600 text-xs">
-                {wargaData.filter((w:any) => w.posisi === 'Kepala Keluarga' || !w.posisi).map((w: any, index: number) => (
+                {wargaData.filter((w:any) => w.posisi === 'Kepala Keluarga' || !w.posisi).sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || "")).map((w: any, index: number) => (
                   <tr key={`kk-${index}`} className="hover:bg-blue-50/30 transition-colors">
                     <td className="px-4 py-3 border border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50/10 z-10 shadow-[1px_0_0_#f1f5f9]">
                       <div className="font-bold text-slate-800">{w.nama}</div>
@@ -515,7 +515,7 @@ export function IuranView({
                   <label className="block text-xs font-black text-blue-800 uppercase tracking-widest">Identitas Penyetor (Admin Mode)</label>
                   <select name="wargaId" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="">-- Bukan warga terdaftar --</option>
-                    {wargaData.map((w:any, index: number) => <option key={`w-iuran-opt-${w.docId || w.id || w.nik || index}-${index}`} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
+                    {[...wargaData].sort((a: any, b: any) => (a.nama || '').localeCompare(b.nama || '')).map((w:any, index: number) => <option key={`w-iuran-opt-${w.docId || w.id || w.nik || index}-${index}`} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
                   </select>
                   <input type="text" name="namaPenyetor" placeholder="Tulis manual nama penyetor (jika luar warga)" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" />
                 </div>

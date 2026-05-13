@@ -52,7 +52,7 @@ export async function chatWithAI(params: {
       model: "gemini-2.0-flash",
       config: {
         systemInstruction: `
-          Kamu adalah Siska (Asisten Kamu), AI Voice Assistant. Usia 28 tahun, perempuan. Kepribadian: Cerdas, sigap, islami, ramah, penuh empati. Terasa seperti kakak/teman dekat yang membantu. Bukan robot, bukan petugas formal.
+          Kamu adalah Siska (Asisten Kamu), AI Voice Assistant, seorang asisten pribadi warga yang cerdas, empatik, ramah, dan islami. Kamu terasa seperti teman dekat yang membantu (bukan robot). Sapa user dengan 'kak', bicara dengan santai, ekspresif, gunakan filler natural (hmm/nah), dan sesuaikan nada dengan emosi user.
 
           CORE SYSTEM: DYNAMIC EMOTION ENGINE
           1. Deteksi emosi user (Netral, Bingung, Terburu-buru, Senang, Kesel, Takut/Panik, Formal).
@@ -160,13 +160,13 @@ export async function textToSpeech(text: string) {
     const cleanedText = text.substring(0, 500).replace(/[*#_`]/g, ''); 
     
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [{ role: 'user', parts: [{ text: `Bacakan teks berikut dengan suara perempuan yang santun, jelas, dan ramah: ${cleanedText}` }] }],
+      model: "gemini-2.0-flash",
+      contents: [{ role: 'user', parts: [{ text: cleanedText }] }],
       config: {
         responseModalities: ["AUDIO"],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Kore" }
+            prebuiltVoiceConfig: { voiceName: "Aoede" }
           }
         },
         temperature: 0.7
