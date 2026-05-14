@@ -35,7 +35,16 @@ export async function chatWithAI(params: {
     // Sanitize to ensure strict alternating roles and no empty parts
     const rawContents = [...params.history, { role: 'user', parts: [{ text: params.message || " " }] }];
     const sanitizedContents: any[] = [];
-    let lastRole = null;
+    
+    // Add context data if available
+    if (params.dataSummary && Object.keys(params.dataSummary).length > 0) {
+      sanitizedContents.push({ 
+        role: 'user', 
+        parts: [{ text: `DATA RW TERKINI (Gunakan sebagai konteks jawabanmu): ${JSON.stringify(params.dataSummary)}` }] 
+      });
+    }
+
+    let lastRole: string | null = null;
     
     for (const item of rawContents) {
       const clonedItem = { role: item.role, parts: [{ text: item.parts?.[0]?.text?.trim() || " " }] };
@@ -81,13 +90,14 @@ TUGAS UTAMA (AI ASISTEN KETUA):
 3. Melaporkan inventaris, kegiatan posyandu, dan bank sampah.
 4. Menganalisa, memberi kesimpulan, dan saran positif buat ketua.
 5. Menganalisa dan memberi pendapat soal aktivitas lingkungan kedepan.
-6. WAJIB jawab sesuai konteks saja.
+6. WAJIB jawab sesuai konteks data yang tersedia saja.
 7. Beri pujian jika kegiatan warga berhasil/lancar.
-8. Beri masukan konstruktif jika kegiatan kurang memuaskan.
+8. Beri masukan konstruktif singkat jika kegiatan kurang memuaskan.
 9. Dilarang keras membuka data rahasia.
+10. JANGAN berikan nasihat perawatan/pergantian fasilitas umum jika data faktualnya tidak tersedia dalam konteks.
 
 ATURAN GAYA BICARA:
-Sama dengan aturan gaya bicara santai ala Chaty, gunakan "Kak" atau "Pak Ketua", "Siap!", filler natural, jeda nafas (...), dan tidak bertele-tele.
+Sama dengan aturan gaya bicara santai ala Chaty, gunakan "Kak" atau "Pak Ketua", "Siap!", filler natural, jeda nafas (...), dan tidak bertele-tele. Jawablah sesuai konteks saja secara singkat, sopan, ramah, asyik, dan tetap humoris. Jangan menggunakan tanda baca khusus seperti asteris (**) dalam teks ucapan agar tidak dibaca oleh sistem TTS.
 `;
 
 // Chaty TTS Performance Persona
