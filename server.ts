@@ -3,6 +3,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import { checkFeatureAccess } from "./src/services/subscriptionService";
+import admin from "firebase-admin";
+import cron from "node-cron";
+
+// Initialize admin
+if (!admin.apps.length) {                
+  admin.initializeApp();                
+}                
+const db = admin.firestore();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +24,43 @@ async function startServer() {
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Webhook: Payment received
+  app.post("/api/payments/webhook", async (req, res) => {
+    const { tenantId, status, plan, paymentProviderRef } = req.body;
+    
+    // For simplicity, 30 days active
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 30);
+
+    try {
+        await db.collection('subscriptions').doc(tenantId).set({
+            tenantId,
+            status: status === 'success' ? 'Active' : 'Inactive',
+            plan,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            paymentProviderRef
+        }, { merge: true });
+        res.json({ status: 'success' });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+  });
+
+  // Daily Reminder Bot (Runs at 00:00 every day)
+  cron.schedule('0 0 * * *', async () => {
+    const snapshot = await db.collection('subscriptions')
+        .where('status', '==', 'Active')
+        .where('endDate', '<', new Date().toISOString())
+        .get();
+    
+    snapshot.forEach(async (doc) => {
+        // Send reminders here (e.g., via notification collection)
+        console.log(`Reminder sent to tenant: ${doc.id}`);
+    });
   });
 
   // PPOB Revenue Sharing

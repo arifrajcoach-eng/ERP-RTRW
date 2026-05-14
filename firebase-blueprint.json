@@ -653,6 +653,20 @@
         "tenantId": { "type": "string" }
       },
       "required": ["userId", "action", "timestamp", "tenantId"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Informasi langganan tenant",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive", "Trial"] },
+        "plan": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "paymentProviderRef": { "type": "string" }
+      },
+      "required": ["tenantId", "status", "startDate", "endDate"]
     }
   },
   "firestore": {
@@ -807,6 +821,10 @@
     "/warga_sakit/{id}": {
       "schema": "WargaSakit",
       "description": "Koleksi data warga sakit"
+    },
+    "/subscriptions/{tenantId}": {
+      "schema": "Subscription",
+      "description": "Koleksi data langganan tenant"
     }
   }
 }

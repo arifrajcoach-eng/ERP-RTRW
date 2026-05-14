@@ -172,7 +172,7 @@ import {
   scanReceiptAI,
 } from "./services/aiService";
 
-const APP_LOGO = "/logo_rw.png";
+const APP_LOGO = "/logo_rx.png";
 
 const AppLogo = ({
   className,
@@ -1004,15 +1004,26 @@ export default function App() {
     // Ensure persistence
     setPersistence(auth, browserLocalPersistence);
 
+    const userProfileCache: Record<string, any> = {};
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           // Fetch additional user info/role from Firestore
           const userDocRef = doc(db, "users", user.uid);
-          let userDoc = await getDoc(userDocRef);
+          let userDoc;
 
-          if (userDoc.exists()) {
-            let userData = userDoc.data() as any;
+          if (userProfileCache[user.uid]) {
+            userDoc = userProfileCache[user.uid];
+          } else {
+            userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              userProfileCache[user.uid] = userDoc;
+            }
+          }
+
+          if (userDoc && userDoc.exists()) {
+            let userData = (userDoc.data() as any);
 
             // --- AUTO MIGRATION & REPAIR LOGIC ---
             const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
@@ -2795,7 +2806,7 @@ export default function App() {
             </div>
           </div>
           <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors">
-            <span className="font-bold"><span className="text-[#89CFF0]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
+            <span className="font-bold"><span className="text-[#04a8f4]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
           </h2>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">
             Berdampak & Memberdayakan
@@ -2873,8 +2884,8 @@ export default function App() {
                     {(currentTenant?.name || settings?.nama_rt).includes('SUPER ADMIN') ? (
                       <>
                         <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border border-white leading-[18px] w-[139.906px] inline-block uppercase">SUPER ADMIN</span>
-                        <span className="text-[14px] truncate ml-[30px] mt-[6px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center">
-                          <span className="text-[#89CFF0] font-bold border-[#1d3840]">Smart</span>
+                        <span className="text-[14px] truncate ml-[38px] mt-[6px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center mr-[32px] pt-0 pb-0">
+                          <span className="text-[#04a8f4] font-bold border-[#1d3840]">Smart</span>
                           <span className="text-brand-blue">RW</span>&nbsp;
                           <span className="text-brand-pink">AI</span>
                         </span>
@@ -8880,7 +8891,7 @@ function LoginView({
             />
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 leading-none mb-2 font-elegant">
-            <span className="font-bold"><span className="text-[#89CFF0]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
+            <span className="font-bold"><span className="text-[#04a8f4]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
           </h1>
           <p className="text-brand-blue font-bold tracking-[0.2em] text-sm uppercase">
             BERDAMPAK &amp; MEMBERDAYAKAN

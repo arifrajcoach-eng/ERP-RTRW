@@ -1,11 +1,37 @@
 import { PLAN_CONFIG, ADDON_CONFIG } from '../constants';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export interface TenantSubscription {
   planId: string;
   addons: string[];
+  status: 'Active' | 'Inactive' | 'Trial';
+  endDate: string;
 }
 
+export const fetchSubscriptionStatus = async (tenantId: string): Promise<TenantSubscription | null> => {
+    try {
+        const subDoc = await getDoc(doc(db, 'subscriptions', tenantId));
+        if (!subDoc.exists()) return null;
+        
+        const data = subDoc.data();
+        return {
+            planId: data.plan,
+            addons: [], // Addon management not yet implemented
+            status: data.status,
+            endDate: data.endDate
+        } as TenantSubscription;
+    } catch (e) {
+        console.error("Error fetching subscription:", e);
+        return null;
+    }
+};
+
 export const checkFeatureAccess = (subscription: TenantSubscription, featureKey: string) => {
+    // Check if subscription has expired
+    if (subscription.status !== 'Active' && subscription.status !== 'Trial') return false;
+    if (new Date(subscription.endDate) < new Date()) return false;
+
   // 1. Check if the plan is valid
   const plan = Object.values(PLAN_CONFIG).find(p => p.id === subscription.planId);
   if (!plan) return false;

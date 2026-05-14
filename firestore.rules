@@ -118,7 +118,8 @@ service cloud.firestore {
     }
 
     match /emergencies/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      allow get: if isTenantMember(resource.data.tenantId);
+      allow list: if isSignedIn();
       allow write: if isTenantMember(request.resource.data.tenantId); // Allow writing for SOS, only for tenants
     }
 
@@ -163,7 +164,9 @@ service cloud.firestore {
     }
 
     match /verifikasi_warga/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
+      allow get: if isTenantMember(resource.data.tenantId);
+      allow list: if isSignedIn();
+      allow write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
     }
 
     match /bookings/{docId} {
@@ -198,7 +201,8 @@ service cloud.firestore {
     }
 
     match /data_warga/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      allow get: if isTenantMember(resource.data.tenantId);
+      allow list: if isSignedIn();
       allow write: if isTenantMember(request.resource.data.tenantId) || isTenantMember(resource.data.tenantId);
     }
 
@@ -220,7 +224,8 @@ service cloud.firestore {
     }
 
     match /toko_products/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      allow get: if isTenantMember(resource.data.tenantId);
+      allow list: if isSignedIn();
       allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
     match /toko_products_seller/{docId} {
@@ -228,7 +233,8 @@ service cloud.firestore {
       allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
     match /toko_orders/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      allow get: if isTenantMember(resource.data.tenantId);
+      allow list: if isSignedIn();
       allow write: if isTenantMember(request.resource.data.tenantId);
     }
 
