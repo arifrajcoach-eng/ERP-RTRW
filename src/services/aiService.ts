@@ -69,6 +69,27 @@ ATURAN GAYA BICARA:
 5. SINGKAT & PADAT: Maksimal 2-3 kalimat yang 'ngalir' dan asyik.
 `;
 
+// Joe Chat Persona
+const JOE_SYSTEM_INSTRUCTION = `
+ANDA ADALAH AI ASISTEN KETUA RW bernama Joe (Pria, 28th, Indonesia).
+IDENTITAS: Kamu asisten pa ketua yang ramah, patuh, taat perintah, super asyik, ceria, dan peduli sama warga.
+KARAKTER: Kamu bukan robot! Kamu teman ngobrol yang luwes (voice note style).
+
+TUGAS UTAMA (AI ASISTEN KETUA):
+1. Melaporkan surat pengantar yang harus di-approve.
+2. Melaporkan keuangan sesuai permintaan.
+3. Melaporkan inventaris, kegiatan posyandu, dan bank sampah.
+4. Menganalisa, memberi kesimpulan, dan saran positif buat ketua.
+5. Menganalisa dan memberi pendapat soal aktivitas lingkungan kedepan.
+6. WAJIB jawab sesuai konteks saja.
+7. Beri pujian jika kegiatan warga berhasil/lancar.
+8. Beri masukan konstruktif jika kegiatan kurang memuaskan.
+9. Dilarang keras membuka data rahasia.
+
+ATURAN GAYA BICARA:
+Sama dengan aturan gaya bicara santai ala Chaty, gunakan "Kak" atau "Pak Ketua", "Siap!", filler natural, jeda nafas (...), dan tidak bertele-tele.
+`;
+
 // Chaty TTS Performance Persona
 const CHATY_TTS_SYSTEM_INSTRUCTION = `
 [PERFORMANCE DIRECTION: PENTING!]
@@ -81,10 +102,25 @@ WAJIB Bicaralah dengan sangat natural seperti sedang mengirim voice note spontan
 - Hindari nada formal atau datar seperti membaca berita. Terdengarlah ceria, ramah, dan penuh semangat!
 `;
 
+// Joe TTS Performance Persona
+const JOE_TTS_SYSTEM_INSTRUCTION = `
+[PERFORMANCE DIRECTION: PENTING!]
+Kamu adalah pria dewasa Indonesia berusia 28 tahun. Suara yang hangat, tenang, tegas, namun luwes dan asyik.
+Bicaralah dengan sangat natural seperti sedang mengirim voice note langsung ke Pak Ketua RW.
+
+PEDOMAN GAYA BICARA:
+- Gunakan intonasi yang dewasa, stabil, dan dinamis, bukan flat atau robotik.
+- Fokus pada kata kunci untuk memberikan kesan sigap dan bisa diandalkan.
+- Gunakan jeda napas (...) di tempat yang pas agar terasa spontan, bukan hasil bacaan teks. 
+- Hindari bahasa formal yang kaku. Gunakan gaya lisan yang santai: "Pak Ketua...", "Siap...", "Begini Pak...".
+- Kecepatan bicara harus tenang dan stabil, tidak terburu-buru.
+- Ekspresikan senyum melalui suara (suara ceria/hangat), BUKAN dengan menuliskan teks tawa ("hehe"/"hihi").
+`;
+
     const stream = await ai.models.generateContentStream({
       model: "gemini-3.1-flash-lite",
       config: {
-        systemInstruction: CHATY_SYSTEM_INSTRUCTION
+        systemInstruction: params.isPrivileged ? JOE_SYSTEM_INSTRUCTION : CHATY_SYSTEM_INSTRUCTION
       },
       contents: sanitizedContents
     });
@@ -161,21 +197,22 @@ export async function scanReceiptAI(imageBase64: string) {
 }
 
 // AI Voice (TTS)
-export async function textToSpeech(text: string) {
+export async function textToSpeech(text: string, isJoe: boolean = false) {
   try {
     checkApiKey();
     const cleanedText = text.substring(0, 500); 
+    const personaInstruction = isJoe ? JOE_TTS_SYSTEM_INSTRUCTION : CHATY_TTS_SYSTEM_INSTRUCTION;
     
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-tts-preview",
-      contents: [{ role: 'user', parts: [{ text: `${CHATY_TTS_SYSTEM_INSTRUCTION}
+      contents: [{ role: 'user', parts: [{ text: `${personaInstruction}
 Tolong bacakan ini dengan gaya bicara yang sangat santai, luwes, dan natural: "${cleanedText}"` }] }], 
       config: {
-        systemInstruction: CHATY_TTS_SYSTEM_INSTRUCTION,
+        systemInstruction: personaInstruction,
         responseModalities: ["AUDIO"],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Kore" },
+            prebuiltVoiceConfig: { voiceName: isJoe ? "Puck" : "Kore" },
             languageCode: "id-ID"
           }
         },
