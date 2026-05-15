@@ -1251,36 +1251,35 @@ export default function App() {
     message: string;
     type: "success" | "error" | "info";
   } | null>(null);
-  const [darkMode, setDarkMode] = useState(() => {
+  const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("theme") === "dark" ||
-        (!localStorage.getItem("theme") &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      );
+      return localStorage.getItem("theme") || "light";
     }
-    return false;
+    return "light";
   });
+  
+  const darkMode = theme === "dark";
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [darkMode]);
+    document.documentElement.classList.remove("light", "dark", "oceanic");
+    document.documentElement.classList.add(theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
-  const toggleDarkMode = () => {
-    const nextMode = !darkMode;
-    setDarkMode(nextMode);
+  const cycleTheme = () => {
+    const themes = ["light", "dark", "oceanic"];
+    const currentIndex = themes.indexOf(theme);
+    const nextTheme = themes[(currentIndex + 1) % themes.length];
+    setTheme(nextTheme);
     setNotification({
-      message: `Mode ${nextMode ? "Malam" : "Siang"} diaktifkan`,
+      message: `Tema diubah ke ${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)}`,
       type: "info",
     });
     setTimeout(() => setNotification(null), 2000);
   };
+  
+  // Keep toggleDarkMode for compatibility
+  const toggleDarkMode = cycleTheme;
 
   const activeEmergency = emergenciesData.find(
     (e) => e.status === "ACTIVE" && e.id !== hiddenEmergencyId,
@@ -2840,7 +2839,7 @@ export default function App() {
           <div className="relative z-10 flex flex-col items-center w-full">
             <div className="flex justify-between w-full mb-4">
               <button
-                onClick={toggleDarkMode}
+                onClick={cycleTheme}
                 className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm border border-slate-200 dark:border-slate-700"
                 title={
                   darkMode ? "Switch to Light Mode" : "Switch to Night View"
@@ -2883,7 +2882,7 @@ export default function App() {
                   <div className="flex flex-col leading-tight" title={currentTenant?.name || settings?.nama_rt}>
                     {(currentTenant?.name || settings?.nama_rt).includes('SUPER ADMIN') ? (
                       <>
-                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border border-white leading-[18px] w-[139.906px] inline-block uppercase">SUPER ADMIN</span>
+                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border-none leading-[18px] w-[139.906px] inline-block uppercase">SUPER ADMIN</span>
                         <span className="text-[14px] truncate ml-[38px] mt-[6px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center mr-[32px] pt-0 pb-0">
                           <span className="text-[#04a8f4] font-bold border-[#1d3840]">Smart</span>
                           <span className="text-brand-blue">RW</span>&nbsp;
@@ -2905,7 +2904,7 @@ export default function App() {
               </h1>
               {currentTenant?.name && (
                 <div className="mt-1.5 ml-[18px] space-y-1">
-                  <p className="text-[9px] font-bold text-[#5779ab] bg-white font-[Georgia] uppercase tracking-widest">
+                  <p className="text-[9px] font-bold text-[#5779ab] dark:text-slate-400 bg-transparent font-[Georgia] uppercase tracking-widest">
                     Eksosistem Digital
                   </p>
                   <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg">

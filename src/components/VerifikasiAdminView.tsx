@@ -459,7 +459,9 @@ export function VerifikasiAdminView({
                     <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest border-b border-blue-50 pb-2">Perubahan Data</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Nama Lengkap Baru</label>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">NIK</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.nik}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Nama Lengkap</label>
                         <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.nama}</p>
                       </div>
                       <div className="col-span-2">

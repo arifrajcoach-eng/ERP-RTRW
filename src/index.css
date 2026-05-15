@@ -67,12 +67,42 @@
 
 @layer base {
   body {
-    @apply antialiased text-slate-800 bg-[#fafafa] dark:text-slate-100 dark:bg-slate-950 transition-colors duration-300;
+    @apply antialiased transition-colors duration-300;
   }
   
+  /* Default/Light */
+  body {
+    @apply text-slate-800 bg-[#fafafa];
+  }
+
+  /* Dark */
+  .dark body {
+    @apply text-slate-100 bg-slate-950;
+  }
+
+  /* Oceanic */
+  .oceanic body {
+    @apply text-slate-800 bg-slate-50;
+  }
+
   h1, h2, h3, h4 {
     @apply font-sans tracking-tight;
   }
+}
+
+/* Theme Overrides for Oceanic */
+:root.oceanic {
+  --color-slate-50: #f0f9ff;
+  --color-slate-100: #e0f2fe;
+  --color-slate-200: #bae6fd;
+  --color-slate-300: #7dd3fc;
+  --color-slate-400: #38bdf8;
+  --color-slate-500: #0ea5e9;
+  --color-slate-600: #0284c7;
+  --color-slate-700: #0369a1;
+  --color-slate-800: #075985;
+  --color-slate-900: #0c4a6e;
+  --color-slate-950: #082f49;
 }
 
 .font-elegant {
