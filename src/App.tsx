@@ -2606,7 +2606,7 @@ export default function App() {
         BENDAHARA: ["dashboard", "keuangan", "bank-sampah", "chat", "ai-bot"],
         SATPAM: ["dashboard", "buku-tamu"],
         KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot"],
-        WARGA: ["dashboard", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "surat", "chat", "ai-bot", "complaint", "booking"],
+        WARGA: ["dashboard", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "surat", "chat", "ai-bot", "complaint", "booking", "inventaris"],
         TAMU: ["dashboard", "etoko"],
         Viewer: ["dashboard", "etoko"],
       };
@@ -10542,6 +10542,36 @@ function PosyanduView({
   handleFirestoreError,
   showNotification,
 }: any) {
+  const isViewer = ["WARGA", "Viewer", "TAMU"].includes(currentUser.role);
+  const isWarga = currentUser.role === "WARGA";
+
+  const filteredBalita = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (balitaData || []).filter(
+        (b: any) => b.nikOrangTua === currentUser.nik || b.nik === currentUser.nik
+      );
+    }
+    return balitaData || [];
+  }, [balitaData, isWarga, currentUser?.nik]);
+
+  const filteredIbuHamil = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (ibuHamilData || []).filter(
+        (i: any) => i.nik === currentUser.nik
+      );
+    }
+    return ibuHamilData || [];
+  }, [ibuHamilData, isWarga, currentUser?.nik]);
+
+  const filteredPosbinduKegiatan = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (posbinduKegiatanData || []).filter(
+        (p: any) => p.nik === currentUser.nik
+      );
+    }
+    return posbinduKegiatanData || [];
+  }, [posbinduKegiatanData, isWarga, currentUser?.nik]);
+
   const [activeSubTab, setActiveSubTab] = useState<
     | "dashboard"
     | "balita"
@@ -11098,54 +11128,63 @@ function PosyanduView({
     }
   };
 
+  const filteredPosbindu = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (pemeriksaanPosbinduData || []).filter(
+        (p: any) => p.nik === currentUser.nik
+      );
+    }
+    return pemeriksaanPosbinduData || [];
+  }, [pemeriksaanPosbinduData, isWarga, currentUser?.nik]);
+
   // Dashboard Stats
   const stats = {
-    totalBalita: balitaData.length,
-    balitaSehat: balitaData.filter((b: any) => b.statusStunting === "Normal")
+    totalBalita: filteredBalita.length,
+    balitaSehat: filteredBalita.filter((b: any) => b.statusStunting === "Normal")
       .length,
-    balitaRisiko: balitaData.filter(
+    balitaRisiko: filteredBalita.filter(
       (b: any) => b.statusStunting === "Risiko Stunting",
     ).length,
-    balitaStunting: balitaData.filter(
+    balitaStunting: filteredBalita.filter(
       (b: any) => b.statusStunting === "Stunting",
     ).length,
 
-    totalIbuHamil: ibuHamilData.length,
-    ibuHamilRisiko: ibuHamilData.filter((i: any) =>
+    totalIbuHamil: filteredIbuHamil.length,
+    ibuHamilRisiko: filteredIbuHamil.filter((i: any) =>
       (i.riwayatKesehatan || "").toLowerCase().includes("risiko"),
     ).length,
 
-    totalLansia: wargaData.filter((w: any) => {
+    totalLansia: (isWarga ? [] : wargaData).filter((w: any) => {
       const age = calculateAge(w.tglLahir);
       return typeof age === "number" && (age as number) >= 60;
     }).length,
 
-    totalPosbindu: pemeriksaanPosbinduData.length,
-    posbinduHipertensi: pemeriksaanPosbinduData.filter(
+    totalPosbindu: filteredPosbindu.length,
+    posbinduHipertensi: filteredPosbindu.filter(
       (p: any) =>
         p.tekananDarah &&
         parseInt(p.tekananDarah.toString().split("/")[0]) >= 140,
     ).length,
-    posbinduAsamUrat: pemeriksaanPosbinduData.filter(
+    posbinduAsamUrat: filteredPosbindu.filter(
       (p: any) => p.asamUrat && parseFloat(p.asamUrat) > 7,
     ).length,
-    posbinduGulaDarah: pemeriksaanPosbinduData.filter(
+    posbinduGulaDarah: filteredPosbindu.filter(
       (p: any) => p.gulaDarah && parseFloat(p.gulaDarah) > 200,
     ).length,
 
     posyanduTerakhir: posyanduKegiatanData.sort((a: any, b: any) =>
       b.tanggal.localeCompare(a.tanggal),
     )[0],
-    stuntingCount: balitaData.filter(
+    stuntingCount: filteredBalita.filter(
       (b: any) => b.statusStunting === "Stunting",
     ).length,
-    risikoStunting: balitaData.filter(
+    risikoStunting: filteredBalita.filter(
       (b: any) => b.statusStunting === "Risiko Stunting",
     ).length,
   };
 
   const exportIbuHamilExcel = () => {
-    const data = ibuHamilData.map((mil) => ({
+    const data = filteredIbuHamil.map((mil: any) => ({
       Nama: mil.nama,
       NIK: mil.nik,
       "Usia Hamil (Minggu)": mil.usiaKehamilan,
@@ -11170,7 +11209,7 @@ function PosyanduView({
     doc.text(`Tenant: ${tenantId}`, 14, 30);
     doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
 
-    const tableData = ibuHamilData.map((mil: any) => [
+    const tableData = filteredIbuHamil.map((mil: any) => [
       mil.nama,
       mil.nik,
       mil.usiaKehamilan + " Minggu",
@@ -11191,7 +11230,7 @@ function PosyanduView({
   };
 
   const exportBalitaExcel = () => {
-    const data = balitaData.map((b) => ({
+    const data = filteredBalita.map((b: any) => ({
       "Nama Balita": b.nama,
       NIK: b.nik || "-",
       "Jenis Kelamin": b.jk,
@@ -11219,7 +11258,7 @@ function PosyanduView({
     doc.text(`Tenant: ${tenantId}`, 14, 30);
     doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
 
-    const tableData = balitaData.map((b: any) => [
+    const tableData = filteredBalita.map((b: any) => [
       b.nama,
       calculateAgeMonths(b.tglLahir) + " Bulan",
       b.namaOrangTua,
@@ -11320,23 +11359,35 @@ function PosyanduView({
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-5">
-                <button
-                  onClick={() => setActiveSubTab("balita")}
-                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100"
-                >
-                  Lihat Daftar
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingItem(null);
-                    setShowBalitaForm(true);
-                  }}
-                  className="py-2.5 bg-brand-blue/10 text-brand-blue rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all"
-                >
-                  Tambah Data
-                </button>
-              </div>
+              {!isViewer && (
+                <div className="grid grid-cols-2 gap-2 mt-5">
+                  <button
+                    onClick={() => setActiveSubTab("balita")}
+                    className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100"
+                  >
+                    Lihat Daftar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setShowBalitaForm(true);
+                    }}
+                    className="py-2.5 bg-brand-blue/10 text-brand-blue rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue hover:text-white transition-all"
+                  >
+                    Tambah Data
+                  </button>
+                </div>
+              )}
+              {isViewer && (
+                <div className="mt-5">
+                  <button
+                    onClick={() => setActiveSubTab("balita")}
+                    className="w-full py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100"
+                  >
+                    Buka Laporan Balita
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-pink-100/20 relative overflow-hidden group">
@@ -11359,23 +11410,35 @@ function PosyanduView({
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-5">
-                <button
-                  onClick={() => setActiveSubTab("ibuhamil")}
-                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-50 hover:text-pink-600 transition-all border border-slate-100"
-                >
-                  Lihat Daftar
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingItem(null);
-                    setShowIbuHamilForm(true);
-                  }}
-                  className="py-2.5 bg-brand-pink/10 text-brand-pink rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-pink hover:text-white transition-all"
-                >
-                  Tambah Data
-                </button>
-              </div>
+              {!isViewer && (
+                <div className="grid grid-cols-2 gap-2 mt-5">
+                  <button
+                    onClick={() => setActiveSubTab("ibuhamil")}
+                    className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-50 hover:text-pink-600 transition-all border border-slate-100"
+                  >
+                    Lihat Daftar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setShowIbuHamilForm(true);
+                    }}
+                    className="py-2.5 bg-brand-pink/10 text-brand-pink rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-pink hover:text-white transition-all"
+                  >
+                    Tambah Data
+                  </button>
+                </div>
+              )}
+              {isViewer && (
+                <div className="mt-5">
+                  <button
+                    onClick={() => setActiveSubTab("ibuhamil")}
+                    className="w-full py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-50 hover:text-pink-600 transition-all border border-slate-100"
+                  >
+                    Buka Laporan Ibu Hamil
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-purple-100/20 relative overflow-hidden group">
@@ -11423,23 +11486,35 @@ function PosyanduView({
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-5">
-                <button
-                  onClick={() => setActiveSubTab("posbindu")}
-                  className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-50 hover:text-purple-600 transition-all border border-slate-100"
-                >
-                  Lihat Daftar
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingPosbinduItem(null);
-                    setShowPosbinduForm(true);
-                  }}
-                  className="py-2.5 bg-brand-purple/10 text-brand-purple rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-purple hover:text-white transition-all"
-                >
-                  Tambah Data
-                </button>
-              </div>
+              {!isViewer && (
+                <div className="grid grid-cols-2 gap-2 mt-5">
+                  <button
+                    onClick={() => setActiveSubTab("posbindu")}
+                    className="py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-50 hover:text-purple-600 transition-all border border-slate-100"
+                  >
+                    Lihat Daftar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingPosbinduItem(null);
+                      setShowPosbinduForm(true);
+                    }}
+                    className="py-2.5 bg-brand-purple/10 text-brand-purple rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-purple hover:text-white transition-all"
+                  >
+                    Tambah Data
+                  </button>
+                </div>
+              )}
+              {isViewer && (
+                <div className="mt-5">
+                  <button
+                    onClick={() => setActiveSubTab("posbindu")}
+                    className="w-full py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-50 hover:text-purple-600 transition-all border border-slate-100"
+                  >
+                    Buka Laporan Posbindu
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -11455,7 +11530,7 @@ function PosyanduView({
                     data={[
                       {
                         name: "Normal",
-                        count: balitaData.filter(
+                        count: filteredBalita.filter(
                           (b) => b.statusStunting === "Normal",
                         ).length,
                       },
@@ -11623,7 +11698,7 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pemeriksaanPosbinduData
+                {filteredPosbindu
                   .filter(
                     (item: any) =>
                       item.nama
@@ -11911,7 +11986,7 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {balitaData
+                {filteredBalita
                   .filter((b) =>
                     (b.nama || "")
                       .toLowerCase()
@@ -12292,7 +12367,7 @@ function PosyanduView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {ibuHamilData
+                {filteredIbuHamil
                   .filter((mil: any) =>
                     (mil.nama || "")
                       .toLowerCase()
@@ -13034,7 +13109,19 @@ function BankSampahView({
     reader.readAsBinaryString(file);
   };
 
-  const canEdit = currentUser?.role !== "Viewer";
+  const canEdit = !["Viewer", "WARGA", "TAMU"].includes(currentUser?.role);
+  const isWarga = currentUser?.role === "WARGA";
+
+  // Auto-select self as nasabah for WARGA
+  useEffect(() => {
+    if (isWarga && currentUser?.nik && activeSubTab === "dashboard") {
+      const match = nasabahSummary.find((n: any) => n.nik === currentUser.nik);
+      if (match) {
+        setSelectedNasabahId(match.nik);
+        setActiveSubTab("nasabah_detail");
+      }
+    }
+  }, [isWarga, currentUser?.nik, nasabahSummary, activeSubTab]);
 
   // Statistics
   const stats = {
@@ -13507,8 +13594,8 @@ function BankSampahView({
             { id: "setoran", label: "Setoran", icon: PlusCircle },
             { id: "tarik", label: "Tarik Saldo", icon: HandCoins },
             { id: "nasabah", label: "Nasabah", icon: Users },
-            { id: "kategori", label: "Kategori", icon: Settings },
-          ].map((tab) => (
+            { id: "kategori", label: "Kategori", icon: Settings, adminOnly: true },
+          ].filter(tab => !tab.adminOnly || canEdit).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
@@ -14147,27 +14234,31 @@ function BankSampahView({
                                 setActiveSubTab("nasabah_detail");
                               }}
                               className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm active:scale-95"
-                              title="Lihat/Mata"
+                              title="Lihat Detail"
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditingItem(n);
-                                setShowNasabahForm(true);
-                              }}
-                              className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95"
-                              title="Edit Nasabah"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => deleteItemsByNasabah(n.nik)}
-                              className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95"
-                              title="Hapus Semua Riwayat"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {canEdit && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingItem(n);
+                                    setShowNasabahForm(true);
+                                  }}
+                                  className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm active:scale-95"
+                                  title="Edit Nasabah"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => deleteItemsByNasabah(n.nik)}
+                                  className="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm active:scale-95"
+                                  title="Hapus Semua Riwayat"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -14733,6 +14824,7 @@ function InventarisView({
   showNotification,
   handleFileUpload,
 }: any) {
+  const isViewer = ["WARGA", "Viewer", "TAMU"].includes(currentUser.role);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showLogForm, setShowLogForm] = useState(false);
   const [showLogHistory, setShowLogHistory] = useState(false);

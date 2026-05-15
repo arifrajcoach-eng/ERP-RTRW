@@ -77,6 +77,32 @@ export default function DashboardView({
   const [linkForm, setLinkForm] = useState({ nik: '', pin: '' });
   const [showAIChat, setShowAIChat] = useState(false);
 
+  const isWarga = userRole === 'WARGA';
+
+  // Personal Stats for Warga
+  const personalStats = useMemo(() => {
+    if (!isWarga || !currentUser?.nik) return null;
+
+    const mySetoran = sampahSetoranData.filter((s: any) => s.nik === currentUser.nik || s.namaNasabah === currentUser.name);
+    const myTarik = sampahTarikSaldoData.filter((s: any) => s.nik === currentUser.nik || s.namaNasabah === currentUser.name);
+    const totalSetoran = mySetoran.reduce((acc, curr) => acc + (curr.total || 0), 0);
+    const totalTarik = myTarik.reduce((acc, curr) => acc + (curr.jumlah || 0), 0);
+    const saldoSampah = totalSetoran - totalTarik;
+
+    const myIuran = iuranData.filter((i: any) => i.nik === currentUser.nik);
+    const unpaidIuran = myIuran.filter((i: any) => i.status !== 'Lunas').length;
+
+    const myOrders = tokoOrders.filter((o: any) => o.customerId === currentUser.uid || o.customerId === (currentUser.nik || ''));
+    const pendingOrders = myOrders.filter((o: any) => o.status === 'PENDING' || o.status === 'PROCESS').length;
+
+    return {
+      saldoSampah,
+      unpaidIuran,
+      pendingOrders,
+      totalOrders: myOrders.length
+    };
+  }, [isWarga, currentUser, sampahSetoranData, sampahTarikSaldoData, iuranData, tokoOrders]);
+
   const activeSOS = useMemo(() => emergenciesData?.find(e => e.status === 'ACTIVE'), [emergenciesData]);
 
   const months = useMemo(() => [
@@ -180,65 +206,87 @@ export default function DashboardView({
   }, [wargaData]);
 
   const recentActivities = useMemo(() => {
-    return [
-      ...kasData.slice(0, 10).map(k => ({ 
+    let rawActivities = [
+      ...kasData.map(k => ({ 
         title: k.tipe === 'Masuk' ? 'Pemasukan Keuangan' : 'Pengeluaran Keuangan',
         desc: k.keterangan || k.transaksi,
         date: k.tanggal,
         amount: k.debit || k.kredit,
         type: k.tipe === 'Masuk' ? 'in' : 'out',
-        dateObj: new Date(k.tanggal)
+        dateObj: new Date(k.tanggal),
+        isPersonal: k.nik === currentUser?.nik || k.nama?.includes(currentUser?.name || '')
       })),
-      ...suratData.slice(0, 10).map(s => ({ 
+      ...suratData.map(s => ({ 
         title: 'Surat Pengantar',
         desc: `${s.pemohon} - ${s.jenisSurat} (${s.keperluan || '-'})`,
         date: s.tanggal,
         status: s.status,
         type: 'doc',
-        dateObj: new Date(s.tanggal)
+        dateObj: new Date(s.tanggal),
+        isPersonal: s.nik === currentUser?.nik || s.pemohon === currentUser?.name
       })),
-      ...bukuTamuData.slice(0, 10).map(b => ({ 
+      ...bukuTamuData.map(b => ({ 
         title: 'Aktivitas Buku Tamu',
         desc: `${b.nama} berkunjung ke ${b.tujuan} (${b.keperluan || 'Tamu'})`,
         date: b.waktuDatang ? new Date(b.waktuDatang).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: b.status,
         type: 'tamu',
-        dateObj: new Date(b.waktuDatang || 0)
+        dateObj: new Date(b.waktuDatang || 0),
+        isPersonal: b.nik === currentUser?.nik || b.nama === currentUser?.name
       })),
-      ...posyanduKegiatanData.slice(0, 10).map(p => ({
+      ...posyanduKegiatanData.map(p => ({
         title: 'Kesehatan Warga',
         desc: `Kegiatan: ${p.namaKegiatan || 'Pemeriksaan Rutin'} di ${p.lokasi || 'Posyandu'}`,
         date: p.tanggal ? new Date(p.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: 'Selesai',
         type: 'kesehatan',
-        dateObj: new Date(p.tanggal || 0)
+        dateObj: new Date(p.tanggal || 0),
+        isPersonal: p.nik === currentUser?.nik // Posyandu activities are often generic but could be specific
       })),
-      ...sampahSetoranData.slice(0, 10).map(s => ({
+      ...sampahSetoranData.map(s => ({
         title: 'Bank Sampah',
         desc: `Setoran ${s.namaKategori || 'Sampah'}: ${s.namaNasabah || 'Nasabah'} (${s.berat}kg)`,
         date: s.tanggal ? new Date(s.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         amount: s.total,
         type: 'sampah_in',
-        dateObj: new Date(s.tanggal || 0)
+        dateObj: new Date(s.tanggal || 0),
+        isPersonal: s.nik === currentUser?.nik || s.namaNasabah === currentUser?.name
       })),
-      ...userVotes.slice(-10).map(v => ({
+      ...userVotes.map(v => ({
         title: 'E-Pemilu SmartRW',
         desc: `${v.voterName} telah memberikan suara`,
         date: v.timestamp ? new Date(v.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: 'Suara Masuk',
         type: 'voting',
-        dateObj: new Date(v.timestamp || 0)
+        dateObj: new Date(v.timestamp || 0),
+        isPersonal: v.voterId === currentUser?.uid || v.voterId === currentUser?.nik
       })),
-      ...tokoOrders.slice(-10).map(o => ({
+      ...tokoOrders.map(o => ({
         title: 'Pesanan E-LAPAK SmartRW',
         desc: `${o.customerName} memesan ${o.items.length} item`,
         date: o.timestamp ? new Date(o.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         amount: o.total,
         type: 'toko',
-        dateObj: new Date(o.timestamp || 0)
+        dateObj: new Date(o.timestamp || 0),
+        isPersonal: o.customerId === currentUser?.uid || o.customerId === currentUser?.nik
       })),
-    ].sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()).slice(0, 15);
-  }, [kasData, suratData, bukuTamuData, posyanduKegiatanData, sampahSetoranData, userVotes, tokoOrders]);
+      ...emergenciesData.map(e => ({
+        title: 'Laporan SOS / Darurat',
+        desc: `SOS oleh ${e.userName} di ${e.userLocation || (e.rt && e.rw ? 'RT ' + e.rt + '/RW ' + e.rw : 'Lingkungan')}`,
+        date: e.timestamp ? new Date(e.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
+        status: e.status === 'ACTIVE' ? 'Aktif' : 'Selesai',
+        type: 'sos',
+        dateObj: new Date(e.timestamp || 0),
+        isPersonal: e.userId === currentUser?.uid
+      })),
+    ];
+
+    if (isWarga) {
+      rawActivities = rawActivities.filter(act => act.isPersonal);
+    }
+
+    return rawActivities.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()).slice(0, 15);
+  }, [isWarga, currentUser, kasData, suratData, bukuTamuData, posyanduKegiatanData, sampahSetoranData, userVotes, tokoOrders, emergenciesData]);
 
   const activityChartData = useMemo(() => {
     const getActData = (period: string) => {
@@ -282,6 +330,47 @@ export default function DashboardView({
               </div>
             </div>
           </motion.div>
+        ) : isWarga ? (
+          <div className="flex-1 bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 -mr-10 -mt-10">
+              <ShieldCheck className="w-48 h-48" />
+            </div>
+            <div className="relative z-10">
+              <h2 className="text-2xl font-black mb-1">Halo, {currentUser?.name || 'Warga'}!</h2>
+              <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-6">Nikmati layanan mandiri & pantau keuangan pribadi Anda.</p>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
+                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Tabungan Sampah</p>
+                  <p className="text-lg font-black leading-none flex items-center gap-1 group/item">
+                    <Recycle className="w-3 h-3 text-emerald-400 group-hover/item:rotate-180 transition-transform" />
+                    Rp {personalStats?.saldoSampah.toLocaleString('id-ID')}
+                  </p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
+                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Iuran Belum Lunas</p>
+                  <p className="text-lg font-black leading-none flex items-center gap-1">
+                    <CreditCard className="w-3 h-3 text-red-400" />
+                    {personalStats?.unpaidIuran} Tagihan
+                  </p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
+                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Pesanan E-Lapak</p>
+                  <p className="text-lg font-black leading-none flex items-center gap-1">
+                    <ShoppingBag className="w-3 h-3 text-orange-400" />
+                    {personalStats?.pendingOrders} Diproses
+                  </p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
+                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Status Akun</p>
+                  <p className="text-lg font-black leading-none flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    Terverifikasi
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-colors">
             <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-blue/10 transition-colors"></div>
@@ -339,67 +428,69 @@ export default function DashboardView({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-[#e3ffee] dark:bg-emerald-500/10 p-6 rounded-[2rem] border border-white dark:border-emerald-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
-          <div className="absolute right-4 top-4 w-24 h-24 bg-green-600/10 rounded-full blur-2xl group-hover:bg-green-600/20 transition-colors flex items-center justify-center text-white">
-            <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
-              <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+      {!isWarga && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-[#e3ffee] dark:bg-emerald-500/10 p-6 rounded-[2rem] border border-white dark:border-emerald-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
+            <div className="absolute right-4 top-4 w-24 h-24 bg-green-600/10 rounded-full blur-2xl group-hover:bg-green-600/20 transition-colors flex items-center justify-center text-white">
+              <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
+                <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+              </div>
+            </div>
+            <p className="text-[10px] text-green-800/70 dark:text-emerald-400 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-green-600/10 dark:bg-emerald-500/20 flex items-center justify-center backdrop-blur-sm">
+                <Users className="w-6 h-6 text-green-700 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-3xl font-black text-green-900 dark:text-emerald-500 leading-none mb-1">
+                  {stats.totalWarga}
+                </p>
+                <p className="text-[10px] font-bold text-green-800/60 dark:text-emerald-500/60 uppercase tracking-tighter">KK: {stats.kepalaKeluarga} Terdaftar</p>
+              </div>
             </div>
           </div>
-          <p className="text-[10px] text-green-800/70 dark:text-emerald-400 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-green-600/10 dark:bg-emerald-500/20 flex items-center justify-center backdrop-blur-sm">
-              <Users className="w-6 h-6 text-green-700 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-3xl font-black text-green-900 dark:text-emerald-500 leading-none mb-1">
-                {stats.totalWarga}
-              </p>
-              <p className="text-[10px] font-bold text-green-800/60 dark:text-emerald-500/60 uppercase tracking-tighter">KK: {stats.kepalaKeluarga} Terdaftar</p>
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-[#67a9e9] dark:bg-blue-600/20 p-6 rounded-[2rem] border border-slate-50 dark:border-blue-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
-          <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
-            <div className="w-10 h-10 opacity-30 -rotate-12 group-hover:rotate-0 group-hover:opacity-50 transition-all duration-500">
-              <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+          <div className="bg-[#67a9e9] dark:bg-blue-600/20 p-6 rounded-[2rem] border border-slate-50 dark:border-blue-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
+            <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
+              <div className="w-10 h-10 opacity-30 -rotate-12 group-hover:rotate-0 group-hover:opacity-50 transition-all duration-500">
+                <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+              </div>
+            </div>
+            <p className="text-[10px] text-white/70 dark:text-blue-200/70 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 dark:bg-blue-500/30 flex items-center justify-center backdrop-blur-md">
+                <CreditCard className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white dark:text-blue-100 leading-none mb-1">
+                  Rp {formatRupiah(stats.saldoTotal)}
+                </p>
+                <p className="text-[10px] font-bold text-white/60 dark:text-blue-200/60 uppercase tracking-tighter">Update Real-time</p>
+              </div>
             </div>
           </div>
-          <p className="text-[10px] text-white/70 dark:text-blue-200/70 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 dark:bg-blue-500/30 flex items-center justify-center backdrop-blur-md">
-              <CreditCard className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-white dark:text-blue-100 leading-none mb-1">
-                Rp {formatRupiah(stats.saldoTotal)}
-              </p>
-              <p className="text-[10px] font-bold text-white/60 dark:text-blue-200/60 uppercase tracking-tighter">Update Real-time</p>
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-[#fcf1f1] dark:bg-rose-500/10 p-6 rounded-[2rem] border border-white dark:border-rose-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
-          <div className="absolute right-4 top-4 w-24 h-24 bg-red-600/10 rounded-full blur-2xl group-hover:bg-red-600/20 transition-colors flex items-center justify-center text-white">
-            <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
-              <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+          <div className="bg-[#fcf1f1] dark:bg-rose-500/10 p-6 rounded-[2rem] border border-white dark:border-rose-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
+            <div className="absolute right-4 top-4 w-24 h-24 bg-red-600/10 rounded-full blur-2xl group-hover:bg-red-600/20 transition-colors flex items-center justify-center text-white">
+              <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
+                <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+              </div>
             </div>
-          </div>
-          <p className="text-[10px] text-red-800/70 dark:text-rose-400 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-600/10 dark:bg-rose-500/20 flex items-center justify-center backdrop-blur-sm">
-              <FileText className="w-6 h-6 text-red-700 dark:text-rose-400" />
-            </div>
-            <div>
-              <p className="text-3xl font-black text-red-900 dark:text-rose-500 leading-none mb-1">
-                {stats.suratPending}
-              </p>
-              <p className="text-[10px] font-bold text-red-800/60 dark:text-rose-500/60 uppercase tracking-tighter">Butuh Persetujuan</p>
+            <p className="text-[10px] text-red-800/70 dark:text-rose-400 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-600/10 dark:bg-rose-500/20 flex items-center justify-center backdrop-blur-sm">
+                <FileText className="w-6 h-6 text-red-700 dark:text-rose-400" />
+              </div>
+              <div>
+                <p className="text-3xl font-black text-red-900 dark:text-rose-500 leading-none mb-1">
+                  {stats.suratPending}
+                </p>
+                <p className="text-[10px] font-bold text-red-800/60 dark:text-rose-500/60 uppercase tracking-tighter">Butuh Persetujuan</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
@@ -523,6 +614,7 @@ export default function DashboardView({
                   act.type === 'kesehatan' ? 'bg-pink-50 text-pink-600' :
                   act.type === 'sampah_in' ? 'bg-teal-50 text-teal-600' :
                   act.type === 'voting' ? 'bg-purple-50 text-purple-600' :
+                  act.type === 'sos' ? 'bg-red-50 text-red-600' :
                   'bg-slate-100 text-slate-600'
                 }`}>
                   {act.type === 'in' && <TrendingUp size={20} />}
@@ -533,6 +625,7 @@ export default function DashboardView({
                   {act.type === 'sampah_in' && <TrendingUp size={20} />}
                   {act.type === 'voting' && <FileText size={20} />}
                   {act.type === 'toko' && <CreditCard size={20} />}
+                  {act.type === 'sos' && <Siren size={20} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
