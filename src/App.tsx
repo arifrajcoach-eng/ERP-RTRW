@@ -1261,13 +1261,13 @@ export default function App() {
   const darkMode = theme === "dark";
 
   useEffect(() => {
-    document.documentElement.classList.remove("light", "dark", "oceanic");
+    document.documentElement.classList.remove("light", "dark", "oceanic", "forest", "sunset");
     document.documentElement.classList.add(theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
 
   const cycleTheme = () => {
-    const themes = ["light", "dark", "oceanic"];
+    const themes = ["light", "dark", "oceanic", "forest", "sunset"];
     const currentIndex = themes.indexOf(theme);
     const nextTheme = themes[(currentIndex + 1) % themes.length];
     setTheme(nextTheme);
