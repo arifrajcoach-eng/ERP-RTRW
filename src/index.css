@@ -95,6 +95,13 @@
     @apply text-slate-800 bg-slate-50;
   }
 
+  /* Pink Baby */
+  .pink-baby body {
+    @apply text-slate-800;
+    background: linear-gradient(135deg, #ffd1ff 0%, #fad0c4 100%);
+    background-attachment: fixed;
+  }
+
   h1, h2, h3, h4 {
     @apply font-sans tracking-tight;
   }
@@ -143,6 +150,21 @@
   --color-slate-800: #92400e;
   --color-slate-900: #78350f;
   --color-slate-950: #451a03;
+}
+
+/* Theme Overrides for Pink Baby (Soft Pastel Glassmorphism) */
+:root.pink-baby {
+  --color-slate-50: rgba(255, 235, 240, 0.7);
+  --color-slate-100: rgba(255, 220, 230, 0.6);
+  --color-slate-200: rgba(255, 200, 220, 0.5);
+  --color-slate-300: rgba(255, 180, 200, 0.4);
+  --color-slate-400: #ec4899;
+  --color-slate-500: #db2777;
+  --color-slate-600: #be185d;
+  --color-slate-700: #9d174d;
+  --color-slate-800: #831843;
+  --color-slate-900: #500724;
+  --color-slate-950: #3e051b;
 }
 
 .font-elegant {
