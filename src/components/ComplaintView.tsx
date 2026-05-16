@@ -3,32 +3,17 @@ import { db } from '../firebase';
 import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer } from 'lucide-react';
 
-export function ComplaintView({ currentUser, showNotification, handleFirestoreError, settings }: any) {
+export function ComplaintView({ currentUser, showNotification, handleFirestoreError, settings, complaintsData }: any) {
   const [jenisKeluhan, setJenisKeluhan] = useState('Kebersihan');
   const [deskripsi, setDeskripsi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [complaints, setComplaints] = useState<any[]>([]);
 
+  // Filter complaints for regular users to only show their own, unless they are pengurus
   const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
-
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-    
-    const q = query(
-      collection(db, 'complaints'),
-      where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setComplaints(data);
-    }, (err) => {
-      handleFirestoreError(err, 'list', 'complaints');
-    });
-
-    return () => unsubscribe();
-  }, [currentUser]);
+  
+  const complaints = isAtLeastPengurus 
+    ? complaintsData 
+    : complaintsData.filter((c: any) => c.userId === currentUser.uid || c.userId === currentUser.id_user);
 
   const handleUpdateStatus = async (complaintId: string, newStatus: string) => {
     try {
@@ -262,28 +247,29 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
                       <>
                         <button 
                           onClick={() => handleUpdateStatus(c.id, 'REJECTED')}
-                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                          className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border border-red-100"
                           title="Tolak"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
+                          Tolak
                         </button>
                         <button 
                           onClick={() => handleUpdateStatus(c.id, 'PROCESS')}
-                          className="px-3 py-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors text-[10px] font-black uppercase tracking-widest flex items-center gap-1"
-                          title="Proses"
+                          className="px-3 py-2 bg-[#0cbb97] text-white rounded-lg hover:opacity-90 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm"
+                          title="Setujui"
                         >
-                          <Clock className="w-3 h-3" />
-                          Proses
+                          <Check className="w-3.5 h-3.5" />
+                          Setujui
                         </button>
                       </>
                     )}
                     {(c.status === 'PROCESS' || c.status === 'Diproses') && (
                       <button 
                         onClick={() => handleUpdateStatus(c.id, 'DONE')}
-                        className="px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-[10px] font-black uppercase tracking-widest flex items-center gap-1"
+                        className="px-4 py-2 bg-[#008bb5] text-white rounded-lg hover:opacity-90 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow-md shadow-blue-100"
                         title="Selesaikan"
                       >
-                        <Check className="w-3 h-3" />
+                        <CheckCircle2 className="w-4 h-4" />
                         Selesaikan
                       </button>
                     )}

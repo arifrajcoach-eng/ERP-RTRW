@@ -3,65 +3,18 @@ import { db } from '../firebase';
 import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer } from 'lucide-react';
 
-export function BookingView({ currentUser, showNotification, handleFirestoreError, settings }: any) {
+export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, bookingsData }: any) {
   const [namaFasilitas, setNamaFasilitas] = useState('Aula RW');
   const [tanggal, setTanggal] = useState('');
   const [keperluan, setKeperluan] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [myBookings, setMyBookings] = useState<any[]>([]);
 
+  // Filter bookings for regular users to only show their own, unless they are pengurus
   const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
-  useEffect(() => {
-    if (!currentUser) return;
-    
-    const tId = currentUser.tenantId || 'RW26_SMART';
-    
-    let q;
-    if (isAtLeastPengurus) {
-       q = query(
-        collection(db, 'bookings'),
-        where('tenantId', '==', tId),
-        orderBy('createdAt', 'desc')
-      );
-    } else {
-       q = query(
-        collection(db, 'bookings'),
-        where('userId', '==', (currentUser.uid || currentUser.id_user || 'anonymous')),
-        orderBy('createdAt', 'desc')
-      );
-    }
-
-    let unsubscribeFallback: (() => void) | null = null;
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMyBookings(data);
-    }, (err) => {
-      if (err.message?.includes('index')) {
-        console.warn('Booking index missing, using client-side sort');
-        const fallbackQ = query(
-          collection(db, 'bookings'),
-          where('tenantId', '==', tId)
-        );
-        unsubscribeFallback = onSnapshot(fallbackQ, (snap) => {
-          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-            .sort((a: any, b: any) => {
-              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-              return dateB - dateA;
-            });
-          setMyBookings(data);
-        });
-      } else {
-        handleFirestoreError(err, 'list', 'bookings');
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      if (unsubscribeFallback) unsubscribeFallback();
-    };
-  }, [currentUser]);
+  
+  const myBookings = isAtLeastPengurus 
+    ? bookingsData 
+    : bookingsData.filter((b: any) => b.userId === (currentUser.uid || currentUser.id_user));
 
   const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
     try {

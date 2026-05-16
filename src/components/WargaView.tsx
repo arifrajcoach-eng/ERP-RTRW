@@ -348,7 +348,7 @@ function WargaView({
           <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 text-emerald-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
             <Download size={18} className="rotate-180" /> {isUploading ? 'Loading...' : 'Import Data'}
           </button>
-          <button onClick={() => setShowAddForm(true)} className="bg-brand-blue hover:bg-brand-blue/90 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-blue/25">
+          <button onClick={() => setShowAddForm(true)} className="bg-[#008bb5] hover:opacity-90 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-[#008bb5]/25">
             <UserPlus size={18} /> Tambah {isApt ? "Penghuni" : "Warga"}
           </button>
         </div>

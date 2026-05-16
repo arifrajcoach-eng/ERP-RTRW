@@ -346,18 +346,18 @@ export function IuranView({
       <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit">
         <button
           onClick={() => setActiveSubTab('pembayaran')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-[#008bb5] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <CreditCard className="w-4 h-4" />
-          <span className="uppercase text-[#15c3fc]">Riwayat Pembayaran</span>
+          <span className="uppercase tracking-tight">Riwayat Pembayaran</span>
         </button>
         {isPengurus && (
           <button
             onClick={() => setActiveSubTab('rekap')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'rekap' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'rekap' ? 'bg-[#008bb5] text-[#ffffff] shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
           >
             <Users className="w-4 h-4" />
-            <span className="uppercase text-[#27bcff]">Rekap Iuran Warga</span>
+            <span className="uppercase tracking-tight">Rekap Iuran Warga</span>
           </button>
         )}
       </div>

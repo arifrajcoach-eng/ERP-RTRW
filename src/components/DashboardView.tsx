@@ -29,6 +29,8 @@ interface DashboardViewProps {
   votingConfig: any;
   userVotes: any[];
   tokoOrders: any[];
+  complaintsData: any[];
+  bookingsData: any[];
   handleLinkToWarga: (nik: string, pin: string) => void;
   currentTenant: any;
   setShowUpgradeModal: (v: boolean) => void;
@@ -60,6 +62,8 @@ export default function DashboardView({
   votingConfig,
   userVotes,
   tokoOrders,
+  complaintsData,
+  bookingsData,
   handleLinkToWarga,
   currentTenant,
   setShowUpgradeModal,
@@ -279,6 +283,24 @@ export default function DashboardView({
         dateObj: new Date(e.timestamp || 0),
         isPersonal: e.userId === currentUser?.uid
       })),
+      ...complaintsData.map(c => ({
+        title: 'Keluhan Warga',
+        desc: `${c.namaWarga}: ${c.deskripsi}`,
+        date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
+        status: c.status === 'DONE' ? 'Selesai' : c.status === 'PROCESS' ? 'Diproses' : 'Diajukan',
+        type: 'complaint',
+        dateObj: new Date(c.createdAt || 0),
+        isPersonal: c.userId === currentUser?.uid || c.namaWarga === currentUser?.name
+      })),
+      ...bookingsData.map(b => ({
+        title: 'Booking Fasilitas',
+        desc: `${b.userName}: ${b.facilityName} (${b.bookingDate})`,
+        date: b.createdAt ? new Date(b.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
+        status: b.status === 'APPROVED' ? 'Disetujui' : b.status === 'REJECTED' ? 'Ditolak' : 'Menunggu',
+        type: 'booking',
+        dateObj: new Date(b.createdAt || 0),
+        isPersonal: b.userId === currentUser?.uid || b.userName === currentUser?.name
+      })),
     ];
 
     if (isWarga) {
@@ -286,7 +308,7 @@ export default function DashboardView({
     }
 
     return rawActivities.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()).slice(0, 15);
-  }, [isWarga, currentUser, kasData, suratData, bukuTamuData, posyanduKegiatanData, sampahSetoranData, userVotes, tokoOrders, emergenciesData]);
+  }, [isWarga, currentUser, kasData, suratData, bukuTamuData, posyanduKegiatanData, sampahSetoranData, userVotes, tokoOrders, emergenciesData, complaintsData, bookingsData]);
 
   const activityChartData = useMemo(() => {
     const getActData = (period: string) => {
@@ -626,6 +648,8 @@ export default function DashboardView({
                   {act.type === 'voting' && <FileText size={20} />}
                   {act.type === 'toko' && <CreditCard size={20} />}
                   {act.type === 'sos' && <Siren size={20} />}
+                  {act.type === 'complaint' && <MessageSquare size={20} />}
+                  {act.type === 'booking' && <Calendar size={20} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
@@ -641,8 +665,9 @@ export default function DashboardView({
                 )}
                 {act.status && (
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                    act.status === 'Selesai' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                    act.status === 'Diajukan' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                    act.status === 'Selesai' || act.status === 'Disetujui' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    act.status === 'Diajukan' || act.status === 'Menunggu' || act.status === 'Diproses' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                    act.status === 'Ditolak' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                     'bg-slate-50 text-slate-500 border-slate-100'
                   }`}>
                     {act.status}
@@ -696,29 +721,29 @@ export default function DashboardView({
             </div>
           </div>
 
-          <div className="bg-brand-blue p-8 rounded-[2.5rem] relative overflow-hidden group">
+          <div className="bg-[#ae126f] p-8 rounded-[2.5rem] relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-10 -rotate-12 group-hover:rotate-0 transition-transform">
               <Users size={120} className="text-white" />
             </div>
             <div className="relative z-10">
               <h3 className="text-2xl font-black text-white tracking-tighter leading-none mb-2">DEMOGRAFI WARGA</h3>
-              <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-6">Sebaran penduduk rukun warga</p>
+              <p className="text-[#eabebe] text-xs font-bold uppercase tracking-widest mb-6">Sebaran penduduk rukun warga</p>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Pria</p>
+                  <p className="text-[10px] font-black text-[#f5f5f5] uppercase tracking-widest mb-1">Pria</p>
                   <p className="text-2xl font-black text-white leading-none">{demographics.totalLaki}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Wanita</p>
+                  <p className="text-[10px] font-black text-[#f5f5f5] uppercase tracking-widest mb-1">Wanita</p>
                   <p className="text-2xl font-black text-white leading-none">{demographics.totalPerempuan}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Balita</p>
+                  <p className="text-[10px] font-black text-[#ffffff] uppercase tracking-widest mb-1">Balita</p>
                   <p className="text-2xl font-black text-white leading-none">{demographics.totalBalita}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Lansia</p>
+                  <p className="text-[10px] font-black text-[#fdfdfd] uppercase tracking-widest mb-1">Lansia</p>
                   <p className="text-2xl font-black text-white leading-none">{demographics.totalLansia}</p>
                 </div>
               </div>

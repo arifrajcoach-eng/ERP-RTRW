@@ -601,7 +601,7 @@ export function KasView({
               onClick={() => scanInputRef.current?.click()}
               disabled={isScanning}
               type="button"
-              className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-emerald-700 shadow-sm disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-[#0cbb97] text-[#fffdfd] px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:opacity-90 shadow-sm disabled:opacity-50"
             >
               {isScanning ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -615,7 +615,7 @@ export function KasView({
                 setTrxType("Masuk");
                 setShowMasukForm(true);
               }}
-              className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-700 shadow-sm"
+              className="flex items-center gap-1.5 bg-[#008bb5] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-opacity-90 shadow-sm"
             >
               <PlusCircle className="w-3.5 h-3.5" /> Entri Kas
             </button>

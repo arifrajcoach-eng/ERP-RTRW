@@ -713,9 +713,11 @@ export function SuratView({
                     {!isPengurus && s.status === 'Selesai' && (
                        <button 
                         onClick={(e) => { e.stopPropagation(); generateSuratPDF(s); }} 
-                        className="p-2 rounded-xl bg-slate-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-slate-100 transition-all"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm"
+                        title="Cetak PDF"
                       >
-                        <Download className="w-4 h-4" />
+                        <Printer className="w-4 h-4" />
+                        Cetak PDF
                       </button>
                     )}
                  </div>

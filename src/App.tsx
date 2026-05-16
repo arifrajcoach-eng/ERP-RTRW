@@ -1233,6 +1233,8 @@ export default function App() {
   const [userVotes, setUserVotes] = useState<any[]>([]);
   const [tokoProducts, setTokoProducts] = useState<any[]>([]);
   const [tokoOrders, setTokoOrders] = useState<any[]>([]);
+  const [complaintsData, setComplaintsData] = useState<any[]>([]);
+  const [bookingsData, setBookingsData] = useState<any[]>([]);
   const [isSOSTriggering, setIsSOSTriggering] = useState(false);
   const [hiddenEmergencyId, setHiddenEmergencyId] = useState<string | null>(
     null,
@@ -2198,31 +2200,56 @@ export default function App() {
     }
 
     // 7. Audit Log Listener (Enterprise)
-    let unsubAudit = () => {};
-    if (hasFullAccess && getPlanFeatures(currentTenant).governance === "HIGH") {
-      unsubAudit = onSnapshot(
-        query(
-          collection(db, "audit_logs"),
-          where("tenantId", "in", tIds),
-          limit(100),
-        ),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          setAuditLogs(
-            data.sort(
-              (a: any, b: any) =>
-                new Date(b.timestamp).getTime() -
-                new Date(a.timestamp).getTime(),
-            ),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "audit_logs");
-          onDataLoaded();
-        },
-      );
-    }
+    const unsubAudit = hasFullAccess && getPlanFeatures(currentTenant).governance === "HIGH" 
+      ? onSnapshot(
+          query(
+            collection(db, "audit_logs"),
+            where("tenantId", "in", tIds),
+            limit(100),
+          ),
+          (snap) => {
+            const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+            setAuditLogs(
+              data.sort(
+                (a: any, b: any) =>
+                  new Date(b.timestamp).getTime() -
+                  new Date(a.timestamp).getTime(),
+              ),
+            );
+            onDataLoaded();
+          },
+          (err) => {
+            handleFirestoreError(err, "list", "audit_logs");
+            onDataLoaded();
+          },
+        )
+      : () => { onDataLoaded(); };
+
+    // 8. Complaints Listener
+    const unsubComplaints = onSnapshot(
+      query(collection(db, "complaints"), where("tenantId", "in", tIds)),
+      (snap) => {
+        setComplaintsData(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        onDataLoaded();
+      },
+      (err) => {
+        handleFirestoreError(err, "list", "complaints");
+        onDataLoaded();
+      }
+    );
+
+    // 9. Bookings Listener
+    const unsubBookings = onSnapshot(
+      query(collection(db, "bookings"), where("tenantId", "in", tIds)),
+      (snap) => {
+        setBookingsData(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        onDataLoaded();
+      },
+      (err) => {
+        handleFirestoreError(err, "list", "bookings");
+        onDataLoaded();
+      }
+    );
 
     return () => {
       unsubWarga();
@@ -2258,6 +2285,8 @@ export default function App() {
       unsubCurrentTenant();
       unsubKopSettings();
       unsubAudit();
+      unsubComplaints();
+      unsubBookings();
     };
   }, [currentUser, wargaAuth]);
 
@@ -3118,6 +3147,8 @@ export default function App() {
               votingConfig={votingConfig}
               userVotes={userVotes}
               tokoOrders={tokoOrders}
+              complaintsData={complaintsData}
+              bookingsData={bookingsData}
               handleLinkToWarga={handleLinkToWarga}
               currentTenant={currentTenant}
               setShowUpgradeModal={setShowUpgradeModal}
@@ -3324,6 +3355,7 @@ export default function App() {
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               settings={settings}
+              complaintsData={complaintsData}
             />
           )}
           {activeTab === "booking" && (
@@ -3332,6 +3364,7 @@ export default function App() {
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               settings={settings}
+              bookingsData={bookingsData}
             />
           )}
           {activeTab === "kop-template" && (
