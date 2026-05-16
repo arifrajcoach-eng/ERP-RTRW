@@ -1070,7 +1070,7 @@ export default function App() {
                 console.warn("Could not sync profile repairs to DB.", e);
               }
             }
-            setCurrentUser(userData);
+            setCurrentUser({ uid: user.uid, ...userData });
           } else if (user.isAnonymous) {
             // Anonymous Citizen Bypass for Super Admin
             const overrideAdmin = user.uid === "MKe94buSU4SMg8jiRbCcOLwJp9H3";

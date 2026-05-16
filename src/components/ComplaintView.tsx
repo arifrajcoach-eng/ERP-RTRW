@@ -7,20 +7,20 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
   const [jenisKeluhan, setJenisKeluhan] = useState('Kebersihan');
   const [deskripsi, setDeskripsi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [myComplaints, setMyComplaints] = useState<any[]>([]);
+  const [complaints, setComplaints] = useState<any[]>([]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
     
     const q = query(
       collection(db, 'complaints'),
-      where('userId', '==', currentUser.uid),
+      where('tenantId', '==', currentUser.tenantId || 'RW26_SMART'),
       orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMyComplaints(data);
+      setComplaints(data);
     }, (err) => {
       handleFirestoreError(err, 'list', 'complaints');
     });
@@ -93,15 +93,15 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Riwayat Keluhan Saya</h3>
+        <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Riwayat Keluhan</h3>
         <div className="space-y-4">
-          {myComplaints.length === 0 && (
+          {complaints.length === 0 && (
             <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
               <MessageSquare className="w-10 h-10 text-slate-200 mx-auto mb-2" />
               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Belum ada riwayat keluhan</p>
             </div>
           )}
-          {myComplaints.map((c) => (
+          {complaints.map((c) => (
             <div key={c.id} className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white transition-all hover:shadow-md border-l-4 border-l-blue-500">
               <div className="flex justify-between items-start mb-2">
                 <div>

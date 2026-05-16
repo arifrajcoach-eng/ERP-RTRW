@@ -667,6 +667,21 @@
         "paymentProviderRef": { "type": "string" }
       },
       "required": ["tenantId", "status", "startDate", "endDate"]
+    },
+    "Complaint": {
+      "title": "Keluhan",
+      "description": "Data keluhan warga",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "userId": { "type": "string" },
+        "namaWarga": { "type": "string" },
+        "jenisKeluhan": { "type": "string" },
+        "deskripsi": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "jenisKeluhan", "deskripsi", "status", "createdAt", "tenantId"]
     }
   },
   "firestore": {
@@ -825,6 +840,10 @@
     "/subscriptions/{tenantId}": {
       "schema": "Subscription",
       "description": "Koleksi data langganan tenant"
+    },
+    "/complaints/{id}": {
+      "schema": "Complaint",
+      "description": "Koleksi keluhan warga"
     }
   }
 }

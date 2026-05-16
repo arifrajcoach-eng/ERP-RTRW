@@ -170,8 +170,9 @@ service cloud.firestore {
     }
 
     match /bookings/{docId} {
-      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
+      allow list: if isSignedIn() && isTenantMember(resource.data.tenantId);                
+      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
       allow update, delete: if isTenantMember(resource.data.tenantId);
     }
 
@@ -241,6 +242,13 @@ service cloud.firestore {
     match /chat_messages/{docId} {
       allow read: if isTenantMember(resource.data.tenantId);
       allow create: if isTenantMember(request.resource.data.tenantId);
+      allow update, delete: if isTenantMember(resource.data.tenantId) && isPengurus();
+    }
+
+    match /complaints/{docId} {
+      allow list: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow get: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow create: if isSignedIn();
       allow update, delete: if isTenantMember(resource.data.tenantId) && isPengurus();
     }
 

@@ -11,31 +11,70 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
   const [myBookings, setMyBookings] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!currentUser) return;
     
-    const q = query(
-      collection(db, 'bookings'),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
+    const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser.role);
+    const tId = currentUser.tenantId || 'RW26_SMART';
+    
+    let q;
+    if (isAtLeastPengurus) {
+       q = query(
+        collection(db, 'bookings'),
+        where('tenantId', '==', tId),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+       q = query(
+        collection(db, 'bookings'),
+        where('userId', '==', (currentUser.uid || currentUser.id_user || 'anonymous')),
+        orderBy('createdAt', 'desc')
+      );
+    }
+
+    let unsubscribeFallback: (() => void) | null = null;
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMyBookings(data);
     }, (err) => {
-      handleFirestoreError(err, 'list', 'bookings');
+      if (err.message?.includes('index')) {
+        console.warn('Booking index missing, using client-side sort');
+        const fallbackQ = query(
+          collection(db, 'bookings'),
+          where('tenantId', '==', tId)
+        );
+        unsubscribeFallback = onSnapshot(fallbackQ, (snap) => {
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a: any, b: any) => {
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateB - dateA;
+            });
+          setMyBookings(data);
+        });
+      } else {
+        handleFirestoreError(err, 'list', 'bookings');
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubscribeFallback) unsubscribeFallback();
+    };
   }, [currentUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      if (!currentUser) {
+        showNotification('Sesi anda telah berakhir. Silakan login kembali.', 'error');
+        return;
+      }
+
       await addDoc(collection(db, 'bookings'), {
         tenantId: currentUser.tenantId || 'RW26_SMART',
-        userId: currentUser.uid || 'anonymous',
+        userId: currentUser.uid || currentUser.id_user || 'anonymous',
         namaWarga: currentUser.name || currentUser.nama || 'Warga',
         namaFasilitas,
         tanggal,
@@ -106,7 +145,9 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Riwayat Peminjaman Saya</h3>
+        <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">
+          {['ADMIN', 'SUPER_ADMIN', 'RW', 'RT'].includes(currentUser?.role) ? 'Daftar Peminjaman Wilayah' : 'Riwayat Peminjaman Saya'}
+        </h3>
         <div className="space-y-4">
           {myBookings.length === 0 && (
             <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
