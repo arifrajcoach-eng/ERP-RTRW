@@ -626,7 +626,7 @@ export function SuratView({
                 className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
-            <button onClick={() => { setSelectedWargaId(""); setWargaSearch(""); setKtpUrl(""); setKkUrl(""); setShowForm(true); }} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">
+            <button onClick={() => { setSelectedWargaId(""); setWargaSearch(""); setKtpUrl(""); setKkUrl(""); setShowForm(true); }} className="flex items-center justify-center gap-2 bg-[#0cbb97] text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-emerald-200 hover:bg-[#0aa88a] transition-all active:scale-95">
               <PlusCircle className="w-4 h-4" /> 
               Buat Permohonan
             </button>
@@ -1110,7 +1110,7 @@ export function SuratView({
                   <button 
                     type="submit" 
                     disabled={isUploadingKTP || isUploadingKK}
-                    className="flex-[2] py-4 text-xs font-black bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-2xl transition-all shadow-xl shadow-blue-200 uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-[2] py-4 text-xs font-black bg-[#0cbb97] hover:bg-[#0aa88a] disabled:bg-slate-300 text-white rounded-2xl transition-all shadow-xl shadow-emerald-200 uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
                   >
                     {isUploadingKTP || isUploadingKK ? (
                       <><RefreshCw className="w-4 h-4 animate-spin" /> Menunggu Unggahan...</>

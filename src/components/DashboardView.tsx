@@ -430,22 +430,22 @@ export default function DashboardView({
 
       {!isWarga && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#e3ffee] dark:bg-emerald-500/10 p-6 rounded-[2rem] border border-white dark:border-emerald-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
-            <div className="absolute right-4 top-4 w-24 h-24 bg-green-600/10 rounded-full blur-2xl group-hover:bg-green-600/20 transition-colors flex items-center justify-center text-white">
+          <div className="bg-[#4aa379] p-6 rounded-[2rem] border border-white/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors text-white">
+            <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
               <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
                 <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
               </div>
             </div>
-            <p className="text-[10px] text-green-800/70 dark:text-emerald-400 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
+            <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-green-600/10 dark:bg-emerald-500/20 flex items-center justify-center backdrop-blur-sm">
-                <Users className="w-6 h-6 text-green-700 dark:text-emerald-400" />
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                <Users className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-3xl font-black text-green-900 dark:text-emerald-500 leading-none mb-1">
+                <p className="text-3xl font-black text-white leading-none mb-1">
                   {stats.totalWarga}
                 </p>
-                <p className="text-[10px] font-bold text-green-800/60 dark:text-emerald-500/60 uppercase tracking-tighter">KK: {stats.kepalaKeluarga} Terdaftar</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">KK: {stats.kepalaKeluarga} Terdaftar</p>
               </div>
             </div>
           </div>
@@ -470,22 +470,22 @@ export default function DashboardView({
             </div>
           </div>
 
-          <div className="bg-[#fcf1f1] dark:bg-rose-500/10 p-6 rounded-[2rem] border border-white dark:border-rose-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
-            <div className="absolute right-4 top-4 w-24 h-24 bg-red-600/10 rounded-full blur-2xl group-hover:bg-red-600/20 transition-colors flex items-center justify-center text-white">
+          <div className="bg-[#cb6497] p-6 rounded-[2rem] border border-white/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors text-white">
+            <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
               <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
                 <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
               </div>
             </div>
-            <p className="text-[10px] text-red-800/70 dark:text-rose-400 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
+            <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-red-600/10 dark:bg-rose-500/20 flex items-center justify-center backdrop-blur-sm">
-                <FileText className="w-6 h-6 text-red-700 dark:text-rose-400" />
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-3xl font-black text-red-900 dark:text-rose-500 leading-none mb-1">
+                <p className="text-3xl font-black text-white leading-none mb-1">
                   {stats.suratPending}
                 </p>
-                <p className="text-[10px] font-bold text-red-800/60 dark:text-rose-500/60 uppercase tracking-tighter">Butuh Persetujuan</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">Butuh Persetujuan</p>
               </div>
             </div>
           </div>

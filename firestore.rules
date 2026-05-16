@@ -173,7 +173,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && isTenantMember(resource.data.tenantId);                
       allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || resource.data.userId == request.auth.uid);
       allow create: if isSignedIn();
-      allow update, delete: if isTenantMember(resource.data.tenantId);
+      allow update, delete: if isTenantMember(resource.data.tenantId) && isPengurus();
     }
 
     match /posyandu_balita/{docId} {

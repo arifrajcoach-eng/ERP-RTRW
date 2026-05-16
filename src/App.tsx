@@ -3323,6 +3323,7 @@ export default function App() {
               currentUser={currentUser}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
+              settings={settings}
             />
           )}
           {activeTab === "booking" && (
@@ -3330,6 +3331,7 @@ export default function App() {
               currentUser={currentUser}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
+              settings={settings}
             />
           )}
           {activeTab === "kop-template" && (
