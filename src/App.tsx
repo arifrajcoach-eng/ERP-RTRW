@@ -13112,6 +13112,31 @@ function BankSampahView({
   const canEdit = !["Viewer", "WARGA", "TAMU"].includes(currentUser?.role);
   const isWarga = currentUser?.role === "WARGA";
 
+  // Nasabah Summary (Warga with their balances)
+  const nasabahSummary = wargaData
+    .map((w: any) => {
+      const setoran = sampahSetoranData
+        .filter((s: any) => s.nasabahId === w.nik)
+        .reduce(
+          (acc: number, curr: any) => acc + (parseFloat(curr.total) || 0),
+          0,
+        );
+      const tarikan = sampahTarikSaldoData
+        .filter((t: any) => t.nasabahId === w.nik)
+        .reduce(
+          (acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0),
+          0,
+        );
+      return {
+        ...w,
+        saldo: setoran - tarikan,
+        totalSetoran: setoran,
+      };
+    })
+    .filter(
+      (n: any) => n.totalSetoran > 0 || n.saldo > 0 || n.isNasabah === true,
+    );
+
   // Auto-select self as nasabah for WARGA
   useEffect(() => {
     if (isWarga && currentUser?.nik && activeSubTab === "dashboard") {
@@ -13143,31 +13168,6 @@ function BankSampahView({
     ).length,
     nasabahAktif: new Set(sampahSetoranData.map((s: any) => s.nasabahId)).size,
   };
-
-  // Nasabah Summary (Warga with their balances)
-  const nasabahSummary = wargaData
-    .map((w: any) => {
-      const setoran = sampahSetoranData
-        .filter((s: any) => s.nasabahId === w.nik)
-        .reduce(
-          (acc: number, curr: any) => acc + (parseFloat(curr.total) || 0),
-          0,
-        );
-      const tarikan = sampahTarikSaldoData
-        .filter((t: any) => t.nasabahId === w.nik)
-        .reduce(
-          (acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0),
-          0,
-        );
-      return {
-        ...w,
-        saldo: setoran - tarikan,
-        totalSetoran: setoran,
-      };
-    })
-    .filter(
-      (n: any) => n.totalSetoran > 0 || n.saldo > 0 || n.isNasabah === true,
-    );
 
   const selectedNasabah = selectedNasabahId
     ? nasabahSummary.find((n: any) => n.nik === selectedNasabahId)

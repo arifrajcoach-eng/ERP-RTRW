@@ -21,12 +21,12 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
                        ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
-  const agentName = isPrivileged ? "Aspri" : "Siska";
-  const agentTitle = isPrivileged ? "AI Asisten Ketua" : "AI Asisten Warga";
+  const agentName = isPrivileged ? "Arya" : "Aisyah";
+  const agentTitle = isPrivileged ? "AI Asisten Pengurus" : "AI Asisten Lingkungan";
 
   const welcomeMessage = isPrivileged 
-    ? `Assalamu’alaikum! 🫡 Aku Siska sebagai Aspri-mu. Ada data keuangan, laporan, atau tugas kepengurusan yang perlu aku bantu?`
-    : `Assalamu’alaikum! Haii, aku Siska, AI Asisten Kamu 😊. Ada yang bisa aku bantu untuk info warga, surat pengantar, atau keperluan lainnya?`;
+    ? `Assalamu’alaikum Pak/Bu! 🫡 Saya Arya, asisten operasional Anda. Ada laporan keuangan atau agenda lingkungan yang perlu saya siapkan?`
+    : `Assalamu’alaikum! Halo tetangga! 😊 Perkenalkan, saya Aisyah, AI asisten lingkungan kita. Ada yang bisa Aisyah bantu hari ini?`;
 
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
     { role: 'bot', text: welcomeMessage }
@@ -203,7 +203,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       setIsSpeaking(true);
       lastSpokenTextRef.current = text;
       
-      const response = await textToSpeech(text);
+      const response = await textToSpeech(text, isPrivileged);
       if (!response || !mountedRef.current) {
         console.warn("TTS Service returned no response. Check Gemini Key/Quota. Falling back to Browser TTS.");
         // Fallback to browser TTS if Gemini fails

@@ -192,26 +192,40 @@ export async function getWargaActivitySummary(tenantId: string) {
     const wargaDetail: any[] = [];
     let wargaSakit = 0;
     let wargaMeninggal = 0;
+    let totalKK = 0;
+    let kkSudahBayar = 0;
 
     snapWarga.forEach(doc => {
       const d = doc.data();
+      const isLunas = paidUserIds.has(doc.id) || paidUserIds.has(d.userId) || paidUserIds.has(d.nik);
+      
       if (d.kondisi?.toLowerCase() === 'sakit') wargaSakit++;
       if (d.kondisi?.toLowerCase() === 'meninggal') wargaMeninggal++;
+      
+      if (d.hubunganKeluarga === 'KEPALA KELUARGA') {
+        totalKK++;
+        if (isLunas) kkSudahBayar++;
+      }
+
       wargaDetail.push({ 
         nama: d.nama || 'Warga', 
-        sudahBayar: paidUserIds.has(doc.id) || paidUserIds.has(d.userId) || paidUserIds.has(d.nik),
-        status: d.status || 'Tetap'
+        sudahBayar: isLunas,
+        status: d.status || 'Tetap',
+        isKK: d.hubunganKeluarga === 'KEPALA KELUARGA'
       });
     });
     
     return {
       totalWarga: snapWarga.size,
-      wargaSudahBayar: paidUserIds.size,
+      totalKK,
+      kkSudahBayar,
+      kkBelumBayar: Math.max(0, totalKK - kkSudahBayar),
+      wargaSudahBayar: paidUserIds.size, // Keep for backward compat or extra info
       wargaBelumBayar: Math.max(0, snapWarga.size - paidUserIds.size),
       wargaSakit,
       wargaMeninggal,
       wargaDetailSummary: wargaDetail.slice(0, 30),
-      note: "Summary based on top 500 records"
+      note: "Summary based on top 500 records. Payment stats focused on KK (Kepala Keluarga)."
     };
   } catch(e) {
     console.warn("Failed getWargaActivitySummary", e);

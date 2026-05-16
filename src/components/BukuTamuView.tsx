@@ -167,8 +167,11 @@ export function BukuTamuView({
         <div className="lg:col-span-3 bg-black rounded-[2.5rem] p-4 shadow-2xl relative overflow-hidden aspect-video lg:aspect-auto h-[300px]">
           {/* Main camera feed */}
           <div className="absolute inset-0">
-             {/* @ts-ignore */}
-             <Webcam audio={false} videoConstraints={{ facingMode: "environment" }} mirrored={false} className="w-full h-full object-cover opacity-80 mix-blend-screen" />
+             {/* Only show "monitoring" webcam if not actively capturing a guest photo to avoid conflicts */}
+             {!showWebcam && (
+               /* @ts-ignore */
+               <Webcam audio={false} videoConstraints={{ facingMode: { ideal: "environment" } }} mirrored={false} className="w-full h-full object-cover opacity-80 mix-blend-screen" />
+             )}
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 pointer-events-none"></div>
           
@@ -401,7 +404,14 @@ export function BukuTamuView({
           <div className="fixed inset-0 bg-slate-900/90 flex flex-col justify-center items-center z-[130] p-4">
              <div className="relative rounded-[2rem] overflow-hidden border-4 border-white/20 shadow-2xl max-w-lg w-full aspect-square md:aspect-video bg-black">
                 {/* @ts-ignore */}
-                <Webcam audio={false} ref={webcamRef} screenshotFormat="image/jpeg" className="w-full h-full object-cover" />
+                <Webcam 
+                  audio={false} 
+                  ref={webcamRef} 
+                  screenshotFormat="image/jpeg" 
+                  videoConstraints={{ facingMode: { ideal: "environment" } }}
+                  forceScreenshotSourceSize={true}
+                  className="w-full h-full object-cover" 
+                />
                 <button onClick={() => setShowWebcam(false)} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 p-2 rounded-full text-white backdrop-blur-md transition-all"><X className="w-6 h-6" /></button>
              </div>
              <div className="mt-8 flex gap-6">
