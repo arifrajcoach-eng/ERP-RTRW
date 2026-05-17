@@ -682,38 +682,52 @@ export function KasView({
                   <td className="px-5 py-3 text-right font-black text-red-600">
                     {trx.kredit > 0 ? formatRupiah(trx.kredit) : "-"}
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="flex gap-1 justify-center shrink-0">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          exportSingleTrxPDF(trx);
-                        }}
-                        className="p-1 px-2 border border-slate-200 rounded hover:bg-slate-100 text-slate-600"
-                        title="Cetak Slip"
-                      >
-                        <Printer className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingKas(trx);
-                          setTrxType(trx.tipe);
-                          setShowMasukForm(true);
-                        }}
-                        className="p-1 px-2 border border-slate-200 rounded hover:bg-blue-50 text-blue-600"
-                        title="Edit"
-                      >
-                        <Edit className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => setKasToDelete(trx)}
-                        className="p-1 px-2 border border-slate-200 rounded hover:bg-red-50 text-red-600"
-                        title="Hapus"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-2 justify-end items-center shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingKas(trx);
+                          }}
+                          className="p-2 text-white bg-[#c9a60d] hover:bg-[#b0920a] rounded-lg transition-all border border-[#c9a60d] shadow-sm transform hover:scale-105 active:scale-95"
+                          title="Lihat Detail"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exportSingleTrxPDF(trx);
+                          }}
+                          className="p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all border border-slate-100 shadow-sm transform hover:scale-105 active:scale-95"
+                          title="Cetak Receipt"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingKas(trx);
+                            setTrxType(trx.tipe);
+                            setShowMasukForm(true);
+                          }}
+                          className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all border border-amber-100 shadow-sm transform hover:scale-105 active:scale-95"
+                          title="Edit"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setKasToDelete(trx);
+                          }}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all border border-red-100 shadow-sm transform hover:scale-105 active:scale-95"
+                          title="Hapus"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                 </tr>
               ))}
             </tbody>
@@ -932,6 +946,118 @@ export function KasView({
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {viewingKas && (
+          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden"
+            >
+              <div
+                className={`p-6 ${viewingKas.tipe === "Masuk" ? "bg-emerald-600" : "bg-red-600"} text-white flex justify-between items-center`}
+              >
+                <h3 className="font-black uppercase tracking-widest text-xs flex items-center gap-2">
+                  <Wallet className="w-4 h-4" /> Detail Kas {viewingKas.tipe}
+                </h3>
+                <button
+                  onClick={() => setViewingKas(null)}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="flex flex-col items-center">
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                    Nominal Transaksi
+                  </div>
+                  <div
+                    className={`text-3xl font-black ${viewingKas.tipe === "Masuk" ? "text-emerald-600" : "text-red-600"}`}
+                  >
+                    {formatRupiah(viewingKas.debit || viewingKas.kredit)}
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                        Tanggal
+                      </p>
+                      <p className="text-sm font-bold text-slate-700">
+                        {viewingKas.tanggal}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                        Kategori
+                      </p>
+                      <p className="text-sm font-bold text-blue-600">
+                        {viewingKas.transaksi}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                      Pihak Terkait
+                    </p>
+                    <p className="text-sm font-bold text-slate-700">
+                      {viewingKas.nama}
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {viewingKas.alamat || "-"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                      Keterangan
+                    </p>
+                    <p className="text-sm font-medium text-slate-600 leading-relaxed">
+                      {viewingKas.keterangan || "-"}
+                    </p>
+                  </div>
+
+                  {viewingKas.strukUrl && (
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">
+                        Dokumen / Struk
+                      </p>
+                      <div className="rounded-xl overflow-hidden border border-slate-200 group relative">
+                        <img
+                          src={viewingKas.strukUrl}
+                          alt="Struk"
+                          className="w-full max-h-48 object-contain bg-slate-50"
+                        />
+                        <a
+                          href={viewingKas.strukUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs"
+                        >
+                          Lihat Ukuran Penuh
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setViewingKas(null)}
+                  className="w-full py-4 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+                >
+                  Tutup Detail
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

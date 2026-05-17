@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ConfirmModal } from './ui/ConfirmModal';
+import { jsPDF } from 'jspdf';
 import { 
   CreditCard, 
   Users, 
@@ -124,6 +126,7 @@ export function IuranView({
 
   const [editingTrx, setEditingTrx] = useState<any>(null);
   const [viewingTrx, setViewingTrx] = useState<any>(null);
+  const [trxToDelete, setTrxToDelete] = useState<any>(null);
 
   const handleEdit = (trx: any) => {
     setEditingTrx(trx);
@@ -147,16 +150,30 @@ export function IuranView({
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Hapus transaksi ini secara permanen? Data di buku kas mungkin perlu disesuaikan secara manual.")) return;
+  const handleDelete = async () => {
+    if (!trxToDelete) return;
+    const id = trxToDelete.id;
     setIsLoadingDB(true);
     try {
+      // 1. Delete the iuran record
       await deleteDoc(doc(db, 'iuran', id));
       setIuranData(prev => prev.filter(t => t.id !== id));
-      showNotification('Transaksi berhasil dihapus', 'success');
+
+      // 2. Locate and delete the corresponding kas record
+      if (Array.isArray(kasData)) {
+        const relatedKas = kasData.find((k: any) => k.iuranId === id);
+        if (relatedKas) {
+          await deleteDoc(doc(db, 'kas', relatedKas.id));
+          setKasData(prev => prev.filter(k => k.id !== relatedKas.id));
+        }
+      }
+
+      showNotification('Transaksi dan catatan kas terkait berhasil dihapus', 'success');
+      setTrxToDelete(null);
     } catch (err: any) {
       handleFirestoreError(err, 'delete', 'iuran');
       showNotification('Gagal menghapus transaksi', 'error');
+      setTrxToDelete(null);
     } finally {
       setIsLoadingDB(false);
     }
@@ -167,10 +184,19 @@ export function IuranView({
   };
 
   const handlePrint = (trx: any) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    let printWindow = null;
+    try {
+      printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        showNotification('Gagal mencetak: Pop-up diblokir. Harap aktifkan pop-up untuk situs ini.', 'error');
+        return;
+      }
+    } catch (e) {
+      showNotification('Gagal mencetak: Browser memblokir pembukaan tab baru.', 'error');
+      return;
+    }
 
-    const formattedNominal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(trx.nominal);
+    const formattedNominal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(trx.nominal);
     const dateStr = new Date(trx.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     printWindow.document.write(`
@@ -214,6 +240,12 @@ export function IuranView({
     printWindow.document.close();
   };
 
+  const sanitizeForFirestore = (obj: any) => {
+    return JSON.parse(JSON.stringify(obj, (key, value) => 
+      value === undefined ? null : value
+    ));
+  };
+
   const handleCreatePayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -223,43 +255,52 @@ export function IuranView({
     const nominal = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
     const keterangan = formData.get('keterangan') as string;
     
-    let nik = (currentUser?.nik || '-').toString();
-    let nama = currentUser?.nama || currentUser?.name || "Anonim";
-    let alamat = wargaData.find((w:any) => w.nik === nik)?.alamat || "-";
+    let nik = (currentUser?.nik || "-").toString();
+    let nama = currentUser?.nama || currentUser?.name || "Warga";
+    let alamat = "-";
+    
+    // Attempt to find address from wargaData
+    const foundCurrent = wargaData.find((w: any) => (w.nik === nik && nik !== "-") || (currentUser?.uid && w.id === currentUser.uid));
+    if (foundCurrent) alamat = foundCurrent.alamat || "-";
+
     let targetUserId = currentUser?.uid || currentUser?.id_user || null;
     
     if (isPengurus) {
       const selectedWargaIdFromForm = formData.get('wargaId') as string;
-      const w = wargaData.find((warga:any) => warga.id === selectedWargaIdFromForm || warga.docId === selectedWargaIdFromForm || warga.nik === selectedWargaIdFromForm);
+      const w = wargaData.find((item: any) => 
+        (item.docId || item.id || item.nik) === selectedWargaIdFromForm
+      );
+      
       if (w) {
-        nik = (w.nik || '-').toString();
-        nama = w.nama || "Anonim";
+        nik = (w.nik || "-").toString();
+        nama = w.nama || "Warga";
         alamat = w.alamat || "-";
         targetUserId = w.id || w.uid || w.id_user || null;
       } else {
-        const inputNama = formData.get('namaPenyetor') as string;
-        if (inputNama) nama = inputNama;
+        const manualNama = formData.get('namaPenyetor') as string;
+        if (manualNama) nama = manualNama;
+        nik = "-";
       }
     }
 
-    const payload = JSON.parse(JSON.stringify({
+    const payload = sanitizeForFirestore({
       ...(editingTrx || {}),
       id,
-      tenantId,
-      rt: currentUser.rt || '01',
+      tenantId: tenantId || "MASTER",
+      rt: (currentUser?.rt || "01").toString(),
       tanggal: dateObj.toISOString(),
-      jenis: jenisPembayaran,
-      nominal,
-      keterangan: keterangan || "",
+      jenis: jenisPembayaran || "Iuran Warga",
+      nominal: nominal || 0,
+      keterangan: (formData.get('keterangan') as string) || "",
       nik: nik || "-",
-      namaPenyetor: nama || "Anonim",
+      namaPenyetor: nama || "Admin",
       alamat: alamat || "-",
       buktiUrl: buktiUrl || "",
       status: editingTrx ? editingTrx.status : (isPengurus ? 'Lunas' : 'Menunggu Verifikasi'),
       userId: targetUserId || null,
-      recordedBy: editingTrx?.recordedBy || currentUser.uid || currentUser.id_user || 'System',
+      recordedBy: editingTrx?.recordedBy || currentUser?.uid || currentUser?.id_user || 'System',
       updatedAt: new Date().toISOString()
-    }));
+    });
 
     setIsLoadingDB(true);
     try {
@@ -272,28 +313,67 @@ export function IuranView({
         return [payload, ...prev];
       });
       
-      // Auto create Kas if status is Lunas (only for new entries)
-      if (payload.status === 'Lunas' && !editingTrx) {
-        const kasId = `TRX-${Date.now()}`;
-        const kasPayload = {
-          id: kasId,
-          tenantId,
-          rt: payload.rt,
-          tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
-          tipe: 'Masuk',
-          transaksi: payload.jenis,
-          nama: payload.namaPenyetor,
-          keterangan: payload.keterangan || `Pembayaran ${payload.jenis}`,
-          debit: payload.nominal,
-          kredit: 0,
-          strukUrl: payload.buktiUrl,
-          iuranId: id
-        };
-        await setDoc(doc(db, 'kas', kasId), kasPayload);
-        setKasData((prev: any) => {
-          if (prev.some((k:any) => k.id === kasId)) return prev;
-          return [kasPayload, ...prev];
-        });
+      // Auto create or update Kas if status is Lunas
+      if (payload.status === 'Lunas') {
+        if (!editingTrx) {
+          // Create new record
+          const kasId = `TRX-${Date.now()}`;
+          const kasPayload = {
+            id: kasId,
+            tenantId: tenantId || "MASTER",
+            rt: payload.rt,
+            tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+            tipe: 'Masuk',
+            transaksi: payload.jenis,
+            nama: payload.namaPenyetor,
+            keterangan: payload.keterangan || `Pembayaran ${payload.jenis}`,
+            debit: payload.nominal,
+            kredit: 0,
+            strukUrl: payload.buktiUrl,
+            iuranId: id
+          };
+          await setDoc(doc(db, 'kas', kasId), kasPayload);
+          setKasData((prev: any) => {
+            if (prev.some((k:any) => k.id === kasId)) return prev;
+            return [kasPayload, ...prev];
+          });
+        } else {
+          // Update existing related kas record
+          const relatedKas = kasData.find((k: any) => k.iuranId === id);
+          if (relatedKas) {
+            const updatedKas = {
+              ...relatedKas,
+              rt: payload.rt,
+              tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+              transaksi: payload.jenis,
+              nama: payload.namaPenyetor,
+              keterangan: payload.keterangan,
+              debit: payload.nominal,
+              strukUrl: payload.buktiUrl
+            };
+            await updateDoc(doc(db, 'kas', relatedKas.id), updatedKas);
+            setKasData(prev => prev.map(k => k.id === relatedKas.id ? updatedKas : k));
+          } else {
+            // If somehow iuran exists but kas doesn't (legacy or manual error), create it now if Lunas
+            const kasId = `TRX-${Date.now()}`;
+            const kasPayload = {
+              id: kasId,
+              tenantId: tenantId || "MASTER",
+              rt: payload.rt,
+              tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+              tipe: 'Masuk',
+              transaksi: payload.jenis,
+              nama: payload.namaPenyetor,
+              keterangan: payload.keterangan || `Pembayaran ${payload.jenis}`,
+              debit: payload.nominal,
+              kredit: 0,
+              strukUrl: payload.buktiUrl,
+              iuranId: id
+            };
+            await setDoc(doc(db, 'kas', kasId), kasPayload);
+            setKasData(prev => [kasPayload, ...prev]);
+          }
+        }
       }
       
       showNotification(editingTrx ? 'Pembayaran berhasil diperbarui' : 'Pembayaran berhasil dicatat', 'success');
@@ -312,7 +392,6 @@ export function IuranView({
   const handleStartPg = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     
-    // Get nominal from form using state or ref if possible, but let's just make it more robust
     const form = e.currentTarget.closest('form');
     if (!form) {
       showNotification("Sistem Error: Form tidak ditemukan", "error");
@@ -320,18 +399,18 @@ export function IuranView({
     }
     
     const formData = new FormData(form);
-    const nominalString = formData.get('nominal') as string;
-    const nominalRaw = parseInt(nominalString?.replace(/\D/g, '') || "0");
-    const labelSakit = formData.get('nominal'); // debug
+    const nominalRaw = parseInt((formData.get('nominal') as string)?.replace(/\D/g, '') || "0");
     
-    // Validation
-    if (!nominalRaw || nominalRaw < 10000) {
-      showNotification("Nominal tidak valid. Minimal pembayaran online adalah Rp 10.000", "error");
+    if (nominalRaw <= 0) {
+      showNotification("Silakan masukkan nominal pembayaran", "error");
       return;
     }
 
     const wargaId = formData.get('wargaId') as string;
     const namaPenyetor = formData.get('namaPenyetor') as string;
+    const jenis = formData.get('jenis') as string;
+    const tanggal = formData.get('tanggal') as string;
+    const keterangan = formData.get('keterangan') as string;
     
     if (isPengurus && !wargaId && !namaPenyetor) {
       showNotification("Harap pilih warga atau isi nama penyetor", "error");
@@ -339,10 +418,10 @@ export function IuranView({
     }
 
     setPgFormState({
-      tanggal: formData.get('tanggal'),
+      tanggal,
       nominal: nominalRaw,
-      jenis: formData.get('jenis'),
-      keterangan: formData.get('keterangan'),
+      jenis,
+      keterangan,
       wargaId,
       namaPenyetor
     });
@@ -355,16 +434,16 @@ export function IuranView({
     const id = `IURAN-${Date.now()}`;
     const dateObj = (pgFormState.tanggal && !isNaN(new Date(pgFormState.tanggal).getTime())) ? new Date(pgFormState.tanggal) : new Date();
     
-    let nik = currentUser.nik || currentUser.uid || currentUser.id_user;
-    let nama = currentUser.nama || currentUser.name || "Warga";
-    let alamat = currentUser.alamat || "-";
-    let targetUserId = currentUser.uid || currentUser.id_user || null;
+    let nik = (currentUser?.nik || currentUser?.uid || currentUser?.id_user || "-").toString();
+    let nama = currentUser?.nama || currentUser?.name || "Warga";
+    let alamat = currentUser?.alamat || "-";
+    let targetUserId = currentUser?.uid || currentUser?.id_user || null;
 
     if (isPengurus && pgFormState.wargaId) {
       const selectedWarga = wargaData.find((w:any) => w.id === pgFormState.wargaId || w.docId === pgFormState.wargaId || w.nik === pgFormState.wargaId);
       if (selectedWarga) {
-        nik = selectedWarga.nik;
-        nama = selectedWarga.nama;
+        nik = (selectedWarga.nik || "-").toString();
+        nama = selectedWarga.nama || "Warga";
         alamat = selectedWarga.alamat || selectedWarga.blok || "-";
         targetUserId = selectedWarga.id || selectedWarga.uid || selectedWarga.id_user || null;
       }
@@ -373,33 +452,37 @@ export function IuranView({
       nik = "-";
     }
 
-    const payload = {
+    const payload = sanitizeForFirestore({
       id,
-      tenantId,
-      rt: currentUser.rt || '01',
+      tenantId: tenantId || "MASTER",
+      rt: (currentUser?.rt || '01').toString(),
       tanggal: dateObj.toISOString(),
-      jenis: pgFormState.jenis,
-      nominal: pgFormState.nominal,
-      keterangan: pgFormState.keterangan || `Pembayaran ${pgFormState.jenis} (via ${pgMethod})`,
-      nik,
-      namaPenyetor: nama,
-      alamat,
-      buktiUrl: 'Sistem Payment Gateway TRIPAY',
+      jenis: pgFormState.jenis || "Iuran Warga",
+      nominal: pgFormState.nominal || 0,
+      keterangan: pgFormState.keterangan || `Pembayaran ${pgFormState.jenis || 'Iuran'} (via ${pgMethod})`,
+      nik: nik || "-",
+      namaPenyetor: nama || "Warga",
+      alamat: alamat || "-",
+      buktiUrl: `PG-${pgMethod} Digital Receipt`,
       status: 'Lunas',
-      userId: targetUserId,
+      userId: targetUserId || null,
       verifiedBy: 'Sistem',
-      verifiedAt: new Date().toISOString()
-    };
+      verifiedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
 
     setIsLoadingDB(true);
     try {
       await setDoc(doc(db, 'iuran', id), payload);
-      setIuranData((prev: any) => [payload, ...prev]);
+      setIuranData((prev: any) => {
+        if (prev.some((i: any) => i.id === id)) return prev;
+        return [payload, ...prev];
+      });
       
       const kasId = `TRX-${Date.now()}`;
       const kasPayload = {
         id: kasId,
-        tenantId,
+        tenantId: tenantId || "MASTER",
         rt: payload.rt,
         tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
         tipe: 'Masuk',
@@ -408,11 +491,14 @@ export function IuranView({
         keterangan: payload.keterangan,
         debit: payload.nominal,
         kredit: 0,
-        strukUrl: 'Sistem Payment Gateway TRIPAY',
+        strukUrl: `Simulasi PG ${pgMethod}`,
         iuranId: id
       };
       await setDoc(doc(db, 'kas', kasId), kasPayload);
-      setKasData((prev: any) => [kasPayload, ...prev]);
+      setKasData((prev: any) => {
+        if (prev.some((k: any) => k.id === kasId)) return prev;
+        return [kasPayload, ...prev];
+      });
       
       showNotification('Pembayaran Online Berhasil!', 'success');
       setShowPgModal(false);
@@ -494,7 +580,7 @@ export function IuranView({
         {isPengurus && (
           <button
             onClick={() => setActiveSubTab('rekap')}
-            className={`flex items-center gap-2.5 px-8 py-3.5 rounded-full text-[13px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'rekap' ? 'bg-[#0cbb97] text-white shadow-lg shadow-[#0cbb97]/20 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center gap-2.5 px-8 py-[10px] ml-[18px] rounded-full text-[13px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'rekap' ? 'bg-[#0cbb97] text-white shadow-lg shadow-[#0cbb97]/20 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
           >
             <Users className="w-4 h-4" />
             Rekap Iuran
@@ -551,7 +637,7 @@ export function IuranView({
                   <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Tidak ada data.</td></tr>
                 )}
                 {filteredTransactions.map((trx: any, idx: number) => (
-                  <tr key={`iuran-row-${trx.id || idx}`} className="hover:bg-slate-50 transition-colors">
+                  <tr key={`iuran-row-${trx.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-3 text-xs">{new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td className="px-5 py-3">
                       <div className="font-bold text-slate-800">{trx.namaPenyetor}</div>
@@ -580,14 +666,14 @@ export function IuranView({
                       <div className="flex gap-2 justify-end items-center">
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleViewDetails(trx); }} 
-                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100 shadow-sm" 
+                          className="p-2 text-white bg-[#c9a60d] hover:bg-[#b0920a] rounded-lg transition-all border border-[#c9a60d] shadow-sm transform hover:scale-105 active:scale-95" 
                           title="Lihat Detail"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); handlePrint(trx); }} 
-                          className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors border border-slate-100 shadow-sm" 
+                          className="p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all border border-slate-100 shadow-sm transform hover:scale-105 active:scale-95" 
                           title="Cetak Receipt"
                         >
                           <Printer className="w-4 h-4" />
@@ -596,14 +682,14 @@ export function IuranView({
                           <>
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleEdit(trx); }} 
-                              className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors border border-amber-100 shadow-sm" 
+                              className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all border border-amber-100 shadow-sm transform hover:scale-105 active:scale-95" 
                               title="Edit"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); handleDelete(trx.id); }} 
-                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-100 shadow-sm" 
+                              onClick={(e) => { e.stopPropagation(); setTrxToDelete(trx); }} 
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all border border-red-100 shadow-sm transform hover:scale-105 active:scale-95" 
                               title="Hapus"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -667,14 +753,14 @@ export function IuranView({
                         
                         if (!isIuranWajib) return false;
 
-                        // Match logic: NIK (strong), UserId (strong), or Name (fallback)
-                        const matchNik = trx.nik && w.nik && trx.nik !== '-' && trx.nik === w.nik;
-                        const matchUserId = trx.userId && (trx.userId === w.id || trx.userId === w.uid || trx.userId === w.id_user || trx.userId === w.docId);
+                        // Match logic: NIK (strong), UserId (strong), or Name (robust fallback)
+                        const matchNik = (trx.nik && w.nik && trx.nik !== '-' && trx.nik === w.nik);
+                        const matchUserId = (trx.userId && (trx.userId === w.id || trx.userId === w.uid || trx.userId === w.id_user || trx.userId === w.docId));
                         
                         // Robust name matching for fallback
-                        const cleanTrxNama = trx.namaPenyetor?.toLowerCase().replace(/\s+/g, ' ').trim();
-                        const cleanWargaNama = w.nama?.toLowerCase().replace(/\s+/g, ' ').trim();
-                        const matchNama = cleanTrxNama && cleanWargaNama && cleanTrxNama === cleanWargaNama;
+                        const cleanTrxNama = trx.namaPenyetor?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                        const cleanWargaNama = w.nama?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                        const matchNama = !!cleanTrxNama && !!cleanWargaNama && (cleanTrxNama.includes(cleanWargaNama) || cleanWargaNama.includes(cleanTrxNama));
 
                         if (!matchNik && !matchUserId && !matchNama) return false;
 
@@ -937,9 +1023,9 @@ export function IuranView({
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
             className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden"
           >
-            <div className="p-6 bg-blue-600 text-white flex justify-between items-center">
+            <div className={`p-6 ${viewingTrx.status === 'Lunas' ? 'bg-emerald-600' : 'bg-orange-600'} text-white flex justify-between items-center`}>
               <h3 className="font-black uppercase tracking-widest text-xs flex items-center gap-2">
-                <CreditCard className="w-4 h-4" /> Detail Transaksi
+                <CreditCard className="w-4 h-4" /> Detail Transaksi {viewingTrx.jenis}
               </h3>
               <button 
                 onClick={() => setViewingTrx(null)} 
@@ -953,11 +1039,8 @@ export function IuranView({
             <div className="p-8 space-y-6">
               <div className="flex flex-col items-center">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pembayaran</div>
-                <div className="text-3xl font-black text-slate-800">
+                <div className={`text-3xl font-black ${viewingTrx.status === 'Lunas' ? 'text-emerald-600' : 'text-orange-600'}`}>
                   Rp {new Intl.NumberFormat('id-ID').format(viewingTrx.nominal)}
-                </div>
-                <div className={`mt-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${viewingTrx.status === 'Lunas' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                  {viewingTrx.status}
                 </div>
               </div>
 
@@ -1004,6 +1087,21 @@ export function IuranView({
           </motion.div>
         </div>
       )}
+
+      <AnimatePresence>
+        {trxToDelete && (
+          <ConfirmModal
+            isOpen={true}
+            title="Hapus Transaksi Iuran"
+            message={`Apakah Anda yakin ingin menghapus transaksi iuran senilai Rp ${new Intl.NumberFormat('id-ID').format(trxToDelete.nominal)} dari "${trxToDelete.namaPenyetor}"? Data buku kas yang terkait juga akan terhapus.`}
+            onConfirm={handleDelete}
+            onCancel={() => setTrxToDelete(null)}
+            confirmText="Ya, Hapus"
+            cancelText="Batal"
+            isLoading={false}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

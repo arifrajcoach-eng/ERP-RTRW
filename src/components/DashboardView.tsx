@@ -93,15 +93,30 @@ export default function DashboardView({
     const totalTarik = myTarik.reduce((acc, curr) => acc + (curr.jumlah || 0), 0);
     const saldoSampah = totalSetoran - totalTarik;
 
-    const myIuran = iuranData.filter((i: any) => i.nik === currentUser.nik);
-    const unpaidIuran = myIuran.filter((i: any) => i.status !== 'Lunas').length;
+    const myIuran = iuranData.filter((i: any) => i.nik === currentUser.nik || i.userId === currentUser.uid || i.namaPenyetor?.toLowerCase().includes(currentUser.name?.toLowerCase()));
+    
+    // Calculate missing months for the current year
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    let unpaidCount = 0;
+    
+    for (let m = 0; m <= currentMonth; m++) {
+      const isPaid = myIuran.some((trx: any) => {
+        if (trx.status !== 'Lunas') return false;
+        const d = new Date(trx.tanggal);
+        const matchesDate = d.getMonth() === m && d.getFullYear() === currentYear;
+        const isIuranWajib = trx.jenis?.toLowerCase().includes('iuran') || trx.keterangan?.toLowerCase().includes('iuran');
+        return matchesDate && isIuranWajib;
+      });
+      if (!isPaid) unpaidCount++;
+    }
 
     const myOrders = tokoOrders.filter((o: any) => o.customerId === currentUser.uid || o.customerId === (currentUser.nik || ''));
     const pendingOrders = myOrders.filter((o: any) => o.status === 'PENDING' || o.status === 'PROCESS').length;
 
     return {
       saldoSampah,
-      unpaidIuran,
+      unpaidIuran: unpaidCount,
       pendingOrders,
       totalOrders: myOrders.length
     };
@@ -219,6 +234,16 @@ export default function DashboardView({
         type: k.tipe === 'Masuk' ? 'in' : 'out',
         dateObj: new Date(k.tanggal),
         isPersonal: k.nik === currentUser?.nik || k.nama?.includes(currentUser?.name || '')
+      })),
+      ...iuranData.filter(i => i.status === 'Menunggu Verifikasi').map(i => ({
+        title: 'Pembayaran Iuran (Pending)',
+        desc: `${i.namaPenyetor} - ${i.jenis}`,
+        date: i.tanggal ? new Date(i.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
+        amount: i.nominal,
+        status: 'Menunggu',
+        type: 'in',
+        dateObj: new Date(i.tanggal || 0),
+        isPersonal: i.nik === currentUser?.nik || i.userId === currentUser?.uid
       })),
       ...suratData.map(s => ({ 
         title: 'Surat Pengantar',

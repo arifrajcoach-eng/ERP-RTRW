@@ -993,14 +993,16 @@ export default function App() {
     const testConnection = async () => {
       try {
         await getDocFromServer(doc(db, "test", "connection"));
+        setDbError(null);
       } catch (error: any) {
+        console.warn("Firestore Connectivity Check:", error.message || error.code);
         if (
           error instanceof Error &&
-          error.message.includes("the client is offline")
+          (error.message.includes("the client is offline") || error.message.includes("Could not reach Cloud Firestore"))
         ) {
-          console.warn("Firestore client is operating in offline mode.");
+          setDbStatus("OFFLINE");
         } else if (error?.code === "unavailable") {
-          console.warn("Firestore client is offline.");
+          setDbStatus("UNAVAILABLE");
         }
       }
     };
@@ -1251,6 +1253,7 @@ export default function App() {
   const [kopSettings, setKopSettings] = useState<Record<string, any>>({});
 
   const [isLoadingDB, setIsLoadingDB] = useState(true);
+  const [dbStatus, setDbStatus] = useState<"ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING">("INITIALIZING");
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [currentTenant, setCurrentTenant] = useState<any>(null);
@@ -3077,9 +3080,9 @@ export default function App() {
               <span className="bg-soft-yellow dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] px-2.5 py-1 rounded-full border border-amber-100 dark:border-amber-500/20 uppercase font-black tracking-widest shadow-sm transition-colors">
                 V4.0 Active
               </span>
-              <div className="flex items-center gap-2 bg-soft-green dark:bg-emerald-500/10 text-brand-green dark:text-brand-green text-[10px] px-3 py-1 rounded-full border border-brand-green/20 dark:border-emerald-500/20 uppercase font-black tracking-widest shadow-sm transition-colors">
-                <div className="w-2 h-2 bg-brand-green rounded-full animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
-                Connected
+              <div className={`flex items-center gap-2 ${dbStatus === 'UNAVAILABLE' ? 'bg-red-50 text-red-600' : dbStatus === 'OFFLINE' ? 'bg-amber-50 text-amber-600' : 'bg-soft-green text-brand-green'} dark:bg-emerald-500/10 text-[10px] px-3 py-1 rounded-full border ${dbStatus === 'UNAVAILABLE' ? 'border-red-200' : 'border-brand-green/20'} uppercase font-black tracking-widest shadow-sm transition-colors`}>
+                <div className={`w-2 h-2 ${dbStatus === 'UNAVAILABLE' ? 'bg-red-500' : dbStatus === 'OFFLINE' ? 'bg-amber-500' : 'bg-brand-green'} rounded-full animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]`}></div>
+                {dbStatus === 'UNAVAILABLE' ? 'Connection Blocked' : dbStatus === 'OFFLINE' ? 'Offline Mode' : 'Connected'}
               </div>
             </div>
             <div className="h-6 w-px bg-slate-100 mx-2 hidden md:block"></div>
@@ -4632,7 +4635,15 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
       
       {showLocalCamera && (
         <div className="rounded-[2rem] overflow-hidden border-4 border-slate-200 shadow-xl aspect-video md:w-1/2">
-            <Webcam audio={false} videoConstraints={{ facingMode: "user" }} className="w-full h-full object-cover" />
+            <Webcam 
+              audio={false} 
+              videoConstraints={{ facingMode: "user" }} 
+              className="w-full h-full object-cover"
+              mirrored={true}
+              screenshotFormat="image/jpeg"
+              forceScreenshotSourceSize={false}
+              audioConstraints={false}
+            />
         </div>
       )}
 
@@ -4702,18 +4713,22 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
   const [isMuted, setIsMuted] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const sirenIntervalRef = useRef<any>(null);
 
   useEffect(() => {
+    // Stop all audio/vibration if not emergency or muted
     if (!emergency || isMuted) {
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
         try { navigator.vibrate(0); } catch (e) {}
       }
+      if (sirenIntervalRef.current) {
+        clearTimeout(sirenIntervalRef.current);
+        sirenIntervalRef.current = null;
+      }
       return;
     }
 
-    let intervalId: NodeJS.Timeout;
-
-    const playSirenPulse = async () => {
+    const startAudioContext = async () => {
       try {
         if (!audioCtxRef.current) {
           const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -4721,61 +4736,76 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
             audioCtxRef.current = new AudioContextClass();
           }
         }
-
+        
         const audioCtx = audioCtxRef.current;
         if (!audioCtx) return;
 
         if (audioCtx.state === "suspended") {
           try {
             await audioCtx.resume();
-          } catch (err) {
+          } catch (e) {
             setAudioBlocked(true);
             return;
           }
         }
         setAudioBlocked(false);
-
+        
         if (audioCtx.state === "running") {
-          const oscillator = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-
-          oscillator.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-
-          // Siren: Sweeping frequency 
-          oscillator.type = "sawtooth";
-          const now = audioCtx.currentTime;
-          
-          oscillator.frequency.setValueAtTime(300, now);
-          oscillator.frequency.exponentialRampToValueAtTime(900, now + 1);
-          oscillator.frequency.exponentialRampToValueAtTime(300, now + 2);
-
-          // Gain envelope
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(1, now + 0.1);
-          gainNode.gain.setValueAtTime(1, now + 1.8);
-          gainNode.gain.linearRampToValueAtTime(0, now + 2);
-
-          oscillator.start(now);
-          oscillator.stop(now + 2);
-
-          if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-            navigator.vibrate([1000, 500, 500]);
-          }
+          scheduleNextPulse();
         }
       } catch (e) {
-        console.warn("SOS Siren Pulse Error:", e);
+        console.warn("SOS Audio Start Error:", e);
       }
     };
 
-    // Play immediately
-    playSirenPulse();
-    
-    // Repeat every 2.1 seconds for a consistent loop (matching the 2s sound duration)
-    intervalId = setInterval(playSirenPulse, 2100);
+    const scheduleNextPulse = () => {
+      if (!audioCtxRef.current || isMuted || !emergency) return;
+      
+      const ctx = audioCtxRef.current;
+      const now = ctx.currentTime;
+      const pulseDuration = 0.6; // Durasi per nada (0.6 detik)
+      
+      // Buat oscillator untuk pulsa saat ini
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = "square"; // Suara lebih tajam/alarm
+      
+      // Pola dua nada (Hi-Lo)
+      const isEven = Math.floor(now / pulseDuration) % 2 === 0;
+      osc.frequency.setValueAtTime(isEven ? 880 : 660, now);
+      
+      // Envelope volume agar tidak ada 'klik'
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.5, now + 0.1);
+      gain.gain.setValueAtTime(0.5, now + pulseDuration - 0.1);
+      gain.gain.linearRampToValueAtTime(0, now + pulseDuration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(now);
+      osc.stop(now + pulseDuration);
+      
+      // Jadwalkan pulsa berikutnya sedikit sebelum berakhir agar seamless
+      sirenIntervalRef.current = setTimeout(scheduleNextPulse, (pulseDuration - 0.05) * 1000);
+    };
+
+    startAudioContext();
+
+    // Getaran terpisah
+    const vibInterval = setInterval(() => {
+      if (!isMuted && typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([400, 200, 400]);
+      }
+    }, 1000);
 
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      if (vibInterval) clearInterval(vibInterval);
+      if (sirenIntervalRef.current) {
+        clearTimeout(sirenIntervalRef.current);
+        sirenIntervalRef.current = null;
+      }
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
         try { navigator.vibrate(0); } catch (e) {}
       }
