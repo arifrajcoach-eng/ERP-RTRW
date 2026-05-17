@@ -295,7 +295,7 @@ export function VerifikasiAdminView({
           <button 
             onClick={handleMassSync}
             disabled={!verifikasiData.some(v => v.status === 'Disetujui' && !v.isFinalized)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0"
+            className="px-5 py-3 bg-gradient-to-tr from-indigo-600 to-blue-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-xl shadow-indigo-600/20 flex items-center gap-2 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Sinkronkan
@@ -308,7 +308,7 @@ export function VerifikasiAdminView({
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${filter === f ? 'bg-orange-400 text-white shadow-lg shadow-orange-100' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+                className={`whitespace-nowrap shrink-0 px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${filter === f ? 'bg-slate-900 text-white shadow-lg shadow-slate-300' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
               >
                 {f}
               </button>

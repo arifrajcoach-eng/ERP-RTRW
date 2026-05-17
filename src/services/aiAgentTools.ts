@@ -177,7 +177,7 @@ export async function getInventorySummary(tenantId: string) {
 export async function getWargaActivitySummary(tenantId: string) {
   try {
     // Iuran check
-    const qIuran = query(collection(db, 'iuran'), where('tenantId', '==', tenantId), limit(500));
+    const qIuran = query(collection(db, 'iuran'), where('tenantId', '==', tenantId), limit(5000));
     const snapIuran = await getDocs(qIuran);
     const paidUserIds = new Set<string>();
     snapIuran.forEach(doc => {
@@ -186,7 +186,7 @@ export async function getWargaActivitySummary(tenantId: string) {
     });
     
     // Warga check
-    const qWarga = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId), limit(500));
+    const qWarga = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId), limit(5000));
     const snapWarga = await getDocs(qWarga);
     
     const wargaDetail: any[] = [];

@@ -652,8 +652,8 @@ export default function DashboardView({
           </div>
           <div className="space-y-4">
             {recentActivities.map((act, i) => (
-              <div key={`activity-${act.id || i}`} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+              <div key={`activity-${act.id || i}`} className="flex items-center gap-5 p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
                   act.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 
                   act.type === 'out' ? 'bg-rose-50 text-rose-600' :
                   act.type === 'doc' ? 'bg-blue-50 text-blue-600' :
@@ -664,32 +664,32 @@ export default function DashboardView({
                   act.type === 'sos' ? 'bg-red-50 text-red-600' :
                   'bg-slate-100 text-slate-600'
                 }`}>
-                  {act.type === 'in' && <TrendingUp size={20} />}
-                  {act.type === 'out' && <TrendingUp size={20} className="rotate-180" />}
-                  {act.type === 'doc' && <FileText size={20} />}
-                  {act.type === 'tamu' && <Users size={20} />}
-                  {act.type === 'kesehatan' && <CheckCircle2 size={20} />}
-                  {act.type === 'sampah_in' && <TrendingUp size={20} />}
-                  {act.type === 'voting' && <FileText size={20} />}
-                  {act.type === 'toko' && <CreditCard size={20} />}
-                  {act.type === 'sos' && <Siren size={20} />}
-                  {act.type === 'complaint' && <MessageSquare size={20} />}
-                  {act.type === 'booking' && <Calendar size={20} />}
+                  {act.type === 'in' && <TrendingUp size={22} />}
+                  {act.type === 'out' && <TrendingUp size={22} className="rotate-180" />}
+                  {act.type === 'doc' && <FileText size={22} />}
+                  {act.type === 'tamu' && <Users size={22} />}
+                  {act.type === 'kesehatan' && <CheckCircle2 size={22} />}
+                  {act.type === 'sampah_in' && <TrendingUp size={22} />}
+                  {act.type === 'voting' && <FileText size={22} />}
+                  {act.type === 'toko' && <CreditCard size={22} />}
+                  {act.type === 'sos' && <Siren size={22} />}
+                  {act.type === 'complaint' && <MessageSquare size={22} />}
+                  {act.type === 'booking' && <Calendar size={22} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 truncate uppercase tracking-tighter">{act.title}</h4>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">{act.date}</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-50 truncate tracking-tight">{act.title}</h4>
+                    <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{act.date}</span>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium truncate">{act.desc}</p>
+                  <p className="text-sm text-slate-500 font-medium truncate leading-tight">{act.desc}</p>
                 </div>
                 {act.amount && (
-                  <span className={`text-sm font-black tracking-tight ${act.type === 'in' ? 'text-emerald-600' : 'text-slate-700'}`}>
+                  <span className={`text-base font-black tracking-tight ml-4 ${act.type === 'in' ? 'text-emerald-600' : 'text-slate-900'}`}>
                     {act.type === 'in' ? '+' : ''}{formatRupiah(act.amount)}
                   </span>
                 )}
                 {act.status && (
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border ml-4 ${
                     act.status === 'Selesai' || act.status === 'Disetujui' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                     act.status === 'Diajukan' || act.status === 'Menunggu' || act.status === 'Diproses' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                     act.status === 'Ditolak' ? 'bg-rose-50 text-rose-600 border-rose-100' :
@@ -715,7 +715,7 @@ export default function DashboardView({
               <div className="space-y-3">
                 <button 
                   onClick={() => setShowQRModal(true)}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white p-5 rounded-3xl flex items-center justify-between transition-all group/btn border border-white/10 backdrop-blur-sm"
+                  className="w-full bg-white/10 hover:bg-white/20 text-white h-[34px] p-5 rounded-3xl flex items-center justify-between transition-all group/btn border border-white/10 backdrop-blur-sm"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">

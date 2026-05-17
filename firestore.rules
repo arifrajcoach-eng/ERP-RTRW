@@ -214,7 +214,7 @@ service cloud.firestore {
 
     match /voting_config/{docId} {
       allow read: if isSignedIn();
-      allow write: if isPengurus();
+      allow write: if isAdmin() || (getUserData() != null && getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS'] && getUserData().tenantId == docId);
     }
 
     match /voting_votes/{docId} {

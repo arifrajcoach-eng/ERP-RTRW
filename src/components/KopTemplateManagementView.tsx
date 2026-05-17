@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'fireb
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Settings, Save, Upload, FileText, PlusCircle, CheckCircle } from 'lucide-react';
 import { SuratTemplate } from './SuratTemplate';
+import { StyledButton } from './StyledButton';
 
 export default function KopTemplateManagementView({ currentUser, settings, showNotification, handleFirestoreError }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
   const [activeSub, setActiveSub] = useState('branding');
@@ -13,10 +14,20 @@ export default function KopTemplateManagementView({ currentUser, settings, showN
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-6">Manajemen KOP & Template</h2>
-      <div className="flex gap-4 mb-6">
-        <button onClick={() => setActiveSub('branding')} className={`px-4 py-2 rounded-lg ${activeSub === 'branding' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Branding</button>
-        <button onClick={() => setActiveSub('template')} className={`px-4 py-2 rounded-lg ${activeSub === 'template' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Template</button>
-      </div>
+        <div className="flex gap-4 mb-6">
+          <StyledButton 
+            label="Branding"
+            onClick={() => setActiveSub('branding')}
+            colorType={activeSub === 'branding' ? 'primary' : 'secondary'}
+            className="text-xs uppercase"
+          />
+          <StyledButton 
+            label="Template"
+            onClick={() => setActiveSub('template')}
+            colorType={activeSub === 'template' ? 'primary' : 'secondary'}
+            className="text-xs uppercase"
+          />
+        </div>
 
       {activeSub === 'branding' && <BrandingForm currentUser={currentUser} settings={settings} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}
       {activeSub === 'template' && <TemplateList currentUser={currentUser} showNotification={showNotification} handleFirestoreError={handleFirestoreError} />}

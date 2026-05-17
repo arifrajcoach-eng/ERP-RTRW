@@ -184,7 +184,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
               required
             />
           </div>
-          <button type="submit" disabled={isSubmitting} className="w-full bg-[#0cbb97] text-white p-4 rounded-xl font-black uppercase text-xs tracking-widest hover:opacity-90 shadow-lg shadow-emerald-100 transition-all active:scale-[0.98]">
+          <button type="submit" disabled={isSubmitting} className="w-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white p-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/30 transition-all duration-300">
             {isSubmitting ? 'Memproses...' : 'Kirim Permohonan Booking'}
           </button>
         </form>

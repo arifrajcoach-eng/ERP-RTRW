@@ -345,10 +345,10 @@ function WargaView({
             </button>
           )}
           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 text-emerald-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+          <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="bg-gradient-to-tr from-amber-500 to-orange-600 text-white px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-md shadow-amber-500/20">
             <Download size={18} className="rotate-180" /> {isUploading ? 'Loading...' : 'Import Data'}
           </button>
-          <button onClick={() => setShowAddForm(true)} className="bg-[#008bb5] hover:opacity-90 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-[#008bb5]/25">
+          <button onClick={() => setShowAddForm(true)} className="bg-gradient-to-tr from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-600/20">
             <UserPlus size={18} /> Tambah {isApt ? "Penghuni" : "Warga"}
           </button>
         </div>
@@ -369,7 +369,7 @@ function WargaView({
               {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => <option key={rw} value={rw} className="dark:bg-slate-800">{`RW ${rw}`}</option>)}
             </select>
             <div className="flex items-center gap-2">
-               <button onClick={handleExportExcel} className="flex-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 h-full rounded-2xl font-black uppercase text-[10px] tracking-widest border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center gap-2 py-4 shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"> <Download size={14} /> Ekspor </button>
+               <button onClick={handleExportExcel} className="flex-1 bg-gradient-to-tr from-emerald-500 to-teal-600 text-white h-full rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 py-4 shadow-md shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all duration-300"> <Download size={14} /> Ekspor </button>
             </div>
          </div>
 

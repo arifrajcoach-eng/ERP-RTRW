@@ -165,6 +165,7 @@ import { VerifikasiAdminView } from "./components/VerifikasiAdminView";
 import { WargaProfileView } from "./components/WargaProfileView";
 import { ComplaintView } from "./components/ComplaintView";
 import { BookingView } from "./components/BookingView";
+import { StyledButton } from "./components/StyledButton";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
 import { MessageSquare, Bot } from "lucide-react";
 import { checkFeatureAccess } from "./services/subscriptionService";
@@ -2904,7 +2905,7 @@ export default function App() {
               <div className="w-10 h-10 md:hidden"></div>
             </div>
             <div className="relative group/logo">
-              <div className="w-[82.9931px] h-[69.9931px] rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
+              <div className="w-[82.9931px] h-[69.9931px] rounded-2xl bg-[#ffffff] dark:bg-slate-800 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
                 <AppLogo
                   size={12}
                   className="w-12 h-12 truncate"
@@ -3076,7 +3077,7 @@ export default function App() {
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 text-[#03c97d]">
               <span className="bg-soft-yellow dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] px-2.5 py-1 rounded-full border border-amber-100 dark:border-amber-500/20 uppercase font-black tracking-widest shadow-sm transition-colors">
                 V4.0 Active
               </span>
@@ -3139,7 +3140,7 @@ export default function App() {
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all ml-1 md:ml-2"
+                className="p-2 ml-[12px] text-[#eaf8ff] hover:text-red-600 hover:bg-red-50 rounded-xl transition-all md:ml-2"
                 title="Keluar"
               >
                 <LogOut className="w-5 h-5" />
@@ -3711,13 +3712,13 @@ export default function App() {
                     setShowInfoPopup(false); 
                     window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20coba%20Free%20Trial%20SmartRW%20AI', '_blank');
                   }}
-                  className="w-full py-4 bg-brand-pink text-white font-black rounded-2xl shadow-lg shadow-brand-pink/20"
+                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 hover:shadow-2xl hover:shadow-pink-500/40 hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
                 >
                   Coba Sekarang
                 </button>
                 <button 
                   onClick={() => setShowInfoPopup(false)}
-                  className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl"
+                  className="w-full py-4 bg-white text-slate-500 font-bold rounded-2xl border-2 border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-all duration-300 active:scale-95"
                 >
                   Nanti Saja
                 </button>
@@ -4643,6 +4644,11 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
               screenshotFormat="image/jpeg"
               forceScreenshotSourceSize={false}
               audioConstraints={false}
+              disablePictureInPicture={true}
+              imageSmoothing={true}
+              onUserMedia={() => {}}
+              onUserMediaError={() => {}}
+              screenshotQuality={0.92}
             />
         </div>
       )}
@@ -4994,26 +5000,26 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
 
         {/* Local actions: Mute and Hide */}
         <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-2 flex-wrap">
-          {audioBlocked && !isMuted && (
+          {audioBlocked && !isMuted ? (
             <button
               onClick={enableAudioManually}
-              className="px-6 py-4 bg-yellow-400 text-slate-900 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-yellow-300 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto shadow-xl"
+              className="px-6 py-4 bg-yellow-400 text-slate-900 border border-[#ffcbcb] rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-yellow-300 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto shadow-xl"
             >
               <Volume2 className="w-5 h-5" /> AKTIFKAN SUARA ALARM
             </button>
-          )}
+          ) : null}
 
           {!isMuted ? (
             <button
               onClick={() => setIsMuted(true)}
-              className="px-6 py-4 bg-red-700/50 border border-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="px-6 py-4 bg-red-700/50 border border-[#ffcbcb] text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <BellOff className="w-5 h-5" /> Stop Suara/Getar
             </button>
           ) : (
             <button
               onClick={() => setIsMuted(false)}
-              className="px-6 py-4 bg-emerald-600 border border-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="px-6 py-4 bg-emerald-600 border border-[#ffcbcb] text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Volume2 className="w-5 h-5" /> Nyalakan Suara/Getar
             </button>
@@ -5265,18 +5271,18 @@ function ETokoView({
         <div className="flex items-center gap-3 w-full md:w-auto">
           {isAdmin && (
             <div className="bg-slate-100 p-1 rounded-2xl flex border border-slate-200">
-              <button
+              <StyledButton
                 onClick={() => setView("buyer")}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === "buyer" ? "bg-white shadow-sm text-brand-blue" : "text-slate-500"}`}
-              >
-                Pembeli
-              </button>
-              <button
+                label="Pembeli"
+                colorType={view === "buyer" ? "pastelRed" : "secondary"}
+                className="text-xs px-4 py-2"
+              />
+              <StyledButton
                 onClick={() => setView("seller")}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === "seller" ? "bg-white shadow-sm text-brand-blue" : "text-slate-500"}`}
-              >
-                Penjual
-              </button>
+                label="Penjual"
+                colorType={view === "seller" ? "pastelBlue" : "secondary"}
+                className="text-xs px-4 py-2"
+              />
             </div>
           )}
 
@@ -5352,13 +5358,13 @@ function ETokoView({
                     ))}
                   </select>
                   {categories.map((c, i) => (
-                    <button
-                      key={`toko-cat-${c}-${i}`}
-                      onClick={() => setSelectedCategory(c)}
-                      className={`px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedCategory === c ? "bg-brand-blue text-white border-blue-600" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"}`}
-                    >
-                      {c}
-                    </button>
+                  <StyledButton
+                    key={`toko-cat-${c}-${i}`}
+                    onClick={() => setSelectedCategory(c)}
+                    label={c}
+                    colorType={selectedCategory === c ? "primary" : "secondary"}
+                    className="text-xs px-4 py-2 whitespace-nowrap"
+                  />
                   ))}
                 </div>
               </div>
@@ -5435,23 +5441,14 @@ function ETokoView({
                           </div>
                         </div>
 
-                        <button
+                        <StyledButton
                           disabled={p.stock <= 0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(p);
-                          }}
-                          className={`w-full py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 ${p.stock <= 0 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-95"}`}
-                        >
-                          {p.stock <= 0 ? (
-                            "Stok Habis"
-                          ) : (
-                            <>
-                              <ShoppingBag className="w-4 h-4" /> Tambah
-                              Keranjang
-                            </>
-                          )}
-                        </button>
+                          onClick={() => addToCart(p)}
+                          label={p.stock <= 0 ? "Stok Habis" : "Tambah Keranjang"}
+                          colorType={p.stock <= 0 ? "danger" : "success"}
+                          icon={p.stock > 0 && <ShoppingBag className="w-4 h-4" />}
+                          className="w-full py-3 text-[10px]"
+                        />
                       </div>
                     </div>
                   </motion.div>
@@ -6362,7 +6359,7 @@ function EVotingView({
         {
           [scopeId]: {
             status: nextStatus,
-            aturan: currentAturan,
+            aturan: currentAturan || "",
           },
         },
         { merge: true },
@@ -9533,23 +9530,21 @@ function UsersView({
             Manajemen Pengguna & Pemetaan Unit
           </h3>
           <div className="flex gap-2">
-            <button
+            <StyledButton
+              label="Tambah User"
               onClick={() => {
                 setEditingUser(null);
                 setShowForm(true);
               }}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Tambah User
-            </button>
-            <button
+              colorType="primary"
+              icon={<PlusCircle className="w-4 h-4" />}
+            />
+            <StyledButton
+              label="Daftar RT"
               onClick={() => setShowRTForm(true)}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
-            >
-              <UserPlus className="w-4 h-4" />
-              Daftar RT
-            </button>
+              colorType="success"
+              icon={<UserPlus className="w-4 h-4" />}
+            />
           </div>
         </div>
 
@@ -10118,17 +10113,15 @@ function TenantsView({
             </p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            setEditingTenant(null);
-            setShowAddForm(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold text-sm shadow-lg shadow-pink-100 hover:opacity-90 transition-all active:scale-95"
-          style={{ backgroundColor: "#fc1580" }}
-        >
-          <PlusCircle className="w-4 h-4" />
-          Tambah Tenant Baru
-        </button>
+            <StyledButton
+              label="Tambah Tenant Baru"
+              onClick={() => {
+                setEditingTenant(null);
+                setShowAddForm(true);
+              }}
+              colorType="primary"
+              icon={<PlusCircle className="w-4 h-4" />}
+            />
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -13940,15 +13933,14 @@ function BankSampahView({
                 />
               </div>
             </div>
-            {canEdit && (
-              <button
-                onClick={() => setShowSetoranForm(true)}
-                className="w-full sm:w-auto p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center justify-center gap-2"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Catat Setoran
-              </button>
-            )}
+              {canEdit && (
+                <StyledButton
+                  label="Catat Setoran"
+                  onClick={() => setShowSetoranForm(true)}
+                  colorType="success"
+                  icon={<PlusCircle className="w-4 h-4" />}
+                />
+              )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -14059,13 +14051,12 @@ function BankSampahView({
               />
             </div>
             {canEdit && (
-              <button
+              <StyledButton
+                label="Tarik Saldo"
                 onClick={() => setShowTarikForm(true)}
-                className="w-full sm:w-auto p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center justify-center gap-2"
-              >
-                <HandCoins className="w-4 h-4" />
-                Tarik Saldo
-              </button>
+                colorType="primary"
+                icon={<HandCoins className="w-4 h-4" />}
+              />
             )}
           </div>
           <div className="overflow-x-auto">
@@ -14313,17 +14304,15 @@ function BankSampahView({
                   onChange={handleImportExcel}
                 />
                 {canEdit && (
-                  <button
+                  <StyledButton
+                    label="Nasabah"
                     onClick={() => {
                       setEditingItem(null);
                       setShowNasabahForm(true);
                     }}
-                    className="p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center gap-2"
-                    title="Tambah Nasabah Baru"
-                  >
-                    <PlusCircle className="w-4 h-4" />
-                    Nasabah
-                  </button>
+                    colorType="success"
+                    icon={<PlusCircle className="w-4 h-4" />}
+                  />
                 )}
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -14454,15 +14443,14 @@ function BankSampahView({
             <h3 className="font-bold text-slate-800">
               Kategori Sampah & Harga
             </h3>
-            {canEdit && (
-              <button
-                onClick={() => setShowKategoriForm(true)}
-                className="p-2 px-3 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-95 font-bold text-sm flex items-center gap-2"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Tambah Kategori
-              </button>
-            )}
+              {canEdit && (
+                <StyledButton
+                  label="Tambah Kategori"
+                  onClick={() => setShowKategoriForm(true)}
+                  colorType="success"
+                  icon={<PlusCircle className="w-4 h-4" />}
+                />
+              )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
             {sampahKategoriData.map((kat: any) => (
@@ -14577,22 +14565,22 @@ function BankSampahView({
                 </div>
               </div>
               <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
+                <StyledButton
+                  label="Batal"
                   onClick={() => {
                     setShowKategoriForm(false);
                     setEditingItem(null);
                   }}
-                  className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50"
-                >
-                  Batal
-                </button>
-                <button
+                  colorType="secondary"
+                  className="flex-1"
+                />
+                <StyledButton
+                  label="Simpan Kategori"
+                  onClick={() => {}}
                   type="submit"
-                  className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all"
-                >
-                  Simpan Kategori
-                </button>
+                  colorType="success"
+                  className="flex-1"
+                />
               </div>
             </form>
           </motion.div>
@@ -14698,19 +14686,19 @@ function BankSampahView({
                 </div>
               </div>
               <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
+                <StyledButton
+                  label="Batal"
                   onClick={() => setShowSetoranForm(false)}
-                  className="flex-1 py-3 bg-white border border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-slate-50"
-                >
-                  Batal
-                </button>
-                <button
+                  colorType="secondary"
+                  className="flex-1"
+                />
+                <StyledButton
+                  label="Simpan Setoran"
+                  onClick={() => {}}
                   type="submit"
-                  className="flex-1 py-3 bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transform active:scale-95 transition-all"
-                >
-                  Simpan Setoran
-                </button>
+                  colorType="success"
+                  className="flex-1"
+                />
               </div>
             </form>
           </motion.div>

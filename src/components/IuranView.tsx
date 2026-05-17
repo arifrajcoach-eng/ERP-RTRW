@@ -122,6 +122,10 @@ export function IuranView({
       i.nik?.toLowerCase().includes(query) ||
       i.alamat?.toLowerCase().includes(query)
     );
+  }).sort((a: any, b: any) => {
+    const dateA = new Date(a.tanggal || a.createdAt || 0).getTime();
+    const dateB = new Date(b.tanggal || b.createdAt || 0).getTime();
+    return dateB - dateA;
   });
 
   const [editingTrx, setEditingTrx] = useState<any>(null);
@@ -569,20 +573,20 @@ export function IuranView({
   
   return (
     <div className="space-y-6">
-      <div className="flex bg-white/40 backdrop-blur-md p-1.5 rounded-[1.8rem] border border-white/60 w-fit shadow-sm">
+      <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 w-fit shadow-sm">
         <button
           onClick={() => setActiveSubTab('pembayaran')}
-          className={`flex items-center gap-2.5 px-8 py-3.5 rounded-full text-[13px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'pembayaran' ? 'bg-[#008bb5] text-white shadow-lg shadow-[#008bb5]/20 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'pembayaran' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
         >
-          <CreditCard className="w-4 h-4" />
+          <CreditCard className="w-3.5 h-3.5" />
           Riwayat
         </button>
         {isPengurus && (
           <button
             onClick={() => setActiveSubTab('rekap')}
-            className={`flex items-center gap-2.5 px-8 py-[10px] ml-[18px] rounded-full text-[13px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'rekap' ? 'bg-[#0cbb97] text-white shadow-lg shadow-[#0cbb97]/20 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center gap-2.5 px-6 py-3 ml-1 rounded-xl text-[11px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'rekap' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-3.5 h-3.5" />
             Rekap Iuran
           </button>
         )}

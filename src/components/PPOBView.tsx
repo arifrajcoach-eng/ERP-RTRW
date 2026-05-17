@@ -10,7 +10,12 @@ import {
   X, 
   Info, 
   ShieldCheck,
-  QrCode
+  QrCode,
+  Gamepad2,
+  Tv,
+  Phone,
+  Wallet,
+  Coins
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -56,6 +61,11 @@ export function PPOBView({
     { id: 'PDAM', name: 'Air PDAM', desc: 'Bayar tagihan air', icon: <Droplets className="w-5 h-5 text-cyan-500" /> },
     { id: 'Tiket Kereta', name: 'Tiket Kereta Api', desc: 'Pesan KAI', icon: <Train className="w-5 h-5 text-orange-500" /> },
     { id: 'BPJS', name: 'BPJS Kesehatan', desc: 'Bayar iuran BPJS', icon: <ShieldAlert className="w-5 h-5 text-green-500" /> },
+    { id: 'Voucher', name: 'Voucher Digital', desc: 'Game, Streaming, App Store', icon: <Gamepad2 className="w-5 h-5 text-purple-500" /> },
+    { id: 'TV', name: 'TV & Internet', desc: 'Bayar tagihan TV/Internet', icon: <Tv className="w-5 h-5 text-rose-500" /> },
+    { id: 'Telepon', name: 'Telepon', desc: 'Bayar tagihan telepon', icon: <Phone className="w-5 h-5 text-teal-500" /> },
+    { id: 'Wallet', name: 'E-Wallet', desc: 'Top Up E-Wallet', icon: <Wallet className="w-5 h-5 text-indigo-500" /> },
+    { id: 'E-Money', name: 'E-Money', desc: 'Top Up E-Money', icon: <Coins className="w-5 h-5 text-emerald-500" /> },
   ];
 
   const handleSimulasiBayar = async (e: React.FormEvent) => {

@@ -37,6 +37,7 @@ import {
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { jsPDF } from 'jspdf';
+import { StyledButton } from './StyledButton';
 import { ConfirmModal } from './ui/ConfirmModal';
 
 interface SuratViewProps {
@@ -588,20 +589,20 @@ export function SuratView({
   return (
     <div className="space-y-6">
       <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit">
-        <button
+        <StyledButton 
+          label="Sedang Berjalan"
           onClick={() => setActiveSubTab('berjalan')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'berjalan' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Clock className="w-4 h-4" />
-          <span className="uppercase">Sedang Berjalan</span>
-        </button>
-        <button
+          colorType={activeSubTab === 'berjalan' ? 'brightPink' : 'secondary'}
+          icon={<Clock className="w-4 h-4" />}
+          className="text-xs uppercase"
+        />
+        <StyledButton 
+          label="Riwayat / Arsip"
           onClick={() => setActiveSubTab('arsip')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'arsip' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <History className="w-4 h-4" />
-          <span className="uppercase">Riwayat / Arsip</span>
-        </button>
+          colorType={activeSubTab === 'arsip' ? 'pastelRedActive' : 'secondary'}
+          icon={<History className="w-4 h-4" />}
+          className="text-xs uppercase"
+        />
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
