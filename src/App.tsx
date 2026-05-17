@@ -4751,57 +4751,64 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
         setAudioBlocked(false);
         
         if (audioCtx.state === "running") {
-          scheduleNextPulse();
+          startWarSiren();
         }
       } catch (e) {
         console.warn("SOS Audio Start Error:", e);
       }
     };
 
-    const scheduleNextPulse = () => {
+    let activeOsc: OscillatorNode | null = null;
+    let activeLFO: OscillatorNode | null = null;
+    let activeGain: GainNode | null = null;
+
+    const startWarSiren = () => {
       if (!audioCtxRef.current || isMuted || !emergency) return;
       
       const ctx = audioCtxRef.current;
       const now = ctx.currentTime;
-      const pulseDuration = 0.6; // Durasi per nada (0.6 detik)
       
-      // Buat oscillator untuk pulsa saat ini
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      // Main Siren Oscillator
+      activeOsc = ctx.createOscillator();
+      activeOsc.type = "sawtooth"; // Karakter suara gergaji yang berat/mekanis
+      activeOsc.frequency.setValueAtTime(450, now); // Frekuensi dasar rendah
+
+      // LFO (Low Frequency Oscillator) untuk kontrol ayunan nada
+      activeLFO = ctx.createOscillator();
+      activeLFO.type = "sine";
+      activeLFO.frequency.setValueAtTime(0.25, now); // Kecepatan ayun lambat (4 detik per siklus)
       
-      osc.type = "square"; // Suara lebih tajam/alarm
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(150, now); // Rentang ayunan: 450 +/- 150 = 300Hz ke 600Hz
+
+      activeLFO.connect(lfoGain);
+      lfoGain.connect(activeOsc.frequency); // Modulasi frekuensi osc utama
+
+      activeGain = ctx.createGain();
+      activeGain.gain.setValueAtTime(0, now);
+      activeGain.gain.linearRampToValueAtTime(0.8, now + 1); // Fade in berat
+
+      activeOsc.connect(activeGain);
+      activeGain.connect(ctx.destination);
       
-      // Pola dua nada (Hi-Lo)
-      const isEven = Math.floor(now / pulseDuration) % 2 === 0;
-      osc.frequency.setValueAtTime(isEven ? 880 : 660, now);
-      
-      // Envelope volume agar tidak ada 'klik'
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.5, now + 0.1);
-      gain.gain.setValueAtTime(0.5, now + pulseDuration - 0.1);
-      gain.gain.linearRampToValueAtTime(0, now + pulseDuration);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.start(now);
-      osc.stop(now + pulseDuration);
-      
-      // Jadwalkan pulsa berikutnya sedikit sebelum berakhir agar seamless
-      sirenIntervalRef.current = setTimeout(scheduleNextPulse, (pulseDuration - 0.05) * 1000);
+      activeOsc.start(now);
+      activeLFO.start(now);
     };
 
     startAudioContext();
 
-    // Getaran terpisah
+    // Getaran terpisah (lebih lambat mengikuti irama sirine)
     const vibInterval = setInterval(() => {
       if (!isMuted && typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate([400, 200, 400]);
+        navigator.vibrate([800, 400]);
       }
-    }, 1000);
+    }, 2000);
 
     return () => {
       if (vibInterval) clearInterval(vibInterval);
+      if (activeOsc) { try { activeOsc.stop(); activeOsc.disconnect(); } catch(e){} }
+      if (activeLFO) { try { activeLFO.stop(); activeLFO.disconnect(); } catch(e){} }
+      if (activeGain) { try { activeGain.disconnect(); } catch(e){} }
       if (sirenIntervalRef.current) {
         clearTimeout(sirenIntervalRef.current);
         sirenIntervalRef.current = null;
