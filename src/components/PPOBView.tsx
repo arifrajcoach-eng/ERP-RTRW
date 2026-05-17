@@ -138,8 +138,8 @@ export function PPOBView({
           <h2 className="text-2xl font-black mb-2 flex items-center gap-2"><Smartphone className="w-6 h-6" /> Layanan PPOB & Tiketing</h2>
           <p className="text-blue-100 text-sm font-medium">Beli pulsa, token listrik, bayar tagihan hingga tiket kereta dari aplikasi warga. Setiap transaksi akan memberikan keuntungan otomatis (komisi) yang masuk ke Saldo Kas RT/RW!</p>
         </div>
-        <button onClick={() => setShowSimulasiForm(true)} className="relative z-10 bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors shadow-lg active:scale-95 whitespace-nowrap">
-          Lakukan Transaksi
+        <button onClick={() => setShowSimulasiForm(true)} className="relative z-10 bg-white text-[#008bb5] px-8 py-3.5 rounded-full font-black text-sm uppercase tracking-widest hover:bg-slate-100 transition-all duration-300 shadow-lg shadow-black/10 active:scale-95 whitespace-nowrap">
+          Transaksikan Sekarang
         </button>
       </div>
 

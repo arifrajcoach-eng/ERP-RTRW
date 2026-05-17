@@ -615,9 +615,9 @@ export function KasView({
                 setTrxType("Masuk");
                 setShowMasukForm(true);
               }}
-              className="flex items-center gap-1.5 bg-[#008bb5] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-opacity-90 shadow-sm"
+              className="flex items-center gap-2 bg-[#0cbb97] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all hover:opacity-90 shadow-lg shadow-[#0cbb97]/25"
             >
-              <PlusCircle className="w-3.5 h-3.5" /> Entri Kas
+              <PlusCircle className="w-4 h-4" /> Entri Kas Baru
             </button>
           </div>
         </div>
@@ -789,10 +789,8 @@ export function KasView({
                       name="tanggal"
                       type="date"
                       defaultValue={
-                        editingKas
-                          ? new Date(editingKas.tanggal)
-                              .toISOString()
-                              .split("T")[0]
+                        editingKas && editingKas.tanggal && !isNaN(new Date(editingKas.tanggal).getTime())
+                          ? new Date(editingKas.tanggal).toISOString().split("T")[0]
                           : scannedData?.tanggal ||
                             new Date().toISOString().split("T")[0]
                       }

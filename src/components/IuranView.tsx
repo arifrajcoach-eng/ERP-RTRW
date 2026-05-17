@@ -215,7 +215,7 @@ export function IuranView({
 
   const handlePgSuccess = async () => {
     const id = `IURAN-${Date.now()}`;
-    const dateObj = pgFormState.tanggal ? new Date(pgFormState.tanggal) : new Date();
+    const dateObj = (pgFormState.tanggal && !isNaN(new Date(pgFormState.tanggal).getTime())) ? new Date(pgFormState.tanggal) : new Date();
     
     let nik = currentUser.nik || currentUser.uid || currentUser.id_user;
     let nama = currentUser.nama || currentUser.name || "Warga";
@@ -346,18 +346,18 @@ export function IuranView({
       <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit">
         <button
           onClick={() => setActiveSubTab('pembayaran')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'pembayaran' ? 'bg-[#008bb5] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex items-center gap-2.5 px-6 py-3 rounded-full text-[14px] font-black transition-all duration-300 ${activeSubTab === 'pembayaran' ? 'bg-[#008bb5] text-white shadow-xl shadow-[#008bb5]/30' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
         >
           <CreditCard className="w-4 h-4" />
-          <span className="uppercase tracking-tight">Riwayat Pembayaran</span>
+          <span className="uppercase tracking-wider">Riwayat</span>
         </button>
         {isPengurus && (
           <button
             onClick={() => setActiveSubTab('rekap')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[15px] font-black transition-all ${activeSubTab === 'rekap' ? 'bg-[#008bb5] text-[#ffffff] shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center gap-2.5 px-6 py-3 rounded-full text-[14px] font-black transition-all duration-300 ${activeSubTab === 'rekap' ? 'bg-[#0cbb97] text-white shadow-xl shadow-[#0cbb97]/30' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
           >
             <Users className="w-4 h-4" />
-            <span className="uppercase tracking-tight">Rekap Iuran Warga</span>
+            <span className="uppercase tracking-wider">Rekap Iuran</span>
           </button>
         )}
       </div>
@@ -387,8 +387,8 @@ export function IuranView({
               <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
-              <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-700 shadow-sm">
-                <PlusCircle className="w-3.5 h-3.5" /> Buat Pembayaran
+              <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-[#008bb5] text-white px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all hover:opacity-90 shadow-lg shadow-[#008bb5]/25">
+                <PlusCircle className="w-4 h-4" /> Entri Pembayaran
               </button>
             </div>
           </div>
@@ -410,8 +410,8 @@ export function IuranView({
                 {filteredTransactions.length === 0 && (
                   <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Tidak ada data.</td></tr>
                 )}
-                {filteredTransactions.map((trx: any) => (
-                  <tr key={trx.id} className="hover:bg-slate-50 transition-colors">
+                {filteredTransactions.map((trx: any, idx: number) => (
+                  <tr key={`iuran-row-${trx.id || idx}`} className="hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-3 text-xs">{new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td className="px-5 py-3">
                       <div className="font-bold text-slate-800">{trx.namaPenyetor}</div>

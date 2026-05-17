@@ -19,7 +19,9 @@ import {
   Eye,
   Trash2,
   Edit,
-  LogOut
+  LogOut,
+  Image,
+  RefreshCw
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -53,7 +55,9 @@ export function BukuTamuView({
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const webcamRef = useRef<Webcam>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredTamu = tamuData.filter(t => 
     t.nama?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -67,6 +71,21 @@ export function BukuTamuView({
       setShowWebcam(false);
     }
   }, [webcamRef]);
+
+  const toggleFacingMode = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCapturedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleCheckOut = async (id: string) => {
     setIsLoadingDB(true);
@@ -170,7 +189,7 @@ export function BukuTamuView({
              {/* Only show "monitoring" webcam if not actively capturing a guest photo to avoid conflicts */}
              {!showWebcam && (
                /* @ts-ignore */
-               <Webcam audio={false} videoConstraints={{ facingMode: { ideal: "environment" } }} mirrored={false} className="w-full h-full object-cover opacity-80 mix-blend-screen" />
+               <Webcam audio={false} videoConstraints={{ facingMode: "environment" }} mirrored={false} className="w-full h-full object-cover opacity-80" />
              )}
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 pointer-events-none"></div>
@@ -337,25 +356,32 @@ export function BukuTamuView({
                 </div>
                 
                 <form onSubmit={handleSubmitTamu} className="p-6 overflow-y-auto space-y-5">
-                   <div className="flex flex-col items-center gap-4">
-                      {capturedImage ? (
-                        <div className="relative w-40 h-40 bg-slate-100 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
-                           <img src={capturedImage} className="w-full h-full object-cover" />
-                           {formMode !== 'view' && <button type="button" onClick={() => setCapturedImage(null)} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-md"><X className="w-4 h-4" /></button>}
-                        </div>
-                      ) : (
-                        formMode !== 'view' ? (
-                          <div className="w-40 h-40 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onClick={() => setShowWebcam(true)}>
-                             <Camera className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" />
-                             <span className="text-[10px] font-black uppercase tracking-widest text-center px-4">Ambil Foto Identitas / Wajah</span>
-                          </div>
-                        ) : (
-                          <div className="w-40 h-40 bg-slate-50 rounded-3xl border border-slate-200 flex items-center justify-center text-slate-400">
-                            <span className="text-[10px] font-bold uppercase">Tanpa Foto</span>
-                          </div>
-                        )
-                      )}
-                   </div>
+                    <div className="flex flex-col items-center gap-4">
+                       {capturedImage ? (
+                         <div className="relative w-40 h-40 bg-slate-100 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
+                            <img src={capturedImage} className="w-full h-full object-cover" />
+                            {formMode !== 'view' && <button type="button" onClick={() => setCapturedImage(null)} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-md"><X className="w-4 h-4" /></button>}
+                         </div>
+                       ) : (
+                         formMode !== 'view' ? (
+                           <div className="flex gap-4">
+                              <div className="w-32 h-32 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onClick={() => setShowWebcam(true)}>
+                                <Camera className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform" />
+                                <span className="text-[8px] font-black uppercase tracking-widest text-center px-2">Ambil Foto</span>
+                              </div>
+                              <div className="w-32 h-32 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
+                                <Image className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform" />
+                                <span className="text-[8px] font-black uppercase tracking-widest text-center px-2">Unggah Foto</span>
+                                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+                              </div>
+                           </div>
+                         ) : (
+                           <div className="w-40 h-40 bg-slate-50 rounded-3xl border border-slate-200 flex items-center justify-center text-slate-400">
+                             <span className="text-[10px] font-bold uppercase">Tanpa Foto</span>
+                           </div>
+                         )
+                       )}
+                    </div>
 
                    <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -408,10 +434,14 @@ export function BukuTamuView({
                   audio={false} 
                   ref={webcamRef} 
                   screenshotFormat="image/jpeg" 
-                  videoConstraints={{ facingMode: { ideal: "environment" } }}
+                  videoConstraints={{ facingMode }}
                   forceScreenshotSourceSize={true}
+                  mirrored={facingMode === 'user'}
                   className="w-full h-full object-cover" 
                 />
+                <div className="absolute top-4 left-4 flex gap-2">
+                   <button onClick={toggleFacingMode} title="Balik Kamera" className="bg-white/20 hover:bg-white/40 p-2 rounded-full text-white backdrop-blur-md transition-all"><RefreshCw className="w-6 h-6" /></button>
+                </div>
                 <button onClick={() => setShowWebcam(false)} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 p-2 rounded-full text-white backdrop-blur-md transition-all"><X className="w-6 h-6" /></button>
              </div>
              <div className="mt-8 flex gap-6">

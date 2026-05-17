@@ -627,7 +627,7 @@ export default function DashboardView({
           </div>
           <div className="space-y-4">
             {recentActivities.map((act, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+              <div key={`activity-${act.id || i}`} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                   act.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 
                   act.type === 'out' ? 'bg-rose-50 text-rose-600' :

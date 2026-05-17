@@ -89,6 +89,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import Webcam from 'react-webcam';
 import {
   BarChart,
   Bar,
@@ -105,7 +106,6 @@ import {
   Pie,
 } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
-import Webcam from "react-webcam";
 import { db } from "./firebase";
 import {
   collection,
@@ -1288,15 +1288,8 @@ export default function App() {
   );
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    // Additional generic cleanup or logic for emergencies can go here.
-    // The actual audio playing logic has been moved to SOSOverlay.
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [activeEmergency]);
+    // Redundant - audio logic is in SOSOverlay
+  }, [activeEmergency?.id]);
 
   const showNotification = (
     message: string,
@@ -2782,6 +2775,7 @@ export default function App() {
       <AnimatePresence>
         {activeEmergency && (
           <SOSOverlay
+            key={activeEmergency.id}
             emergency={activeEmergency}
             onResolve={handleResolveSOS}
             onCloseLocal={() => setHiddenEmergencyId(activeEmergency.id)}
@@ -4506,13 +4500,13 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
 function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
   const [links, setLinks] = useState<string[]>(settings?.cctvLinks || []);
   const [newLink, setNewLink] = useState("");
+  const [showLocalCamera, setShowLocalCamera] = useState(false);
 
   const addLink = () => {
     if (!newLink) return;
     const updated = [...links, newLink];
     setLinks(updated);
     setNewLink("");
-    // in real app update settings in firestore
   };
 
   return (
@@ -4524,7 +4518,7 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
           </h2>
           <p className="text-slate-500 font-medium text-sm">
             Pantauan real-time area strategis melalui link IP Camera /
-            Streaming.
+            Streaming atau Kamera Lokal.
           </p>
         </div>
         <div className="flex gap-2">
@@ -4542,8 +4536,23 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
           </button>
         </div>
       </div>
+      
+      <div className="flex gap-4">
+          <button
+            onClick={() => setShowLocalCamera(!showLocalCamera)}
+            className={`px-6 py-3 rounded-full font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-lg ${showLocalCamera ? 'bg-red-600 text-white' : 'bg-[#008bb5] text-white'}`}
+          >
+            {showLocalCamera ? 'Tutup Kamera Lokal' : 'Buka Kamera Lokal'}
+          </button>
+      </div>
+      
+      {showLocalCamera && (
+        <div className="rounded-[2rem] overflow-hidden border-4 border-slate-200 shadow-xl aspect-video md:w-1/2">
+            <Webcam audio={false} videoConstraints={{ facingMode: "user" }} className="w-full h-full object-cover" />
+        </div>
+      )}
 
-      {links.length === 0 ? (
+      {links.length === 0 && !showLocalCamera ? (
         <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center">
           <Video className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
@@ -4611,23 +4620,19 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    const playPulse = async () => {
-      // Vibrate for all supported devices
+    if (!emergency || isMuted) {
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        try {
-          navigator.vibrate([1000, 500, 1000, 500]);
-        } catch (e) {}
+        try { navigator.vibrate(0); } catch (e) {}
       }
+      return;
+    }
 
-      if (isMuted) return;
+    let intervalId: NodeJS.Timeout;
 
-      // Sound Notification using Web Audio API (Suara Sinyal Perang)
+    const playSirenPulse = async () => {
       try {
         if (!audioCtxRef.current) {
-          const AudioContextClass =
-            window.AudioContext || (window as any).webkitAudioContext;
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
           if (AudioContextClass) {
             audioCtxRef.current = new AudioContextClass();
           }
@@ -4637,65 +4642,61 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
         if (!audioCtx) return;
 
         if (audioCtx.state === "suspended") {
-          setAudioBlocked(true);
           try {
             await audioCtx.resume();
-            setAudioBlocked(false);
           } catch (err) {
-            // Still suspended, user gesture probably required
+            setAudioBlocked(true);
             return;
           }
         }
+        setAudioBlocked(false);
 
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
+        if (audioCtx.state === "running") {
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
 
-        // Sinyal Perang: Sweeping frequency
-        oscillator.type = "sawtooth";
-        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-        oscillator.frequency.linearRampToValueAtTime(
-          800,
-          audioCtx.currentTime + 1.5,
-        );
-        oscillator.frequency.linearRampToValueAtTime(
-          300,
-          audioCtx.currentTime + 3,
-        );
+          // Siren: Sweeping frequency 
+          oscillator.type = "sawtooth";
+          const now = audioCtx.currentTime;
+          
+          oscillator.frequency.setValueAtTime(300, now);
+          oscillator.frequency.exponentialRampToValueAtTime(900, now + 1);
+          oscillator.frequency.exponentialRampToValueAtTime(300, now + 2);
 
-        // Volume curve
-        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5);
-        gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 2.5);
-        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+          // Gain envelope
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(1, now + 0.1);
+          gainNode.gain.setValueAtTime(1, now + 1.8);
+          gainNode.gain.linearRampToValueAtTime(0, now + 2);
 
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 3);
+          oscillator.start(now);
+          oscillator.stop(now + 2);
+
+          if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+            navigator.vibrate([1000, 500, 500]);
+          }
+        }
       } catch (e) {
-        console.warn("Audio Context playback failed (likely autoplay):", e);
+        console.warn("SOS Siren Pulse Error:", e);
       }
     };
 
-    if (!isMuted) {
-      // Play immediately
-      playPulse();
-      // Repeat every 3 seconds to match the siren length
-      interval = setInterval(playPulse, 3000);
-    } else {
-      // Stop vibration if muted
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        try {
-          navigator.vibrate(0);
-        } catch (e) {}
-      }
-    }
+    // Play immediately
+    playSirenPulse();
+    
+    // Repeat every 2.1 seconds for a consistent loop (matching the 2s sound duration)
+    intervalId = setInterval(playSirenPulse, 2100);
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (intervalId) clearInterval(intervalId);
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate(0); } catch (e) {}
+      }
     };
-  }, [isMuted]);
+  }, [isMuted, emergency?.id]);
 
   // Cleanup audio context on unmount
   useEffect(() => {
