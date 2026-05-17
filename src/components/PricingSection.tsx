@@ -16,75 +16,135 @@ export const PricingSection: React.FC = () => {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <section className="py-20 bg-[#001F3F] text-white">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#D4AF37] mb-4">Pilihan Paket Nexyn</h2>
-          <p className="text-lg text-slate-300 font-sans">Solusi ERP RT/RW Tactical Elegance</p>
+    <section className="py-12 bg-white">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-pink/10 text-brand-pink text-[10px] font-black uppercase tracking-widest mb-4">
+            <Sparkles className="w-3 h-3" />
+            Promo Terbatas
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-2">
+            Pilih Paket <span className="text-brand-pink">SmartRW AI</span>
+          </h2>
+          <p className="text-slate-500 text-sm max-w-lg mx-auto leading-relaxed">
+            Solusi digitalisasi RT/RW tercanggih di Indonesia. <br className="hidden md:block" />
+            Pilih paket yang sesuai dengan kebutuhan lingkungan Anda.
+          </p>
           
-          <div className="mt-8 flex justify-center items-center gap-4">
-            <span className={`text-sm ${!isYearly ? 'font-bold text-white' : 'text-slate-400'}`}>Bulanan</span>
+          <div className="mt-8 flex justify-center items-center gap-5">
+            <span className={`text-xs font-bold uppercase tracking-widest ${!isYearly ? 'text-brand-blue' : 'text-slate-400'}`}>Bulanan</span>
             <button 
               onClick={() => setIsYearly(!isYearly)}
-              className="w-14 h-7 bg-slate-700 rounded-full p-1 transition-all flex items-center"
+              className="w-14 h-8 bg-slate-100 rounded-full p-1 transition-all flex items-center border border-slate-200"
             >
-              <div className={`w-5 h-5 bg-[#D4AF37] rounded-full transition-transform ${isYearly ? 'translate-x-7' : 'translate-x-0'}`} />
+              <div className={`w-6 h-6 bg-brand-pink rounded-full transition-transform shadow-md ${isYearly ? 'translate-x-6' : 'translate-x-0'}`} />
             </button>
-            <span className={`text-sm ${isYearly ? 'font-bold text-white' : 'text-slate-400'}`}>Tahunan (Hemat 20%)</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold uppercase tracking-widest ${isYearly ? 'text-brand-pink' : 'text-slate-400'}`}>Tahunan</span>
+              <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black rounded-full animate-pulse">HEMAT 20%</span>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {Object.values(PLAN_CONFIG).map((plan) => {
             const Icon = icons[plan.id];
+            const isBestSeller = (plan as any).isBestSeller;
+            const price = isYearly ? plan.priceYearly : plan.priceMonthly;
+            const oldPrice = isYearly ? (plan as any).priceOldYearly || (plan as any).priceOldMonthly * 12 : (plan as any).priceOldMonthly;
+
             return (
               <motion.div
                 key={plan.id}
-                whileHover={{ y: -10 }}
-                className={`relative p-6 rounded-3xl backdrop-blur-md bg-white/5 border border-white/10 flex flex-col ${
-                  (plan as any).isBestSeller ? 'border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.3)]' : ''
+                whileHover={{ y: -5 }}
+                className={`relative p-8 rounded-[2.5rem] border-2 flex flex-col transition-all overflow-hidden ${
+                  isBestSeller 
+                    ? 'border-brand-pink bg-white shadow-2xl shadow-brand-pink/10 ring-4 ring-brand-pink/5' 
+                    : 'border-slate-100 bg-slate-50/50 hover:bg-white hover:border-brand-blue/20 hover:shadow-xl'
                 }`}
               >
-              {(plan as any).isBestSeller && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-black font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
-                  Rekomendasi Pengurus RW
+                {isBestSeller && (
+                  <div className="absolute top-0 right-0">
+                    <div className="bg-brand-pink text-white text-[8px] font-black py-1 px-8 rotate-45 translate-x-6 translate-y-3 uppercase tracking-tighter">
+                      Terpopuler
+                    </div>
+                  </div>
+                )}
+                
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-5 ${isBestSeller ? 'bg-brand-pink text-white shadow-lg shadow-brand-pink/20' : 'bg-white text-slate-400 border border-slate-100'}`}>
+                  <Icon className="w-6 h-6" />
                 </div>
-              )}
-              
-              <Icon className="w-8 h-8 text-[#D4AF37] mb-4" />
-              <h3 className="text-xl font-serif font-bold mb-0.5">{plan.name}</h3>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-4 font-sans">{plan.focus}</p>
-              
-              <div className="text-2xl font-bold mb-6 font-sans">
-                {plan.priceMonthly === 0 ? 'GRATIS' : `Rp${(isYearly ? plan.priceYearly : plan.priceMonthly).toLocaleString('id-ID')}`}
-                {plan.priceMonthly > 0 && <span className="text-sm font-normal text-slate-400">/{isYearly ? 'thn' : 'bln'}</span>}
-              </div>
 
-              <ul className="space-y-3 mb-6 flex-grow">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-xs font-sans text-slate-200">
-                    <Check className="w-3 h-3 text-[#D4AF37] flex-shrink-0 mt-0.5" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+                <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">{plan.name}</h3>
+                <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest mb-6">{plan.focus}</p>
+                
+                <div className="mb-6">
+                  {oldPrice > 0 && (
+                    <div className="text-slate-400 text-xs line-through font-bold mb-1">
+                      Rp{oldPrice.toLocaleString('id-ID')}
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-slate-800">
+                      {price === 0 ? 'GRATIS' : `Rp${(price / (isYearly ? 12 : 1)).toLocaleString('id-ID')}`}
+                    </span>
+                    {price > 0 && <span className="text-[10px] font-bold text-slate-400 uppercase">/bln*</span>}
+                  </div>
+                  {isYearly && price > 0 && (
+                    <p className="text-[9px] font-bold text-emerald-600 mt-1 uppercase">Dibayar per tahun</p>
+                  )}
+                </div>
 
-              <button className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                (plan as any).isBestSeller ? 'bg-[#D4AF37] text-black hover:bg-white' : 'bg-transparent border border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black'
-              }`}>
-                {plan.priceMonthly === 0 ? 'Mulai Sekarang' : 'Pilih Paket'}
-              </button>
-            </motion.div>
+                <div className="space-y-4 mb-8 flex-grow">
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-100 pb-2">Fitur Utama</p>
+                  <ul className="space-y-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2.5 text-xs text-slate-600 font-medium leading-snug">
+                        <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${isBestSeller ? 'bg-brand-pink/10 text-brand-pink' : 'bg-brand-blue/10 text-brand-blue'}`}>
+                          <Check className="w-2.5 h-2.5" />
+                        </div>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button 
+                  onClick={() => window.open(`https://wa.me/087726741143?text=Halo%20Admin,%20saya%20tertarik%20dengan%20Paket%20${plan.name}%20SmartRW%20AI`, '_blank')}
+                  className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    isBestSeller 
+                      ? 'bg-brand-pink text-white shadow-lg shadow-brand-pink/20 hover:scale-[1.05] active:scale-95' 
+                      : 'bg-white border-2 border-slate-200 text-slate-400 hover:border-brand-blue hover:text-brand-blue hover:bg-brand-blue/5'
+                  }`}
+                >
+                  {plan.priceMonthly === 0 ? 'Daftar Gratis' : 'Pilih Paket'}
+                </button>
+              </motion.div>
             )
           })}
         </div>
 
-        <div className="mt-16 text-center text-slate-400 text-sm font-sans bg-white/5 p-6 rounded-2xl border border-white/5">
-          <p>
-            <ShieldCheck className="w-5 h-5 inline mr-2 text-[#D4AF37]"/>
-            Sistem Bagi Hasil 50:50 untuk Dana Pengembangan Sistem & Kas Lingkungan
-          </p>
+        <div className="mt-12 p-6 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-500 border border-slate-100 shadow-sm">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-800 uppercase tracking-widest mb-0.5">Sistem Bagi Hasil 50:50</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Dana Pengembangan & Kas Lingkungan</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20konsultasi%20mengenai%20SmartRW%20AI', '_blank')}
+            className="px-8 py-4 bg-brand-blue text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-brand-blue/20 hover:scale-105 transition-all"
+          >
+            Konsultasi Admin
+          </button>
         </div>
+        
+        <p className="text-center mt-8 text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+          *Harga sewaktu-waktu dapat berubah sesuai kebijakan promo yang berlaku.
+        </p>
       </div>
     </section>
   );

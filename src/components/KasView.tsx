@@ -729,12 +729,12 @@ export function KasView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white/90 backdrop-blur-xl w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-black text-slate-800 flex items-center gap-2">
-                  <div className="p-2 bg-blue-600 text-white rounded-xl">
-                    <Wallet className="w-4 h-4" />
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50 shrink-0">
+                <h3 className="font-black text-slate-800 flex items-center gap-3">
+                  <div className="p-2 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
+                    <Wallet className="w-5 h-5" />
                   </div>
                   {editingKas ? "Edit Transaksi Kas" : "Entri Kas Baru"}
                 </h3>
@@ -743,7 +743,7 @@ export function KasView({
                     setShowMasukForm(false);
                     setEditingKas(null);
                   }}
-                  className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"
+                  className="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-all active:scale-90"
                 >
                   <X className="w-5 h-5" />
                 </button>

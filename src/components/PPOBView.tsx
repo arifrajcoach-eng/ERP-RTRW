@@ -61,7 +61,7 @@ export function PPOBView({
   const handleSimulasiBayar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nominal || !tujuan) {
-      showNotification('Harap isi nomor tujuan dan nominal', 'error');
+      showNotification('Harap isi nomor tujuan and nominal', 'error');
       return;
     }
     
@@ -70,6 +70,8 @@ export function PPOBView({
     // Pemilik Aplikasi (Owner) mendapatkan 40% dari Biaya Admin
     const komisiRT = Math.floor(adminFee * 0.6);
     const komisiOwner = Math.floor(adminFee * 0.4);
+    const nominalInt = parseInt(nominal.replace(/\D/g, '') || "0");
+    const totalBayar = nominalInt + adminFee;
     
     const trxId = `PPOB-${Date.now()}`;
     const payload = {
@@ -79,11 +81,11 @@ export function PPOBView({
       tanggal: new Date().toISOString(),
       layanan: selectedLayanan,
       tujuan,
-      nominal: parseInt(nominal.replace(/\D/g, '') || "0"),
+      nominal: nominalInt,
       adminFee,
       komisiOwner, // Keuntungan untuk Anda
       komisiRT,    // Keuntungan untuk RT/RW
-      totalBayar: parseInt(nominal.replace(/\D/g, '') || "0") + adminFee,
+      totalBayar,
       status: 'Berhasil',
       userId: currentUser?.uid || currentUser?.id_user || null,
       namaPembeli: currentUser?.nama || currentUser?.name || 'Warga'
@@ -95,7 +97,31 @@ export function PPOBView({
       await setDoc(doc(db, 'ppob_trx', trxId), payload);
       setPpobData((prev: any) => [payload, ...prev]);
 
-      // 2. Tambahkan komisi kas RT (Hanya bagian RT yang masuk ke buku kas RT)
+      // 2. Tambahkan ke koleksi keuangan agar muncul di Riwayat & Rekap Iuran jika perlu
+      const keuanganId = `KU-${Date.now()}`;
+      const keuanganPayload = {
+        id: keuanganId,
+        tenantId,
+        rt: payload.rt,
+        tanggal: payload.tanggal,
+        jenis: 'Digital & PPOB',
+        penyetor: payload.namaPembeli,
+        nik: currentUser?.nik || "-",
+        nominal: totalBayar,
+        keterangan: `Pembelian ${selectedLayanan} ke ${tujuan}`,
+        status: 'Lunas',
+        createdAt: new Date().toISOString(),
+        userId: payload.userId,
+        buktiUrl: 'Sistem PPOB SmartRW',
+        method: 'Saldo Digital'
+      };
+      await setDoc(doc(db, 'keuangan', keuanganId), keuanganPayload);
+      
+      // Update local finance state if available (passed through props or state lifting)
+      // Since this is PPOBView, we might not have a direct setIuranData here unless we add it.
+      // But if App.tsx is listening to 'keuangan', it will update automatically via onSnapshot.
+
+      // 3. Tambahkan komisi kas RT (Hanya bagian RT yang masuk ke buku kas RT)
       const kasId = `TRX-${Date.now()}`;
       const kasPayload = {
         id: kasId,
@@ -114,7 +140,7 @@ export function PPOBView({
       await setDoc(doc(db, 'kas', kasId), kasPayload);
       setKasData((prev: any) => [kasPayload, ...prev]);
 
-      showNotification('Transaksi Berhasil! Kas RT bertambah dari komisi.', 'success');
+      showNotification('Simulasi Berhasil! Transaksi tercatat di Riwayat & Komisi masuk ke Kas RT.', 'success');
       setShowSimulasiForm(false);
       setNominal("");
       setTujuan("");
@@ -138,7 +164,11 @@ export function PPOBView({
           <h2 className="text-2xl font-black mb-2 flex items-center gap-2"><Smartphone className="w-6 h-6" /> Layanan PPOB & Tiketing</h2>
           <p className="text-blue-100 text-sm font-medium">Beli pulsa, token listrik, bayar tagihan hingga tiket kereta dari aplikasi warga. Setiap transaksi akan memberikan keuntungan otomatis (komisi) yang masuk ke Saldo Kas RT/RW!</p>
         </div>
-        <button onClick={() => setShowSimulasiForm(true)} className="relative z-10 bg-white text-[#008bb5] px-8 py-3.5 rounded-full font-black text-sm uppercase tracking-widest hover:bg-slate-100 transition-all duration-300 shadow-lg shadow-black/10 active:scale-95 whitespace-nowrap">
+        <button 
+          onClick={() => setShowSimulasiForm(true)} 
+          className="relative z-10 bg-white text-[#2a5fc4] px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-100 transition-all duration-300 shadow-2xl shadow-blue-900/20 active:scale-[0.98] whitespace-nowrap flex items-center gap-3 group"
+        >
+          <Smartphone className="w-5 h-5 group-hover:scale-110 transition-transform" />
           Transaksikan Sekarang
         </button>
       </div>
@@ -199,12 +229,25 @@ export function PPOBView({
 
       {showSimulasiForm && (
         <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[100] p-4">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
-              <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
-                Transaksi PPOB & Tiket
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            className="bg-white/90 backdrop-blur-xl w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[90vh]"
+          >
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50 shrink-0">
+              <h3 className="font-black text-slate-800 flex items-center gap-3">
+                <div className="p-2 bg-brand-pink text-white rounded-xl shadow-lg shadow-brand-pink/20">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                Transaksi Digital
               </h3>
-              <button type="button" onClick={() => setShowSimulasiForm(false)} className="bg-white p-1.5 border border-slate-200 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+              <button 
+                type="button" 
+                onClick={() => setShowSimulasiForm(false)} 
+                className="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-all active:scale-90"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
             <form onSubmit={handleSimulasiBayar} className="p-6 overflow-y-auto space-y-5">

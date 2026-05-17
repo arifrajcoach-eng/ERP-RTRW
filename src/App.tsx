@@ -84,6 +84,8 @@ import {
   VolumeX,
   Sun,
   Moon,
+  Sparkles,
+  Tag,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -145,6 +147,7 @@ import { QRCodeSVG } from "qrcode.react";
 import KopTemplateManagementView from "./components/KopTemplateManagementView";
 import { FreeTrialRegistrationModal } from "./components/FreeTrialRegistrationModal";
 import { RTRegistrationForm } from "./components/RTRegistrationForm";
+import { PricingSection } from "./components/PricingSection";
 import ChatWargaView from "./components/ChatWargaView";
 import AIChatBot from "./components/AIChatBot";
 import UpgradeModal from "./components/UpgradeModal";
@@ -971,6 +974,8 @@ export default function App() {
   >(localStorage.getItem("impersonatedTenantId"));
   const [showQRModal, setShowQRModal] = useState(false);
   const [showFreeTrialModal, setShowFreeTrialModal] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showInfoPopup, setShowInfoPopup] = useState(true); // Default show for announcement
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{
@@ -1663,8 +1668,6 @@ export default function App() {
         query(
           collection(db, "iuran"),
           where("tenantId", "in", tIds),
-          orderBy("expiredDate", "desc"),
-          limit(200),
         ),
         (snap) => {
           const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -2219,21 +2222,41 @@ export default function App() {
       : () => { onDataLoaded(); };
 
     // 8. Complaints Listener
+    const getComplaintsQuery = () => {
+      const base = collection(db, "complaints");
+      const constraints = [where("tenantId", "in", tIds)];
+      if (isCitizen) {
+        constraints.push(where("userId", "==", auth.currentUser?.uid || "NONE"));
+      }
+      return query(base, ...constraints);
+    };
+
     const unsubComplaints = onSnapshot(
-      query(collection(db, "complaints"), where("tenantId", "in", tIds)),
+      getComplaintsQuery(),
       (snap) => {
-        setComplaintsData(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setComplaintsData(
+          snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        );
         onDataLoaded();
       },
       (err) => {
         handleFirestoreError(err, "list", "complaints");
         onDataLoaded();
-      }
+      },
     );
 
     // 9. Bookings Listener
+    const getBookingsQuery = () => {
+      const base = collection(db, "bookings");
+      const constraints = [where("tenantId", "in", tIds)];
+      if (isCitizen) {
+        constraints.push(where("userId", "==", auth.currentUser?.uid || "NONE"));
+      }
+      return query(base, ...constraints);
+    };
+
     const unsubBookings = onSnapshot(
-      query(collection(db, "bookings"), where("tenantId", "in", tIds)),
+      getBookingsQuery(),
       (snap) => {
         setBookingsData(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
         onDataLoaded();
@@ -2241,7 +2264,7 @@ export default function App() {
       (err) => {
         handleFirestoreError(err, "list", "bookings");
         onDataLoaded();
-      }
+      },
     );
 
     return () => {
@@ -2740,6 +2763,7 @@ export default function App() {
         isLoadingDB={isLoadingDB}
         onSelfRegister={() => setIsSelfRegistering(true)}
         onShowFreeTrial={() => setShowFreeTrialModal(true)}
+        onShowPricing={() => setShowPricingModal(true)}
         settings={settings}
         tenantId={currentUser?.tenantId || "RW26_SMART"}
       />
@@ -3637,6 +3661,66 @@ export default function App() {
           onClose={() => setShowFreeTrialModal(false)}
           showNotification={showNotification}
         />
+      )}
+      
+      {showPricingModal && (
+        <div className="fixed inset-0 z-[200] overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4">
+           <div className="min-h-full flex items-center justify-center py-10">
+              <div className="bg-white rounded-[3rem] w-full max-w-5xl relative overflow-hidden">
+                <button 
+                  onClick={() => setShowPricingModal(false)}
+                  className="absolute top-8 right-8 z-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+                <PricingSection />
+              </div>
+           </div>
+        </div>
+      )}
+      
+      {showInfoPopup && (
+        <div className="fixed inset-0 z-[250] flex items-end md:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+           <motion.div 
+             initial={{ y: 100, opacity: 0 }}
+             animate={{ y: 0, opacity: 1 }}
+             className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative border-t-4 border-brand-pink"
+           >
+              <button 
+                onClick={() => setShowInfoPopup(false)}
+                className="absolute top-4 right-4 p-2"
+              >
+                <X className="w-5 h-5 text-slate-300" />
+              </button>
+              <div className="w-20 h-20 bg-brand-pink/10 rounded-3xl flex items-center justify-center mb-6">
+                <Sparkles className="w-10 h-10 text-brand-pink" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-3">
+                SmartRW AI <br/>
+                <span className="text-brand-pink">Telah Hadir!</span>
+              </h3>
+              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                Nikmati kemudahan pengelolaan RT/RW dengan teknologi AI terbaru. Daftar sekarang dan dapatkan Free Trial 30 hari.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => { 
+                    setShowInfoPopup(false); 
+                    window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20coba%20Free%20Trial%20SmartRW%20AI', '_blank');
+                  }}
+                  className="w-full py-4 bg-brand-pink text-white font-black rounded-2xl shadow-lg shadow-brand-pink/20"
+                >
+                  Coba Sekarang
+                </button>
+                <button 
+                  onClick={() => setShowInfoPopup(false)}
+                  className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl"
+                >
+                  Nanti Saja
+                </button>
+              </div>
+           </motion.div>
+        </div>
       )}
     </div>
   );
@@ -8349,6 +8433,7 @@ function LoginView({
   isLoadingDB,
   onSelfRegister,
   onShowFreeTrial,
+  onShowPricing,
   settings,
   tenantId,
 }: {
@@ -8358,6 +8443,7 @@ function LoginView({
   isLoadingDB: boolean;
   onSelfRegister: () => void;
   onShowFreeTrial: () => void;
+  onShowPricing: () => void;
   settings?: any;
   tenantId: string;
 }) {
@@ -8785,7 +8871,15 @@ function LoginView({
             adminErr.code === "auth/user-not-found" ||
             adminErr.code === "auth/invalid-credential"
           ) {
-            await createUserWithEmailAndPassword(auth, loginEmail, targetPass);
+            try {
+              await createUserWithEmailAndPassword(auth, loginEmail, targetPass);
+            } catch (createErr: any) {
+              if (createErr.code === "auth/email-already-in-use") {
+                // If it already exists, then the original signIn failed because of wrong password
+                throw adminErr;
+              }
+              throw createErr;
+            }
           } else {
             throw adminErr;
           }
@@ -8817,6 +8911,8 @@ function LoginView({
         msg = "PASSWORD SALAH: Periksa kembali kata sandi Anda.";
       } else if (err.code === "auth/invalid-email") {
         msg = "FORMAT EMAIL SALAH: Masukkan format email yang benar.";
+      } else if (err.code === "auth/email-already-in-use") {
+        msg = "EMAIL SUDAH TERDAFTAR: Email ini sudah digunakan oleh akun lain. Silakan masuk menggunakan email tersebut.";
       } else if (err.code === "auth/operation-not-allowed") {
         msg =
           'METODE LOGIN NON-AKTIF: Aktifkan "Email/Password" di Firebase Console > Authentication > Sign-in method.';
@@ -8947,7 +9043,7 @@ function LoginView({
               setLoginMode("admin");
               setError("");
             }}
-            className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === "admin" ? "text-brand-blue bg-white border-b-2 border-brand-blue shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/80"}`}
+            className={`flex-1 py-5 text-[15px] font-black uppercase tracking-widest transition-all relative ${loginMode === "admin" ? "text-brand-blue bg-white border-b-2 border-brand-blue shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/80"}`}
           >
             Pengurus
           </button>
@@ -8956,11 +9052,11 @@ function LoginView({
               setLoginMode("warga");
               setError("");
             }}
-            className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === "warga" ? "text-brand-green bg-white border-b-2 border-brand-green shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/80"}`}
+            className={`flex-1 py-5 text-[15px] font-black uppercase tracking-widest transition-all relative ${loginMode === "warga" ? "text-brand-green bg-white border-b-2 border-brand-green shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/80"}`}
           >
-            <span className="relative">
+            <span className="relative text-[15px]">
               Warga
-              <span className="absolute -top-3 -right-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded-full text-[6px] animate-pulse">
+              <span className="absolute -top-3 -right-2 px-1.5 pt-0 pb-0 bg-emerald-500 text-white rounded-full text-[8px] animate-pulse">
                 GOOGLE
               </span>
             </span>
@@ -8970,11 +9066,11 @@ function LoginView({
               setLoginMode("verifikasi");
               setError("");
             }}
-            className={`flex-1 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative ${loginMode === "verifikasi" ? "text-brand-pink bg-white border-b-2 border-brand-pink shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/80"}`}
+            className={`flex-1 py-5 text-[15px] font-black uppercase tracking-widest transition-all relative ${loginMode === "verifikasi" ? "text-brand-pink bg-white border-b-2 border-brand-pink shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/80"}`}
           >
-            <span className="relative">
+            <span className="relative text-[15px]">
               NIK & KK
-              <span className="absolute -top-3 -right-2 px-1.5 py-0.5 bg-brand-pink text-white rounded-full text-[6px]">
+              <span className="absolute -top-3 -right-2 px-1.5 pt-0 pb-[1px] bg-brand-pink text-white rounded-full text-[8px]">
                 PROFIL
               </span>
             </span>
@@ -9067,15 +9163,7 @@ function LoginView({
                   "Masuk"
                 )}
               </button>
-              <div className="text-center mt-4">
-                <button
-                  type="button"
-                  onClick={onShowFreeTrial}
-                  className="text-xs font-bold text-brand-blue hover:text-blue-600 underline"
-                >
-                  Aplikasi ini menarik? Coba Free Trial Sekarang
-                </button>
-              </div>
+
             </form>
           )}
 
@@ -9222,75 +9310,80 @@ function LoginView({
             </div>
           )}
 
-          {loginMode === "admin" && (
-            <div className="mt-8 pt-8 border-t-2 border-slate-100 border-dashed">
-              <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                Awal Cepat Uji Coba
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <button
-                  onClick={() =>
-                    handleSubmit(
-                      { preventDefault: () => {} } as React.FormEvent,
-                      "arifrajcoach@gmail.com",
-                      "4R1f080162a3",
-                    )
-                  }
-                  className="w-full bg-slate-50 hover:bg-brand-blue hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm"
+
+
+          {/* Free Trial Banner */}
+          <div className="mt-10 flex flex-col items-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="w-full max-w-sm"
+            >
+              <div 
+                onClick={() => window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20coba%20Free%20Trial%20SmartRW%20AI', '_blank')}
+                className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-white/60 p-5 rounded-[2rem] transition-all hover:bg-white/70 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-sm hover:shadow-md border-brand-pink/20"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-pink to-brand-pink/60 flex items-center justify-center text-white shadow-lg shadow-brand-pink/20 group-hover:rotate-6 transition-transform">
+                    <Sparkles className="w-7 h-7" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 bg-brand-pink text-[8px] font-black uppercase tracking-widest text-white rounded-full">New</span>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-brand-pink">Kesempatan Terbatas</p>
+                    </div>
+                    <p className="text-base font-black text-slate-800 leading-tight">
+                      Aplikasi ini menarik? <br/>
+                      <span className="text-brand-pink">Coba Free Trial Sekarang</span>
+                    </p>
+                  </div>
+                  <div className="p-3 bg-brand-pink rounded-xl text-white shadow-md group-hover:translate-x-1 transition-transform">
+                    <ChevronRight className="w-5 h-5 ml-0.5" />
+                  </div>
+                </div>
+                
+                {/* Decorative element */}
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand-pink/10 rounded-full blur-3xl"></div>
+              </div>
+            </motion.div>
+            
+            <div className="flex flex-col items-center gap-3 mt-8 w-full max-w-sm">
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onShowPricing}
+                className="w-full py-4 bg-white border-2 border-brand-pink/20 text-brand-pink rounded-2xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:border-brand-pink transition-all"
+              >
+                <Tag className="w-4 h-4" />
+                <span className="text-[11px] font-black uppercase tracking-widest">Lihat Paket & Harga</span>
+              </motion.button>
+              
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <motion.a 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  href="https://smartrwai.vercel.app/" 
+                  target="_blank" 
+                  className="py-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl flex items-center justify-center gap-2 hover:bg-brand-blue/5 hover:text-brand-blue hover:border-brand-blue/20 transition-all"
                 >
-                  Super
-                </button>
-                <button
-                  onClick={() =>
-                    handleSubmit(
-                      { preventDefault: () => {} } as React.FormEvent,
-                      "admin@rw26.com",
-                      "admin123",
-                    )
-                  }
-                  className="w-full bg-slate-50 hover:bg-brand-pink hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm"
+                  <Globe className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Website</span>
+                </motion.a>
+                
+                <motion.a 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  href="https://wa.me/087726741143" 
+                  target="_blank" 
+                  className="py-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all"
                 >
-                  Admin
-                </button>
-                <button
-                  onClick={() =>
-                    handleSubmit(
-                      { preventDefault: () => {} } as React.FormEvent,
-                      "operator@rw26.com",
-                      "operator123",
-                    )
-                  }
-                  className="w-full bg-slate-50 hover:bg-brand-yellow hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm"
-                >
-                  Kader
-                </button>
-                <button
-                  onClick={() =>
-                    handleSubmit(
-                      { preventDefault: () => {} } as React.FormEvent,
-                      "rt01@rw26.com",
-                      "rt01123",
-                    )
-                  }
-                  className="w-full bg-slate-50 hover:bg-purple-600 hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm"
-                >
-                  RT01
-                </button>
-                <button
-                  onClick={() =>
-                    handleSubmit(
-                      { preventDefault: () => {} } as React.FormEvent,
-                      "warga@rw26.com",
-                      "warga123",
-                    )
-                  }
-                  className="w-full bg-slate-50 hover:bg-brand-green hover:text-white text-slate-500 text-[10px] uppercase tracking-widest font-black py-4 rounded-2xl transition-colors shadow-sm"
-                >
-                  Warga
-                </button>
+                  <Phone className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">WA Admin</span>
+                </motion.a>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
@@ -10514,7 +10607,7 @@ function TenantsView({
                           "Hi Ka, Saya mau Upgrade Paket E-RTRW boleh dibantu, Trima Kasih",
                         );
                         window.open(
-                          `https://wa.me/6287726741143?text=${waText}`,
+                          `https://wa.me/087726741143?text=${waText}`,
                           "_blank",
                         );
                       }}
