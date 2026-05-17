@@ -3067,9 +3067,13 @@ export default function App() {
       </aside>
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full bg-slate-50 dark:bg-slate-950 relative transition-colors duration-300">
+        
+        {/* Subtle Unique Background Pattern / Gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50/10 to-teal-50/30 dark:from-indigo-900/10 dark:via-slate-950 dark:to-cyan-900/10 pointer-events-none z-0"></div>
+
         {/* Header */}
-        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30">
+        <header className="h-20 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/80 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30 shadow-sm relative">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -3150,7 +3154,7 @@ export default function App() {
         </header>
 
         {/* Content Area */}
-        <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0">
+        <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0 relative z-10">
           {activeTab === "dashboard" && (
             <DashboardView allowedMenuItems={renderableNavItems} kasData={kasData}
               wargaData={wargaData}
