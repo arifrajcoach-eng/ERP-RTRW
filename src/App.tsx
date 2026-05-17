@@ -8365,6 +8365,7 @@ function LoginView({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showKK, setShowKK] = useState(false);
+  const [showNik, setShowNik] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<"admin" | "warga" | "verifikasi">(
@@ -8988,7 +8989,7 @@ function LoginView({
               {loginMode === "warga"
                 ? 'KHUSUS AKUN GOOGLE. Jika ingin masuk pakai NIK & KK, silakan pilih tab "NIK & KK" di atas.'
                 : loginMode === "verifikasi"
-                  ? "MASUK VIA NIK (Tanpa Google). Masukkan NIK sebagai ID dan Nomor KK sebagai Kunci."
+                  ? "VERIFIKASI WARGA (Tanpa Google). Masukkan NIK atau Nama sebagai ID, dan Nomor KK atau No. HP sebagai Kunci."
                   : "Akses khusus pengurus RT/RW yang telah terdaftar."}
             </p>
           </div>
@@ -8997,7 +8998,7 @@ function LoginView({
               ? "LOGIN PENGURUS"
               : loginMode === "warga"
                 ? "MASUK GOOGLE"
-                : "MASUK VIA NIK & KK"}
+                : "VERIFIKASI NIK/NAMA & KK/HP"}
           </h2>
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
@@ -9136,24 +9137,35 @@ function LoginView({
               <form onSubmit={handleWargaLogin} className="space-y-6">
                 <div>
                   <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">
-                    ID WARGA (NIK/ NAMA)
+                    IDENTITAS (NIK / NAMA)
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                       <User className="w-6 h-6 text-slate-400 group-focus-within:text-brand-pink transition-colors" />
                     </div>
                     <input
-                      type="text"
+                      type={showNik ? "text" : "password"}
                       value={nik}
                       onChange={(e) => setNik(e.target.value)}
-                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-bold text-base"
+                      className="w-full pl-14 pr-14 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-bold text-base"
                       placeholder="NIK atau Nama Lengkap"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowNik(!showNik)}
+                      className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showNik ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">
-                    KUNCI (KK/ NO. HP)
+                    KUNCI (KK / NO. HP)
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
