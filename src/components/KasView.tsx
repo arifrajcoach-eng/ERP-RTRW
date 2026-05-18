@@ -29,7 +29,7 @@ import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { jsPDF } from "jspdf";
 import { ConfirmModal } from "./ui/ConfirmModal";
-import { GoogleGenAI, Type } from "@google/genai";
+import { scanReceiptAI } from "../services/aiService";
 
 interface KasViewProps {
   kasData: any[];
@@ -109,6 +109,7 @@ export function KasView({
   const [editingKas, setEditingKas] = useState<any>(null);
   const [viewingKas, setViewingKas] = useState<any>(null);
   const [isDeletingKas, setIsDeletingKas] = useState(false);
+  const [isSavingKas, setIsSavingKas] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatRupiah = (val: number) => {
@@ -160,37 +161,9 @@ export function KasView({
       });
       const base64Data = await base64Promise;
 
-      // 3. Call Gemini
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [
-          {
-            parts: [
-              {
-                text: "Ekstrak data dari struk pembayaran atau invoice ini (bisa berupa gambar atau PDF). Masukkan dalam JSON. Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, Perbaikan, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika itu struk belanja/pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat barang/jasa).",
-              },
-              { inlineData: { data: base64Data, mimeType: file.type } },
-            ],
-          },
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              tanggal: { type: Type.STRING },
-              nominal: { type: Type.NUMBER },
-              transaksi: { type: Type.STRING },
-              nama: { type: Type.STRING },
-              tipe: { type: Type.STRING },
-              keterangan: { type: Type.STRING },
-            },
-          },
-        },
-      });
+      // 3. Call Gemini via aiService
+      const result = await scanReceiptAI(base64Data, file.type);
 
-      const result = JSON.parse(response.text);
       // Add a tag to track AI Scans for limit enforcement
       result.keterangan = result.keterangan ? `${result.keterangan} [AI Scan]` : "[AI Scan]";
       setScannedData(result);
@@ -398,6 +371,8 @@ export function KasView({
 
   const handleSaveKas = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSavingKas) return;
+    setIsSavingKas(true);
     const formData = new FormData(e.currentTarget);
     const dateInput = formData.get("tanggal") as string;
     const dateObj = dateInput ? new Date(dateInput) : new Date();
@@ -441,7 +416,12 @@ export function KasView({
         showNotification("Transaksi kas berhasil diperbarui", "success");
       } else {
         await setDoc(doc(db, "kas", newId), newTrx);
-        setKasData((prev: any[]) => [newTrx, ...prev]);
+        setKasData((prev: any[]) => {
+          if (prev.some(t => t.id === newId)) {
+            return prev.map(t => t.id === newId ? newTrx : t);
+          }
+          return [newTrx, ...prev];
+        });
         showNotification("Transaksi kas berhasil ditambahkan", "success");
       }
       setShowMasukForm(false);
@@ -455,6 +435,7 @@ export function KasView({
       showNotification("Gagal menyimpan transaksi kas", "error");
     } finally {
       setIsLoadingDB(false);
+      setIsSavingKas(false);
     }
   };
 

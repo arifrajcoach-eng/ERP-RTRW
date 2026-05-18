@@ -217,7 +217,7 @@ export async function generateAIReport(dataSummary: any) {
   try {
     checkApiKey();
     const response = await ai.models.generateContent({ 
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
       Laporan harus mencakup: 
       1. Ringkasan Keuangan (Saldo Akhir). 
@@ -241,7 +241,7 @@ export async function generateRegionalInsight(regionsData: any) {
     Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt
     });
     return response.text || "";
@@ -251,29 +251,28 @@ export async function generateRegionalInsight(regionsData: any) {
   }
 }
 
-export async function scanReceiptAI(imageBase64: string) {
+export async function scanReceiptAI(base64: string, mimeType: string = "image/jpeg") {
   try {
     checkApiKey();
+    const dataPart = base64.includes(',') ? base64.split(',')[1] : base64;
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi. Ekstrak informasi dari gambar struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: 
-        {
-          "nominal": 150000, 
-          "keterangan": "Beli semen",
-          "tipe": "Keluar",
-          "nama": "Toko Bangunan XYZ"
-        }
-        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Tipe biasanya "Keluar" jika itu struk belanja/pengeluaran, atau "Masuk" jika kwitansi penerimaan. Return HANYA JSON block.` },
-        { inlineData: { data: imageBase64.split(',')[1] || imageBase64, mimeType: "image/jpeg" } }
-      ]
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi (bisa berupa gambar atau PDF). Ekstrak informasi dari file struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: \n        {\n          "tanggal": "2023-10-05",\n          "nominal": 150000, \n          "transaksi": "Konsumsi",\n          "keterangan": "Beli semen",\n          "tipe": "Keluar",\n          "nama": "Toko Bangunan XYZ"\n        }\n        Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat).\n        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Return HANYA JSON block.` },
+          { inlineData: { data: dataPart, mimeType: mimeType } }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json"
+      }
     });
     const text = response.text || "";
     const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim();
     return JSON.parse(cleanJson);
   } catch (error) {
     console.error("AI Scan Receipt Error:", error);
-    return null;
+    throw error;
   }
 }
 
