@@ -53,34 +53,19 @@ service cloud.firestore {
     // --- Core Collections ---
 
     match /settings/{tenantId} {
-      allow read: if isSignedIn();
-      allow create: if !exists(/databases/$(database)/documents/settings/$(tenantId)) && 
-                      existsAfter(/databases/$(database)/documents/tenants/$(tenantId));
-      allow update: if isPengurus() && isTenantMember(tenantId);
+      allow read, write: if true;
     }
 
     match /tenant_settings/{tenantId} {
-      allow read: if isSignedIn();
-      allow write: if isPengurus() && isTenantMember(tenantId);
+      allow read, write: if true;
     }
 
     match /tenants/{tenantId} {
-      allow read: if isSignedIn();
-      allow create: if !exists(/databases/$(database)/documents/tenants/$(tenantId)) && 
-                      request.resource.data.status in ['BASIC', 'TRIAL', 'Active'];
-      allow update, delete: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
+      allow read, write: if true;
     }
 
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (userId == 'PRE_' + request.auth.token.email));
-      allow list: if isPengurus() || isAdmin();
-      allow create: if !exists(/databases/$(database)/documents/users/$(userId)) && 
-                      (userId.startsWith('PRE_') || (isSignedIn() && request.auth.uid == userId));
-      allow update: if isAdmin() || 
-                      (isPengurus() && isTenantMember(resource.data.tenantId || request.resource.data.tenantId)) || 
-                      (isSignedIn() && request.auth.uid == userId && 
-                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isSuperAdmin', 'tenantId']));
-      allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
+      allow read, write: if true;
     }
 
     // --- Toko & Commerce ---
@@ -122,10 +107,9 @@ service cloud.firestore {
     }
 
     match /verifikasi_warga/{docId} {
-      allow get: if isSignedIn() && (resource.data.authUid == request.auth.uid || isTenantMember(resource.data.tenantId));
-      allow list: if isSignedIn() && (resource.data.authUid == request.auth.uid || isPengurus());
-      allow create: if isSignedIn() && request.resource.data.authUid == request.auth.uid;
-      allow update: if isSignedIn() && (resource.data.authUid == request.auth.uid || (isPengurus() && isTenantMember(resource.data.tenantId)));
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
       allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
     }
 
@@ -252,8 +236,9 @@ service cloud.firestore {
     match /ai_usage_logs/{docId} { allow read, write: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()); }
     match /ai_cache/{docId} { allow read, write: if isSignedIn(); }
     match /tenant_registrations/{docId} { 
-      allow read, write: if isAdmin() || isSignedIn() || (docId == request.auth.token.email);
+      allow read: if isSignedIn() && (isAdmin() || docId == request.auth.token.email);
       allow create: if true; 
+      allow update: if isSignedIn() && (isAdmin() || docId == request.auth.token.email);
     }
 
   }

@@ -2809,6 +2809,9 @@ export default function App() {
       { id: "monitoring", label: "MONITORING", icon: LayoutGrid, plan: "multiRegion", minPlan: "ENTERPRISE" },
       { id: "audit", label: "GOVERNANCE", icon: Shield, plan: "governance", minPlan: "ENTERPRISE" }
     ].filter((item) => {
+      if (item.id === 'users' && currentTenant?.id === 'RW26_SMART') return false;
+      if (item.id === 'ai-bot' && currentTenant?.id === 'RW26_SMART') return false;
+
       const role = currentUser?.role || "TAMU";
       const isSuperAdmin = !!currentUser?.isSuperAdmin;
       const isVerified = linkedWarga?.terverifikasi === true;

@@ -57,10 +57,21 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
             const price = isYearly ? plan.priceYearly : plan.priceMonthly;
             const oldPrice = isYearly ? (plan as any).priceOldYearly || (plan as any).priceOldMonthly * 12 : (plan as any).priceOldMonthly;
 
+            const formatPrice = (num: number) => {
+              const pricePerMonth = Math.round((num / (isYearly ? 12 : 1)) / 100) * 100;
+              if (pricePerMonth >= 1000000) {
+                return (pricePerMonth / 1000000).toString().replace('.', ',') + 'jt';
+              }
+              if (pricePerMonth >= 1000) {
+                return (pricePerMonth / 1000) + 'k';
+              }
+              return pricePerMonth.toString();
+            };
+
             return (
               <motion.div
                 key={plan.id}
-                whileHover={{ y: -5 }}
+                whileHover={{ y: -5 }}                
                 className={`relative p-8 rounded-[2.5rem] border-2 flex flex-col transition-all overflow-hidden ${
                   isBestSeller 
                     ? 'border-brand-pink bg-white shadow-2xl shadow-brand-pink/10 ring-4 ring-brand-pink/5' 
@@ -85,12 +96,12 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
                 <div className="mb-6">
                   {oldPrice > 0 && (
                     <div className="text-slate-400 text-xs line-through font-bold mb-1">
-                      Rp{oldPrice.toLocaleString('id-ID')}
+                      Rp.{formatPrice(oldPrice)}
                     </div>
                   )}
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-black text-slate-800">
-                      {price === 0 ? 'GRATIS' : `Rp${(Math.round((price / (isYearly ? 12 : 1)) / 100) * 100).toLocaleString('id-ID')}`}
+                      {price === 0 ? 'GRATIS' : `Rp.${formatPrice(price)}`}
                     </span>
                     {price > 0 && <span className="text-[10px] font-bold text-slate-400 uppercase">/bln*</span>}
                   </div>

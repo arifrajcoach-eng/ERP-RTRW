@@ -19,9 +19,12 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
     setLoading(true);
     try {
       // 1. Ensure we have a session (Signin Anonymously if needed for rules)
+      console.log('Registration: auth.currentUser before check:', auth.currentUser?.uid);
       if (!auth.currentUser) {
         await signInAnonymously(auth);
       }
+      console.log('Registration: auth.currentUser after check:', auth.currentUser?.uid);
+
 
       const tenantId = `TRIAL_${formData.nama.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_${Math.floor(1000 + Math.random() * 9000)}`;
       

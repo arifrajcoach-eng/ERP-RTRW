@@ -778,18 +778,20 @@ export default function DashboardView({
       </div>
       
       {/* Floating AI Chat Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setShowAIChat(!showAIChat)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50"
-      >
-        <Bot className="w-8 h-8" />
-      </motion.button>
+      {currentTenant?.id !== 'RW26_SMART' && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowAIChat(!showAIChat)}
+          className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50"
+        >
+          <Bot className="w-8 h-8" />
+        </motion.button>
+      )}
 
       {/* AI Chat Window */}
       <AnimatePresence>
-        {showAIChat && (
+        {showAIChat && currentTenant?.id !== 'RW26_SMART' && (
           <motion.div
             initial={{ opacity: 0, y: 100, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
