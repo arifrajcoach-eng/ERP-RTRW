@@ -73,6 +73,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
                 key={plan.id}
                 whileHover={{ y: -5 }}                
                 className={`relative p-8 rounded-[2.5rem] border-2 flex flex-col transition-all overflow-hidden ${
+                  plan.id === 'enterprise' ? 'border-[#e4e439]' :
+                  plan.id === 'pro' ? 'border-[#88da5b]' :
                   isBestSeller 
                     ? 'border-brand-pink bg-white shadow-2xl shadow-brand-pink/10 ring-4 ring-brand-pink/5' 
                     : 'border-slate-100 bg-slate-50/50 hover:bg-white hover:border-brand-blue/20 hover:shadow-xl'
@@ -133,9 +135,11 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
                     }
                   }}
                   className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    plan.id === 'enterprise' ? 'border-2 border-[#dcde50] bg-[#fffffd] text-black hover:bg-slate-100' :
+                    plan.id === 'pro' ? 'border-2 border-[#76cc46] bg-white text-black hover:bg-slate-50' :
                     isBestSeller 
                       ? 'bg-brand-pink text-white shadow-lg shadow-brand-pink/20 hover:scale-[1.05] active:scale-95' 
-                      : 'bg-white border-2 border-slate-200 text-slate-400 hover:border-brand-blue hover:text-brand-blue hover:bg-brand-blue/5'
+                      : 'bg-white border-2 border-slate-200 text-black hover:border-brand-blue hover:text-brand-blue hover:bg-brand-blue/5'
                   }`}
                 >
                   {plan.priceMonthly === 0 ? 'Daftar Gratis' : 'Pilih Paket'}

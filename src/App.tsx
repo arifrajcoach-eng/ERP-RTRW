@@ -2802,7 +2802,7 @@ export default function App() {
       { id: "inventaris", label: "Inventaris", icon: Package },
       { id: "surat", label: "Surat", icon: FileText, plan: "surat", minPlan: "BASIC" },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
-      { id: "daftar-trial", label: "Daftar Pendaftar Trial", icon: Users },
+      { id: "daftar-trial", label: "Tenant Trial", icon: Users },
       { id: "users", label: "Manage User", icon: User },
       { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
       { id: "pengaturan", label: "Pengaturan", icon: Settings },

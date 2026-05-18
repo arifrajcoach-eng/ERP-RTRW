@@ -17,7 +17,7 @@ export function DaftarPendaftarTrialView() {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">Daftar Pendaftar Trial</h2>
+      <h2 className="text-xl font-bold mb-4">Tenant Trial</h2>
       <div className="bg-white rounded-xl shadow overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-100 text-slate-600 uppercase text-xs font-bold">
