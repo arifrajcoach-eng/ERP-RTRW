@@ -540,6 +540,9 @@ const PLAN_FEATURES: Record<string, any> = {
     ],
     keuangan: "DASAR",
     surat: "STANDAR",
+    verifikasi: false,
+    chatMode: false,
+    ai: false,
     maxAiChats: 5,
     multiRT: false,
     posyandu: false,
@@ -1192,6 +1195,14 @@ export default function App() {
   const linkedWarga = currentUser?.nikMapping
     ? wargaData.find((w: any) => w.nik === currentUser.nikMapping)
     : null;
+
+  // Enforce Max Warga limit locally for UI based on Plan
+  const cappedWargaData = useMemo(() => {
+    const isFree = !currentTenant || currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
+    const maxWargaLimit = isFree ? 50 : (getPlanFeatures(currentTenant?.status).maxWarga || 50);
+    return wargaData.slice(0, maxWargaLimit);
+  }, [wargaData, currentTenant?.status]);
+
   const userPhoto =
     (currentUser as any)?.photoUrl ||
     linkedWarga?.foto ||
@@ -2620,7 +2631,7 @@ export default function App() {
       { id: "complaint", label: isApt ? "Keluhan/Defect" : "Keluhan", icon: AlertTriangle },
       { id: "booking", label: isApt ? "Booking Fasilitas" : "Booking", icon: Calendar },
       { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy },
-      { id: "verifikasi", label: "VERIFIKASI", icon: ShieldCheck },
+      { id: "verifikasi", label: "VERIFIKASI", icon: ShieldCheck, plan: "verifikasi", minPlan: "BASIC" },
       { id: "keuangan", label: isApt ? "Keuangan / IPL" : "Keuangan", icon: CreditCard, plan: "keuangan", minPlan: "BASIC" },
       { id: "posyandu", label: "Kesehatan", icon: Baby, plan: "posyandu", minPlan: "PRO" },
       { id: "bank-sampah", label: "Bank Sampah", icon: Recycle, plan: "bankSampah", minPlan: "PRO" },
@@ -3161,7 +3172,7 @@ export default function App() {
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0 relative z-10">
           {activeTab === "dashboard" && (
             <DashboardView allowedMenuItems={renderableNavItems} kasData={kasData}
-              wargaData={wargaData}
+              wargaData={cappedWargaData}
               suratData={suratData}
               iuranData={iuranData}
               emergenciesData={emergenciesData}
@@ -3193,7 +3204,7 @@ export default function App() {
           )}
           {activeTab === "warga" && (
             <WargaView
-              wargaData={wargaData}
+              wargaData={cappedWargaData}
               currentTenant={currentTenant}
               setWargaData={setWargaData}
               userRole={currentUser.role}

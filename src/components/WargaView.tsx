@@ -52,7 +52,11 @@ function WargaView({
   settings 
 }: WargaViewProps) {
   const isApt = settings?.themeMode === 'apartemen';
-  
+  const isFree = !currentTenant || currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
+  // The plan limits are stored in currentTenant or we just use hardcoded checks / maxWarga from the object. This is a bit rough but works for trial
+  const maxWargaLimit = isFree ? 50 : (currentTenant?.maxWarga || 5000);
+  const limitReached = wargaData.length >= maxWargaLimit;
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWarga, setEditingWarga] = useState<any>(null);
@@ -345,11 +349,17 @@ function WargaView({
             </button>
           )}
           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="bg-gradient-to-tr from-amber-500 to-orange-600 text-white px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-md shadow-amber-500/20">
+          <button onClick={() => fileInputRef.current?.click()} disabled={isUploading || limitReached} className="bg-gradient-to-tr from-amber-500 to-orange-600 text-white px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-md shadow-amber-500/20 disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed">
             <Download size={18} className="rotate-180" /> {isUploading ? 'Loading...' : 'Import Data'}
           </button>
-          <button onClick={() => setShowAddForm(true)} className="bg-gradient-to-tr from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-600/20">
-            <UserPlus size={18} /> Tambah {isApt ? "Penghuni" : "Warga"}
+          <button onClick={() => {
+            if (limitReached) {
+              showNotification(`Batas maksimal ${maxWargaLimit} warga untuk paket saat ini telah tercapai. Upgrade paket untuk menambah warga.`, 'error');
+              return;
+            }
+            setShowAddForm(true);
+          }} className="bg-gradient-to-tr from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-600/20 disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed">
+            <UserPlus size={18} /> {limitReached ? `Limit (${maxWargaLimit}) Penuh` : `Tambah ${isApt ? "Penghuni" : "Warga"}`}
           </button>
         </div>
       </div>
