@@ -646,8 +646,8 @@ const PLAN_FEATURES: Record<string, any> = {
   },
   ENTERPRISE: {
     maxWarga: 20000,
-    price: "Rp 2.5jt",
-    oldPrice: "Rp 4.9jt",
+    price: "Rp 4.5jt",
+    oldPrice: "Rp 5.9jt",
     coreFeatures: [
       "Multi-RW / Skala Kelurahan/ Perumahan Besar",
       "Custom Domain / White Labeling",

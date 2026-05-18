@@ -3,7 +3,7 @@ export const PLAN_CONFIG = {
   FLASH: { id: 'flash', name: 'FLASH', focus: 'KHUSUS RT', priceMonthly: 55000, priceOldMonthly: 85000, priceYearly: 550000, features: ['Maks 300 Warga', 'PPOB & Iuran Digital Integrasi', 'Surat Digital, Buku Tamu Digital, SOS', 'Booking Fasilitas Umum', 'AI Chatbot (50x/bln)'], systemKey: 'BASIC' },
   PRO: { id: 'pro', name: 'PRO', focus: 'KHUSUS RW', priceMonthly: 129000, priceOldMonthly: 169000, priceYearly: 1290000, features: ['Semua Fitur FLASH', 'Maks 1000 Warga', 'Modul Posyandu', 'Modul Bank Sampah', 'Modul E-Voting (Pemilu Warga)', 'AI Chatbot (200x/bln)'], systemKey: 'PRO' },
   PREMIUM: { id: 'premium', name: 'PREMIUM', focus: 'MULTI-TENANT RW', priceMonthly: 239000, priceOldMonthly: 479000, priceYearly: 2390000, features: ['Available 6 Tenant (Multi-Tenant RW -> 5 RT + 1 RW)', 'Dashboard Konsolidasi Data RW', 'Integrasi CCTV Keamanan', 'AI Scan Struk (100x/bln)', 'Prioritas Layanan Support'], systemKey: 'PREMIUM', isBestSeller: true },
-  ENTERPRISE: { id: 'enterprise', name: 'ENTERPRISE', focus: 'PERUMAHAN BESAR', priceMonthly: 2500000, priceOldMonthly: 4900000, priceYearly: 25000000, features: ['Multi-RW / Skala Kelurahan/ Perumahan Besar', 'Custom Domain / White Labeling', 'AI Strategic & Big Data Insights', 'Warga Tanpa Batas (Unlimited)', 'Dedicated CS Manager 24/7'], systemKey: 'ENTERPRISE' },
+  ENTERPRISE: { id: 'enterprise', name: 'ENTERPRISE', focus: 'PERUMAHAN BESAR', priceMonthly: 4500000, priceOldMonthly: 5900000, priceYearly: 25000000, features: ['Multi-RW / Skala Kelurahan/ Perumahan Besar', 'Custom Domain / White Labeling', 'AI Strategic & Big Data Insights', 'Warga Tanpa Batas (Unlimited)', 'Dedicated CS Manager 24/7'], systemKey: 'ENTERPRISE' },
 };
 
 export const ADDON_CONFIG = {
