@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { X, User, Mail, Phone, Tag } from 'lucide-react';
 
 export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
@@ -28,9 +28,26 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
         rwTarget: 26,
       };
 
-      await setDoc(doc(db, 'tenants', tenantId), newTenant);
+      // Buat akun admin pre-registered menggunakan ID acak atau berbasis nomor HP
+      const userId = `PRE_${formData.hp}_${Date.now()}`;
+      const newUser = {
+        id_user: userId,
+        nama: formData.nama,
+        email: formData.email,
+        phone: formData.hp,
+        tenantId: tenantId,
+        role: 'ADMIN',
+        rt: formData.rt,
+        status: 'AKTIF',
+        createdAt: new Date().toISOString()
+      };
+
+      const batchOp = writeBatch(db);
+      batchOp.set(doc(db, 'tenants', tenantId), newTenant);
+      batchOp.set(doc(db, 'users', userId), newUser);
+      await batchOp.commit();
       
-      showNotification('Pendaftaran Berhasil! Mohon tunggu verifikasi admin.', 'success');
+      showNotification('Pendaftaran Berhasil! Silakan masuk menggunakan Masuk Dengan Google (gunakan email yang sama).', 'success');
       onClose();
     } catch (err: any) {
       console.error(err);

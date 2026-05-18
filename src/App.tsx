@@ -1114,50 +1114,32 @@ export default function App() {
               isSuperAdmin: overrideAdmin,
             });
           } else {
-            // If No Firestore doc yet, use default based on email (for easy migration)
-            let role = "RT";
-            let name = user.email?.split("@")[0] || "User";
-
-            const isMasterEmail =
-              user.email?.toLowerCase() === "arifrajcoach@gmail.com";
-
-            // Set default tenantId based on username or email
-            let tenantId = "RW26_SMART";
-            if (user.email?.toLowerCase().includes("trihprw26")) {
-              tenantId = "RW_BERJUANG";
-              role = "ADMIN";
-            } else if (user.email?.includes("@")) {
-              // Extract potential tenantId from email if it's a custom domain or structured
-              const domain = user.email.split("@")[1];
-              if (domain !== "gmail.com" && domain !== "rw26.com") {
-                tenantId = domain.replace(/\./g, "_");
-              }
-            }
-
-            const isSuperAdmin = isMasterEmail;
+            // If No Firestore doc yet, check if they are the hardcoded super admin
+            const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
 
             if (isMasterEmail) {
-              role = "SUPER_ADMIN";
-              name = "Bpk. Arif (Super Admin)";
-              tenantId = "MASTER"; // Super Admin sees overall or master data
+              const newUser = {
+                id_user: user.uid,
+                name: "Bpk. Arif (Super Admin)",
+                nama: "Bpk. Arif (Super Admin)",
+                username: user.email?.split("@")[0] || "user",
+                role: "SUPER_ADMIN",
+                email: user.email,
+                tenantId: "MASTER",
+                isSuperAdmin: true,
+                rt: "01",
+                status: "AKTIF",
+                created_at: new Date().toISOString(),
+              };
+              await setDoc(userDocRef, newUser);
+              setCurrentUser(newUser as any);
+            } else {
+               // Unauthorized Google session without a Firestore document
+               // Sign them out automatically, they must be registered
+               await signOut(auth);
+               setCurrentUser(null);
+               setDbError("Akun Google Anda belum terdaftar di sistem. Silakan mendaftar Trial atau minta Admin untuk mendaftarkan Anda.");
             }
-
-            const newUser = {
-              id_user: user.uid,
-              name: name,
-              nama: name,
-              username: user.email?.split("@")[0] || "user",
-              role: role,
-              email: user.email,
-              tenantId: tenantId,
-              isSuperAdmin: !!isSuperAdmin,
-              rt: "01",
-              status: "AKTIF",
-              created_at: new Date().toISOString(),
-            };
-            // Auto-create the doc BEFORE setting state to avoid race condition with rules
-            await setDoc(userDocRef, newUser);
-            setCurrentUser(newUser as any);
           }
         } catch (error: any) {
           if (
@@ -9011,6 +8993,7 @@ function LoginView({
 
       let preRegisteredRole = "Viewer";
       let preRegisteredTenant = tenantId;
+      let isPreRegistered = false;
 
       // 2. If standard UID document doesn't exist, search if Super Admin pre-registered this email
       if (!userDoc.exists() && user.email) {
@@ -9019,6 +9002,7 @@ function LoginView({
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
+          isPreRegistered = true;
           const matchedUser = querySnapshot.docs[0];
           const matchedData = matchedUser.data();
           preRegisteredRole = matchedData.role || "Viewer";
@@ -9029,6 +9013,15 @@ function LoginView({
             await deleteDoc(doc(db, "users", matchedUser.id));
           }
         }
+      }
+
+      const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
+
+      if (!userDoc.exists() && !isPreRegistered && !isArif && !isTrihUser) {
+        await signOut(auth);
+        setError("Akun Google Anda belum terdaftar di sistem. Silakan minta Admin RT/RW untuk mendaftarkan email Anda, atau gunakan login Warga/Verifikasi WA.");
+        setIsLoading(false);
+        return;
       }
 
       const userData = {
@@ -9381,7 +9374,7 @@ function LoginView({
               className="w-full max-w-sm"
             >
               <div 
-                onClick={() => window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20coba%20Free%20Trial%20SmartRW%20AI', '_blank')}
+                onClick={onShowFreeTrial}
                 className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-white/60 p-5 rounded-[2rem] transition-all hover:bg-white/70 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-sm hover:shadow-md border-brand-pink/20"
               >
                 <div className="flex items-center gap-4">
@@ -10030,18 +10023,18 @@ function TenantsView({
       }
 
       // 3. Sync Admin User Password/Email if changed
+      let hasAdminUser = false;
       if (editingTenant) {
         const usersRef = collection(db, 'users');
-        // Check for any user with admin roles in this tenant
-        const qAdmin = query(usersRef, where('tenantId', '==', tenant.id));
+        const qAdmin = query(usersRef, where('tenantId', '==', tenantId));
         const userSnap = await getDocs(qAdmin);
         
         userSnap.forEach((userDoc) => {
           const userData = userDoc.data();
           const userRole = (userData.role || '').toUpperCase();
           
-          // Only sync if the user has an admin-like role or matches the current admin email
           if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userData.email === editingTenant.adminEmail) {
+            hasAdminUser = true;
             const updateData: any = { email: email };
             if (password && password.length >= 6) {
               updateData.password = password;
@@ -10051,8 +10044,8 @@ function TenantsView({
         });
       }
 
-      // 4. Auto Setup Admin User (Only on creation)
-      if (!editingTenant) {
+      // 4. Auto Setup Admin User (Only on creation or if trial has no admin yet)
+      if (!editingTenant || (!hasAdminUser && editingTenant)) {
         const userId = `ADM-${Date.now()}`;
         batch.set(doc(db, "users", userId), {
           id_user: userId,
@@ -10060,7 +10053,7 @@ function TenantsView({
           name: `Admin ${name}`,
           username: email.split("@")[0],
           email: email,
-          password: password, // In production, this should be handled by Firebase Auth create
+          password: password, 
           role: "ADMIN",
           tenantId: tenantId,
           rt: "01",
