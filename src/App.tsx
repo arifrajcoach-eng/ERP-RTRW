@@ -3197,7 +3197,7 @@ export default function App() {
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 ml-[12px] text-[#eaf8ff] hover:text-red-600 hover:bg-red-50 rounded-xl transition-all md:ml-2"
+                className="p-2.5 ml-[12px] bg-[#e71173] text-white hover:bg-[#c40e62] rounded-2xl transition-all md:ml-2 shadow-lg shadow-brand-pink/20 flex items-center justify-center active:scale-95"
                 title="Keluar"
               >
                 <LogOut className="w-5 h-5" />
@@ -3753,7 +3753,10 @@ export default function App() {
                 >
                   <X className="w-6 h-6" />
                 </button>
-                <PricingSection />
+                <PricingSection onSelectFreeTrial={() => {
+                  setShowPricingModal(false);
+                  setShowFreeTrialModal(true);
+                }} />
               </div>
            </div>
         </div>
@@ -9433,53 +9436,63 @@ function LoginView({
 
 
 
-          {/* Free Trial Banner */}
-          <div className="mt-10 flex flex-col items-center gap-4">
+          {/* Free Trial Banner - More Prominent CTA */}
+          <div className="mt-8 flex flex-col items-center w-full px-4">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               className="w-full max-w-sm"
             >
-              <div 
+              <button 
                 onClick={onShowFreeTrial}
-                className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-brand-blue/20 p-5 rounded-[2.5rem] transition-all hover:bg-white/80 hover:scale-[1.03] active:scale-[0.98] cursor-pointer shadow-xl shadow-slate-200/50 hover:shadow-brand-blue/20"
+                className="w-full group relative overflow-hidden bg-gradient-to-br from-white to-slate-50 border-2 border-brand-pink/30 p-6 rounded-[2.5rem] transition-all hover:bg-white hover:border-brand-pink shadow-2xl shadow-brand-pink/10 hover:shadow-brand-pink/20 text-left"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-3xl bg-brand-blue flex items-center justify-center text-white shadow-2xl shadow-brand-blue/30 group-hover:rotate-12 transition-transform duration-500">
+                {/* Decorative background light */}
+                <div className="absolute -right-10 -top-10 w-32 h-32 bg-brand-pink/5 rounded-full blur-3xl group-hover:bg-brand-pink/10 transition-colors"></div>
+                
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className="w-16 h-16 rounded-3xl bg-brand-pink flex items-center justify-center text-white shadow-xl shadow-brand-pink/30 group-hover:rotate-12 transition-transform duration-500">
                     <Sparkles className="w-8 h-8 fill-white/20" />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="px-3 py-1 bg-amber-500 text-[9px] font-black uppercase tracking-widest text-white rounded-full shadow-lg shadow-amber-500/20 animate-pulse">New</span>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-blue">Kesempatan Terbatas</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-3 py-1 bg-amber-500 text-[10px] font-black uppercase tracking-widest text-white rounded-full shadow-lg shadow-amber-500/20 animate-pulse">
+                        Terbatas!
+                      </span>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-pink">Promo Launching</p>
                     </div>
-                    <h3 className="text-xl font-black text-slate-800 leading-tight tracking-tight mb-0.5">
-                      Aplikasi ini menarik?
+                    <h3 className="text-xl font-black text-slate-800 leading-tight tracking-tight">
+                      Gunakan <span className="text-brand-pink">SmartRW AI</span>
                     </h3>
-                    <p className="text-sm font-bold text-slate-500 leading-none">
-                      Coba <span className="text-brand-pink font-black uppercase">Free Trial</span> Sekarang!
+                    <p className="text-sm font-bold text-slate-500 mb-4 whitespace-nowrap overflow-hidden text-ellipsis">
+                      Dapatkan <span className="text-brand-blue">Free Trial</span> Sekarang!
                     </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center group-hover:bg-brand-blue group-hover:border-brand-blue transition-all group-hover:translate-x-2">
-                    <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-white" />
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="px-5 py-2.5 bg-brand-pink text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-brand-pink/20 group-hover:bg-brand-blue group-hover:shadow-brand-blue/20 transition-all flex items-center gap-2">
+                        Daftar Gratis
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 italic">
+                        Tanpa Kartu Kredit
+                      </div>
+                    </div>
                   </div>
                 </div>
-                
-                {/* Decorative element */}
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand-pink/10 rounded-full blur-3xl"></div>
-              </div>
+              </button>
             </motion.div>
             
-            <div className="flex flex-col items-center gap-3 mt-8 w-full max-w-sm">
+            <div className="flex flex-col items-center gap-3 mt-6 w-full max-w-sm">
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onShowPricing}
-                className="w-full py-4 bg-white border-2 border-brand-pink/20 text-brand-pink rounded-2xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:border-brand-pink transition-all"
+                className="w-full py-4 bg-white/50 backdrop-blur-sm border-2 border-slate-200 text-slate-600 rounded-2xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:border-brand-blue hover:text-brand-blue transition-all"
               >
                 <Tag className="w-4 h-4" />
-                <span className="text-[11px] font-black uppercase tracking-widest">Lihat Paket & Harga</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">Pricing & List Fitur</span>
               </motion.button>
               
               <div className="grid grid-cols-2 gap-3 w-full">

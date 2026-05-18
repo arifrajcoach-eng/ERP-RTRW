@@ -12,7 +12,11 @@ const icons: Record<string, any> = {
   enterprise: Building2,
 };
 
-export const PricingSection: React.FC = () => {
+interface PricingSectionProps {
+  onSelectFreeTrial?: () => void;
+}
+
+export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTrial }) => {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
@@ -110,7 +114,13 @@ export const PricingSection: React.FC = () => {
                 </div>
 
                 <button 
-                  onClick={() => window.open(`https://wa.me/087726741143?text=Halo%20Admin,%20saya%20tertarik%20dengan%20Paket%20${plan.name}%20SmartRW%20AI`, '_blank')}
+                  onClick={() => {
+                    if (plan.priceMonthly === 0 && onSelectFreeTrial) {
+                      onSelectFreeTrial();
+                    } else {
+                      window.open(`https://wa.me/087726741143?text=Halo%20Admin,%20saya%20tertarik%20dengan%20Paket%20${plan.name}%20SmartRW%20AI`, '_blank');
+                    }
+                  }}
                   className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
                     isBestSeller 
                       ? 'bg-brand-pink text-white shadow-lg shadow-brand-pink/20 hover:scale-[1.05] active:scale-95' 

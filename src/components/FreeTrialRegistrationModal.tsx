@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 import { db } from '../firebase';
 import { doc, setDoc, writeBatch } from 'firebase/firestore';
-import { X, User, Mail, Phone, Tag } from 'lucide-react';
+import { X, User, Mail, Phone, Tag, ShieldCheck } from 'lucide-react';
 
 export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
   const [formData, setFormData] = useState({ nama: '', email: '', hp: '', rt: '01', voucher: '' });
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       // Logic for free trial:
-      // Create user + tenant with 'TRIAL' plan, 'PENDING' status
       const tenantId = `TRIAL_${formData.nama.replace(/\s+/g, '_').toUpperCase()}_${Math.floor(Math.random() * 1000)}`;
       
       const newTenant = {
         id: tenantId,
-        name: `Tenant ${formData.nama}`,
-        status: 'BASIC', // Use BASIC for Starter plan access
-        isActive: true, // Auto-active for direct access
+        name: `SaaS ${formData.nama}`,
+        status: 'BASIC',
+        isActive: true,
         createdAt: new Date().toISOString(),
         adminEmail: formData.email,
         adminPhone: formData.hp,
@@ -28,7 +28,6 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
         rwTarget: 26,
       };
 
-      // Buat akun admin pre-registered menggunakan ID acak atau berbasis nomor HP
       const userId = `PRE_${formData.hp}_${Date.now()}`;
       const newUser = {
         id_user: userId,
@@ -47,8 +46,8 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
       batchOp.set(doc(db, 'users', userId), newUser);
       await batchOp.commit();
       
-      showNotification('Pendaftaran Berhasil! Silakan masuk menggunakan Masuk Dengan Google (gunakan email yang sama).', 'success');
-      onClose();
+      setIsSuccess(true);
+      showNotification('Pendaftaran Berhasil!', 'success');
     } catch (err: any) {
       console.error(err);
       showNotification('Gagal melakukan pendaftaran.', 'error');
@@ -56,6 +55,30 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
       setLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl flex flex-col items-center text-center">
+          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 animate-bounce">
+            <ShieldCheck className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-800 mb-2">Pendaftaran Berhasil!</h2>
+          <p className="text-sm font-medium text-slate-500 mb-8 leading-relaxed">
+            Akun Anda telah aktif di paket <span className="text-brand-pink font-bold">Starter (BASIC)</span>. 
+            Silakan masuk menggunakan tombol <span className="font-bold text-slate-700">Masuk dengan Google</span> dengan email: <br/>
+            <span className="text-blue-600 font-bold underline">{formData.email}</span>
+          </p>
+          <button 
+            onClick={onClose} 
+            className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs"
+          >
+            Mengerti, Lanjut Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
