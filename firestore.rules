@@ -165,7 +165,8 @@ service cloud.firestore {
       allow get: if isTenantMember(resource.data.tenantId);
       allow list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
+      allow update: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId) || 
+                       (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     match /complaints/{docId} {
