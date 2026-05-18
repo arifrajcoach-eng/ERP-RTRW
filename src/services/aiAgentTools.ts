@@ -234,11 +234,11 @@ export async function getWargaActivitySummary(tenantId: string) {
 }
 
 // 11. ACTIONS (FOR AI TOOL CALLING)
-export async function createSurat(data: { tenantId: string, pemohon: string, nik: string, noKK: string, keperluan: string }) {
+export async function createSurat(data: { tenantId: string, pemohon: string, nik: string, noKK: string, keperluan: string, jenisSurat?: string, nomorHp?: string }) {
   try {
     const docRef = await addDoc(collection(db, 'surat'), {
       ...data,
-      jenisSurat: 'Pengantar',
+      jenisSurat: data.jenisSurat || 'Pengantar',
       status: 'PENDING',
       createdAt: new Date()
     });

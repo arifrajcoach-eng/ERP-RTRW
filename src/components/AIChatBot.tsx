@@ -203,12 +203,14 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       setIsSpeaking(true);
       lastSpokenTextRef.current = text;
       
-      const response = await textToSpeech(text, isPrivileged);
+      // Bersihkan teks dari markdown symbol
+      const cleanText = text.replace(/[*#_`]/g, '');
+      const response = await textToSpeech(cleanText, isPrivileged);
       if (!response || !mountedRef.current) {
         console.warn("TTS Service returned no response. Check Gemini Key/Quota. Falling back to Browser TTS.");
         // Fallback to browser TTS if Gemini fails
         if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(text);
+          const utterance = new SpeechSynthesisUtterance(cleanText);
           utterance.lang = 'id-ID';
           utterance.onend = () => { if (mountedRef.current) setIsSpeaking(false); };
           utterance.onerror = () => { if (mountedRef.current) setIsSpeaking(false); };
@@ -515,7 +517,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
             const jsonAction = JSON.parse(cleanText);
             if (jsonAction.action === 'createSurat') {
               const res = await createSurat({ ...jsonAction.params, tenantId });
-              const msg = res.success ? `Alhamdulillah kak, surat pengantar berhasil dibuat (ID: ${res.id}).` : 'Maaf kak, ada kendala saat membuat surat.';
+              const msg = res.success ? (jsonAction.text || `Alhamdulillah kak, ${jsonAction.params?.jenisSurat || 'surat'} berhasil dibuat (ID: ${res.id}).`) : 'Maaf kak, ada kendala saat membuat surat.';
               setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
               handleSpeak(msg);
             } else if (jsonAction.action === 'registerELapak') {

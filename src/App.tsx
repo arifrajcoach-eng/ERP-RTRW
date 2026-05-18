@@ -534,10 +534,9 @@ const PLAN_FEATURES: Record<string, any> = {
     maxWarga: 50,
     price: "Free",
     coreFeatures: [
-      "Pencatatan Warga & Keuangan",
-      "AI Scan Struk (2-3/bln)",
-      "AI Chat (5/bln)",
-      "Surat Standar",
+      "Cetak Surat Pengantar dalam hitungan detik",
+      "Ubah Biaya jadi Income Kas RT dengan Fitur PPOB Bagi-Hasil",
+      "Coba keajaiban AI : Foto struk langsung jadi laporan (Batas 3x/Bulan)",
     ],
     keuangan: "DASAR",
     surat: "STANDAR",
@@ -559,9 +558,10 @@ const PLAN_FEATURES: Record<string, any> = {
     price: "Rp 55rb",
     oldPrice: "Rp 85rb",
     coreFeatures: [
-      "Data, Iuran & Buku Tamu",
-      "Surat, SOS & Inventaris",
-      "AI Chatbot (Max 50)",
+      "PPOB & Iuran Digital Integrasi",
+      "Surat Digital, Buku Tamu Digital, SOS",
+      "Booking Fasilitas Umum",
+      "AI Chatbot (50x/bln)",
     ],
     keuangan: "DASAR", // No advanced PPOB
     surat: "STANDAR",
@@ -584,9 +584,10 @@ const PLAN_FEATURES: Record<string, any> = {
     price: "Rp 129rb",
     oldPrice: "Rp 169rb",
     coreFeatures: [
-      "Buku Tamu & E-Voting",
-      "Bank Sampah & Posyandu",
-      "AI Chatbot (max 200/bln)",
+      "Modul Posyandu",
+      "Modul Bank Sampah",
+      "Modul E-Voting (Pemilu Warga)",
+      "AI Chatbot (200x/bln)",
     ],
     keuangan: "FULL",
     surat: "CUSTOM",
@@ -609,9 +610,11 @@ const PLAN_FEATURES: Record<string, any> = {
     price: "Rp 239rb",
     oldPrice: "Rp 479rb",
     coreFeatures: [
-      "Multi-Tenant (Max 6)",
-      "Buku Tamu & E-Pemilu",
-      "Posyandu & Bank Sampah",
+      "Available 6 Tenant (Multi-Tenant RW -> 5 RT + 1 RW)",
+      "Dashboard Konsolidasi Data RW",
+      "Integrasi CCTV Keamanan",
+      "AI Scan Struk (100x/bln)",
+      "Prioritas Layanan Support",
     ],
     keuangan: "FULL",
     surat: "CUSTOM",
@@ -634,9 +637,11 @@ const PLAN_FEATURES: Record<string, any> = {
     price: "Rp 2.5jt",
     oldPrice: "Rp 4.9jt",
     coreFeatures: [
-      "Multi-RW / Skala Kelurahan",
-      "White Label & Custom DB",
-      "Big Data & Strategic AI",
+      "Multi-RW / Skala Kelurahan/ Perumahan Besar",
+      "Custom Domain / White Labeling",
+      "AI Strategic & Big Data Insights",
+      "Warga Tanpa Batas (Unlimited)",
+      "Dedicated CS Manager 24/7",
     ],
     keuangan: "ENTERPRISE",
     surat: "DYNAMIC",
@@ -659,75 +664,92 @@ const PLAN_FEATURES: Record<string, any> = {
 const ADDON_CONFIG = {
   AI_CHAT: {
     id: "addon_ai",
-    name: "Extra AI Chat Quota (+100)",
-    priceMonthly: 25000,
+    name: "Extra AI Chat (100 chats) - 49k/ bln",
+    priceMonthly: 49000,
     featureKey: "extraAi_100",
   },
   POSYANDU: {
     id: "addon_posyandu",
-    name: "Modul Kesehatan (Posyandu)",
-    priceMonthly: 15000,
+    name: "Modul Kesehatan (Posyandu) - 35k/ bln",
+    priceMonthly: 35000,
     featureKey: "posyandu",
   },
   EVOTING: {
     id: "addon_evoting",
-    name: "Modul E-Voting & Pemilu",
-    priceMonthly: 20000,
+    name: "Modul E-Voting & Pemilu - 45k/ bln",
+    priceMonthly: 45000,
     featureKey: "ePemilu",
   },
   BANK_SAMPAH: {
     id: "addon_banksampah",
-    name: "Modul Bank Sampah",
-    priceMonthly: 15000,
+    name: "Modul Bank Sampah - 35k/ bln",
+    priceMonthly: 35000,
     featureKey: "bankSampah",
   },
   CCTV: {
     id: "addon_cctv",
-    name: "CCTV Integration",
-    priceMonthly: 50000,
+    name: "CCTV Integration - 80k/ bln",
+    priceMonthly: 80000,
     featureKey: "cctv",
   },
   ELAPAK: {
     id: "addon_elapak",
-    name: "E-Lapak (Pasar Warga)",
-    priceMonthly: 30000,
+    name: "E-Lapak (Pasar Warga) - 50k/ bln",
+    priceMonthly: 50000,
     featureKey: "eLapakFull",
   },
-  JUMLAH_WARGA: {
-    id: "addon_warga",
-    name: "Jumlah Warga",
-    priceMonthly: 0,
-    featureKey: "jumlahWarga",
+  PPOB: { 
+    id: "addon_ppob", 
+    name: "Modul PPOB (Payment Point Online Bank) - 50k/ bln", 
+    priceMonthly: 50000, 
+    featureKey: "ppob" 
+  },
+  BOOKING: { 
+    id: "addon_booking", 
+    name: "Modul Booking Fasilitas - 5k/ bln", 
+    priceMonthly: 5000, 
+    featureKey: "booking" 
+  },
+  JUMLAH_WARGA_100: {
+    id: "addon_warga_100",
+    name: "Ekstra +100 Warga - 15k/ bln",
+    priceMonthly: 15000,
+    featureKey: "warga_100",
+  },
+  JUMLAH_WARGA_500: {
+    id: "addon_warga_500",
+    name: "Ekstra +500 Warga - 50k/ bln",
+    priceMonthly: 50000,
+    featureKey: "warga_500",
   },
   SOS: {
     id: "addon_sos",
-    name: "Modul SOS",
-    priceMonthly: 0,
+    name: "Modul SOS - 29k/ bln",
+    priceMonthly: 29000,
     featureKey: "modulSos",
   },
   BUKU_TAMU: {
     id: "addon_buku_tamu",
-    name: "Buku Tamu",
-    priceMonthly: 0,
+    name: "Buku Tamu Digital - 19k/ bln",
+    priceMonthly: 19000,
     featureKey: "bukuTamu",
   },
   INVENTARIS: {
     id: "addon_inventaris",
-    name: "Inventaris",
-    priceMonthly: 0,
+    name: "Modul Inventaris - 15k/ bln",
+    priceMonthly: 15000,
     featureKey: "inventaris",
   },
-  PPOB: { id: "addon_ppob", name: "PPOB", priceMonthly: 0, featureKey: "ppob" },
   AI_AGENT: {
     id: "addon_ai_agent",
-    name: "AI Agent",
-    priceMonthly: 0,
+    name: "AI Agent (Asisten 24/7) - 59k/ bln",
+    priceMonthly: 59000,
     featureKey: "aiAgent",
   },
   GRUP_CHAT: {
     id: "addon_grup_chat",
-    name: "Grup Chat",
-    priceMonthly: 0,
+    name: "Grup Chat Warga - 25k/ bln",
+    priceMonthly: 25000,
     featureKey: "grupChat",
   },
 };
@@ -2856,7 +2878,7 @@ export default function App() {
             </div>
           </div>
           <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors">
-            <span className="font-bold"><span className="text-[#04a8f4]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
+            <span className="font-bold"><span className="text-[#04a8f4]">Smart</span><span className="text-[#1ba0ce]">RW</span> <span className="text-brand-pink">AI</span></span>
           </h2>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">
             Berdampak & Memberdayakan
