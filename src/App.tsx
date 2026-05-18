@@ -1225,23 +1225,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_WARGA_DATA;
   });
 
-  const linkedWarga = currentUser?.nikMapping
-    ? wargaData.find((w: any) => w.nik === currentUser.nikMapping)
-    : null;
 
-  // Enforce Max Warga limit locally for UI based on Plan
-  const cappedWargaData = useMemo(() => {
-    if (!currentTenant) return wargaData.slice(0, 50);
-    const isFree = currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
-    const maxWargaLimit = isFree ? 50 : (getPlanFeatures(currentTenant).maxWarga || 50);
-    return wargaData.slice(0, maxWargaLimit);
-  }, [wargaData, currentTenant]);
-
-  const userPhoto =
-    (currentUser as any)?.photoUrl ||
-    linkedWarga?.foto ||
-    linkedWarga?.ktpUrl ||
-    null;
 
   const [kasData, setKasData] = useState(() => {
     const saved = localStorage.getItem("rw26_kasData");
@@ -1360,6 +1344,25 @@ export default function App() {
   const [isSOSConfirmOpen, setIsSOSConfirmOpen] = useState(false);
   const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
   const [isSelfRegistering, setIsSelfRegistering] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+
+  const linkedWarga = currentUser?.nikMapping
+    ? wargaData.find((w: any) => w.nik === currentUser.nikMapping)
+    : null;
+
+  // Enforce Max Warga limit locally for UI based on Plan
+  const cappedWargaData = useMemo(() => {
+    if (!currentTenant) return wargaData.slice(0, 50);
+    const isFree = currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
+    const maxWargaLimit = isFree ? 50 : (getPlanFeatures(currentTenant).maxWarga || 50);
+    return wargaData.slice(0, maxWargaLimit);
+  }, [wargaData, currentTenant]);
+
+  const userPhoto =
+    (currentUser as any)?.photoUrl ||
+    linkedWarga?.foto ||
+    linkedWarga?.ktpUrl ||
+    null;
 
   // Derived Access Roles
   const isViewer = currentUser?.role === "Viewer" || currentUser?.role === "TAMU";
@@ -1526,7 +1529,8 @@ export default function App() {
       return;
     }
 
-    const tId = currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
+    const baseTenantId = currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : baseTenantId;
     const tIds = tId === "RW_BERJUANG" ? ["RW_BERJUANG", "trihprw26"] : [tId];
 
     setIsLoadingDB(true);
@@ -2357,7 +2361,7 @@ export default function App() {
       unsubComplaints();
       unsubBookings();
     };
-  }, [currentUser, wargaAuth]);
+  }, [currentUser, wargaAuth, selectedTenantId]);
 
   // --- CENTRAL CONFIG HELPERS ---
   const getSetting = (key: string) => {
@@ -3202,6 +3206,23 @@ export default function App() {
           </div>
         </header>
 
+        {currentUser?.isSuperAdmin && selectedTenantId && (
+          <div className="mx-3 md:mx-6 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm animate-pulse-subtle">
+             <div className="flex items-center gap-3">
+               <Shield className="w-4 h-4 text-amber-600" />
+               <p className="text-[10px] md:text-xs font-bold text-amber-800 uppercase tracking-widest">
+                 Mode Bypass Aktif: Mengakses Data {currentTenant?.name || selectedTenantId}
+               </p>
+             </div>
+             <button 
+               onClick={() => setSelectedTenantId(null)}
+               className="px-3 py-1 bg-amber-600 text-white text-[10px] font-black rounded-lg hover:bg-amber-700 uppercase tracking-tighter transition-all"
+             >
+               Reset Master
+             </button>
+          </div>
+        )}
+
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0 relative z-10">
           {activeTab === "dashboard" && (
@@ -3469,6 +3490,8 @@ export default function App() {
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               showNotification={showNotification}
+              setSelectedTenantId={setSelectedTenantId}
+              selectedTenantId={selectedTenantId}
             />
           )}
           {activeTab === "pengaturan" && (
@@ -9420,24 +9443,26 @@ function LoginView({
             >
               <div 
                 onClick={onShowFreeTrial}
-                className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-white/60 p-5 rounded-[2rem] transition-all hover:bg-white/70 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-sm hover:shadow-md border-brand-pink/20"
+                className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-brand-blue/20 p-5 rounded-[2.5rem] transition-all hover:bg-white/80 hover:scale-[1.03] active:scale-[0.98] cursor-pointer shadow-xl shadow-slate-200/50 hover:shadow-brand-blue/20"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-pink to-brand-pink/60 flex items-center justify-center text-white shadow-lg shadow-brand-pink/20 group-hover:rotate-6 transition-transform">
-                    <Sparkles className="w-7 h-7" />
+                  <div className="w-16 h-16 rounded-3xl bg-brand-blue flex items-center justify-center text-white shadow-2xl shadow-brand-blue/30 group-hover:rotate-12 transition-transform duration-500">
+                    <Sparkles className="w-8 h-8 fill-white/20" />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 bg-brand-pink text-[8px] font-black uppercase tracking-widest text-white rounded-full">New</span>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-brand-pink">Kesempatan Terbatas</p>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="px-3 py-1 bg-amber-500 text-[9px] font-black uppercase tracking-widest text-white rounded-full shadow-lg shadow-amber-500/20 animate-pulse">New</span>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-blue">Kesempatan Terbatas</p>
                     </div>
-                    <p className="text-base font-black text-slate-800 leading-tight">
-                      Aplikasi ini menarik? <br/>
-                      <span className="text-brand-pink">Coba Free Trial Sekarang</span>
+                    <h3 className="text-xl font-black text-slate-800 leading-tight tracking-tight mb-0.5">
+                      Aplikasi ini menarik?
+                    </h3>
+                    <p className="text-sm font-bold text-slate-500 leading-none">
+                      Coba <span className="text-brand-pink font-black uppercase">Free Trial</span> Sekarang!
                     </p>
                   </div>
-                  <div className="p-3 bg-brand-pink rounded-xl text-white shadow-md group-hover:translate-x-1 transition-transform">
-                    <ChevronRight className="w-5 h-5 ml-0.5" />
+                  <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center group-hover:bg-brand-blue group-hover:border-brand-blue transition-all group-hover:translate-x-2">
+                    <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-white" />
                   </div>
                 </div>
                 
@@ -9970,12 +9995,16 @@ function TenantsView({
   setIsLoadingDB,
   handleFirestoreError,
   showNotification,
+  setSelectedTenantId,
+  selectedTenantId,
 }: {
   tenantsData: any[];
   isLoadingDB: boolean;
   setIsLoadingDB: any;
   handleFirestoreError: any;
   showNotification: any;
+  setSelectedTenantId: any;
+  selectedTenantId: string | null;
 }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
@@ -10177,15 +10206,28 @@ function TenantsView({
             </p>
           </div>
         </div>
+        <div className="flex gap-2">
+          {selectedTenantId && (
             <StyledButton
-              label="Tambah Tenant Baru"
+              label="Reset ke Super Admin"
+              onClick={() => {
+                setSelectedTenantId(null);
+                showNotification("Kembali ke mode Super Admin pusat.", "info");
+              }}
+              colorType="secondary"
+              icon={<Shield className="w-4 h-4" />}
+            />
+          )}
+          <StyledButton
+            label="Tambah Tenant Baru"
               onClick={() => {
                 setEditingTenant(null);
                 setShowAddForm(true);
               }}
               colorType="primary"
               icon={<PlusCircle className="w-4 h-4" />}
-            />
+          />
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -10322,6 +10364,20 @@ function TenantsView({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2 text-[10px] uppercase font-black tracking-widest">
+                      <button
+                        onClick={() => {
+                          setSelectedTenantId(tenant.id);
+                          showNotification(`Berhasil berpindah ke akses ${tenant.name}`, "info");
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border font-bold active:scale-95 shadow-sm ${
+                          selectedTenantId === tenant.id
+                            ? "bg-emerald-600 text-white border-emerald-500"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {selectedTenantId === tenant.id ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                        <span>{selectedTenantId === tenant.id ? "Akses Aktif" : "Bypass Akses"}</span>
+                      </button>
                       <button
                         onClick={() => {
                           setEditingTenant(tenant);
