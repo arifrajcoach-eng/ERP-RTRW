@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { doc, setDoc, writeBatch } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
 import { X, User, Mail, Phone, Tag, ShieldCheck } from 'lucide-react';
 
 export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
@@ -10,10 +11,19 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.nama || !formData.email || !formData.hp) {
+      showNotification('Harap isi semua field wajib.', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Logic for free trial:
-      const tenantId = `TRIAL_${formData.nama.replace(/\s+/g, '_').toUpperCase()}_${Math.floor(Math.random() * 1000)}`;
+      // 1. Ensure we have a session (Signin Anonymously if needed for rules)
+      if (!auth.currentUser) {
+        await signInAnonymously(auth);
+      }
+
+      const tenantId = `TRIAL_${formData.nama.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_${Math.floor(1000 + Math.random() * 9000)}`;
       
       const newTenant = {
         id: tenantId,
@@ -21,36 +31,48 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
         status: 'BASIC',
         isActive: true,
         createdAt: new Date().toISOString(),
-        adminEmail: formData.email,
+        adminEmail: formData.email.toLowerCase(),
         adminPhone: formData.hp,
-        voucher: formData.voucher,
+        voucher: formData.voucher || '',
         rtTarget: 1,
         rwTarget: 26,
       };
 
-      const userId = `PRE_${formData.hp}_${Date.now()}`;
+      // If user is already logged in (Google), use their real UID
+      // Otherwise use a PRE_ prefix to allow rule matching for guest registration
+      const finalUserId = auth.currentUser?.email === formData.email.toLowerCase() 
+        ? auth.currentUser.uid 
+        : `PRE_${formData.hp.replace(/\D/g, '')}_${Date.now()}`;
+
       const newUser = {
-        id_user: userId,
+        id_user: finalUserId,
         nama: formData.nama,
-        email: formData.email,
+        name: formData.nama,
+        email: formData.email.toLowerCase(),
         phone: formData.hp,
         tenantId: tenantId,
         role: 'ADMIN',
-        rt: formData.rt,
+        rt: formData.rt || '01',
         status: 'AKTIF',
         createdAt: new Date().toISOString()
       };
 
       const batchOp = writeBatch(db);
       batchOp.set(doc(db, 'tenants', tenantId), newTenant);
-      batchOp.set(doc(db, 'users', userId), newUser);
+      batchOp.set(doc(db, 'users', finalUserId), newUser);
       await batchOp.commit();
       
       setIsSuccess(true);
       showNotification('Pendaftaran Berhasil!', 'success');
     } catch (err: any) {
-      console.error(err);
-      showNotification('Gagal melakukan pendaftaran.', 'error');
+      console.error('Registration Error:', err);
+      const isPermissionError = err?.code === 'permission-denied' || err?.message?.includes('permission');
+      showNotification(
+        isPermissionError 
+          ? 'Gagal: Izin ditolak. Silakan hubungi admin.' 
+          : `Gagal: ${err.message || 'Terjadi kesalahan sistem.'}`, 
+        'error'
+      );
     } finally {
       setLoading(false);
     }
