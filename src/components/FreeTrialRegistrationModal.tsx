@@ -38,12 +38,13 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
         rwTarget: 26,
       };
 
-      // Use current auth UID (anonymous or Google) to ensure getUserData() works in rules
-      const finalUserId = auth.currentUser!.uid;
+      // Use a PRE_ prefix with email to allow rule matching for guest registration
+      // and linking when they log in with Google later
+      const finalUserId = `PRE_${formData.email.toLowerCase()}`;
 
       const newUser = {
         id_user: finalUserId,
-        uid: finalUserId, // Consistency
+        uid: null, // Will be updated on first login
         nama: formData.nama,
         name: formData.nama,
         email: formData.email.toLowerCase(),
@@ -151,8 +152,12 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
               <input type="text" value={formData.voucher} onChange={e => setFormData({...formData, voucher: e.target.value})} className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" />
             </div>
           </div>
-          <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl mt-4 disabled:opacity-50">
-            {loading ? 'Memproses...' : 'Daftar Gratis'}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-4 bg-brand-pink text-white font-black rounded-2xl shadow-xl shadow-brand-pink/20 hover:scale-[1.02] active:scale-[0.98] transition-all mt-4 disabled:opacity-50 uppercase tracking-widest text-xs"
+          >
+            {loading ? 'Memproses...' : 'Daftar & Aktivasi Gratis'}
           </button>
         </form>
       </div>

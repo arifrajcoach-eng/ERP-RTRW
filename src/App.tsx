@@ -1131,24 +1131,24 @@ export default function App() {
             });
           } else {
             // If No Firestore doc yet, check if they are pre-registered by email
-            const userQuery = query(collection(db, "users"), where("email", "==", user.email));
-            const userDocs = await getDocs(userQuery);
+            const preRegDocRef = doc(db, "users", "PRE_" + (user.email?.toLowerCase() || "NONE"));
+            const preRegDoc = await getDoc(preRegDocRef);
 
-            if (!userDocs.empty) {
+            if (preRegDoc.exists()) {
               // Found pre-registered user
-              const preRegUserDoc = userDocs.docs[0];
-              const preRegUserData = preRegUserDoc.data();
+              const preRegUserData = preRegDoc.data();
               
               // Update to new UID
               const newUser = {
                 ...preRegUserData,
-                id_user: user.uid
+                id_user: user.uid,
+                uid: user.uid
               };
               
               await setDoc(doc(db, "users", user.uid), newUser);
-              await deleteDoc(preRegUserDoc.ref);
+              await deleteDoc(preRegDocRef);
               
-              setCurrentUser(newUser as any);
+              setCurrentUser({ uid: user.uid, ...newUser } as any);
             } else {
               // Otherwise check if they are the hardcoded super admin
               const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
@@ -1874,6 +1874,9 @@ export default function App() {
         ),
         (snap) =>
           setInventarisKategori(snap.docs.map((doc) => ({ ...doc.data() }))),
+        (err) => {
+          handleFirestoreError(err, "list", "inventaris_kategori");
+        }
       );
       unsubInventarisLokasi = onSnapshot(
         query(
@@ -1882,6 +1885,9 @@ export default function App() {
         ),
         (snap) =>
           setInventarisLokasi(snap.docs.map((doc) => ({ ...doc.data() }))),
+        (err) => {
+          handleFirestoreError(err, "list", "inventaris_lokasi");
+        }
       );
       unsubInventarisSupplier = onSnapshot(
         query(
@@ -1890,6 +1896,9 @@ export default function App() {
         ),
         (snap) =>
           setInventarisSupplier(snap.docs.map((doc) => ({ ...doc.data() }))),
+        (err) => {
+          handleFirestoreError(err, "list", "inventaris_supplier");
+        }
       );
     }
 
