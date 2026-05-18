@@ -90,7 +90,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
                   )}
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-black text-slate-800">
-                      {price === 0 ? 'GRATIS' : `Rp${(price / (isYearly ? 12 : 1)).toLocaleString('id-ID')}`}
+                      {price === 0 ? 'GRATIS' : `Rp${(Math.round((price / (isYearly ? 12 : 1)) / 100) * 100).toLocaleString('id-ID')}`}
                     </span>
                     {price > 0 && <span className="text-[10px] font-bold text-slate-400 uppercase">/bln*</span>}
                   </div>

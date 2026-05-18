@@ -2813,17 +2813,43 @@ export default function App() {
         currentUser.name === "Warga (Anonymous)"))
   ) {
     return (
-      <LoginView
-        setWargaAuth={setWargaAuth}
-        wargaData={wargaData}
-        verifikasiWargaData={verifikasiWargaData}
-        isLoadingDB={isLoadingDB}
-        onSelfRegister={() => setIsSelfRegistering(true)}
-        onShowFreeTrial={() => setShowFreeTrialModal(true)}
-        onShowPricing={() => setShowPricingModal(true)}
-        settings={settings}
-        tenantId={currentUser?.tenantId || "RW26_SMART"}
-      />
+      <>
+        <LoginView
+          setWargaAuth={setWargaAuth}
+          wargaData={wargaData}
+          verifikasiWargaData={verifikasiWargaData}
+          isLoadingDB={isLoadingDB}
+          onSelfRegister={() => setIsSelfRegistering(true)}
+          onShowFreeTrial={() => setShowFreeTrialModal(true)}
+          onShowPricing={() => setShowPricingModal(true)}
+          settings={settings}
+          tenantId={currentUser?.tenantId || "RW26_SMART"}
+        />
+        {showFreeTrialModal && (
+          <FreeTrialRegistrationModal
+            onClose={() => setShowFreeTrialModal(false)}
+            showNotification={showNotification}
+          />
+        )}
+        {showPricingModal && (
+          <div className="fixed inset-0 z-[200] overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4">
+            <div className="min-h-full flex items-center justify-center py-10">
+              <div className="bg-white rounded-[3rem] w-full max-w-5xl relative overflow-hidden">
+                <button 
+                  onClick={() => setShowPricingModal(false)}
+                  className="absolute top-8 right-8 z-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+                <PricingSection onSelectFreeTrial={() => {
+                  setShowPricingModal(false);
+                  setShowFreeTrialModal(true);
+                }} />
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -3762,7 +3788,7 @@ export default function App() {
         </div>
       )}
       
-      {showInfoPopup && (
+      {showInfoPopup && (!currentUser || currentUser?.isAnonymous) && (
         <div className="fixed inset-0 z-[250] flex items-end md:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
            <motion.div 
              initial={{ y: 100, opacity: 0 }}
@@ -3789,7 +3815,7 @@ export default function App() {
                 <button 
                   onClick={() => { 
                     setShowInfoPopup(false); 
-                    window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20coba%20Free%20Trial%20SmartRW%20AI', '_blank');
+                    setShowFreeTrialModal(true);
                   }}
                   className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 hover:shadow-2xl hover:shadow-pink-500/40 hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
                 >

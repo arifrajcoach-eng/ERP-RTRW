@@ -1,19 +1,18 @@
 import express from "express";
 import path from "path";
-import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
-import { checkFeatureAccess } from "./src/services/subscriptionService";
 import admin from "firebase-admin";
 import cron from "node-cron";
 
 // Initialize admin
-if (!admin.apps.length) {                
-  admin.initializeApp();                
-}                
-const db = admin.firestore();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+try {
+  if (!admin.apps.length) {                
+    admin.initializeApp();                
+  }                
+} catch (e) {
+  console.error("Firebase Admin init failed:", e.message);
+}
+const db = admin.apps.length ? admin.firestore() : null;
 
 async function startServer() {
   const app = express();
@@ -79,7 +78,8 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.resolve(process.cwd(), 'dist');
+    console.log(`Serving static files from: ${distPath}`);
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -87,7 +87,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
