@@ -38,23 +38,25 @@ const calculateAge = (tglLahir: string) => {
   return age;
 };
 
-function WargaView({ 
-  wargaData, 
-  currentTenant, 
-  setWargaData, 
-  userRole, 
-  tenantId, 
-  setIsLoadingDB, 
-  handleFirestoreError, 
-  handleFileUpload, 
-  showNotification, 
-  currentUser,
-  settings 
-}: WargaViewProps) {
+function WargaView(props: WargaViewProps) { 
+  const { 
+      wargaData, 
+      currentTenant, 
+      setWargaData, 
+      userRole, 
+      tenantId, 
+      setIsLoadingDB, 
+      handleFirestoreError, 
+      handleFileUpload, 
+      showNotification, 
+      currentUser,
+      settings 
+  } = props;
   const isApt = settings?.themeMode === 'apartemen';
-  const isFree = !currentTenant || currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
-  // The plan limits are stored in currentTenant or we just use hardcoded checks / maxWarga from the object. This is a bit rough but works for trial
-  const maxWargaLimit = isFree ? 50 : (currentTenant?.maxWarga || 5000);
+  const tenant = currentTenant || {};
+  const isFree = !tenant.status || tenant.status === "TRIAL" || tenant.status === "FREE";
+  // The plan limits are stored in tenant or we just use hardcoded checks / maxWarga from the object. This is a bit rough but works for trial
+  const maxWargaLimit = isFree ? 50 : (tenant?.maxWarga || 5000);
   const limitReached = wargaData.length >= maxWargaLimit;
 
   const [showAddForm, setShowAddForm] = useState(false);

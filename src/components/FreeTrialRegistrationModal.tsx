@@ -18,8 +18,8 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
       const newTenant = {
         id: tenantId,
         name: `Tenant ${formData.nama}`,
-        status: 'TRIAL', // Plan
-        isActive: false, // Pending approval
+        status: 'BASIC', // Use BASIC for Starter plan access
+        isActive: true, // Auto-active for direct access
         createdAt: new Date().toISOString(),
         adminEmail: formData.email,
         adminPhone: formData.hp,

@@ -568,6 +568,9 @@ const PLAN_FEATURES: Record<string, any> = {
     ],
     keuangan: "DASAR", // No advanced PPOB
     surat: "STANDAR",
+    verifikasi: true,
+    chatMode: true,
+    ai: true,
     maxAiChats: 50,
     multiRT: false,
     posyandu: false,
@@ -594,6 +597,9 @@ const PLAN_FEATURES: Record<string, any> = {
     ],
     keuangan: "FULL",
     surat: "CUSTOM",
+    verifikasi: true,
+    chatMode: true,
+    ai: true,
     maxAiChats: 200,
     multiRT: false,
     posyandu: true,
@@ -621,6 +627,9 @@ const PLAN_FEATURES: Record<string, any> = {
     ],
     keuangan: "FULL",
     surat: "CUSTOM",
+    verifikasi: true,
+    chatMode: true,
+    ai: true,
     maxAiChats: 0,
     multiRT: true,
     posyandu: true,
@@ -648,6 +657,9 @@ const PLAN_FEATURES: Record<string, any> = {
     ],
     keuangan: "ENTERPRISE",
     surat: "DYNAMIC",
+    verifikasi: true,
+    chatMode: true,
+    ai: true,
     maxAiChats: -1, // Unlimited
     multiRT: true,
     posyandu: true,
@@ -1117,31 +1129,52 @@ export default function App() {
               isSuperAdmin: overrideAdmin,
             });
           } else {
-            // If No Firestore doc yet, check if they are the hardcoded super admin
-            const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
+            // If No Firestore doc yet, check if they are pre-registered by email
+            const userQuery = query(collection(db, "users"), where("email", "==", user.email));
+            const userDocs = await getDocs(userQuery);
 
-            if (isMasterEmail) {
+            if (!userDocs.empty) {
+              // Found pre-registered user
+              const preRegUserDoc = userDocs.docs[0];
+              const preRegUserData = preRegUserDoc.data();
+              
+              // Update to new UID
               const newUser = {
-                id_user: user.uid,
-                name: "Bpk. Arif (Super Admin)",
-                nama: "Bpk. Arif (Super Admin)",
-                username: user.email?.split("@")[0] || "user",
-                role: "SUPER_ADMIN",
-                email: user.email,
-                tenantId: "MASTER",
-                isSuperAdmin: true,
-                rt: "01",
-                status: "AKTIF",
-                created_at: new Date().toISOString(),
+                ...preRegUserData,
+                id_user: user.uid
               };
-              await setDoc(userDocRef, newUser);
+              
+              await setDoc(doc(db, "users", user.uid), newUser);
+              await deleteDoc(preRegUserDoc.ref);
+              
               setCurrentUser(newUser as any);
             } else {
-               // Unauthorized Google session without a Firestore document
-               // Sign them out automatically, they must be registered
-               await signOut(auth);
-               setCurrentUser(null);
-               setDbError("Akun Google Anda belum terdaftar di sistem. Silakan mendaftar Trial atau minta Admin untuk mendaftarkan Anda.");
+              // Otherwise check if they are the hardcoded super admin
+              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
+              if (isMasterEmail) {
+                const newUser = {
+                  id_user: user.uid,
+                  name: "Bpk. Arif (Super Admin)",
+                  nama: "Bpk. Arif (Super Admin)",
+                  username: user.email?.split("@")[0] || "user",
+                  role: "SUPER_ADMIN",
+                  email: user.email,
+                  tenantId: "MASTER",
+                  isSuperAdmin: true,
+                  rt: "01",
+                  status: "AKTIF",
+                  created_at: new Date().toISOString(),
+                };
+                await setDoc(userDocRef, newUser);
+                setCurrentUser(newUser as any);
+              } else {
+                 // Unauthorized Google session without a Firestore document
+                 await signOut(auth);
+                 setCurrentUser(null);
+                 // Note: Ensure setDbError is available or available in scope. 
+                 // Based on lines 1147, it was available.
+                 if (typeof setDbError === 'function') setDbError("Akun Google Anda belum terdaftar di sistem. Silakan mendaftar Trial atau minta Admin untuk mendaftarkan Anda.");
+              }
             }
           }
         } catch (error: any) {
@@ -1198,10 +1231,11 @@ export default function App() {
 
   // Enforce Max Warga limit locally for UI based on Plan
   const cappedWargaData = useMemo(() => {
-    const isFree = !currentTenant || currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
-    const maxWargaLimit = isFree ? 50 : (getPlanFeatures(currentTenant?.status).maxWarga || 50);
+    if (!currentTenant) return wargaData.slice(0, 50);
+    const isFree = currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
+    const maxWargaLimit = isFree ? 50 : (getPlanFeatures(currentTenant).maxWarga || 50);
     return wargaData.slice(0, maxWargaLimit);
-  }, [wargaData, currentTenant?.status]);
+  }, [wargaData, currentTenant]);
 
   const userPhoto =
     (currentUser as any)?.photoUrl ||
