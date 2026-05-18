@@ -217,7 +217,7 @@ export async function generateAIReport(dataSummary: any) {
   try {
     checkApiKey();
     const response = await ai.models.generateContent({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
       Laporan harus mencakup: 
       1. Ringkasan Keuangan (Saldo Akhir). 
@@ -241,7 +241,7 @@ export async function generateRegionalInsight(regionsData: any) {
     Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt
     });
     return response.text || "";
@@ -255,7 +255,7 @@ export async function scanReceiptAI(imageBase64: string) {
   try {
     checkApiKey();
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: [
         { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi. Ekstrak informasi dari gambar struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: 
         {
