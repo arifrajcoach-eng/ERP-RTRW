@@ -1017,6 +1017,57 @@ export default function App() {
   const [showInfoPopup, setShowInfoPopup] = useState(true); // Default show for announcement
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const alertedSOSRef = useRef<Set<string>>(new Set());
+
+  const triggerLocalSOSAlert = (sosId: string) => {
+    if (alertedSOSRef.current.has(sosId)) return;
+    alertedSOSRef.current.add(sosId);
+
+    // Vibration
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      try {
+        navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+      } catch (e) {}
+    }
+
+    // Audio Alert
+    try {
+      const audioCtx = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )();
+
+      const playSiren = (delay: number) => {
+        setTimeout(() => {
+          if (audioCtx.state === "suspended") audioCtx.resume();
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          oscillator.type = "sawtooth";
+
+          const now = audioCtx.currentTime;
+          oscillator.frequency.setValueAtTime(400, now);
+          oscillator.frequency.exponentialRampToValueAtTime(1000, now + 1);
+          oscillator.frequency.exponentialRampToValueAtTime(400, now + 2);
+
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(0.6, now + 0.1);
+          gainNode.gain.setValueAtTime(0.6, now + 1.8);
+          gainNode.gain.linearRampToValueAtTime(0, now + 2.2);
+
+          oscillator.start(now);
+          oscillator.stop(now + 2.2);
+        }, delay);
+      };
+
+      // Play sequence
+      playSiren(0);
+      playSiren(2500);
+      playSiren(5000);
+    } catch (e) {
+      console.error("SOS Audio Alert failed", e);
+    }
+  };
   const [currentUser, setCurrentUser] = useState<{
     name: string;
     role: string;
@@ -2069,12 +2120,31 @@ export default function App() {
       );
     }
 
+    let isInitialLoad = true;
     const unsubEmergencies = onSnapshot(
       query(collection(db, "emergencies"), where("tenantId", "in", tIds)),
       (snap) => {
-        setEmergenciesData(
-          snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-        );
+        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+        // Detect new active emergencies to trigger alert
+        snap.docChanges().forEach((change) => {
+          if (
+            (change.type === "added" || change.type === "modified") &&
+            change.doc.data().status === "ACTIVE"
+          ) {
+            const sosData = change.doc.data();
+            const sosTime = sosData.timestamp ? new Date(sosData.timestamp).getTime() : Date.now();
+            const now = Date.now();
+            const isRecent = (now - sosTime) < 60000; // 60 seconds
+
+            if (!isInitialLoad || isRecent) {
+              triggerLocalSOSAlert(change.doc.id);
+            }
+          }
+        });
+
+        isInitialLoad = false;
+        setEmergenciesData(data);
         onDataLoaded();
       },
       (err) => {

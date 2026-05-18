@@ -77,7 +77,7 @@ service cloud.firestore {
       allow create: if !exists(/databases/$(database)/documents/users/$(userId)) && 
                       (userId.startsWith('PRE_') || (isSignedIn() && request.auth.uid == userId));
       allow update: if isAdmin() || 
-                      (isPengurus() && isTenantMember(resource.data.tenantId)) || 
+                      (isPengurus() && isTenantMember(resource.data.tenantId || request.resource.data.tenantId)) || 
                       (isSignedIn() && request.auth.uid == userId && 
                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isSuperAdmin', 'tenantId']));
       allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
@@ -164,7 +164,8 @@ service cloud.firestore {
     match /emergencies/{docId} {
       allow get: if isTenantMember(resource.data.tenantId);
       allow list: if isSignedIn();
-      allow write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
+      allow create: if isSignedIn();
+      allow update: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
     }
 
     match /complaints/{docId} {
