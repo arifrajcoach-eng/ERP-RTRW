@@ -176,7 +176,7 @@ import {
   scanReceiptAI,
 } from "./services/aiService";
 
-const APP_LOGO = "/logo_rx.png";
+const APP_LOGO = "/logo_rw.png";
 
 const AppLogo = ({
   className,
