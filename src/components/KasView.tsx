@@ -582,7 +582,7 @@ export function KasView({
               onClick={() => scanInputRef.current?.click()}
               disabled={isScanning}
               type="button"
-              className="flex items-center gap-1.5 bg-[#0cbb97] text-[#fffdfd] px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:opacity-90 shadow-sm disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-[#0cbb97] text-[#fffdfd] px-4 h-[36px] rounded-lg text-xs font-bold transition-all hover:opacity-90 shadow-sm disabled:opacity-50"
             >
               {isScanning ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
