@@ -145,6 +145,7 @@ import {
 import { auth, storage } from "./firebase";
 import { QRCodeSVG } from "qrcode.react";
 import KopTemplateManagementView from "./components/KopTemplateManagementView";
+import { DaftarPendaftarTrialView } from "./components/DaftarPendaftarTrialView";
 import { FreeTrialRegistrationModal } from "./components/FreeTrialRegistrationModal";
 import { RTRegistrationForm } from "./components/RTRegistrationForm";
 import { PricingSection } from "./components/PricingSection";
@@ -2801,6 +2802,7 @@ export default function App() {
       { id: "inventaris", label: "Inventaris", icon: Package },
       { id: "surat", label: "Surat", icon: FileText, plan: "surat", minPlan: "BASIC" },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
+      { id: "daftar-trial", label: "Daftar Pendaftar Trial", icon: Users },
       { id: "users", label: "Manage User", icon: User },
       { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
       { id: "pengaturan", label: "Pengaturan", icon: Settings },
@@ -3630,6 +3632,8 @@ export default function App() {
             />
           )}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
+
+          {activeTab === "daftar-trial" && <DaftarPendaftarTrialView />}
 
           {activeTab === "users" && (
             <UsersView
