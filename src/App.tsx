@@ -1012,6 +1012,7 @@ export default function App() {
   >(localStorage.getItem("impersonatedTenantId"));
   const [showQRModal, setShowQRModal] = useState(false);
   const [showFreeTrialModal, setShowFreeTrialModal] = useState(false);
+  const [prefilledEmail, setPrefilledEmail] = useState("");
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showInfoPopup, setShowInfoPopup] = useState(true); // Default show for announcement
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -2097,8 +2098,28 @@ export default function App() {
       },
     );
 
+    const getVotingVotesQuery = () => {
+      const base = collection(db, "voting_votes");
+      const constraints = [where("tenantId", "in", tIds)];
+
+      const isOperatorRole =
+        currentUser &&
+        (currentUser.isSuperAdmin ||
+          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
+            currentUser.role,
+          ));
+
+      if (!isOperatorRole) {
+        constraints.push(
+          where("voterId", "==", auth.currentUser?.uid || "NONE"),
+        );
+      }
+
+      return query(base, ...constraints);
+    };
+
     const unsubUserVotes = onSnapshot(
-      query(collection(db, "voting_votes"), where("tenantId", "in", tIds)),
+      getVotingVotesQuery(),
       (snap) => {
         setUserVotes(snap.docs.map((doc) => ({ ...doc.data() })));
         onDataLoaded();
@@ -2125,8 +2146,15 @@ export default function App() {
       const base = collection(db, "toko_orders");
       const constraints = [where("tenantId", "in", tIds)];
 
-      // Citizens can only list their own orders to avoid permission errors
-      if (isCitizen) {
+      const isOperatorRole =
+        currentUser &&
+        (currentUser.isSuperAdmin ||
+          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
+            currentUser.role,
+          ));
+
+      // Citizens and guests (non-operators) can only list their own orders to avoid permission errors
+      if (!isOperatorRole) {
         constraints.push(
           where("customerId", "==", auth.currentUser?.uid || "NONE"),
         );
@@ -2282,7 +2310,15 @@ export default function App() {
     const getComplaintsQuery = () => {
       const base = collection(db, "complaints");
       const constraints = [where("tenantId", "in", tIds)];
-      if (isCitizen) {
+      
+      const isOperatorRole =
+        currentUser &&
+        (currentUser.isSuperAdmin ||
+          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
+            currentUser.role,
+          ));
+
+      if (!isOperatorRole) {
         constraints.push(where("userId", "==", auth.currentUser?.uid || "NONE"));
       }
       return query(base, ...constraints);
@@ -2306,7 +2342,15 @@ export default function App() {
     const getBookingsQuery = () => {
       const base = collection(db, "bookings");
       const constraints = [where("tenantId", "in", tIds)];
-      if (isCitizen) {
+
+      const isOperatorRole =
+        currentUser &&
+        (currentUser.isSuperAdmin ||
+          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
+            currentUser.role,
+          ));
+
+      if (!isOperatorRole) {
         constraints.push(where("userId", "==", auth.currentUser?.uid || "NONE"));
       }
       return query(base, ...constraints);
@@ -2824,11 +2868,17 @@ export default function App() {
           onShowPricing={() => setShowPricingModal(true)}
           settings={settings}
           tenantId={currentUser?.tenantId || "RW26_SMART"}
+          initialEmail={prefilledEmail}
+          initialMode={prefilledEmail ? "admin" : "admin"}
         />
         {showFreeTrialModal && (
           <FreeTrialRegistrationModal
             onClose={() => setShowFreeTrialModal(false)}
             showNotification={showNotification}
+            onSuccess={(email: string) => {
+              setPrefilledEmail(email);
+              setShowFreeTrialModal(false);
+            }}
           />
         )}
         {showPricingModal && (
@@ -8575,6 +8625,8 @@ function LoginView({
   onShowPricing,
   settings,
   tenantId,
+  initialEmail = "",
+  initialMode = "admin",
 }: {
   setWargaAuth: any;
   wargaData: any[];
@@ -8585,8 +8637,10 @@ function LoginView({
   onShowPricing: () => void;
   settings?: any;
   tenantId: string;
+  initialEmail?: string;
+  initialMode?: "admin" | "warga" | "verifikasi";
 }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showKK, setShowKK] = useState(false);
@@ -8594,8 +8648,16 @@ function LoginView({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<"admin" | "warga" | "verifikasi">(
-    "admin",
-  ); // Default to admin for easier access
+    initialMode,
+  ); 
+
+  useEffect(() => {
+    if (initialEmail) {
+      setEmail(initialEmail);
+      setLoginMode("admin");
+    }
+  }, [initialEmail]);
+
   const [nik, setNik] = useState("");
   const [kodeKeluarga, setKodeKeluarga] = useState("");
 

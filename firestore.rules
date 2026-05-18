@@ -48,11 +48,22 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // --- Collection Rules ---
+    // --- Core Collections ---
+
+    match /settings/{tenantId} {
+      allow read: if isSignedIn();
+      allow create: if !exists(/databases/$(database)/documents/settings/$(tenantId)) && 
+                      existsAfter(/databases/$(database)/documents/tenants/$(tenantId));
+      allow update: if isPengurus() && isTenantMember(tenantId);
+    }
+
+    match /tenant_settings/{tenantId} {
+      allow read: if isSignedIn();
+      allow write: if isPengurus() && isTenantMember(tenantId);
+    }
 
     match /tenants/{tenantId} {
       allow read: if isSignedIn();
-      // Allow registration: Anyone can create a trial tenant if it doesn't exist
       allow create: if !exists(/databases/$(database)/documents/tenants/$(tenantId)) && 
                       request.resource.data.status in ['BASIC', 'TRIAL', 'Active'];
       allow update, delete: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
@@ -61,7 +72,6 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow list: if isPengurus() || isAdmin();
-      // Allow pre-registration: Anyone can create a user if the ID (pre-reg) is unique
       allow create: if !exists(/databases/$(database)/documents/users/$(userId)) && 
                       (userId.startsWith('PRE_') || (isSignedIn() && request.auth.uid == userId));
       allow update: if isAdmin() || 
@@ -71,27 +81,36 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
     }
 
-    match /test/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    match /settings/{docId} {
+    // --- Toko & Commerce ---
+
+    match /toko_products/{docId} {
       allow read: if isSignedIn();
-      allow write: if isPengurus() && isTenantMember(docId);
-    }
-    
-    match /buku_tamu/{docId} {
-      allow list: if isTenantMember(resource.data.tenantId);
-      allow get: if isSignedIn();
-      allow create: if true; // Public guestbook
-      allow update, delete: if isTenantMember(resource.data.tenantId);
+      allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
 
-    match /kas/{docId} {
+    match /toko_products_seller/{docId} {
       allow read: if isTenantMember(resource.data.tenantId);
-      allow write: if isTenantMember(request.resource.data.tenantId);
+      allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
+
+    match /toko_orders/{docId} {
+      allow read: if isSignedIn() && (resource.data.customerId == request.auth.uid || isTenantMember(resource.data.tenantId));
+      allow create: if isSignedIn();
+      allow update: if isPengurus() && isTenantMember(resource.data.tenantId);
+      allow delete: if isAdmin();
+    }
+
+    match /toko_reviews/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /ppob_trx/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+    }
+
+    // --- Warga & Kependudukan ---
 
     match /data_warga/{docId} {
       allow get: if isTenantMember(resource.data.tenantId);
@@ -99,10 +118,19 @@ service cloud.firestore {
       allow write: if isTenantMember(request.resource.data.tenantId);
     }
 
-    match /surat/{docId} {
-      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || request.auth.uid == resource.data.authUid);
-      allow create: if isSignedIn();
-      allow update, delete: if isPengurus() && isTenantMember(resource.data.tenantId);
+    match /verifikasi_warga/{docId} {
+      allow get: if isSignedIn() && (resource.data.authUid == request.auth.uid || isTenantMember(resource.data.tenantId));
+      allow list: if isSignedIn() && (resource.data.authUid == request.auth.uid || isPengurus());
+      allow create: if isSignedIn() && request.resource.data.authUid == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.authUid == request.auth.uid || (isPengurus() && isTenantMember(resource.data.tenantId)));
+      allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
+    }
+
+    // --- Keuangan & Layanan ---
+
+    match /kas/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isTenantMember(request.resource.data.tenantId);
     }
 
     match /iuran/{docId} {
@@ -111,8 +139,23 @@ service cloud.firestore {
       allow update, delete: if isTenantMember(resource.data.tenantId);
     }
 
-    match /inventaris/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId);
+    match /surat/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || request.auth.uid == resource.data.authUid);
+      allow create: if isSignedIn();
+      allow update, delete: if isPengurus() && isTenantMember(resource.data.tenantId);
+    }
+
+    // --- Social & Interaction ---
+
+    match /chat_messages/{docId} {
+      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
+    }
+
+    match /buku_tamu/{docId} {
+      allow list: if isTenantMember(resource.data.tenantId);
+      allow get: if isSignedIn();
+      allow create: if true;
+      allow update, delete: if isTenantMember(resource.data.tenantId);
     }
 
     match /emergencies/{docId} {
@@ -121,22 +164,82 @@ service cloud.firestore {
       allow write: if isTenantMember(request.resource.data.tenantId);
     }
 
-    match /verifikasi_warga/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
+    match /complaints/{docId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isPengurus());
+      allow create: if isSignedIn();
+      allow update: if isPengurus() && isTenantMember(resource.data.tenantId);
     }
 
-    match /chat_messages/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
+    match /bookings/{docId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMember(resource.data.tenantId));
+      allow create: if isSignedIn();
+      allow update: if isPengurus() && isTenantMember(resource.data.tenantId);
     }
 
-    match /toko_products/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId);
+    match /voting_candidates/{docId} {
+      allow read: if isSignedIn();
       allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
 
-    match /toko_orders/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId) || isTenantMember(request.resource.data.tenantId);
+    match /voting_config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPengurus() && isTenantMember(docId);
     }
+
+    match /voting_votes/{docId} {
+      allow read: if isSignedIn() && (resource.data.voterId == request.auth.uid || isPengurus());
+      allow create: if isSignedIn();
+    }
+
+    // --- Infrastructure & Misc ---
+
+    match /inventaris/{docId} {
+      allow read, write: if isTenantMember(resource.data.tenantId);
+    }
+    
+    match /inventaris_logs/{docId} {
+      allow read, write: if isTenantMember(resource.data.tenantId);
+    }
+
+    match /notifications/{docId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMember(resource.data.tenantId));
+      allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
+    }
+    
+    match /audit_logs/{docId} {
+      allow read: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
+      allow create: if isSignedIn();
+    }
+    
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Health & Social Programs ---
+    match /balita/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /ibu_hamil/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /posyandu_kegiatan/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /posbindu_kegiatan/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /pemeriksaan_balita/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /pemeriksaan_posbindu/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /imunisasi/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    
+    // --- Environment & Waste ---
+    match /sampah_kategori/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /sampah_setoran/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /sampah_tarik_saldo/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    
+    // --- Detailed Citizen Data ---
+    match /lansia/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /warga_sakit/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    
+    // --- Admin/System Collections ---
+    match /monthly_reports/{docId} { allow read: if isTenantMember(resource.data.tenantId); allow write: if isAdmin(); }
+    match /usage_logs/{docId} { allow read: if isTenantMember(resource.data.tenantId); allow write: if isAdmin(); }
+    match /ai_usage_logs/{docId} { allow read, write: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()); }
+    match /ai_cache/{docId} { allow read, write: if isSignedIn(); }
+    match /tenant_registrations/{docId} { allow read, write: if isAdmin() || isSignedIn(); }
 
   }
 }

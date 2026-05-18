@@ -4,7 +4,7 @@ import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { X, User, Mail, Phone, Tag, ShieldCheck } from 'lucide-react';
 
-export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
+export function FreeTrialRegistrationModal({ onClose, showNotification, onSuccess }: any) {
   const [formData, setFormData] = useState({ nama: '', email: '', hp: '', rt: '01', voucher: '' });
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -38,14 +38,12 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
         rwTarget: 26,
       };
 
-      // If user is already logged in (Google), use their real UID
-      // Otherwise use a PRE_ prefix to allow rule matching for guest registration
-      const finalUserId = auth.currentUser?.email === formData.email.toLowerCase() 
-        ? auth.currentUser.uid 
-        : `PRE_${formData.hp.replace(/\D/g, '')}_${Date.now()}`;
+      // Use current auth UID (anonymous or Google) to ensure getUserData() works in rules
+      const finalUserId = auth.currentUser!.uid;
 
       const newUser = {
         id_user: finalUserId,
+        uid: finalUserId, // Consistency
         nama: formData.nama,
         name: formData.nama,
         email: formData.email.toLowerCase(),
@@ -57,9 +55,18 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
         createdAt: new Date().toISOString()
       };
 
+      const newSettings = {
+        org_name: formData.nama,
+        logo_url: '/logo_rw.png',
+        theme: 'light',
+        ownerEmail: formData.email.toLowerCase(),
+        createdAt: new Date().toISOString()
+      };
+
       const batchOp = writeBatch(db);
       batchOp.set(doc(db, 'tenants', tenantId), newTenant);
       batchOp.set(doc(db, 'users', finalUserId), newUser);
+      batchOp.set(doc(db, 'settings', tenantId), newSettings);
       await batchOp.commit();
       
       setIsSuccess(true);
@@ -92,7 +99,13 @@ export function FreeTrialRegistrationModal({ onClose, showNotification }: any) {
             <span className="text-blue-600 font-bold underline">{formData.email}</span>
           </p>
           <button 
-            onClick={onClose} 
+            onClick={() => {
+              if (onSuccess) {
+                onSuccess(formData.email);
+              } else {
+                onClose();
+              }
+            }} 
             className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs"
           >
             Mengerti, Lanjut Login
