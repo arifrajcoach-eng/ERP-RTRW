@@ -1235,18 +1235,20 @@ export default function App() {
               
               setCurrentUser({ uid: user.uid, ...newUser } as any);
             } else {
-              // Otherwise check if they are the hardcoded super admin
+              // Otherwise check if they are the hardcoded super admin or trih user
               const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
-              if (isMasterEmail) {
+              const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
+
+              if (isMasterEmail || isTrihUser) {
                 const newUser = {
                   id_user: user.uid,
-                  name: "Bpk. Arif (Super Admin)",
-                  nama: "Bpk. Arif (Super Admin)",
+                  name: isMasterEmail ? "Bpk. Arif (Super Admin)" : "Admin RW Berjuang",
+                  nama: isMasterEmail ? "Bpk. Arif (Super Admin)" : "Admin RW Berjuang",
                   username: user.email?.split("@")[0] || "user",
-                  role: "SUPER_ADMIN",
+                  role: isMasterEmail ? "SUPER_ADMIN" : "ADMIN",
                   email: user.email,
-                  tenantId: "MASTER",
-                  isSuperAdmin: true,
+                  tenantId: isMasterEmail ? "MASTER" : "RW_BERJUANG",
+                  isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
                   created_at: new Date().toISOString(),
@@ -1254,7 +1256,7 @@ export default function App() {
                 await setDoc(userDocRef, newUser);
                 setCurrentUser(newUser as any);
               } else {
-                 // Unauthorized Google session without a Firestore document
+                 // Unauthorized session without a Firestore document
                  await signOut(auth);
                  setCurrentUser(null);
                  // Note: Ensure setDbError is available or available in scope. 
@@ -9193,7 +9195,7 @@ function LoginView({
             throw new Error("Username valid, but no email set.");
           }
         } else if (inputEmail.toLowerCase() === "trihprw26") {
-          loginEmail = "trihprw26@trihprw26.com";
+          loginEmail = "trihprw26@rw26.com";
         } else if (inputEmail.toLowerCase() === "master") {
           loginEmail = "arifrajcoach@gmail.com";
         } else if (inputEmail.toLowerCase() === "rw26_smart") {
