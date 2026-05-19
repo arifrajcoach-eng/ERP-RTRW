@@ -784,10 +784,10 @@ const ADDON_CONFIG = {
 const PLAN_ALIASES: Record<string, string> = {
   ACTIVE: "TRIAL",
   FREE: "TRIAL",
-  STARTER: "BASIC",
+  STARTER: "TRIAL",
   LITE: "BASIC",
   RT: "BASIC",
-  FLASH: "PRO",
+  FLASH: "BASIC",
   RW: "PRO",
   GOLD: "PREMIUM",
   DIAMOND: "ENTERPRISE",
@@ -10233,8 +10233,59 @@ function TenantsView({
   const [editingTenant, setEditingTenant] = useState<any>(null);
   const [tenantToDelete, setTenantToDelete] = useState<any>(null);
 
+  const runMigration = async () => {
+    setIsLoadingDB(true);
+    try {
+      const batch = writeBatch(db);
+      let updatedCount = 0;
+
+      tenantsData.forEach((tenantData) => {
+        const paketStatus = (tenantData.status || "").toUpperCase();
+        const docId = tenantData.id || tenantData.docId;
+
+        if (!docId) return;
+
+        let maxWarga = 50;
+        
+        // Specific overrides requested by user
+        if (docId === "test" || docId === "TRIAL_ARIFRAJ_MCI_4348" || docId === "RW26_SMART") {
+          maxWarga = 50;
+        } else if (paketStatus.includes("STARTER")) {
+          maxWarga = 50;
+        } else if (paketStatus.includes("FLASH")) {
+          maxWarga = 300;
+        } else if (paketStatus.includes("PRO")) {
+          maxWarga = 1000;
+        } else if (paketStatus.includes("PREMIUM")) {
+          maxWarga = 1000;
+        } else if (paketStatus.includes("ENTERPRISE")) {
+          maxWarga = 20000;
+        } else {
+          // Fallback to resolving via global map if none of the above matches specifically
+          const normalizedStatus = paketStatus.replace("V4.0 ", "").replace("PLAN", "").trim();
+          const baseKey = PLAN_ALIASES[normalizedStatus] || normalizedStatus;
+          maxWarga = (PLAN_FEATURES as any)[baseKey]?.maxWarga || 50;
+        }
+        
+        batch.update(doc(db, "tenants", docId), { maxWarga });
+        updatedCount++;
+      });
+
+      if (updatedCount > 0) {
+        await batch.commit();
+        showNotification(`Berhasil melakukan standardisasi pada ${updatedCount} tenant!`, "success");
+      } else {
+        showNotification("Tidak ada data tenant yang ditemukan.", "info");
+      }
+    } catch (e) {
+      console.error("Migration Error:", e);
+      showNotification("Gagal melakukan standardisasi data.", "error");
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
   const handleSaveTenant = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const tenantId = formData.get("id") as string;
     const parentId = (formData.get("parentId") as string) || null;
@@ -10389,6 +10440,7 @@ function TenantsView({
     }
   };
 
+  
   const handleDeleteTenant = async () => {
     if (!tenantToDelete) return;
     setIsLoadingDB(true);
@@ -10414,8 +10466,8 @@ function TenantsView({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+    <div className="tenants-wrapper">
+      <div className="space-y-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
             <Shield className="w-6 h-6" />
@@ -10430,6 +10482,12 @@ function TenantsView({
           </div>
         </div>
         <div className="flex gap-2">
+          <StyledButton
+            label="Standardisasi maxWarga"
+            onClick={runMigration}
+            colorType="secondary"
+            icon={<RefreshCw className="w-4 h-4" />}
+          />
           {selectedTenantId && (
             <StyledButton
               label="Reset ke Super Admin"
@@ -10443,12 +10501,12 @@ function TenantsView({
           )}
           <StyledButton
             label="Tambah Tenant Baru"
-              onClick={() => {
-                setEditingTenant(null);
-                setShowAddForm(true);
-              }}
-              colorType="primary"
-              icon={<PlusCircle className="w-4 h-4" />}
+            onClick={() => {
+              setEditingTenant(null);
+              setShowAddForm(true);
+            }}
+            colorType="primary"
+            icon={<PlusCircle className="w-4 h-4" />}
           />
         </div>
       </div>

@@ -4,6 +4,9 @@ import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
 import cron from "node-cron";
 import firebaseConfig from "./firebase-applet-config.json";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Lazy initialize admin
 let dbInstance: admin.firestore.Firestore | null = null;
