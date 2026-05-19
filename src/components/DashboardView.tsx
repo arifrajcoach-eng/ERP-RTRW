@@ -353,35 +353,72 @@ export default function DashboardView({
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
-  const isStarter = currentTenant?.status === 'STARTER' || currentTenant?.status === 'GRATIS';
+  const isStarter = !currentTenant?.status || 
+                    currentTenant?.status === 'STARTER' || 
+                    currentTenant?.status === 'GRATIS' || 
+                    currentTenant?.status === 'BASIC' || 
+                    currentTenant?.status === 'TRIAL' ||
+                    currentTenant?.status === 'ACTIVE' ||
+                    currentTenant?.id === 'RW26_SMART';
+
   const trialEndDate = useMemo(() => {
-    if (!isStarter || !currentTenant?.createdAt) return null;
-    const createdAt = typeof currentTenant.createdAt === 'string' 
-      ? new Date(currentTenant.createdAt) 
-      : (currentTenant.createdAt.toDate ? currentTenant.createdAt.toDate() : new Date(currentTenant.createdAt.seconds * 1000));
-    const endDate = new Date(createdAt);
+    if (!isStarter) return null;
+    
+    // For demo tenant, use a fixed trial (e.g., 30 days from some stable date if createdAt is missing)
+    let createdAt = currentTenant?.createdAt;
+    
+    if (!createdAt && currentTenant?.id === 'RW26_SMART') {
+      // Mock for demo
+      const demoStart = new Date();
+      demoStart.setDate(demoStart.getDate() - 5); // 5 days ago
+      createdAt = demoStart.toISOString();
+    }
+
+    if (!createdAt) return null;
+
+    const startDate = typeof createdAt === 'string' 
+      ? new Date(createdAt) 
+      : (createdAt.toDate ? createdAt.toDate() : new Date(createdAt.seconds * 1000));
+    
+    const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 30);
     return endDate;
   }, [currentTenant, isStarter]);
 
   const daysRemaining = useMemo(() => {
     if (!trialEndDate) return null;
-    const diff = trialEndDate.getTime() - new Date().getTime();
+    const now = new Date();
+    const diff = trialEndDate.getTime() - now.getTime();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [trialEndDate]);
 
   return (
     <div className="space-y-6">
-      {daysRemaining !== null && (
-        <div className="bg-amber-100 border border-amber-300 text-amber-800 p-4 rounded-xl flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-amber-600" />
-            <span className="font-bold">Masa Percobaan Gratis</span>
+      {daysRemaining !== null && isStarter && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-amber-500 to-orange-600 p-4 rounded-[2rem] flex items-center justify-between shadow-lg shadow-orange-200 dark:shadow-none text-white overflow-hidden relative"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Clock className="w-16 h-16" />
           </div>
-          <span className="font-mono text-lg font-bold">
-            Sisa {daysRemaining} hari
-          </span>
-        </div>
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30">
+              <Zap className="w-6 h-6 text-white animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest leading-tight">Masa Percobaan Aktif</h3>
+              <p className="text-[10px] font-bold text-white/80 uppercase">Nikmati Fitur SmartRW AI Tanpa Batas</p>
+            </div>
+          </div>
+          <div className="text-right relative z-10">
+            <p className="text-[10px] font-black uppercase tracking-tighter opacity-80 mb-0.5">Berakhir Dalam</p>
+            <span className="font-mono text-2xl font-black tabular-nums">
+              {daysRemaining} Hari
+            </span>
+          </div>
+        </motion.div>
       )}
       {/* SOS Alert & Plan Info */}
       <div className="flex flex-col md:flex-row gap-4 mb-2">

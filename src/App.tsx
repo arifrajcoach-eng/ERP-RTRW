@@ -675,6 +675,17 @@ const PLAN_FEATURES: Record<string, any> = {
     predictiveAI: true,
     inventaris: true,
   },
+  EXPIRED: {
+    maxWarga: 0,
+    price: "Expired",
+    coreFeatures: ["Masa trial berakhir. Silakan upgrade paket."],
+    keuangan: "NONE",
+    surat: "NONE",
+    verifikasi: false,
+    chatMode: false,
+    ai: false,
+    isExpired: true
+  }
 };
 
 const ADDON_CONFIG = {
@@ -773,6 +784,7 @@ const ADDON_CONFIG = {
 const PLAN_ALIASES: Record<string, string> = {
   ACTIVE: "TRIAL",
   FREE: "TRIAL",
+  STARTER: "BASIC",
   LITE: "BASIC",
   RT: "BASIC",
   FLASH: "PRO",
@@ -780,6 +792,7 @@ const PLAN_ALIASES: Record<string, string> = {
   GOLD: "PREMIUM",
   DIAMOND: "ENTERPRISE",
   GOV: "ENTERPRISE",
+  EXPIRED: "EXPIRED",
 };
 
 const getPlanFeatures = (tenantOrStatus: any) => {
@@ -1633,7 +1646,30 @@ export default function App() {
             doc(db, "tenants", tId),
             (snap) => {
               if (snap.exists()) {
-                setCurrentTenant(snap.data());
+                const tenantData = snap.data();
+                if (tenantData) {
+                  // Auto-repair missing createdAt for trials
+                  const rawStatus = (tenantData.status || "STARTER").toUpperCase().replace("PLAN", "").replace("V4.0 ", "").trim();
+                  const isTrial = ["STARTER", "GRATIS", "BASIC", "TRIAL", "ACTIVE"].includes(PLAN_ALIASES[rawStatus] || rawStatus);
+                  
+                  if (isTrial && !tenantData.createdAt && tenantData.id !== 'RW26_SMART') {
+                    const newCreatedAt = new Date().toISOString();
+                    tenantData.createdAt = newCreatedAt;
+                    updateDoc(doc(db, "tenants", tId), { createdAt: newCreatedAt }).catch(console.error);
+                  }
+                  
+                  // Expiration check (30 days)
+                  if (isTrial && tenantData.createdAt) {
+                    const startDate = new Date(tenantData.createdAt);
+                    const now = new Date();
+                    const diffDays = (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+                    if (diffDays > 30 && tenantData.id !== 'RW26_SMART') {
+                      tenantData.isExpired = true;
+                      tenantData.status = 'EXPIRED'; // Force expired status
+                    }
+                  }
+                }
+                setCurrentTenant(tenantData);
               } else {
                 setCurrentTenant(null);
               }
