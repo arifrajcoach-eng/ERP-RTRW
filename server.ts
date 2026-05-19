@@ -5,18 +5,26 @@ import admin from "firebase-admin";
 import cron from "node-cron";
 import firebaseConfig from "./firebase-applet-config.json";
 
-// Initialize admin
-try {
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      projectId: firebaseConfig.projectId
-    });
+// Lazy initialize admin
+let dbInstance: admin.firestore.Firestore | null = null;
+
+function getDb(): admin.firestore.Firestore {
+  if (!dbInstance) {
+    try {
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          projectId: firebaseConfig.projectId
+        });
+      }
+      dbInstance = admin.firestore();
+      console.log("Firebase Admin initialized for project:", firebaseConfig.projectId);
+    } catch (e) {
+      console.error("Firebase Admin init failed:", e.message);
+      throw new Error("Firebase Admin initialization failed");
+    }
   }
-  console.log("Firebase Admin project ID:", admin.app().options.projectId);
-} catch (e) {
-  console.error("Firebase Admin init failed:", e.message);
+  return dbInstance;
 }
-const db = admin.apps.length ? admin.firestore() : null;
 
 async function startServer() {
   const app = express();
@@ -39,6 +47,7 @@ async function startServer() {
     endDate.setDate(endDate.getDate() + 30);
 
     try {
+        const db = getDb();
         await db.collection('subscriptions').doc(tenantId).set({
             tenantId,
             status: status === 'success' ? 'Active' : 'Inactive',
@@ -49,21 +58,26 @@ async function startServer() {
         }, { merge: true });
         res.json({ status: 'success' });
     } catch (e) {
-        res.status(500).json({ status: 'error', message: e.message });
+        res.status(500).json({ status: 'error', message: (e as Error).message });
     }
   });
 
   // Daily Reminder Bot (Runs at 00:00 every day)
   cron.schedule('0 0 * * *', async () => {
-    const snapshot = await db.collection('subscriptions')
-        .where('status', '==', 'Active')
-        .where('endDate', '<', new Date().toISOString())
-        .get();
-    
-    snapshot.forEach(async (doc) => {
-        // Send reminders here (e.g., via notification collection)
-        console.log(`Reminder sent to tenant: ${doc.id}`);
-    });
+    try {
+      const db = getDb();
+      const snapshot = await db.collection('subscriptions')
+          .where('status', '==', 'Active')
+          .where('endDate', '<', new Date().toISOString())
+          .get();
+      
+      snapshot.forEach(async (doc) => {
+          // Send reminders here (e.g., via notification collection)
+          console.log(`Reminder sent to tenant: ${doc.id}`);
+      });
+    } catch (e) {
+      console.error("Daily cron error:", e);
+    }
   });
 
   // PPOB Revenue Sharing
