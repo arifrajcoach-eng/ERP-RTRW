@@ -10284,7 +10284,7 @@ function TenantsView({
       rtTarget: rtCount,
       rwTarget: rwNumber,
       createdAt: editingTenant
-        ? editingTenant.createdAt
+        ? (editingTenant.createdAt || new Date().toISOString())
         : new Date().toISOString(),
     };
 
