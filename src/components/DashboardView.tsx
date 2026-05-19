@@ -353,8 +353,36 @@ export default function DashboardView({
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
+  const isStarter = currentTenant?.status === 'STARTER' || currentTenant?.status === 'GRATIS';
+  const trialEndDate = useMemo(() => {
+    if (!isStarter || !currentTenant?.createdAt) return null;
+    const createdAt = typeof currentTenant.createdAt === 'string' 
+      ? new Date(currentTenant.createdAt) 
+      : (currentTenant.createdAt.toDate ? currentTenant.createdAt.toDate() : new Date(currentTenant.createdAt.seconds * 1000));
+    const endDate = new Date(createdAt);
+    endDate.setDate(endDate.getDate() + 30);
+    return endDate;
+  }, [currentTenant, isStarter]);
+
+  const daysRemaining = useMemo(() => {
+    if (!trialEndDate) return null;
+    const diff = trialEndDate.getTime() - new Date().getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [trialEndDate]);
+
   return (
     <div className="space-y-6">
+      {daysRemaining !== null && (
+        <div className="bg-amber-100 border border-amber-300 text-amber-800 p-4 rounded-xl flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-600" />
+            <span className="font-bold">Masa Percobaan Gratis</span>
+          </div>
+          <span className="font-mono text-lg font-bold">
+            Sisa {daysRemaining} hari
+          </span>
+        </div>
+      )}
       {/* SOS Alert & Plan Info */}
       <div className="flex flex-col md:flex-row gap-4 mb-2">
         {activeSOS ? (
