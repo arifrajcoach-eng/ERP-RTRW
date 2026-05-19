@@ -3,12 +3,16 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
 import cron from "node-cron";
+import firebaseConfig from "./firebase-applet-config.json";
 
 // Initialize admin
 try {
-  if (!admin.apps.length) {                
-    admin.initializeApp();                
-  }                
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: firebaseConfig.projectId
+    });
+  }
+  console.log("Firebase Admin project ID:", admin.app().options.projectId);
 } catch (e) {
   console.error("Firebase Admin init failed:", e.message);
 }
