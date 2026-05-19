@@ -778,7 +778,7 @@ export default function DashboardView({
       </div>
       
       {/* Floating AI Chat Button */}
-      {currentTenant?.id !== 'RW26_SMART' && (
+      {currentTenant?.id !== 'RW26_SMART' && currentTenant?.status !== 'STARTER' && (
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -791,7 +791,7 @@ export default function DashboardView({
 
       {/* AI Chat Window */}
       <AnimatePresence>
-        {showAIChat && currentTenant?.id !== 'RW26_SMART' && (
+        {showAIChat && currentTenant?.id !== 'RW26_SMART' && currentTenant?.status !== 'STARTER' && (
           <motion.div
             initial={{ opacity: 0, y: 100, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
