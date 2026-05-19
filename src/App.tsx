@@ -556,6 +556,9 @@ const PLAN_FEATURES: Record<string, any> = {
     multiRegion: false,
     governance: "LOW",
     predictiveAI: false,
+    booking: false,
+    bukuTamu: false,
+    inventaris: false,
   },
   BASIC: {
     maxWarga: 300,
@@ -585,6 +588,8 @@ const PLAN_FEATURES: Record<string, any> = {
     governance: "LOW",
     predictiveAI: false,
     inventaris: true,
+    booking: true,
+    bukuTamu: true,
   },
   PRO: {
     maxWarga: 1000,
@@ -614,6 +619,8 @@ const PLAN_FEATURES: Record<string, any> = {
     governance: "MEDIUM",
     predictiveAI: false,
     inventaris: true,
+    booking: true,
+    bukuTamu: true,
   },
   PREMIUM: {
     maxWarga: 1000,
@@ -644,6 +651,8 @@ const PLAN_FEATURES: Record<string, any> = {
     governance: "MEDIUM",
     predictiveAI: false,
     inventaris: true,
+    booking: true,
+    bukuTamu: true,
   },
   ENTERPRISE: {
     maxWarga: 20000,
@@ -674,6 +683,8 @@ const PLAN_FEATURES: Record<string, any> = {
     governance: "HIGH",
     predictiveAI: true,
     inventaris: true,
+    booking: true,
+    bukuTamu: true,
   },
   EXPIRED: {
     maxWarga: 0,
@@ -816,13 +827,22 @@ const getPlanFeatures = (tenantOrStatus: any) => {
 
   // Apply Add-ons
   if (addons.includes("extraAi_100")) {
-    features.maxAiChats = (features.maxAiChats || 0) + 100;
+    features.maxAiChats = (features.maxAiChats === -1) ? -1 : (features.maxAiChats || 0) + 100;
   }
   if (addons.includes("posyandu")) features.posyandu = true;
   if (addons.includes("ePemilu")) features.ePemilu = true;
   if (addons.includes("bankSampah")) features.bankSampah = true;
   if (addons.includes("cctv")) features.cctv = true;
   if (addons.includes("eLapakFull")) features.eLapak = "FULL";
+  if (addons.includes("ppob")) features.keuangan = "FULL";
+  if (addons.includes("booking")) features.booking = true;
+  if (addons.includes("warga_100")) features.maxWarga = (features.maxWarga || 0) + 100;
+  if (addons.includes("warga_500")) features.maxWarga = (features.maxWarga || 0) + 500;
+  if (addons.includes("modulSos")) features.sos = true;
+  if (addons.includes("bukuTamu")) features.bukuTamu = true;
+  if (addons.includes("inventaris")) features.inventaris = true;
+  if (addons.includes("aiAgent")) features.ai = true;
+  if (addons.includes("grupChat")) features.chatMode = true;
 
   return features;
 };
@@ -2827,15 +2847,15 @@ export default function App() {
       { id: "dashboard", label: "DASHBOARD", icon: LayoutDashboard },
       { id: "warga", label: isApt ? "Data Penghuni" : "Data Warga", icon: Users },
       { id: "complaint", label: isApt ? "Keluhan/Defect" : "Keluhan", icon: AlertTriangle },
-      { id: "booking", label: isApt ? "Booking Fasilitas" : "Booking", icon: Calendar },
-      { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy },
+      { id: "booking", label: isApt ? "Booking Fasilitas" : "Booking", icon: Calendar, plan: "booking" },
+      { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy, plan: "bukuTamu" },
       { id: "verifikasi", label: "VERIFIKASI", icon: ShieldCheck, plan: "verifikasi", minPlan: "BASIC" },
       { id: "keuangan", label: isApt ? "Keuangan / IPL" : "Keuangan", icon: CreditCard, plan: "keuangan", minPlan: "BASIC" },
       { id: "posyandu", label: "Kesehatan", icon: Baby, plan: "posyandu", minPlan: "PRO" },
       { id: "bank-sampah", label: "Bank Sampah", icon: Recycle, plan: "bankSampah", minPlan: "PRO" },
       { id: "etoko", label: "E-LAPAK26", icon: ShoppingBag, plan: "eLapak", minPlan: "BASIC" },
       { id: "voting", label: isApt ? "Voting Penghuni" : "E-Pemilu", icon: Vote, plan: "ePemilu", minPlan: "PRO" },
-      { id: "inventaris", label: "Inventaris", icon: Package },
+      { id: "inventaris", label: "Inventaris", icon: Package, plan: "inventaris" },
       { id: "surat", label: "Surat", icon: FileText, plan: "surat", minPlan: "BASIC" },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
       { id: "daftar-trial", label: "Tenant Trial", icon: Users },
@@ -10317,9 +10337,11 @@ function TenantsView({
                 ? "ENTERPRISE"
                 : "TRIAL";
 
-    let maxWarga = (PLAN_FEATURES as any)[planKey]?.maxWarga || 50;
+    const addons = formData.getAll("addons[]") as string[];
 
-    const addons = formData.getAll("addons[]");
+    // Use shared logic to calculate features (including maxWarga from add-ons)
+    const planConfig = getPlanFeatures({ status: paket, addons });
+    const maxWarga = planConfig.maxWarga || 50;
 
     const tenant = {
       id: tenantId,
