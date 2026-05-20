@@ -68,7 +68,8 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       allow read: if true;
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
+      allow delete: if isAdmin();
     }
 
     match /users/{userId} {

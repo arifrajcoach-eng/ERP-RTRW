@@ -2609,6 +2609,7 @@ export default function App() {
             role: "Warga",
             nik: warga.nik || "",
             name: nameToUse,
+            tenantId: warga.tenantId || currentTenant?.id || "RW26_SMART",
             linkedResidentId: warga.id || warga.id_warga || warga.nik || "",
             updatedAt: new Date().toISOString(),
           },
@@ -9199,6 +9200,21 @@ function LoginView({
                 : "Menunggu Persetujuan",
             tenantId: found.tenantId || "RW26_SMART",
             lastLogin: new Date().toISOString(),
+          },
+          { merge: true },
+        );
+
+        // Also create/update user document for Firestore security rules support (getUserData() mapping)
+        const userRef = doc(db, "users", uid);
+        await setDoc(
+          userRef,
+          {
+            role: "Warga",
+            nik: found.nik || "",
+            name: found.nama || "Warga",
+            tenantId: found.tenantId || "RW26_SMART",
+            linkedResidentId: docId,
+            updatedAt: new Date().toISOString(),
           },
           { merge: true },
         );
