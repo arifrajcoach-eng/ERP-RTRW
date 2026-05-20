@@ -1041,67 +1041,53 @@ export default function App() {
   }, [currentTenant, settings]);
 
   // Centrally filtered data based on the tenant's specific RT if restricted
+  const extractRtNorm = (rtVal: any) => {
+    const wRtRaw = (rtVal || "").toString();
+    const match = wRtRaw.match(/rt\s*(\d+)/i) || wRtRaw.match(/\d+/);
+    const wRtNorm = match ? match[1] || match[0] : wRtRaw;
+    return wRtNorm.replace(/^0+/, "");
+  };
+
   const filteredWargaDataCentral = useMemo(() => {
     if (!tenantRT) return wargaData;
-    const targetRtNorm = tenantRT.replace(/^0+/, "");
-    return wargaData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
-      return wRtNorm === targetRtNorm;
-    });
+    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+    return wargaData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
   }, [wargaData, tenantRT]);
 
   const filteredIuranDataCentral = useMemo(() => {
     if (!tenantRT) return iuranData;
-    const targetRtNorm = tenantRT.replace(/^0+/, "");
-    return iuranData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
-      return wRtNorm === targetRtNorm;
-    });
+    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+    return iuranData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
   }, [iuranData, tenantRT]);
 
   const filteredKasDataCentral = useMemo(() => {
     if (!tenantRT) return kasData;
-    const targetRtNorm = tenantRT.replace(/^0+/, "");
-    return kasData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
-      return wRtNorm === targetRtNorm;
-    });
+    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+    return kasData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
   }, [kasData, tenantRT]);
 
   const filteredSuratDataCentral = useMemo(() => {
     if (!tenantRT) return suratData;
-    const targetRtNorm = tenantRT.replace(/^0+/, "");
-    return suratData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
-      return wRtNorm === targetRtNorm;
-    });
+    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+    return suratData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
   }, [suratData, tenantRT]);
 
   const filteredVerifikasiWargaDataCentral = useMemo(() => {
     if (!tenantRT) return verifikasiWargaData;
-    const targetRtNorm = tenantRT.replace(/^0+/, "");
-    return verifikasiWargaData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
-      return wRtNorm === targetRtNorm;
-    });
+    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+    return verifikasiWargaData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
   }, [verifikasiWargaData, tenantRT]);
 
   const filteredBalitaDataCentral = useMemo(() => {
     if (!tenantRT) return balitaData;
-    const targetRtNorm = tenantRT.replace(/^0+/, "");
-    return balitaData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
-      return wRtNorm === targetRtNorm;
-    });
+    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+    return balitaData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
   }, [balitaData, tenantRT]);
 
   const filteredIbuHamilDataCentral = useMemo(() => {
     if (!tenantRT) return ibuHamilData;
-    const targetRtNorm = tenantRT.replace(/^0+/, "");
-    return ibuHamilData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
-      return wRtNorm === targetRtNorm;
-    });
+    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+    return ibuHamilData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
   }, [ibuHamilData, tenantRT]);
 
   // Securely resolve active tenant IDs for filtering
@@ -1482,6 +1468,13 @@ export default function App() {
       },
     );
 
+    const getQueryRtNormalized = (rtVal: any): string => {
+      const rtStr = (rtVal || "").toString();
+      const match = rtStr.match(/rt\s*(\d+)/i) || rtStr.match(/\d+/);
+      const num = match ? match[1] || match[0] : rtStr;
+      return num ? num.replace(/^0+/, "").padStart(2, "0") : "01";
+    };
+
     // 1. Warga Listener
     const getWargaQuery = () => {
       const base = collection(db, "data_warga");
@@ -1489,7 +1482,7 @@ export default function App() {
       const constraints = [where("tenantId", "in", tIds), limit(5000)];
 
       if (currentUser?.role === "RT") {
-        constraints.push(where("rt", "==", currentUser.rt || "01"));
+        constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
       }
 
       return query(base, ...constraints);
@@ -1519,7 +1512,7 @@ export default function App() {
           limit(100),
         ];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
@@ -1549,7 +1542,7 @@ export default function App() {
           limit(100),
         ];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
@@ -1601,7 +1594,7 @@ export default function App() {
         const base = collection(db, "iuran");
         const constraints = [where("tenantId", "in", tIds)];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
@@ -1654,7 +1647,7 @@ export default function App() {
           limit(50),
         ];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
@@ -1708,7 +1701,7 @@ export default function App() {
         const base = collection(db, "inventaris");
         const constraints = [where("tenantId", "in", tIds)];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
@@ -1731,7 +1724,7 @@ export default function App() {
         const base = collection(db, "inventaris_logs");
         const constraints = [where("tenantId", "in", tIds)];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
@@ -1797,7 +1790,7 @@ export default function App() {
         const base = collection(db, coll);
         const constraints = [where("tenantId", "in", tIds)];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
@@ -1904,7 +1897,7 @@ export default function App() {
         const base = collection(db, coll);
         const constraints = [where("tenantId", "in", tIds)];
         if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", currentUser.rt || "01"));
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
         return query(base, ...constraints);
       };
