@@ -32,9 +32,12 @@ service cloud.firestore {
     function isTenantMember(tenantId) {
       return isSignedIn() && (
         isAdmin() || 
+        (request.auth.token.firebase.sign_in_provider == 'anonymous' && (tenantId == 'RW26_SMART' || tenantId == 'RW_BERJUANG' || tenantId == 'trihprw26')) ||
         (getUserData() != null && (
           getUserData().tenantId == tenantId || 
-          (getUserData().tenantId == 'RW_BERJUANG' && tenantId == 'trihprw26')
+          (getUserData().tenantId == 'RW_BERJUANG' && (tenantId == 'trihprw26' || tenantId == 'RW_BERJUANG' || tenantId == 'RW26_SMART')) ||
+          (getUserData().tenantId == 'trihprw26' && (tenantId == 'RW_BERJUANG' || tenantId == 'trihprw26' || tenantId == 'RW26_SMART')) ||
+          (getUserData().tenantId == 'RW26_SMART' && (tenantId == 'RW26_SMART' || tenantId == 'RW_BERJUANG' || tenantId == 'trihprw26'))
         ))
       );
     }
@@ -53,11 +56,13 @@ service cloud.firestore {
     // --- Core Collections ---
 
     match /settings/{tenantId} {
-      allow read, write: if true;
+      allow read: if isTenantMember(tenantId);
+      allow write: if isPengurus() && isTenantMember(tenantId);
     }
 
     match /tenant_settings/{tenantId} {
-      allow read, write: if true;
+      allow read: if isTenantMember(tenantId);
+      allow write: if isPengurus() && isTenantMember(tenantId);
     }
 
     match /tenants/{tenantId} {
@@ -67,7 +72,18 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /public_usernames/{username} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     // --- Toko & Commerce ---
@@ -102,16 +118,13 @@ service cloud.firestore {
     // --- Warga & Kependudukan ---
 
     match /data_warga/{docId} {
-      allow get: if isTenantMember(resource.data.tenantId);
-      allow list: if isSignedIn();
-      allow create, update: if isTenantMember(request.resource.data.tenantId);
-      allow delete: if isPengurus() && isTenantMember(resource.data.tenantId);
+      allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
     }
 
     match /verifikasi_warga/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
       allow create: if isSignedIn();
-      allow update: if isSignedIn();
+      allow update: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
       allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
     }
 
@@ -148,8 +161,7 @@ service cloud.firestore {
     }
 
     match /emergencies/{docId} {
-      allow get: if isTenantMember(resource.data.tenantId);
-      allow list: if isSignedIn();
+      allow read: if isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn();
       allow update: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId) || 
                        (isSignedIn() && resource.data.userId == request.auth.uid);
@@ -185,19 +197,24 @@ service cloud.firestore {
     // --- Infrastructure & Misc ---
 
     match /inventaris/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
     }
     match /inventaris_logs/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
     }
     match /inventaris_kategori/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
     }
     match /inventaris_lokasi/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
     }
     match /inventaris_supplier/{docId} {
-      allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId);
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
     }
 
     match /notifications/{docId} {
@@ -216,21 +233,60 @@ service cloud.firestore {
     }
 
     // --- Health & Social Programs ---
-    match /balita/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /ibu_hamil/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /posyandu_kegiatan/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /posbindu_kegiatan/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /pemeriksaan_balita/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /pemeriksaan_posbindu/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /imunisasi/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /lansia/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /warga_sakit/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /balita/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /ibu_hamil/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /posyandu_kegiatan/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /posbindu_kegiatan/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /pemeriksaan_balita/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /pemeriksaan_posbindu/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /imunisasi/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /lansia/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /warga_sakit/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
     
     // --- Environment & Waste ---
-    match /sampah_kategori/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /sampah_setoran/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /sampah_tarik_saldo/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
-    match /sampah_nasabah/{docId} { allow read, write: if isTenantMember(resource.data.tenantId || request.resource.data.tenantId); }
+    match /sampah_kategori/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /sampah_setoran/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /sampah_tarik_saldo/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
+    match /sampah_nasabah/{docId} {
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow write: if isTenantMember(request.resource.data.tenantId || (resource != null ? resource.data.tenantId : null));
+    }
     
     // --- Admin/System Collections ---
     match /monthly_reports/{docId} { allow read: if isTenantMember(resource.data.tenantId); allow write: if isAdmin(); }

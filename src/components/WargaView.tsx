@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   Users, Trash2, Edit2, Download, Printer, UserPlus, 
   MapPin, Phone, Info, Search, X, CheckCircle, AlertCircle, Eye, EyeOff, ClipboardList, Trash, ShieldCheck, LogOut, Menu, Lock
@@ -66,7 +66,28 @@ function WargaView(props: WargaViewProps) {
 
   const isRTAdmin = currentUser?.role === 'RT';
   const myRT = currentUser?.rt || '01';
-  const [filterRT, setFilterRT] = useState(isRTAdmin ? myRT : "Semua");
+
+  // Auto-detect RT from tenant name (e.g. "RT 01 / RW 26") or from tenant identifier
+  const detectedRT = useMemo(() => {
+    if (!tenant?.name) return null;
+    const match = tenant.name.match(/RT\s*(\d+)/i);
+    if (match) {
+      return match[1].padStart(2, '0');
+    }
+    return null;
+  }, [tenant?.name]);
+
+  const [filterRT, setFilterRT] = useState(isRTAdmin ? myRT : (detectedRT || "Semua"));
+
+  useEffect(() => {
+    if (isRTAdmin) {
+      setFilterRT(myRT);
+    } else if (detectedRT) {
+      setFilterRT(detectedRT);
+    } else {
+      setFilterRT("Semua");
+    }
+  }, [isRTAdmin, myRT, detectedRT]);
   const [filterRW, setFilterRW] = useState("Semua");
   const [filterKategoriUmur, setFilterKategoriUmur] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
@@ -372,9 +393,22 @@ function WargaView(props: WargaViewProps) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
               <input type="text" placeholder="Cari Nama / NIK..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors" />
             </div>
-            <select value={filterRT} onChange={(e) => setFilterRT(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors">
-              <option value="Semua" className="dark:bg-slate-800">RT: Semua</option>
-              {Array.from({length: 10}, (_, i) => String(i+1).padStart(2, '0')).map(rt => <option key={rt} value={rt} className="dark:bg-slate-800">{`RT ${rt}`}</option>)}
+            <select 
+              value={filterRT} 
+              onChange={(e) => setFilterRT(e.target.value)} 
+              disabled={!!detectedRT || isRTAdmin}
+              className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
+            >
+              {detectedRT || isRTAdmin ? (
+                <option value={detectedRT || myRT} className="dark:bg-slate-800">{`RT ${detectedRT || myRT}`}</option>
+              ) : (
+                <>
+                  <option value="Semua" className="dark:bg-slate-800">RT: Semua</option>
+                  {Array.from({length: 10}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
+                    <option key={rt} value={rt} className="dark:bg-slate-800">{`RT ${rt}`}</option>
+                  ))}
+                </>
+              )}
             </select>
             <select value={filterRW} onChange={(e) => setFilterRW(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors">
               <option value="Semua" className="dark:bg-slate-800">RW: Semua</option>
@@ -582,7 +616,7 @@ function WargaView(props: WargaViewProps) {
                          <div className="grid grid-cols-2 gap-4 text-left">
                            <div className="flex flex-col">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RT KTP/Domisili <span className="text-red-500">*</span></label>
-                              <input required name="rt" defaultValue={editingWarga?.rt || (isRTAdmin ? myRT : '')} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                              <input required name="rt" defaultValue={editingWarga?.rt || (isRTAdmin ? myRT : (detectedRT || '01'))} readOnly={!!detectedRT || isRTAdmin} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-brand-blue read-only:bg-slate-100 read-only:text-slate-500" />
                            </div>
                            <div className="flex flex-col">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">RW KTP/Domisili <span className="text-red-500">*</span></label>

@@ -176,6 +176,14 @@ import {
   textToSpeech,
   scanReceiptAI,
 } from "./services/aiService";
+// import {
+//   INITIAL_WARGA_DATA,
+//   INITIAL_KAS_DATA,
+//   INITIAL_SURAT_DATA,
+//   INITIAL_INVENTARIS_DATA,
+// } from "./data/initialData";
+import { getPlanFeatures, generateSuratHTML } from "./lib/appUtils";
+import { PLAN_FEATURES, PLAN_ALIASES, ADDON_CONFIG } from "./constants";
 
 const APP_LOGO = "/logo_rw.png";
 
@@ -530,493 +538,9 @@ const INITIAL_INVENTARIS_DATA = [
 // NOTE: Kategori Inventaris dikelola secara dinamis melalui Firestore (koleksi: inventaris_kategori).
 // Anda dapat menambahkannya melalui fitur "Kategori" pada menu Inventaris di aplikasi.
 
-const PLAN_FEATURES: Record<string, any> = {
-  TRIAL: {
-    maxWarga: 50,
-    price: "Free",
-    coreFeatures: [
-      "Cetak Surat Pengantar dalam hitungan detik",
-      "Ubah Biaya jadi Income Kas RT dengan Fitur PPOB Bagi-Hasil",
-      "Coba keajaiban AI : Foto struk langsung jadi laporan (Batas 3x/Bulan)",
-    ],
-    keuangan: "DASAR",
-    surat: "STANDAR",
-    verifikasi: false,
-    chatMode: false,
-    ai: false,
-    maxAiChats: 5,
-    multiRT: false,
-    posyandu: false,
-    bankSampah: false,
-    ePemilu: false,
-    eLapak: "READ",
-    cctv: false,
-    sos: false,
-    analytics: false,
-    multiRegion: false,
-    governance: "LOW",
-    predictiveAI: false,
-    booking: false,
-    bukuTamu: false,
-    inventaris: false,
-  },
-  BASIC: {
-    maxWarga: 300,
-    price: "Rp 55rb",
-    oldPrice: "Rp 85rb",
-    coreFeatures: [
-      "PPOB & Iuran Digital Integrasi",
-      "Surat Digital, Buku Tamu Digital, SOS",
-      "Booking Fasilitas Umum",
-      "AI Chatbot (50x/bln)",
-    ],
-    keuangan: "DASAR", // No advanced PPOB
-    surat: "STANDAR",
-    verifikasi: true,
-    chatMode: true,
-    ai: true,
-    maxAiChats: 50,
-    multiRT: false,
-    posyandu: false,
-    bankSampah: false,
-    ePemilu: false,
-    eLapak: "NONE",
-    cctv: false,
-    sos: true,
-    analytics: false,
-    multiRegion: false,
-    governance: "LOW",
-    predictiveAI: false,
-    inventaris: true,
-    booking: true,
-    bukuTamu: true,
-  },
-  PRO: {
-    maxWarga: 1000,
-    price: "Rp 129rb",
-    oldPrice: "Rp 169rb",
-    coreFeatures: [
-      "Modul Posyandu",
-      "Modul Bank Sampah",
-      "Modul E-Voting (Pemilu Warga)",
-      "AI Chatbot (200x/bln)",
-    ],
-    keuangan: "FULL",
-    surat: "CUSTOM",
-    verifikasi: true,
-    chatMode: true,
-    ai: true,
-    maxAiChats: 200,
-    multiRT: false,
-    posyandu: true,
-    bankSampah: true,
-    ePemilu: true,
-    eLapak: "NONE",
-    cctv: false,
-    sos: false,
-    analytics: true,
-    multiRegion: false,
-    governance: "MEDIUM",
-    predictiveAI: false,
-    inventaris: true,
-    booking: true,
-    bukuTamu: true,
-  },
-  PREMIUM: {
-    maxWarga: 1000,
-    price: "Rp 239rb",
-    oldPrice: "Rp 479rb",
-    coreFeatures: [
-      "Available 6 Tenant (Multi-Tenant RW -> 5 RT + 1 RW)",
-      "Dashboard Konsolidasi Data RW",
-      "Integrasi CCTV Keamanan",
-      "AI Scan Struk (100x/bln)",
-      "Prioritas Layanan Support",
-    ],
-    keuangan: "FULL",
-    surat: "CUSTOM",
-    verifikasi: true,
-    chatMode: true,
-    ai: true,
-    maxAiChats: 0,
-    multiRT: true,
-    posyandu: true,
-    bankSampah: true,
-    ePemilu: true,
-    eLapak: "NONE",
-    cctv: false,
-    sos: true,
-    analytics: false,
-    multiRegion: false,
-    governance: "MEDIUM",
-    predictiveAI: false,
-    inventaris: true,
-    booking: true,
-    bukuTamu: true,
-  },
-  ENTERPRISE: {
-    maxWarga: 20000,
-    price: "Rp 4.5jt",
-    oldPrice: "Rp 5.9jt",
-    coreFeatures: [
-      "Multi-RW / Skala Kelurahan/ Perumahan Besar",
-      "Custom Domain / White Labeling",
-      "AI Strategic & Big Data Insights",
-      "Warga Tanpa Batas (Unlimited)",
-      "Dedicated CS Manager 24/7",
-    ],
-    keuangan: "ENTERPRISE",
-    surat: "DYNAMIC",
-    verifikasi: true,
-    chatMode: true,
-    ai: true,
-    maxAiChats: -1, // Unlimited
-    multiRT: true,
-    posyandu: true,
-    bankSampah: true,
-    ePemilu: true,
-    eLapak: "FULL",
-    cctv: true,
-    sos: true,
-    analytics: true,
-    multiRegion: true,
-    governance: "HIGH",
-    predictiveAI: true,
-    inventaris: true,
-    booking: true,
-    bukuTamu: true,
-  },
-  EXPIRED: {
-    maxWarga: 0,
-    price: "Expired",
-    coreFeatures: ["Masa trial berakhir. Silakan upgrade paket."],
-    keuangan: "NONE",
-    surat: "NONE",
-    verifikasi: false,
-    chatMode: false,
-    ai: false,
-    isExpired: true
-  }
-};
+// Removed redundant plan constants and functions
 
-const ADDON_CONFIG = {
-  AI_CHAT: {
-    id: "addon_ai",
-    name: "Extra AI Chat (100 chats) - 49k/ bln",
-    priceMonthly: 49000,
-    featureKey: "extraAi_100",
-  },
-  POSYANDU: {
-    id: "addon_posyandu",
-    name: "Modul Kesehatan (Posyandu) - 35k/ bln",
-    priceMonthly: 35000,
-    featureKey: "posyandu",
-  },
-  EVOTING: {
-    id: "addon_evoting",
-    name: "Modul E-Voting & Pemilu - 45k/ bln",
-    priceMonthly: 45000,
-    featureKey: "ePemilu",
-  },
-  BANK_SAMPAH: {
-    id: "addon_banksampah",
-    name: "Modul Bank Sampah - 35k/ bln",
-    priceMonthly: 35000,
-    featureKey: "bankSampah",
-  },
-  CCTV: {
-    id: "addon_cctv",
-    name: "CCTV Integration - 80k/ bln",
-    priceMonthly: 80000,
-    featureKey: "cctv",
-  },
-  ELAPAK: {
-    id: "addon_elapak",
-    name: "E-Lapak (Pasar Warga) - 50k/ bln",
-    priceMonthly: 50000,
-    featureKey: "eLapakFull",
-  },
-  PPOB: { 
-    id: "addon_ppob", 
-    name: "Modul PPOB (Payment Point Online Bank) - 50k/ bln", 
-    priceMonthly: 50000, 
-    featureKey: "ppob" 
-  },
-  BOOKING: { 
-    id: "addon_booking", 
-    name: "Modul Booking Fasilitas - 5k/ bln", 
-    priceMonthly: 5000, 
-    featureKey: "booking" 
-  },
-  JUMLAH_WARGA_100: {
-    id: "addon_warga_100",
-    name: "Ekstra +100 Warga - 15k/ bln",
-    priceMonthly: 15000,
-    featureKey: "warga_100",
-  },
-  JUMLAH_WARGA_500: {
-    id: "addon_warga_500",
-    name: "Ekstra +500 Warga - 50k/ bln",
-    priceMonthly: 50000,
-    featureKey: "warga_500",
-  },
-  SOS: {
-    id: "addon_sos",
-    name: "Modul SOS - 29k/ bln",
-    priceMonthly: 29000,
-    featureKey: "modulSos",
-  },
-  BUKU_TAMU: {
-    id: "addon_buku_tamu",
-    name: "Buku Tamu Digital - 19k/ bln",
-    priceMonthly: 19000,
-    featureKey: "bukuTamu",
-  },
-  INVENTARIS: {
-    id: "addon_inventaris",
-    name: "Modul Inventaris - 15k/ bln",
-    priceMonthly: 15000,
-    featureKey: "inventaris",
-  },
-  AI_AGENT: {
-    id: "addon_ai_agent",
-    name: "AI Agent (Asisten 24/7) - 59k/ bln",
-    priceMonthly: 59000,
-    featureKey: "aiAgent",
-  },
-  GRUP_CHAT: {
-    id: "addon_grup_chat",
-    name: "Grup Chat Warga - 25k/ bln",
-    priceMonthly: 25000,
-    featureKey: "grupChat",
-  },
-};
-
-const PLAN_ALIASES: Record<string, string> = {
-  ACTIVE: "TRIAL",
-  FREE: "TRIAL",
-  STARTER: "TRIAL",
-  LITE: "BASIC",
-  RT: "BASIC",
-  FLASH: "BASIC",
-  RW: "PRO",
-  GOLD: "PREMIUM",
-  DIAMOND: "ENTERPRISE",
-  GOV: "ENTERPRISE",
-  EXPIRED: "EXPIRED",
-};
-
-const getPlanFeatures = (tenantOrStatus: any) => {
-  const status =
-    typeof tenantOrStatus === "string"
-      ? tenantOrStatus
-      : tenantOrStatus?.status;
-  const addons =
-    typeof tenantOrStatus === "object" && tenantOrStatus?.addons
-      ? tenantOrStatus.addons
-      : [];
-
-  if (!status) return PLAN_FEATURES.TRIAL;
-  const normalizedStatus = status
-    .toUpperCase()
-    .replace("V4.0 ", "")
-    .replace("PLAN", "")
-    .trim();
-  const basePlan = PLAN_ALIASES[normalizedStatus] || normalizedStatus;
-  const features = { ...(PLAN_FEATURES[basePlan] || PLAN_FEATURES.TRIAL) };
-
-  // Apply Add-ons
-  if (addons.includes("extraAi_100")) {
-    features.maxAiChats = (features.maxAiChats === -1) ? -1 : (features.maxAiChats || 0) + 100;
-  }
-  if (addons.includes("posyandu")) features.posyandu = true;
-  if (addons.includes("ePemilu")) features.ePemilu = true;
-  if (addons.includes("bankSampah")) features.bankSampah = true;
-  if (addons.includes("cctv")) features.cctv = true;
-  if (addons.includes("eLapakFull")) features.eLapak = "FULL";
-  if (addons.includes("ppob")) features.keuangan = "FULL";
-  if (addons.includes("booking")) features.booking = true;
-  if (addons.includes("warga_100")) features.maxWarga = (features.maxWarga || 0) + 100;
-  if (addons.includes("warga_500")) features.maxWarga = (features.maxWarga || 0) + 500;
-  if (addons.includes("modulSos")) features.sos = true;
-  if (addons.includes("bukuTamu")) features.bukuTamu = true;
-  if (addons.includes("inventaris")) features.inventaris = true;
-  if (addons.includes("aiAgent")) features.ai = true;
-  if (addons.includes("grupChat")) features.chatMode = true;
-
-  return features;
-};
-
-// Shared Helper for Document Generation
-const generateSuratHTML = (surat: any, kop: any, settings: any) => {
-  const displayRT = surat.rt || kop.rt || "...";
-  const displayRW = surat.rw || kop.rw || "...";
-
-  return `
-    <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Cetak Surat - ${surat.nomor_surat || surat.id}</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-          body { 
-            font-family: 'Times New Roman', Times, serif; 
-            background: #fff;
-            margin: 0; 
-            padding: 0; 
-          }
-          .print-container {
-            width: 210mm;
-            margin: 0 auto;
-            background: white;
-            padding: 15mm;
-            font-size: 0.875rem;
-          }
-          @media print {
-            @page { margin: 1.5cm; }
-            body { background: white; }
-            .print-container { padding: 0; margin: 0; width: 100%; box-shadow: none; }
-          }
-          .details td { padding: 2px 0; vertical-align: top; }
-        </style>
-      </head>
-      <body>
-        <div class="print-container">
-          <!-- Kop Surat -->
-          <div class="flex items-center relative py-1">
-                <div class="flex items-center w-48">
-                    ${surat.show_logo !== "no" && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-[90px] h-[90px] object-contain mr-4 ml-4" />` : ""}
-                </div>
-                <div class="flex-1 text-center px-4 flex flex-col justify-center items-center">
-                    <h2 class="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}</h2>
-                    <p class="font-['Arial'] text-[16px] leading-[24.8571px] font-bold w-[398.875px] h-[23.9792px]">KELURAHAN ${kop.kelurahan?.toUpperCase() || "..."} - KECAMATAN ${kop.kecamatan?.toUpperCase() || "..."}</p>
-                    <p class="font-['Arial'] text-[16px] leading-[20px] font-bold">${(kop.kabupaten || settings.kabupaten || "BEKASI").toUpperCase().includes("KABUPATEN") || (kop.kabupaten || settings.kabupaten || "BEKASI").toUpperCase().includes("KOTA") ? "" : "KABUPATEN "}${(kop.kabupaten || settings.kabupaten || "BEKASI").toUpperCase()}</p>
-                    <p class="w-[347.242px] h-[23.2461px] text-[8px] leading-[11.14px]">Sekretariat : ${kop.alamat || "..."} | Email: ${kop.email || "..."} | Instagram: ${kop.instagram || "..."}</p>
-                </div>
-                <div class="flex items-center justify-start w-48">
-                    ${surat.show_logo !== "no" && kop.logo_rw_url ? `<img src="${kop.logo_rw_url}" alt="Logo RW" class="w-[100px] h-[95px] object-contain ml-4" />` : ""}
-                </div>
-           </div>
-          <div class="border-b-4 border-black mt-2"></div>
-          <div class="border-b-2 border-black mt-0.5"></div>
-          
-          <div class="text-center mt-6">
-              <h3 class="text-lg font-bold underline">${surat.jenisSurat || "SURAT PENGANTAR"}</h3>
-              <p>Nomor : ${surat.nomor_surat || "...... / RT .... / RW .... / Tahun 202..."}</p>
-          </div>
-          
-          <div class="mt-6 leading-relaxed">
-              <p class="mb-4">Yang bertanda tangan di bawah ini Ketua RT ${surat.rt || kop.rt || "..."} / RW ${surat.rw || kop.rw || "..."} Kelurahan ${(kop.kelurahan || "...").toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase())} Kecamatan ${(kop.kecamatan || "...").toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase())} ${((kop.kabupaten || settings.kabupaten || "Bekasi").toLowerCase().includes("kabupaten") || (kop.kabupaten || settings.kabupaten || "Bekasi").toLowerCase().includes("kota") ? "" : "Kabupaten ") + (kop.kabupaten || settings.kabupaten || "Bekasi").toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase())}</p>
-              <p class="mb-4">Dengan ini menerangkan bahwa :</p>
-              <div class="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
-                 <div>Nama</div><div>:</div><div><strong>${surat.pemohon}</strong></div>
-                 <div>Tempat Tgl, Lahir</div><div>:</div><div>${surat.ttl || "-"}</div>
-                 <div>Jenis Kelamin</div><div>:</div><div>${surat.jk || "-"}</div>
-                 <div>Pekerjaan</div><div>:</div><div>${surat.pekerjaan || "-"}</div>
-                 <div>Kewarganegaraan</div><div>:</div><div>${surat.kewarganegaraan || "WNI"}</div>
-                 <div>No. KTP/NIK</div><div>:</div><div>${surat.nik || "-"}</div>
-                 <div>Status Perkawinan</div><div>:</div><div>${surat.statusKawin || "-"}</div>
-                 <div>Alamat</div><div>:</div><div>${surat.alamat || "-"}</div>
-                 <div class="mt-2">Maksud / Keperluan</div><div class="mt-2">:</div><div class="mt-2 font-bold">${surat.keperluan || "-"}</div>
-              </div>
-              <p class="mt-6">Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
-          </div>
-
-          <div class="mt-12 flex justify-between">
-              <div class="text-center ml-12">
-                  <p>Mengetahui,</p>
-                  <p>Ketua RW ${surat.rw || kop.rw || "...."}</p>
-                  <div class="h-20 flex items-center justify-center relative">
-                      ${kop.signature_rw_url ? `<img src="${kop.signature_rw_url}" alt="TTD RW" class="absolute h-20 w-full object-contain pointer-events-none" />` : ""}
-                  </div>
-                  <p class="font-bold underline">( ${surat.ketua_rw_nama || kop.nama_ketua_rw || "..................................."} )</p>
-              </div>
-              <div class="text-center mr-12">
-                  <p>${(() => {
-                    const kab = kop.kabupaten || settings.kabupaten || "Bekasi";
-                    const prefix =
-                      kab.toUpperCase().includes("KABUPATEN") ||
-                      kab.toUpperCase().includes("KOTA")
-                        ? ""
-                        : "Kabupaten ";
-                    return (
-                      prefix +
-                      kab
-                        .split(" ")
-                        .map(
-                          (w: string) =>
-                            w.charAt(0).toUpperCase() +
-                            w.slice(1).toLowerCase(),
-                        )
-                        .join(" ")
-                    );
-                  })()}, ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
-                  <p>${surat.jabatan_ttd || "Ketua RT"} ${surat.rt || kop.rt || "...."}</p>
-                  <div class="h-20 flex items-center justify-center relative">
-                      ${kop.signature_rt_url ? `<img src="${kop.signature_rt_url}" alt="TTD RT" class="absolute h-20 w-full object-contain pointer-events-none" />` : ""}
-                  </div>
-                  <p class="font-bold underline">( ${surat.ketua || kop.nama_ketua_rt || "..................................."} )</p>
-              </div>
-          </div>
-
-          <div class="mt-12 border-t border-black pt-2 text-[10px] text-gray-800">
-               <div class="font-mono">
-                  <div class="grid grid-cols-3 gap-2 w-full">
-                    <!-- Kiri: TL. Berkas, Berkas Sesuai -->
-                    <div class="flex flex-col">
-                      <span>TL. Berkas / Surat No :</span>
-                      <span class="mt-1">Berkas Sesuai</span>
-                      <div class="w-20 h-6 border border-black mt-1 bg-white"></div>
-                    </div>
-                    <!-- Tengah: Hal, Berkas Kecamatan -->
-                    <div class="flex flex-col">
-                      <span>Hal:</span>
-                      <span class="mt-1">Berkas Kecamatan</span>
-                      <div class="w-20 h-6 border border-black mt-1 bg-white"></div>
-                    </div>
-                    <!-- Kanan: Tgl, Paraf Arsiparis -->
-                    <div class="flex flex-col">
-                      <span>Tgl :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-</span>
-                      <span class="mt-1">Paraf Arsiparis</span>
-                      <div class="w-20 h-6 border border-black mt-1 bg-white"></div>
-                    </div>
-                  </div>
-               </div>
-          </div>
-        </div>
-        <script>
-          function checkImages() {
-            const images = document.getElementsByTagName('img');
-            let loadedCount = 0;
-            if (images.length === 0) {
-              setTimeout(() => { window.print(); window.close(); }, 500);
-              return;
-            }
-            for (let i = 0; i < images.length; i++) {
-              if (images[i].complete) {
-                loadedCount++;
-              } else {
-                images[i].addEventListener('load', () => {
-                  loadedCount++;
-                  if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 500);
-                });
-                images[i].addEventListener('error', () => {
-                  loadedCount++;
-                  if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 500);
-                });
-              }
-            }
-            if (loadedCount === images.length) {
-              setTimeout(() => { window.print(); window.close(); }, 500);
-            }
-          }
-          window.onload = checkImages;
-        </script>
-      </body>
-    </html>
-  `;
-};
+// Removed duplicate generateSuratHTML
 
 // Global utility helpers
 const calculateAge = (tglLahir: string) => {
@@ -1147,8 +671,16 @@ export default function App() {
           if (userProfileCache[user.uid]) {
             userDoc = userProfileCache[user.uid];
           } else {
-            userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
+            console.log("Fetching user profile for UID:", user.uid);
+            try {
+              userDoc = await getDoc(userDocRef);
+            } catch (err: any) {
+              if (err.code === "permission-denied") {
+                console.error("Permission denied reading users collection for UID:", user.uid);
+              }
+              throw err;
+            }
+            if (userDoc && userDoc.exists()) {
               userProfileCache[user.uid] = userDoc;
             }
           }
@@ -1434,17 +966,102 @@ export default function App() {
   const [isSelfRegistering, setIsSelfRegistering] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
+  // Extract and normalize the RT restriction of the active tenant
+  const tenantRT = useMemo(() => {
+    // 1. Check if settings.rt is configured
+    if (settings?.rt) {
+      return settings.rt.toString().replace(/^0+/, '').padStart(2, '0');
+    }
+    // 2. Extrapolate from tenant name
+    const fullName = currentTenant?.nama || currentTenant?.name || settings?.nama_rt || "";
+    const match = fullName.match(/RT\s*(\d+)/i);
+    if (match) {
+      return match[1].padStart(2, '0');
+    }
+    // 3. Extrapolate from tenant ID
+    const idStr = (currentTenant?.id || "").toLowerCase();
+    const matchId = idStr.match(/rt\s*(\d+)/i);
+    if (matchId) {
+      return matchId[1].padStart(2, '0');
+    }
+    return null;
+  }, [currentTenant, settings]);
+
+  // Centrally filtered data based on the tenant's specific RT if restricted
+  const filteredWargaDataCentral = useMemo(() => {
+    if (!tenantRT) return wargaData;
+    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    return wargaData.filter((w: any) => {
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      return wRtNorm === targetRtNorm;
+    });
+  }, [wargaData, tenantRT]);
+
+  const filteredIuranDataCentral = useMemo(() => {
+    if (!tenantRT) return iuranData;
+    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    return iuranData.filter((w: any) => {
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      return wRtNorm === targetRtNorm;
+    });
+  }, [iuranData, tenantRT]);
+
+  const filteredKasDataCentral = useMemo(() => {
+    if (!tenantRT) return kasData;
+    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    return kasData.filter((w: any) => {
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      return wRtNorm === targetRtNorm;
+    });
+  }, [kasData, tenantRT]);
+
+  const filteredSuratDataCentral = useMemo(() => {
+    if (!tenantRT) return suratData;
+    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    return suratData.filter((w: any) => {
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      return wRtNorm === targetRtNorm;
+    });
+  }, [suratData, tenantRT]);
+
+  const filteredVerifikasiWargaDataCentral = useMemo(() => {
+    if (!tenantRT) return verifikasiWargaData;
+    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    return verifikasiWargaData.filter((w: any) => {
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      return wRtNorm === targetRtNorm;
+    });
+  }, [verifikasiWargaData, tenantRT]);
+
+  const filteredBalitaDataCentral = useMemo(() => {
+    if (!tenantRT) return balitaData;
+    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    return balitaData.filter((w: any) => {
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      return wRtNorm === targetRtNorm;
+    });
+  }, [balitaData, tenantRT]);
+
+  const filteredIbuHamilDataCentral = useMemo(() => {
+    if (!tenantRT) return ibuHamilData;
+    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    return ibuHamilData.filter((w: any) => {
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      return wRtNorm === targetRtNorm;
+    });
+  }, [ibuHamilData, tenantRT]);
+
   const linkedWarga = currentUser?.nikMapping
-    ? wargaData.find((w: any) => w.nik === currentUser.nikMapping)
+    ? filteredWargaDataCentral.find((w: any) => w.nik === currentUser.nikMapping)
     : null;
 
   // Enforce Max Warga limit locally for UI based on Plan
   const cappedWargaData = useMemo(() => {
-    if (!currentTenant) return wargaData.slice(0, 50);
+    if (!currentTenant) return filteredWargaDataCentral.slice(0, 50);
     const isFree = currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
     const maxWargaLimit = isFree ? 50 : (getPlanFeatures(currentTenant).maxWarga || 50);
-    return wargaData.slice(0, maxWargaLimit);
-  }, [wargaData, currentTenant]);
+    return filteredWargaDataCentral.slice(0, maxWargaLimit);
+  }, [filteredWargaDataCentral, currentTenant]);
 
   const userPhoto =
     (currentUser as any)?.photoUrl ||
@@ -1619,7 +1236,26 @@ export default function App() {
 
     const baseTenantId = currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
     const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : baseTenantId;
-    const tIds = tId === "RW_BERJUANG" ? ["RW_BERJUANG", "trihprw26"] : [tId];
+    
+    // Build array of supported database tenant IDs by resolving child and virtual relationships
+    const tIdsTemp = [tId];
+    if (
+      tId === "RW_BERJUANG" ||
+      tId === "trihprw26" ||
+      tId.toLowerCase().includes("rt01") ||
+      tId.toLowerCase().includes("rw26_rt") ||
+      tId.toLowerCase().includes("rt_01") ||
+      tId.toLowerCase().includes("berjuang")
+    ) {
+      tIdsTemp.push("RW_BERJUANG", "trihprw26");
+    }
+    if (currentTenant?.parentId) {
+      tIdsTemp.push(currentTenant.parentId);
+      if (currentTenant.parentId === "RW_BERJUANG" || currentTenant.parentId === "trihprw26") {
+        tIdsTemp.push("RW_BERJUANG", "trihprw26");
+      }
+    }
+    const tIds = Array.from(new Set(tIdsTemp));
 
     setIsLoadingDB(true);
     let loadedSections = 0;
@@ -1780,20 +1416,24 @@ export default function App() {
     // 3. Surat Listener
     let unsubSurat = () => {};
     if (hasFullAccess) {
-      unsubSurat = onSnapshot(
-        query(
-          collection(db, "surat"),
+      const getSuratQuery = () => {
+        const base = collection(db, "surat");
+        const constraints = [
           where("tenantId", "in", tIds),
           orderBy("tanggal", "desc"),
           limit(100),
-        ),
+        ];
+        if (currentUser?.role === "RT") {
+          constraints.push(where("rt", "==", currentUser.rt || "01"));
+        }
+        return query(base, ...constraints);
+      };
+
+      unsubSurat = onSnapshot(
+        getSuratQuery(),
         (snap) => {
           const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          const filtered =
-            currentUser?.role === "RT"
-              ? data.filter((s: any) => s.rt === currentUser.rt)
-              : data;
-          setSuratData(filtered);
+          setSuratData(data);
           onDataLoaded();
         },
         (err) => {
@@ -1832,18 +1472,22 @@ export default function App() {
     // 4. Iuran Listener
     let unsubIuran = () => {};
     if (hasFullAccess) {
-      unsubIuran = onSnapshot(
-        query(
-          collection(db, "iuran"),
+      const getIuranQuery = () => {
+        const base = collection(db, "iuran");
+        const constraints = [
           where("tenantId", "in", tIds),
-        ),
+        ];
+        if (currentUser?.role === "RT") {
+          constraints.push(where("rt", "==", currentUser.rt || "01"));
+        }
+        return query(base, ...constraints);
+      };
+
+      unsubIuran = onSnapshot(
+        getIuranQuery(),
         (snap) => {
           const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          const filtered =
-            currentUser?.role === "RT"
-              ? data.filter((i: any) => i.rt === currentUser.rt)
-              : data;
-          setIuranData(filtered);
+          setIuranData(data);
           onDataLoaded();
         },
         (err) => {
@@ -1879,20 +1523,24 @@ export default function App() {
     // 4.6 PPOB Listener
     let unsubPpob = () => {};
     if (hasFullAccess) {
-      unsubPpob = onSnapshot(
-        query(
-          collection(db, "ppob_trx"),
+      const getPpobQuery = () => {
+        const base = collection(db, "ppob_trx");
+        const constraints = [
           where("tenantId", "in", tIds),
           orderBy("createdAt", "desc"),
           limit(50),
-        ),
+        ];
+        if (currentUser?.role === "RT") {
+          constraints.push(where("rt", "==", currentUser.rt || "01"));
+        }
+        return query(base, ...constraints);
+      };
+
+      unsubPpob = onSnapshot(
+        getPpobQuery(),
         (snap) => {
           const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          const filtered =
-            currentUser?.role === "RT"
-              ? data.filter((i: any) => i.rt === currentUser.rt)
-              : data;
-          setPpobData(filtered);
+          setPpobData(data);
           onDataLoaded();
         },
         (err) => {
@@ -2543,7 +2191,7 @@ export default function App() {
       unsubComplaints();
       unsubBookings();
     };
-  }, [currentUser, wargaAuth, selectedTenantId]);
+  }, [currentUser, wargaAuth, selectedTenantId, currentTenant?.parentId, currentTenant?.id]);
 
   // --- CENTRAL CONFIG HELPERS ---
   const getSetting = (key: string) => {
@@ -2644,7 +2292,7 @@ export default function App() {
     showNotification(
       `Akses Gagal: ${op.toUpperCase()} pada ${path}. Sesi anda mungkin habis atau izin ditolak.`,
     );
-    throw new Error(JSON.stringify(errInfo));
+    // throw removed for stability
   };
 
   // Helper for uploading files. In this environment, Firebase Storage (bucket) might not be fully initialized.
@@ -3002,7 +2650,7 @@ export default function App() {
       <>
         <LoginView
           setWargaAuth={setWargaAuth}
-          wargaData={wargaData}
+          wargaData={filteredWargaDataCentral}
           verifikasiWargaData={verifikasiWargaData}
           isLoadingDB={isLoadingDB}
           onSelfRegister={() => setIsSelfRegistering(true)}
@@ -3444,10 +3092,10 @@ export default function App() {
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0 relative z-10">
           {activeTab === "dashboard" && (
-            <DashboardView allowedMenuItems={renderableNavItems} kasData={kasData}
+            <DashboardView allowedMenuItems={renderableNavItems} kasData={filteredKasDataCentral}
               wargaData={cappedWargaData}
-              suratData={suratData}
-              iuranData={iuranData}
+              suratData={filteredSuratDataCentral}
+              iuranData={filteredIuranDataCentral}
               emergenciesData={emergenciesData}
               handleTriggerSOS={handleTriggerSOS}
               userRole={currentUser.role}
@@ -3456,7 +3104,7 @@ export default function App() {
               inventarisData={inventarisData}
               sampahSetoranData={sampahSetoranData}
               bukuTamuData={bukuTamuData}
-              verifikasiWargaData={verifikasiWargaData}
+              verifikasiWargaData={filteredVerifikasiWargaDataCentral}
               sampahTarikSaldoData={sampahTarikSaldoData}
               votingConfig={votingConfig}
               userVotes={userVotes}
@@ -3508,8 +3156,8 @@ export default function App() {
           )}
           {activeTab === "verifikasi" && (
             <VerifikasiAdminView
-              verifikasiData={verifikasiWargaData}
-              wargaData={wargaData}
+              verifikasiData={filteredVerifikasiWargaDataCentral}
+              wargaData={filteredWargaDataCentral}
               tenantId={currentUser.tenantId || "RW26_SMART"}
               isLoadingDB={isLoadingDB}
               setIsLoadingDB={setIsLoadingDB}
@@ -3531,11 +3179,11 @@ export default function App() {
             <FinansialDashboardView
               ppobData={ppobData}
               setPpobData={setPpobData}
-              iuranData={iuranData}
+              iuranData={filteredIuranDataCentral}
               setIuranData={setIuranData}
-              kasData={kasData}
+              kasData={filteredKasDataCentral}
               setKasData={setKasData}
-              wargaData={wargaData}
+              wargaData={filteredWargaDataCentral}
               userRole={currentUser.role}
               currentUser={currentUser}
               getSetting={getSetting}
@@ -3553,9 +3201,9 @@ export default function App() {
           {activeTab === "posyandu" &&
             (getPlanFeatures(currentTenant?.status).posyandu ? (
               <PosyanduView
-                balitaData={balitaData}
+                balitaData={filteredBalitaDataCentral}
                 setBalitaData={setBalitaData}
-                ibuHamilData={ibuHamilData}
+                ibuHamilData={filteredIbuHamilDataCentral}
                 setIbuHamilData={setIbuHamilData}
                 posyanduKegiatanData={posyanduKegiatanData}
                 setPosyanduKegiatanData={setPosyanduKegiatanData}
@@ -3567,7 +3215,7 @@ export default function App() {
                 setPemeriksaanPosbinduData={setPemeriksaanPosbinduData}
                 imunisasiData={imunisasiData}
                 setImunisasiData={setImunisasiData}
-                wargaData={wargaData}
+                wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 tenantId={currentUser.tenantId || "RW26_SMART"}
                 setIsLoadingDB={setIsLoadingDB}
@@ -3600,7 +3248,7 @@ export default function App() {
                 sampahKategoriData={sampahKategoriData}
                 sampahSetoranData={sampahSetoranData}
                 sampahTarikSaldoData={sampahTarikSaldoData}
-                wargaData={wargaData}
+                wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 tenantId={currentUser.tenantId || "RW26_SMART"}
                 handleFirestoreError={handleFirestoreError}
@@ -3646,9 +3294,9 @@ export default function App() {
           )}
           {activeTab === "surat" && (
             <SuratView
-              suratData={suratData}
+              suratData={filteredSuratDataCentral}
               setSuratData={setSuratData}
-              wargaData={wargaData}
+              wargaData={filteredWargaDataCentral}
               usersData={usersData}
               userRole={currentUser.role}
               currentUser={currentUser}
@@ -3718,7 +3366,7 @@ export default function App() {
             <PengaturanView
               tenantId={currentUser.tenantId || "RW26_SMART"}
               currentTenant={currentTenant}
-              wargaData={wargaData}
+              wargaData={filteredWargaDataCentral}
               settings={settings}
               userRole={currentUser.role}
               handleFileUpload={handleFileUpload}
@@ -3780,9 +3428,9 @@ export default function App() {
             (getPlanFeatures(currentTenant?.status).analytics ? (
               <AnalyticsPremiumView
                 tenantId={currentUser.tenantId}
-                kasData={kasData}
-                wargaData={wargaData}
-                iuranData={iuranData}
+                kasData={filteredKasDataCentral}
+                wargaData={filteredWargaDataCentral}
+                iuranData={filteredIuranDataCentral}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -9180,12 +8828,22 @@ function LoginView({
 
       // If the input doesn't contain '@', search for a username in public_usernames
       if (!inputEmail.includes("@")) {
+        console.log("Checking username in public_usernames:", inputEmail.toLowerCase());
         const usernameRef = doc(
           db,
           "public_usernames",
           inputEmail.toLowerCase(),
         );
-        const usernameDoc = await getDoc(usernameRef);
+        
+        let usernameDoc;
+        try {
+          usernameDoc = await getDoc(usernameRef);
+        } catch (err: any) {
+          if (err.code === "permission-denied") {
+            console.error("Permission denied reading public_usernames. Check firestore.rules.");
+          }
+          throw err;
+        }
 
         if (usernameDoc.exists()) {
           const userData = usernameDoc.data();
