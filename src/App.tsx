@@ -680,12 +680,16 @@ export default function App() {
               userDoc = await getDoc(userDocRef);
             } catch (err: any) {
               if (err.code === "permission-denied") {
-                console.error(
-                  "Permission denied reading users collection for UID:",
+                console.warn(
+                  "Permission denied reading users collection for UID (Auth sync delay), retrying...",
                   user.uid,
                 );
+                // Retry after a short delay to allow Auth state to propagate to Firestore SDK
+                await new Promise((resolve) => setTimeout(resolve, 1500));
+                userDoc = await getDoc(userDocRef);
+              } else {
+                throw err;
               }
-              throw err;
             }
             if (userDoc && userDoc.exists()) {
               userProfileCache[user.uid] = userDoc;
@@ -1335,25 +1339,39 @@ export default function App() {
 
     // Build array of supported database tenant IDs by resolving child and virtual relationships
     const tIdsTemp = [tId];
+    
+    // For RW/parent tenants, include all known RT child tenant conventions
     if (
-      (tId === "RW_BERJUANG" ||
-        tId === "trihprw26" ||
-        tId.toLowerCase().includes("rt01") ||
-        tId.toLowerCase().includes("rw26_rt") ||
-        tId.toLowerCase().includes("rt_01") ||
-        tId.toLowerCase().includes("berjuang") ||
-        tId.toLowerCase().includes("trih")) &&
-      !tId.toLowerCase().includes("rw26")
+      tId === "RW_BERJUANG" ||
+      tId === "trihprw26" ||
+      tId === "RW26_SMART" ||
+      tId.toLowerCase().includes("berjuang") ||
+      tId.toLowerCase().includes("trih")
     ) {
-      tIdsTemp.push("RW_BERJUANG", "trihprw26");
+      // If the user context is RW or broader, give them access to the root database identities
+      if (!tId.toLowerCase().includes("rt")) {
+         tIdsTemp.push(
+           "RW_BERJUANG", "trihprw26", "RW26_SMART",
+           "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
+           "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04", "RW26_RT05",
+           "MASTER"
+         );
+      } else {
+         // If they are a specific RT, they only get their own, plus the parent databases
+         tIdsTemp.push("RW_BERJUANG", "trihprw26", "RW26_SMART");
+      }
+    } else if (tId.toLowerCase().includes("rt")) {
+      // Fallback for any other RT format 
+      tIdsTemp.push("RW_BERJUANG", "trihprw26", "RW26_SMART");
     }
+
     if (currentTenant?.parentId) {
       tIdsTemp.push(currentTenant.parentId);
       if (
         currentTenant.parentId === "RW_BERJUANG" ||
         currentTenant.parentId === "trihprw26"
       ) {
-        tIdsTemp.push("RW_BERJUANG", "trihprw26");
+        tIdsTemp.push("RW_BERJUANG", "trihprw26", "RW26_SMART");
       }
     }
     const tIds = Array.from(new Set(tIdsTemp));
@@ -3138,7 +3156,7 @@ export default function App() {
           <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors">
             <span className="font-bold">
               <span className="text-[#04a8f4]">Smart</span>
-              <span className="text-[#1ba0ce]">RW</span>{" "}
+              <span className="text-[#00aefc]">RW</span>{" "}
               <span className="text-brand-pink">AI</span>
             </span>
           </h2>
@@ -9544,7 +9562,7 @@ function LoginView({
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 leading-none mb-2 font-elegant">
             <span className="font-bold">
               <span className="text-[#04a8f4]">Smart</span>
-              <span className="text-brand-blue">RW</span>{" "}
+              <span className="text-brand-blue" style={{ color: "#0baade" }}>RW</span>{" "}
               <span className="text-brand-pink">AI</span>
             </span>
           </h1>

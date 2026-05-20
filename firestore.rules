@@ -32,7 +32,7 @@ service cloud.firestore {
 
     function isAdminStatic() {
       return isSignedIn() && (
-        ('email' in request.auth.token && request.auth.token.email.lower() == 'arifrajcoach@gmail.com') || 
+        ('email' in request.auth.token && request.auth.token.email != null && request.auth.token.email.lower() == 'arifrajcoach@gmail.com') || 
         request.auth.uid in [
           'eHFrJ7Re1sb4xhMWlsHNoKr5qs53',
           'MKe94buSU4SMg8jiRbCcOLwJp9H3',
@@ -44,33 +44,53 @@ service cloud.firestore {
     function isTenantMemberStatic(tenantId) {
       return isSignedIn() && (
         isAdminStatic() ||
-        ('email' in request.auth.token && request.auth.token.email.lower() == 'arifrajcoach@gmail.com') || 
+        ('email' in request.auth.token && request.auth.token.email != null && request.auth.token.email.lower() == 'arifrajcoach@gmail.com') || 
         request.auth.uid == 'eHFrJ7Re1sb4xhMWlsHNoKr5qs53' ||
         request.auth.uid == 'MKe94buSU4SMg8jiRbCcOLwJp9H3' ||
         request.auth.uid == 'zdXsW4N3qFcHpDoBynAoO2GgbYA2' ||
+        
+        // Group access for RW26, Berjuang, and Trih
+        (
+          (
+            ('tenantId' in request.auth.token && request.auth.token.tenantId != null && (
+              request.auth.token.tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26'] ||
+              request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26$') ||
+              request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') ||
+              request.auth.token.tenantId.lower().matches('^rt[0-9]+_trih.*') ||
+              request.auth.token.tenantId.lower().matches('^rw26_.*') ||
+              request.auth.token.tenantId.lower().matches('^rw_berjuang.*') ||
+              request.auth.token.tenantId.lower().matches('.*berjuang.*') ||
+              request.auth.token.tenantId.lower().matches('.*trih.*')
+            )) ||
+            ('email' in request.auth.token && request.auth.token.email != null && (
+              request.auth.token.email.lower().matches('^rt[0-9]+@rw26\\.com$') ||
+              request.auth.token.email.lower().matches('^rt[0-9]+@rw_berjuang\\.com$') ||
+              request.auth.token.email.lower().matches('^rt[0-9]+@trih.*') ||
+              request.auth.token.email.lower().matches('.*rw26.*|.*berjuang.*|.*trih.*')
+            ))
+          ) && (
+            tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26', 'master'] ||
+            tenantId.lower().matches('^rt[0-9]+_rw26$') ||
+            tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') ||
+            tenantId.lower().matches('^rt[0-9]+_trih.*') ||
+            tenantId.lower().matches('^rw26_.*') ||
+            tenantId.lower().matches('^rw_berjuang.*') ||
+            tenantId.lower().matches('.*berjuang.*') ||
+            tenantId.lower().matches('.*trih.*')
+          )
+        ) ||
+
         ('firebase' in request.auth.token && 'sign_in_provider' in request.auth.token.firebase && request.auth.token.firebase.sign_in_provider == 'anonymous' && (tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26'])) ||
+        
         ('tenantId' in request.auth.token && request.auth.token.tenantId != null && (
-          request.auth.token.tenantId.lower() == tenantId.lower() ||
-          // Allow sub-tenant member (RT) to read parent (RW) documents
-          (request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26$') && tenantId.lower() == 'rw26_smart') ||
-          (request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
-          (request.auth.token.tenantId.lower().matches('^rt[0-9]+_trih.*') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
-          (request.auth.token.tenantId.lower() == 'rw_berjuang' && (tenantId.lower() in ['trihprw26', 'rw_berjuang', 'rw26_smart'])) ||
-          (request.auth.token.tenantId.lower() == 'trihprw26' && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
-          (request.auth.token.tenantId.lower() == 'rw26_smart' && (tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26']))
+          request.auth.token.tenantId.lower() == tenantId.lower()
         )) ||
+        
         ('firebase' in request.auth.token && 'tenant' in request.auth.token.firebase && request.auth.token.firebase.tenant != null && (
-          request.auth.token.firebase.tenant.lower() == tenantId.lower() ||
-          // Allow sub-tenant member (RT) to read parent (RW) documents
-          (request.auth.token.firebase.tenant.lower().matches('^rt[0-9]+_rw26$') && tenantId.lower() == 'rw26_smart') ||
-          (request.auth.token.firebase.tenant.lower().matches('^rt[0-9]+_rw_berjuang$') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
-          (request.auth.token.firebase.tenant.lower().matches('^rt[0-9]+_trih.*') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
-          (request.auth.token.firebase.tenant.lower() == 'rw_berjuang' && (tenantId.lower() in ['trihprw26', 'rw_berjuang', 'rw26_smart'])) ||
-          (request.auth.token.firebase.tenant.lower() == 'trihprw26' && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
-          (request.auth.token.firebase.tenant.lower() == 'rw26_smart' && (tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26']))
+          request.auth.token.firebase.tenant.lower() == tenantId.lower()
         )) ||
+        
         ('email' in request.auth.token && request.auth.token.email != null && (
-          // Dynamic prefix matching
           request.auth.token.email.lower() == tenantId.lower() ||
           request.auth.token.email.lower() == tenantId.lower() + '@gmail.com' ||
           request.auth.token.email.lower() == tenantId.lower() + '@rw26.com' ||
@@ -79,73 +99,7 @@ service cloud.firestore {
           request.auth.token.email.lower().matches('^' + tenantId.lower() + '.*') ||
           request.auth.token.email.lower().matches('^' + tenantId.lower() + '@.*') ||
           request.auth.token.email.lower().matches('^' + tenantId.lower() + '_.*') ||
-          request.auth.token.email.lower().matches('^' + tenantId.lower() + '-.*') ||
-          
-          // Pattern-based RT-RW matching (statically matched below via explicit rules)
-          
-          // Match same RT/RW dynamically: email prefix matches dynamic tenant prefix
-          (
-            (tenantId.lower().matches('^rt01_rw26.*') && request.auth.token.email.lower().matches('^rt01@.*')) ||
-            (tenantId.lower().matches('^rt02_rw26.*') && request.auth.token.email.lower().matches('^rt02@.*')) ||
-            (tenantId.lower().matches('^rt03_rw26.*') && request.auth.token.email.lower().matches('^rt03@.*')) ||
-            (tenantId.lower().matches('^rt04_rw26.*') && request.auth.token.email.lower().matches('^rt04@.*')) ||
-            (tenantId.lower().matches('^rt05_rw26.*') && request.auth.token.email.lower().matches('^rt05@.*')) ||
-            (tenantId.lower().matches('^rt06_rw26.*') && request.auth.token.email.lower().matches('^rt06@.*')) ||
-            (tenantId.lower().matches('^rt07_rw26.*') && request.auth.token.email.lower().matches('^rt07@.*')) ||
-            (tenantId.lower().matches('^rt08_rw26.*') && request.auth.token.email.lower().matches('^rt08@.*')) ||
-            (tenantId.lower().matches('^rt09_rw26.*') && request.auth.token.email.lower().matches('^rt09@.*')) ||
-            (tenantId.lower().matches('^rt10_rw26.*') && request.auth.token.email.lower().matches('^rt10@.*')) ||
-            (tenantId.lower().matches('^rt11_rw26.*') && request.auth.token.email.lower().matches('^rt11@.*')) ||
-            (tenantId.lower().matches('^rt12_rw26.*') && request.auth.token.email.lower().matches('^rt12@.*')) ||
-            (tenantId.lower().matches('^rt13_rw26.*') && request.auth.token.email.lower().matches('^rt13@.*')) ||
-            (tenantId.lower().matches('^rt14_rw26.*') && request.auth.token.email.lower().matches('^rt14@.*')) ||
-            (tenantId.lower().matches('^rt15_rw26.*') && request.auth.token.email.lower().matches('^rt15@.*'))
-          ) ||
-          (
-            (tenantId.lower().matches('^rt01_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt01@.*')) ||
-            (tenantId.lower().matches('^rt02_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt02@.*')) ||
-            (tenantId.lower().matches('^rt03_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt03@.*')) ||
-            (tenantId.lower().matches('^rt04_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt04@.*')) ||
-            (tenantId.lower().matches('^rt05_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt05@.*')) ||
-            (tenantId.lower().matches('^rt06_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt06@.*')) ||
-            (tenantId.lower().matches('^rt07_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt07@.*')) ||
-            (tenantId.lower().matches('^rt08_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt08@.*')) ||
-            (tenantId.lower().matches('^rt09_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt09@.*')) ||
-            (tenantId.lower().matches('^rt10_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt10@.*')) ||
-            (tenantId.lower().matches('^rt11_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt11@.*')) ||
-            (tenantId.lower().matches('^rt12_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt12@.*')) ||
-            (tenantId.lower().matches('^rt13_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt13@.*')) ||
-            (tenantId.lower().matches('^rt14_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt14@.*')) ||
-            (tenantId.lower().matches('^rt15_rw_berjuang.*') && request.auth.token.email.lower().matches('^rt15@.*'))
-          ) ||
-          (
-            (tenantId.lower().matches('^rt01_trih.*') && request.auth.token.email.lower().matches('^rt01@.*')) ||
-            (tenantId.lower().matches('^rt02_trih.*') && request.auth.token.email.lower().matches('^rt02@.*')) ||
-            (tenantId.lower().matches('^rt03_trih.*') && request.auth.token.email.lower().matches('^rt03@.*')) ||
-            (tenantId.lower().matches('^rt04_trih.*') && request.auth.token.email.lower().matches('^rt04@.*')) ||
-            (tenantId.lower().matches('^rt05_trih.*') && request.auth.token.email.lower().matches('^rt05@.*')) ||
-            (tenantId.lower().matches('^rt06_trih.*') && request.auth.token.email.lower().matches('^rt06@.*')) ||
-            (tenantId.lower().matches('^rt07_trih.*') && request.auth.token.email.lower().matches('^rt07@.*')) ||
-            (tenantId.lower().matches('^rt08_trih.*') && request.auth.token.email.lower().matches('^rt08@.*')) ||
-            (tenantId.lower().matches('^rt09_trih.*') && request.auth.token.email.lower().matches('^rt09@.*')) ||
-            (tenantId.lower().matches('^rt10_trih.*') && request.auth.token.email.lower().matches('^rt10@.*')) ||
-            (tenantId.lower().matches('^rt11_trih.*') && request.auth.token.email.lower().matches('^rt11@.*')) ||
-            (tenantId.lower().matches('^rt12_trih.*') && request.auth.token.email.lower().matches('^rt12@.*')) ||
-            (tenantId.lower().matches('^rt13_trih.*') && request.auth.token.email.lower().matches('^rt13@.*')) ||
-            (tenantId.lower().matches('^rt14_trih.*') && request.auth.token.email.lower().matches('^rt14@.*')) ||
-            (tenantId.lower().matches('^rt15_trih.*') && request.auth.token.email.lower().matches('^rt15@.*'))
-          ) ||
-          
-          // Allow sub-tenant member (RT) to read parent (RW) documents
-          (request.auth.token.email.lower().matches('^rt[0-9]+@rw26\\.com$') && tenantId.lower() == 'rw26_smart') ||
-          (request.auth.token.email.lower().matches('^rt[0-9]+@rw_berjuang\\.com$') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
-          (request.auth.token.email.lower().matches('^rt[0-9]+@trih.*') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
- 
-          // Traditional startswith fallback checks using matches
-          (request.auth.token.email.lower().matches('^rt01.*') && tenantId.lower().matches('^rt01.*')) ||
-          (request.auth.token.email.lower().matches('^rw26.*') && tenantId.lower().matches('^rw26.*')) ||
-          (request.auth.token.email.lower().matches('^trih.*') && tenantId.lower().matches('^trih.*')) ||
-          (request.auth.token.email.lower().matches('^rw_berjuang.*') && tenantId.lower().matches('^rw_berjuang.*'))
+          request.auth.token.email.lower().matches('^' + tenantId.lower() + '-.*')
         ))
       );
     }
@@ -173,7 +127,7 @@ service cloud.firestore {
     function isPengurusStatic() {
       return isSignedIn() && (
         isAdminStatic() ||
-        ('email' in request.auth.token && request.auth.token.email == 'arifrajcoach@gmail.com') || 
+        ('email' in request.auth.token && request.auth.token.email != null && request.auth.token.email == 'arifrajcoach@gmail.com') || 
         request.auth.uid == 'eHFrJ7Re1sb4xhMWlsHNoKr5qs53' ||
         request.auth.uid == 'MKe94buSU4SMg8jiRbCcOLwJp9H3' ||
         request.auth.uid == 'zdXsW4N3qFcHpDoBynAoO2GgbYA2' ||
@@ -182,6 +136,8 @@ service cloud.firestore {
           request.auth.token.email.lower().matches('^rw.*') ||
           request.auth.token.email.lower().matches('^admin.*') ||
           request.auth.token.email.lower().matches('^kader.*') ||
+          request.auth.token.email.lower().matches('^trih.*') ||
+          request.auth.token.email.lower().matches('^berjuang.*') ||
           request.auth.token.email.lower() == 'rt01@rw26.com'
         ))
       );
@@ -352,8 +308,8 @@ service cloud.firestore {
     }
 
     match /complaints/{docId} {
-      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isPengurusStatic());
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isPengurus());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMemberStatic(resource.data.tenantId));
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMember(resource.data.tenantId));
       allow create: if isSignedIn();
       allow update: if isPengurus() && isTenantMember(resource.data.tenantId);
     }
@@ -379,8 +335,8 @@ service cloud.firestore {
     }
 
     match /voting_votes/{docId} {
-      allow list: if isSignedIn() && (resource.data.voterId == request.auth.uid || isPengurusStatic());
-      allow get: if isSignedIn() && (resource.data.voterId == request.auth.uid || isPengurus());
+      allow list: if isSignedIn() && (resource.data.voterId == request.auth.uid || isTenantMemberStatic(resource.data.tenantId));
+      allow get: if isSignedIn() && (resource.data.voterId == request.auth.uid || isTenantMember(resource.data.tenantId));
       allow create: if isSignedIn();
     }
 

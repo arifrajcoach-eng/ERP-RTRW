@@ -96,25 +96,27 @@ export function SuratView({
   const normalizedRole = (userRole || '').toUpperCase();
   const isRT_Tenant = tenantId?.toLowerCase().startsWith('rt') || tenantId?.toLowerCase().includes('_rt') || tenantId?.toLowerCase().includes('rt_');
   
-  const isRTUser = normalizedRole === 'RT' || 
+  const isGlobalSuperAdmin = !!currentUser?.isSuperAdmin || 
+                             normalizedRole === 'SUPER_ADMIN' || 
+                             currentUser?.role === 'SUPER_ADMIN';
+
+  const isRTUser = isGlobalSuperAdmin ||
+                   normalizedRole === 'RT' || 
                    normalizedRole.includes('RT') || 
                    normalizedRole === 'ADMIN RT' || 
                    normalizedRole.includes('RT_') ||
                    normalizedRole.includes('_RT') ||
-                   (isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
+                   (isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
 
-  const isRWUser = normalizedRole === 'RW' || 
+  const isRWUser = isGlobalSuperAdmin ||
+                   normalizedRole === 'RW' || 
                    normalizedRole.includes('RW') || 
                    normalizedRole === 'ADMIN RW' || 
-                   (!isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
+                   normalizedRole.includes('RW_') ||
+                   normalizedRole.includes('_RW') ||
+                   (!isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
 
-  const isAdminUser = normalizedRole === 'SUPER_ADMIN' || 
-                      normalizedRole === 'ADMIN' || 
-                      !!currentUser?.isSuperAdmin ||
-                      currentUser?.role === 'SUPER_ADMIN' ||
-                      currentUser?.role === 'ADMIN';
-
-  const isPengurus = isRTUser || isRWUser || isAdminUser || normalizedRole === 'BENDAHARA' || normalizedRole === 'SEKRETARIS';
+  const isPengurus = isRTUser || isRWUser || isGlobalSuperAdmin || normalizedRole === 'BENDAHARA' || normalizedRole === 'SEKRETARIS';
   
   const [approvalConfirm, setApprovalConfirm] = useState<{
     s: any;
@@ -512,7 +514,7 @@ export function SuratView({
       posisiKeluarga,
       ktpUrl,
       kkUrl,
-      status: isPengurus ? 'Selesai' : 'Menunggu Persetujuan RT',
+      status: isRWUser ? 'Selesai' : (isRTUser ? 'Menunggu Persetujuan RW' : 'Menunggu Persetujuan RT'),
       keterangan,
       userId: currentUser.uid || currentUser.id_user || null,
       authUid: currentUser.uid || currentUser.id_user || null,
@@ -543,7 +545,6 @@ export function SuratView({
       status: s?.status,
       isRTUser,
       isRWUser,
-      isAdminUser,
       userRole,
       normalizedRole,
       isRT_Tenant,
@@ -554,16 +555,16 @@ export function SuratView({
     let msg = 'Surat disetujui';
 
     if (s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') {
-      if (!isRTUser && !isAdminUser) {
-        console.warn("[SuratView] Blocked RT approval check: not RT or Admin user", { isRTUser, isAdminUser });
+      if (!isRTUser) {
+        console.warn("[SuratView] Blocked RT approval check: not RT user", { isRTUser });
         showNotification('Hanya RT yang dapat menyetujui tahap ini', 'error');
         return;
       }
       nextStatus = 'Menunggu Persetujuan RW';
       msg = 'Disetujui oleh RT. Sekarang menunggu persetujuan RW.';
     } else if (s.status === 'Menunggu Persetujuan RW') {
-      if (!isRWUser && !isAdminUser) {
-        console.warn("[SuratView] Blocked RW approval check: not RW or Admin user", { isRWUser, isAdminUser });
+      if (!isRWUser) {
+        console.warn("[SuratView] Blocked RW approval check: not RW user", { isRWUser });
         showNotification('Hanya RW yang dapat menyetujui tahap ini', 'error');
         return;
       }
@@ -596,8 +597,7 @@ export function SuratView({
       action,
       nextStatus,
       isRTUser,
-      isRWUser,
-      isAdminUser
+      isRWUser
     });
     
     setIsLoadingDB(true);
@@ -612,10 +612,10 @@ export function SuratView({
           updateData.approvedAt = new Date().toISOString();
         }
 
-        if (isRTUser || (isAdminUser && (s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan'))) {
+        if (isRTUser && (s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan')) {
           updateData.approvedByRT = currentUser?.nama || currentUser?.name || 'Ketua RT';
         }
-        if (isRWUser || (isAdminUser && s.status === 'Menunggu Persetujuan RW')) {
+        if (isRWUser && s.status === 'Menunggu Persetujuan RW') {
           updateData.approvedByRW = currentUser?.nama || currentUser?.name || 'Ketua RW';
         }
 
@@ -749,8 +749,8 @@ export function SuratView({
                           </button>
                         ) : (
                           /* Approval logic visibility */
-                          (((s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && (isRTUser || isAdminUser)) || 
-                           (s.status === 'Menunggu Persetujuan RW' && (isRWUser || isAdminUser))) && (
+                          (((s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
+                           (s.status === 'Menunggu Persetujuan RW' && isRWUser)) && (
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleApproveSurat(s); }} 
                               className="p-2 rounded-xl border border-slate-100 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all"
@@ -762,9 +762,9 @@ export function SuratView({
                         )}
                         
                         {(s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan RW' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && 
-                         (((s.status.includes('RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && (isRTUser || isAdminUser)) || 
-                          (s.status.includes('RW') && (isRWUser || isAdminUser)) || 
-                          currentUser?.isSuperAdmin) && (
+                         (((s.status.includes('RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
+                          (s.status.includes('RW') && isRWUser) || 
+                          isGlobalSuperAdmin) && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleRejectSurat(s); }}
                             className="p-2 ml-2 rounded-xl border border-slate-100 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all"
@@ -891,7 +891,7 @@ export function SuratView({
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={selectedWargaId || editingSurat?.id || 'form-top'}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={selectedWargaId ? `form-top-${selectedWargaId}` : (editingSurat?.id ? `form-top-${editingSurat.id}` : 'form-top')}>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Surat</label>
                       <select name="jenis" defaultValue={editingSurat?.jenis || "Surat pengantar pembuatan KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
@@ -928,7 +928,7 @@ export function SuratView({
                 </div>
 
                 {/* 2. Identitas Diri */}
-                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId || editingSurat?.id || 'form-identity'}>
+                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId ? `form-identity-${selectedWargaId}` : (editingSurat?.id ? `form-identity-${editingSurat.id}` : 'form-identity')}>
                   <div className="flex items-center gap-2 text-blue-600">
                     <User className="w-5 h-5" />
                     <h4 className="text-sm font-black uppercase tracking-widest">Identitas Diri</h4>
@@ -998,7 +998,7 @@ export function SuratView({
                 </div>
 
                 {/* 3. Status & Pekerjaan */}
-                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId || editingSurat?.id || 'form-status'}>
+                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId ? `form-status-${selectedWargaId}` : (editingSurat?.id ? `form-status-${editingSurat.id}` : 'form-status')}>
                   <div className="flex items-center gap-2 text-blue-600">
                     <Briefcase className="w-5 h-5" />
                     <h4 className="text-sm font-black uppercase tracking-widest">Status & Pekerjaan</h4>
@@ -1047,7 +1047,7 @@ export function SuratView({
                 </div>
 
                 {/* 4. Alamat & Kontak */}
-                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId || editingSurat?.id || 'form-address'}>
+                <div className="space-y-4 pt-4 border-t border-slate-100" key={selectedWargaId ? `form-address-${selectedWargaId}` : (editingSurat?.id ? `form-address-${editingSurat.id}` : 'form-address')}>
                   <div className="flex items-center gap-2 text-blue-600">
                     <MapPin className="w-5 h-5" />
                     <h4 className="text-sm font-black uppercase tracking-widest">Alamat & Kontak</h4>
@@ -1440,8 +1440,8 @@ export function SuratView({
                 </div>
                 
                 <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
-                   {(((viewingSurat.status === 'Menunggu Persetujuan RT' || viewingSurat.status === 'Menunggu Persetujuan' || viewingSurat.status === 'Diajukan') && (isRTUser || isAdminUser)) || 
-                     (viewingSurat.status === 'Menunggu Persetujuan RW' && (isRWUser || isAdminUser))) && (
+                   {(((viewingSurat.status === 'Menunggu Persetujuan RT' || viewingSurat.status === 'Menunggu Persetujuan' || viewingSurat.status === 'Diajukan') && isRTUser) || 
+                     (viewingSurat.status === 'Menunggu Persetujuan RW' && isRWUser)) && (
                      <>
                         <button onClick={() => { handleApproveSurat(viewingSurat); setViewingSurat(null); }} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-200">Setujui</button>
                         <button onClick={() => { handleRejectSurat(viewingSurat); setViewingSurat(null); }} className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-200">Tolak</button>

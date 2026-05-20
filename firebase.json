@@ -1,0 +1,14 @@
+{
+  "project_info": {
+    "project_number": "123456789",
+    "project_id": "demo-test"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    }
+  }
+}
