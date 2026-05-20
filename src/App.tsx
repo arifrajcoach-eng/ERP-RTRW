@@ -91,7 +91,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import Webcam from 'react-webcam';
+import Webcam from "react-webcam";
 import {
   BarChart,
   Bar,
@@ -643,10 +643,14 @@ export default function App() {
         await getDocFromServer(doc(db, "test", "connection"));
         setDbError(null);
       } catch (error: any) {
-        console.warn("Firestore Connectivity Check:", error.message || error.code);
+        console.warn(
+          "Firestore Connectivity Check:",
+          error.message || error.code,
+        );
         if (
           error instanceof Error &&
-          (error.message.includes("the client is offline") || error.message.includes("Could not reach Cloud Firestore"))
+          (error.message.includes("the client is offline") ||
+            error.message.includes("Could not reach Cloud Firestore"))
         ) {
           setDbStatus("OFFLINE");
         } else if (error?.code === "unavailable") {
@@ -676,7 +680,10 @@ export default function App() {
               userDoc = await getDoc(userDocRef);
             } catch (err: any) {
               if (err.code === "permission-denied") {
-                console.error("Permission denied reading users collection for UID:", user.uid);
+                console.error(
+                  "Permission denied reading users collection for UID:",
+                  user.uid,
+                );
               }
               throw err;
             }
@@ -686,17 +693,16 @@ export default function App() {
           }
 
           if (userDoc && userDoc.exists()) {
-            let userData = (userDoc.data() as any);
+            let userData = userDoc.data() as any;
 
             // --- AUTO MIGRATION & REPAIR LOGIC ---
-            const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
+            const isTrihUser =
+              user.email?.toLowerCase().includes("trihprw26") ||
+              user.email?.toLowerCase().includes("handoko");
             let needsUpdate = false;
 
             // Fix missing or wrong tenantId for known client
-            if (
-              isTrihUser &&
-              userData.tenantId !== "RW_BERJUANG"
-            ) {
+            if (isTrihUser && userData.tenantId !== "RW_BERJUANG") {
               userData.tenantId = "RW_BERJUANG";
               userData.role = "ADMIN";
               needsUpdate = true;
@@ -747,35 +753,64 @@ export default function App() {
               isSuperAdmin: overrideAdmin,
             });
           } else {
-            // If No Firestore doc yet, check if they are pre-registered by email
-            const preRegDocRef = doc(db, "users", "PRE_" + (user.email?.toLowerCase() || "NONE"));
+            // If No Firestore doc yet, check if they are pre-registered by email (both "PRE_email" and USR-based entries)
+            const preRegDocRef = doc(
+              db,
+              "users",
+              "PRE_" + (user.email?.toLowerCase() || "NONE"),
+            );
             const preRegDoc = await getDoc(preRegDocRef);
 
+            let preRegUserData = null;
+            let docToDeleteRef = null;
+
             if (preRegDoc.exists()) {
-              // Found pre-registered user
-              const preRegUserData = preRegDoc.data();
-              
-              // Update to new UID
+              preRegUserData = preRegDoc.data();
+              docToDeleteRef = preRegDocRef;
+            } else if (user.email) {
+              const usersRef = collection(db, "users");
+              const q = query(usersRef, where("email", "==", user.email));
+              const querySnapshot = await getDocs(q);
+              if (!querySnapshot.empty) {
+                const matchedUser = querySnapshot.docs[0];
+                if (matchedUser.id !== user.uid) {
+                  preRegUserData = matchedUser.data();
+                  docToDeleteRef = doc(db, "users", matchedUser.id);
+                }
+              }
+            }
+
+            if (preRegUserData) {
+              // Linked pre-registered / admin-created user
               const newUser = {
                 ...preRegUserData,
                 id_user: user.uid,
-                uid: user.uid
+                uid: user.uid,
               };
-              
+
               await setDoc(doc(db, "users", user.uid), newUser);
-              await deleteDoc(preRegDocRef);
-              
+              if (docToDeleteRef) {
+                await deleteDoc(docToDeleteRef);
+              }
+
               setCurrentUser({ uid: user.uid, ...newUser } as any);
             } else {
               // Otherwise check if they are the hardcoded super admin or trih user
-              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
-              const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
+              const isMasterEmail =
+                user.email?.toLowerCase() === "arifrajcoach@gmail.com";
+              const isTrihUser =
+                user.email?.toLowerCase().includes("trihprw26") ||
+                user.email?.toLowerCase().includes("handoko");
 
               if (isMasterEmail || isTrihUser) {
                 const newUser = {
                   id_user: user.uid,
-                  name: isMasterEmail ? "Bpk. Arif (Super Admin)" : "Admin RW Berjuang",
-                  nama: isMasterEmail ? "Bpk. Arif (Super Admin)" : "Admin RW Berjuang",
+                  name: isMasterEmail
+                    ? "Bpk. Arif (Super Admin)"
+                    : "Admin RW Berjuang",
+                  nama: isMasterEmail
+                    ? "Bpk. Arif (Super Admin)"
+                    : "Admin RW Berjuang",
                   username: user.email?.split("@")[0] || "user",
                   role: isMasterEmail ? "SUPER_ADMIN" : "ADMIN",
                   email: user.email,
@@ -788,12 +823,15 @@ export default function App() {
                 await setDoc(userDocRef, newUser);
                 setCurrentUser(newUser as any);
               } else {
-                 // Unauthorized session without a Firestore document
-                 await signOut(auth);
-                 setCurrentUser(null);
-                 // Note: Ensure setDbError is available or available in scope. 
-                 // Based on lines 1147, it was available.
-                 if (typeof setDbError === 'function') setDbError("Akun Google Anda belum terdaftar di sistem. Silakan mendaftar Trial atau minta Admin untuk mendaftarkan Anda.");
+                // Unauthorized session without a Firestore document
+                await signOut(auth);
+                setCurrentUser(null);
+                // Note: Ensure setDbError is available or available in scope.
+                // Based on lines 1147, it was available.
+                if (typeof setDbError === "function")
+                  setDbError(
+                    "Akun Google Anda belum terdaftar di sistem. Silakan mendaftar Trial atau minta Admin untuk mendaftarkan Anda.",
+                  );
               }
             }
           }
@@ -844,8 +882,6 @@ export default function App() {
     const saved = localStorage.getItem("rw26_wargaData");
     return saved ? JSON.parse(saved) : INITIAL_WARGA_DATA;
   });
-
-
 
   const [kasData, setKasData] = useState(() => {
     const saved = localStorage.getItem("rw26_kasData");
@@ -907,7 +943,9 @@ export default function App() {
   const [kopSettings, setKopSettings] = useState<Record<string, any>>({});
 
   const [isLoadingDB, setIsLoadingDB] = useState(true);
-  const [dbStatus, setDbStatus] = useState<"ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING">("INITIALIZING");
+  const [dbStatus, setDbStatus] = useState<
+    "ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING"
+  >("INITIALIZING");
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [currentTenant, setCurrentTenant] = useState<any>(null);
@@ -921,17 +959,31 @@ export default function App() {
     }
     return "light";
   });
-  
+
   const darkMode = theme === "dark";
 
   useEffect(() => {
-    document.documentElement.classList.remove("light", "dark", "oceanic", "forest", "sunset", "pink-baby");
+    document.documentElement.classList.remove(
+      "light",
+      "dark",
+      "oceanic",
+      "forest",
+      "sunset",
+      "pink-baby",
+    );
     document.documentElement.classList.add(theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
 
   const cycleTheme = () => {
-    const themes = ["light", "dark", "oceanic", "forest", "sunset", "pink-baby"];
+    const themes = [
+      "light",
+      "dark",
+      "oceanic",
+      "forest",
+      "sunset",
+      "pink-baby",
+    ];
     const currentIndex = themes.indexOf(theme);
     const nextTheme = themes[(currentIndex + 1) % themes.length];
     setTheme(nextTheme);
@@ -941,7 +993,7 @@ export default function App() {
     });
     setTimeout(() => setNotification(null), 2000);
   };
-  
+
   // Keep toggleDarkMode for compatibility
   const toggleDarkMode = cycleTheme;
 
@@ -970,19 +1022,20 @@ export default function App() {
   const tenantRT = useMemo(() => {
     // 1. Check if settings.rt is configured
     if (settings?.rt) {
-      return settings.rt.toString().replace(/^0+/, '').padStart(2, '0');
+      return settings.rt.toString().replace(/^0+/, "").padStart(2, "0");
     }
     // 2. Extrapolate from tenant name
-    const fullName = currentTenant?.nama || currentTenant?.name || settings?.nama_rt || "";
+    const fullName =
+      currentTenant?.nama || currentTenant?.name || settings?.nama_rt || "";
     const match = fullName.match(/RT\s*(\d+)/i);
     if (match) {
-      return match[1].padStart(2, '0');
+      return match[1].padStart(2, "0");
     }
     // 3. Extrapolate from tenant ID
     const idStr = (currentTenant?.id || "").toLowerCase();
     const matchId = idStr.match(/rt\s*(\d+)/i);
     if (matchId) {
-      return matchId[1].padStart(2, '0');
+      return matchId[1].padStart(2, "0");
     }
     return null;
   }, [currentTenant, settings]);
@@ -990,76 +1043,123 @@ export default function App() {
   // Centrally filtered data based on the tenant's specific RT if restricted
   const filteredWargaDataCentral = useMemo(() => {
     if (!tenantRT) return wargaData;
-    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    const targetRtNorm = tenantRT.replace(/^0+/, "");
     return wargaData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
       return wRtNorm === targetRtNorm;
     });
   }, [wargaData, tenantRT]);
 
   const filteredIuranDataCentral = useMemo(() => {
     if (!tenantRT) return iuranData;
-    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    const targetRtNorm = tenantRT.replace(/^0+/, "");
     return iuranData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
       return wRtNorm === targetRtNorm;
     });
   }, [iuranData, tenantRT]);
 
   const filteredKasDataCentral = useMemo(() => {
     if (!tenantRT) return kasData;
-    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    const targetRtNorm = tenantRT.replace(/^0+/, "");
     return kasData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
       return wRtNorm === targetRtNorm;
     });
   }, [kasData, tenantRT]);
 
   const filteredSuratDataCentral = useMemo(() => {
     if (!tenantRT) return suratData;
-    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    const targetRtNorm = tenantRT.replace(/^0+/, "");
     return suratData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
       return wRtNorm === targetRtNorm;
     });
   }, [suratData, tenantRT]);
 
   const filteredVerifikasiWargaDataCentral = useMemo(() => {
     if (!tenantRT) return verifikasiWargaData;
-    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    const targetRtNorm = tenantRT.replace(/^0+/, "");
     return verifikasiWargaData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
       return wRtNorm === targetRtNorm;
     });
   }, [verifikasiWargaData, tenantRT]);
 
   const filteredBalitaDataCentral = useMemo(() => {
     if (!tenantRT) return balitaData;
-    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    const targetRtNorm = tenantRT.replace(/^0+/, "");
     return balitaData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
       return wRtNorm === targetRtNorm;
     });
   }, [balitaData, tenantRT]);
 
   const filteredIbuHamilDataCentral = useMemo(() => {
     if (!tenantRT) return ibuHamilData;
-    const targetRtNorm = tenantRT.replace(/^0+/, '');
+    const targetRtNorm = tenantRT.replace(/^0+/, "");
     return ibuHamilData.filter((w: any) => {
-      const wRtNorm = (w.rt || "").toString().replace(/^0+/, '');
+      const wRtNorm = (w.rt || "").toString().replace(/^0+/, "");
       return wRtNorm === targetRtNorm;
     });
   }, [ibuHamilData, tenantRT]);
 
+  // Securely resolve active tenant IDs for filtering
+  const activeTenantIds = useMemo(() => {
+    const baseTenantId =
+      currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
+    const tId =
+      currentUser?.isSuperAdmin && selectedTenantId
+        ? selectedTenantId
+        : baseTenantId;
+    const list = [tId];
+    if (
+      tId === "RW_BERJUANG" ||
+      tId === "trihprw26" ||
+      tId.toLowerCase().includes("rt01") ||
+      tId.toLowerCase().includes("rw26_rt") ||
+      tId.toLowerCase().includes("rt_01") ||
+      tId.toLowerCase().includes("berjuang")
+    ) {
+      list.push("RW_BERJUANG", "trihprw26");
+    }
+    return Array.from(new Set(list));
+  }, [currentUser, wargaAuth, selectedTenantId]);
+
+  // Centrally filtered user accounts matching the active tenant and security privileges
+  const filteredUsersDataCentral = useMemo(() => {
+    let filtered = usersData;
+
+    // 1. A Tenant Admin must only see users that belong to their active tenant/sub-tenant group
+    filtered = filtered.filter((u: any) => {
+      const userTenantId = u.tenantId || "RW26_SMART";
+      return activeTenantIds.includes(userTenantId);
+    });
+
+    // 2. Non-Super-Admins should NEVER see SUPER_ADMIN accounts in their list
+    if (!currentUser?.isSuperAdmin) {
+      filtered = filtered.filter(
+        (u: any) => u.role !== "SUPER_ADMIN" && !u.isSuperAdmin,
+      );
+    }
+
+    return filtered;
+  }, [usersData, activeTenantIds, currentUser]);
+
   const linkedWarga = currentUser?.nikMapping
-    ? filteredWargaDataCentral.find((w: any) => w.nik === currentUser.nikMapping)
+    ? filteredWargaDataCentral.find(
+        (w: any) => w.nik === currentUser.nikMapping,
+      )
     : null;
 
   // Enforce Max Warga limit locally for UI based on Plan
   const cappedWargaData = useMemo(() => {
     if (!currentTenant) return filteredWargaDataCentral.slice(0, 50);
-    const isFree = currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
-    const maxWargaLimit = isFree ? 50 : (getPlanFeatures(currentTenant).maxWarga || 50);
+    const isFree =
+      currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
+    const maxWargaLimit = isFree
+      ? 50
+      : getPlanFeatures(currentTenant).maxWarga || 50;
     return filteredWargaDataCentral.slice(0, maxWargaLimit);
   }, [filteredWargaDataCentral, currentTenant]);
 
@@ -1070,9 +1170,12 @@ export default function App() {
     null;
 
   // Derived Access Roles
-  const isViewer = currentUser?.role === "Viewer" || currentUser?.role === "TAMU";
-  const isCitizen = currentUser?.role === "Warga" || (!currentUser && !!wargaAuth);
-  const hasFullAccess = !!currentUser && !isCitizen && !isViewer && currentUser?.role !== "Viewer";
+  const isViewer =
+    currentUser?.role === "Viewer" || currentUser?.role === "TAMU";
+  const isCitizen =
+    currentUser?.role === "Warga" || (!currentUser && !!wargaAuth);
+  const hasFullAccess =
+    !!currentUser && !isCitizen && !isViewer && currentUser?.role !== "Viewer";
 
   useEffect(() => {
     if (currentUser?.role === "Viewer" || (!currentUser && wargaAuth)) {
@@ -1234,9 +1337,13 @@ export default function App() {
       return;
     }
 
-    const baseTenantId = currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : baseTenantId;
-    
+    const baseTenantId =
+      currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
+    const tId =
+      currentUser?.isSuperAdmin && selectedTenantId
+        ? selectedTenantId
+        : baseTenantId;
+
     // Build array of supported database tenant IDs by resolving child and virtual relationships
     const tIdsTemp = [tId];
     if (
@@ -1251,7 +1358,10 @@ export default function App() {
     }
     if (currentTenant?.parentId) {
       tIdsTemp.push(currentTenant.parentId);
-      if (currentTenant.parentId === "RW_BERJUANG" || currentTenant.parentId === "trihprw26") {
+      if (
+        currentTenant.parentId === "RW_BERJUANG" ||
+        currentTenant.parentId === "trihprw26"
+      ) {
         tIdsTemp.push("RW_BERJUANG", "trihprw26");
       }
     }
@@ -1307,23 +1417,41 @@ export default function App() {
                 const tenantData = snap.data();
                 if (tenantData) {
                   // Auto-repair missing createdAt for trials
-                  const rawStatus = (tenantData.status || "STARTER").toUpperCase().replace("PLAN", "").replace("V4.0 ", "").trim();
-                  const isTrial = ["STARTER", "GRATIS", "BASIC", "TRIAL", "ACTIVE"].includes(PLAN_ALIASES[rawStatus] || rawStatus);
-                  
-                  if (isTrial && !tenantData.createdAt && tenantData.id !== 'RW26_SMART') {
+                  const rawStatus = (tenantData.status || "STARTER")
+                    .toUpperCase()
+                    .replace("PLAN", "")
+                    .replace("V4.0 ", "")
+                    .trim();
+                  const isTrial = [
+                    "STARTER",
+                    "GRATIS",
+                    "BASIC",
+                    "TRIAL",
+                    "ACTIVE",
+                  ].includes(PLAN_ALIASES[rawStatus] || rawStatus);
+
+                  if (
+                    isTrial &&
+                    !tenantData.createdAt &&
+                    tenantData.id !== "RW26_SMART"
+                  ) {
                     const newCreatedAt = new Date().toISOString();
                     tenantData.createdAt = newCreatedAt;
-                    updateDoc(doc(db, "tenants", tId), { createdAt: newCreatedAt }).catch(console.error);
+                    updateDoc(doc(db, "tenants", tId), {
+                      createdAt: newCreatedAt,
+                    }).catch(console.error);
                   }
-                  
+
                   // Expiration check (30 days)
                   if (isTrial && tenantData.createdAt) {
                     const startDate = new Date(tenantData.createdAt);
                     const now = new Date();
-                    const diffDays = (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-                    if (diffDays > 30 && tenantData.id !== 'RW26_SMART') {
+                    const diffDays =
+                      (now.getTime() - startDate.getTime()) /
+                      (1000 * 60 * 60 * 24);
+                    if (diffDays > 30 && tenantData.id !== "RW26_SMART") {
                       tenantData.isExpired = true;
-                      tenantData.status = 'EXPIRED'; // Force expired status
+                      tenantData.status = "EXPIRED"; // Force expired status
                     }
                   }
                 }
@@ -1358,10 +1486,7 @@ export default function App() {
     const getWargaQuery = () => {
       const base = collection(db, "data_warga");
 
-      const constraints = [
-        where("tenantId", "in", tIds),
-        limit(5000),
-      ];
+      const constraints = [where("tenantId", "in", tIds), limit(5000)];
 
       if (currentUser?.role === "RT") {
         constraints.push(where("rt", "==", currentUser.rt || "01"));
@@ -1412,7 +1537,7 @@ export default function App() {
         },
       );
     }
-    
+
     // 3. Surat Listener
     let unsubSurat = () => {};
     if (hasFullAccess) {
@@ -1474,9 +1599,7 @@ export default function App() {
     if (hasFullAccess) {
       const getIuranQuery = () => {
         const base = collection(db, "iuran");
-        const constraints = [
-          where("tenantId", "in", tIds),
-        ];
+        const constraints = [where("tenantId", "in", tIds)];
         if (currentUser?.role === "RT") {
           constraints.push(where("rt", "==", currentUser.rt || "01"));
         }
@@ -1634,7 +1757,7 @@ export default function App() {
           setInventarisKategori(snap.docs.map((doc) => ({ ...doc.data() }))),
         (err) => {
           handleFirestoreError(err, "list", "inventaris_kategori");
-        }
+        },
       );
       unsubInventarisLokasi = onSnapshot(
         query(
@@ -1645,7 +1768,7 @@ export default function App() {
           setInventarisLokasi(snap.docs.map((doc) => ({ ...doc.data() }))),
         (err) => {
           handleFirestoreError(err, "list", "inventaris_lokasi");
-        }
+        },
       );
       unsubInventarisSupplier = onSnapshot(
         query(
@@ -1656,7 +1779,7 @@ export default function App() {
           setInventarisSupplier(snap.docs.map((doc) => ({ ...doc.data() }))),
         (err) => {
           handleFirestoreError(err, "list", "inventaris_supplier");
-        }
+        },
       );
     }
 
@@ -1840,9 +1963,11 @@ export default function App() {
             change.doc.data().status === "ACTIVE"
           ) {
             const sosData = change.doc.data();
-            const sosTime = sosData.timestamp ? new Date(sosData.timestamp).getTime() : Date.now();
+            const sosTime = sosData.timestamp
+              ? new Date(sosData.timestamp).getTime()
+              : Date.now();
             const now = Date.now();
-            const isRecent = (now - sosTime) < 60000; // 60 seconds
+            const isRecent = now - sosTime < 60000; // 60 seconds
 
             if (!isInitialLoad || isRecent) {
               triggerLocalSOSAlert(change.doc.id);
@@ -2032,7 +2157,9 @@ export default function App() {
         query(usersQuery, limit(5000)),
         (snap) => {
           const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
-          data.sort((a: any, b: any) => (a.nama || a.name || "").localeCompare(b.nama || b.name || ""));
+          data.sort((a: any, b: any) =>
+            (a.nama || a.name || "").localeCompare(b.nama || b.name || ""),
+          );
           setUsersData(data);
           onDataLoaded();
         },
@@ -2067,36 +2194,42 @@ export default function App() {
     }
 
     // 7. Audit Log Listener (Enterprise)
-    const unsubAudit = hasFullAccess && getPlanFeatures(currentTenant).governance === "HIGH" 
-      ? onSnapshot(
-          query(
-            collection(db, "audit_logs"),
-            where("tenantId", "in", tIds),
-            limit(100),
-          ),
-          (snap) => {
-            const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            setAuditLogs(
-              data.sort(
-                (a: any, b: any) =>
-                  new Date(b.timestamp).getTime() -
-                  new Date(a.timestamp).getTime(),
-              ),
-            );
+    const unsubAudit =
+      hasFullAccess && getPlanFeatures(currentTenant).governance === "HIGH"
+        ? onSnapshot(
+            query(
+              collection(db, "audit_logs"),
+              where("tenantId", "in", tIds),
+              limit(100),
+            ),
+            (snap) => {
+              const data = snap.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              }));
+              setAuditLogs(
+                data.sort(
+                  (a: any, b: any) =>
+                    new Date(b.timestamp).getTime() -
+                    new Date(a.timestamp).getTime(),
+                ),
+              );
+              onDataLoaded();
+            },
+            (err) => {
+              handleFirestoreError(err, "list", "audit_logs");
+              onDataLoaded();
+            },
+          )
+        : () => {
             onDataLoaded();
-          },
-          (err) => {
-            handleFirestoreError(err, "list", "audit_logs");
-            onDataLoaded();
-          },
-        )
-      : () => { onDataLoaded(); };
+          };
 
     // 8. Complaints Listener
     const getComplaintsQuery = () => {
       const base = collection(db, "complaints");
       const constraints = [where("tenantId", "in", tIds)];
-      
+
       const isOperatorRole =
         currentUser &&
         (currentUser.isSuperAdmin ||
@@ -2105,7 +2238,9 @@ export default function App() {
           ));
 
       if (!isOperatorRole) {
-        constraints.push(where("userId", "==", auth.currentUser?.uid || "NONE"));
+        constraints.push(
+          where("userId", "==", auth.currentUser?.uid || "NONE"),
+        );
       }
       return query(base, ...constraints);
     };
@@ -2137,7 +2272,9 @@ export default function App() {
           ));
 
       if (!isOperatorRole) {
-        constraints.push(where("userId", "==", auth.currentUser?.uid || "NONE"));
+        constraints.push(
+          where("userId", "==", auth.currentUser?.uid || "NONE"),
+        );
       }
       return query(base, ...constraints);
     };
@@ -2145,7 +2282,9 @@ export default function App() {
     const unsubBookings = onSnapshot(
       getBookingsQuery(),
       (snap) => {
-        setBookingsData(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setBookingsData(
+          snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        );
         onDataLoaded();
       },
       (err) => {
@@ -2191,7 +2330,13 @@ export default function App() {
       unsubComplaints();
       unsubBookings();
     };
-  }, [currentUser, wargaAuth, selectedTenantId, currentTenant?.parentId, currentTenant?.id]);
+  }, [
+    currentUser,
+    wargaAuth,
+    selectedTenantId,
+    currentTenant?.parentId,
+    currentTenant?.id,
+  ]);
 
   // --- CENTRAL CONFIG HELPERS ---
   const getSetting = (key: string) => {
@@ -2492,68 +2637,283 @@ export default function App() {
   // --- VIEW SELECTION (Must be after all hooks) ---
 
   const renderableNavItems = useMemo(() => {
-    const isApt = settings?.themeMode === 'apartemen';
+    const isApt = settings?.themeMode === "apartemen";
     return [
       { id: "dashboard", label: "DASHBOARD", icon: LayoutDashboard },
-      { id: "warga", label: isApt ? "Data Penghuni" : "Data Warga", icon: Users },
-      { id: "complaint", label: isApt ? "Keluhan/Defect" : "Keluhan", icon: AlertTriangle },
-      { id: "booking", label: isApt ? "Booking Fasilitas" : "Booking", icon: Calendar, plan: "booking" },
+      {
+        id: "warga",
+        label: isApt ? "Data Penghuni" : "Data Warga",
+        icon: Users,
+      },
+      {
+        id: "complaint",
+        label: isApt ? "Keluhan/Defect" : "Keluhan",
+        icon: AlertTriangle,
+      },
+      {
+        id: "booking",
+        label: isApt ? "Booking Fasilitas" : "Booking",
+        icon: Calendar,
+        plan: "booking",
+      },
       { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy, plan: "bukuTamu" },
-      { id: "verifikasi", label: "VERIFIKASI", icon: ShieldCheck, plan: "verifikasi", minPlan: "BASIC" },
-      { id: "keuangan", label: isApt ? "Keuangan / IPL" : "Keuangan", icon: CreditCard, plan: "keuangan", minPlan: "BASIC" },
-      { id: "posyandu", label: "Kesehatan", icon: Baby, plan: "posyandu", minPlan: "PRO" },
-      { id: "bank-sampah", label: "Bank Sampah", icon: Recycle, plan: "bankSampah", minPlan: "PRO" },
-      { id: "etoko", label: "E-LAPAK26", icon: ShoppingBag, plan: "eLapak", minPlan: "BASIC" },
-      { id: "voting", label: isApt ? "Voting Penghuni" : "E-Pemilu", icon: Vote, plan: "ePemilu", minPlan: "PRO" },
-      { id: "inventaris", label: "Inventaris", icon: Package, plan: "inventaris" },
-      { id: "surat", label: "Surat", icon: FileText, plan: "surat", minPlan: "BASIC" },
+      {
+        id: "verifikasi",
+        label: "VERIFIKASI",
+        icon: ShieldCheck,
+        plan: "verifikasi",
+        minPlan: "BASIC",
+      },
+      {
+        id: "keuangan",
+        label: isApt ? "Keuangan / IPL" : "Keuangan",
+        icon: CreditCard,
+        plan: "keuangan",
+        minPlan: "BASIC",
+      },
+      {
+        id: "posyandu",
+        label: "Kesehatan",
+        icon: Baby,
+        plan: "posyandu",
+        minPlan: "PRO",
+      },
+      {
+        id: "bank-sampah",
+        label: "Bank Sampah",
+        icon: Recycle,
+        plan: "bankSampah",
+        minPlan: "PRO",
+      },
+      {
+        id: "etoko",
+        label: "E-LAPAK26",
+        icon: ShoppingBag,
+        plan: "eLapak",
+        minPlan: "BASIC",
+      },
+      {
+        id: "voting",
+        label: isApt ? "Voting Penghuni" : "E-Pemilu",
+        icon: Vote,
+        plan: "ePemilu",
+        minPlan: "PRO",
+      },
+      {
+        id: "inventaris",
+        label: "Inventaris",
+        icon: Package,
+        plan: "inventaris",
+      },
+      {
+        id: "surat",
+        label: "Surat",
+        icon: FileText,
+        plan: "surat",
+        minPlan: "BASIC",
+      },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
       { id: "daftar-trial", label: "Tenant Trial", icon: Users },
       { id: "users", label: "Manage User", icon: User },
       { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
       { id: "pengaturan", label: "Pengaturan", icon: Settings },
-      { id: "chat", label: "Grup Chat", icon: MessageSquare, plan: "chatMode", minPlan: "BASIC" },
-      { id: "ai-bot", label: "AI Agent", icon: Bot, plan: "ai", minPlan: "PREMIUM" },
-      { id: "monitoring", label: "MONITORING", icon: LayoutGrid, plan: "multiRegion", minPlan: "ENTERPRISE" },
-      { id: "audit", label: "GOVERNANCE", icon: Shield, plan: "governance", minPlan: "ENTERPRISE" }
-    ].filter((item) => {
-      if (item.id === 'users' && currentTenant?.id === 'RW26_SMART') return false;
-      if (item.id === 'ai-bot' && currentTenant?.id === 'RW26_SMART') return false;
+      {
+        id: "chat",
+        label: "Grup Chat",
+        icon: MessageSquare,
+        plan: "chatMode",
+        minPlan: "BASIC",
+      },
+      {
+        id: "ai-bot",
+        label: "AI Agent",
+        icon: Bot,
+        plan: "ai",
+        minPlan: "PREMIUM",
+      },
+      {
+        id: "monitoring",
+        label: "MONITORING",
+        icon: LayoutGrid,
+        plan: "multiRegion",
+        minPlan: "ENTERPRISE",
+      },
+      {
+        id: "audit",
+        label: "GOVERNANCE",
+        icon: Shield,
+        plan: "governance",
+        minPlan: "ENTERPRISE",
+      },
+    ]
+      .filter((item) => {
+        if (item.id === "users" && currentTenant?.id === "RW26_SMART")
+          return false;
+        if (item.id === "ai-bot" && currentTenant?.id === "RW26_SMART")
+          return false;
 
-      const role = currentUser?.role || "TAMU";
-      const isSuperAdmin = !!currentUser?.isSuperAdmin;
-      const isVerified = linkedWarga?.terverifikasi === true;
-      const planConfig = getPlanFeatures(currentTenant?.status);
-      const isFreePlan = (currentTenant?.status || "TRIAL") === "TRIAL" || (currentTenant?.status || "TRIAL") === "FREE";
-      
-      if (isSuperAdmin) return true;
-      if (role === "WARGA" && !isVerified && item.id !== "dashboard" && item.id !== "verifikasi") return false;
-      if ((role === "ADMIN" || role === "RT") && isFreePlan) {
-        if (["inventaris", "posyandu", "bank-sampah"].includes(item.id)) return false;
-      }
-      
-      const rolePermissions: { [key: string]: string[] } = {
-        SUPER_ADMIN: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "super-admin", "pengaturan", "chat", "ai-bot", "monitoring", "audit"],
-        KELURAHAN_ADMIN: ["dashboard", "warga", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "users", "chat", "ai-bot", "monitoring", "audit"],
-        ADMIN: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "pengaturan", "chat", "ai-bot", "monitoring", "audit"],
-        RW: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "chat", "ai-bot", "monitoring", "audit"],
-        RT: ["dashboard", "warga", "buku-tamu", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "inventaris", "surat", "kop-template", "users", "chat", "ai-bot", "complaint", "booking"],
-        SEKRETARIS: ["dashboard", "warga", "buku-tamu", "verifikasi", "inventaris", "surat", "kop-template", "chat", "ai-bot", "complaint", "booking"],
-        BENDAHARA: ["dashboard", "keuangan", "bank-sampah", "chat", "ai-bot"],
-        SATPAM: ["dashboard", "buku-tamu"],
-        KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot"],
-        WARGA: ["dashboard", "verifikasi", "keuangan", "posyandu", "bank-sampah", "etoko", "voting", "surat", "chat", "ai-bot", "complaint", "booking", "inventaris"],
-        TAMU: ["dashboard", "etoko"],
-        Viewer: ["dashboard", "etoko"],
-      };
-      
-      const allowed = rolePermissions[role] || ["dashboard"];
-      return allowed.includes(item.id);
-    }).map(item => {
-      const planConfig = getPlanFeatures(currentTenant?.status);
-      const isLocked = item.plan && (!currentTenant || (planConfig as any)[item.plan] === false);
-      return { ...item, isLocked };
-    });
+        const role = currentUser?.role || "TAMU";
+        const isSuperAdmin = !!currentUser?.isSuperAdmin;
+        const isVerified = linkedWarga?.terverifikasi === true;
+        const planConfig = getPlanFeatures(currentTenant?.status);
+        const isFreePlan =
+          (currentTenant?.status || "TRIAL") === "TRIAL" ||
+          (currentTenant?.status || "TRIAL") === "FREE";
+
+        if (isSuperAdmin) return true;
+        if (
+          role === "WARGA" &&
+          !isVerified &&
+          item.id !== "dashboard" &&
+          item.id !== "verifikasi"
+        )
+          return false;
+        if ((role === "ADMIN" || role === "RT") && isFreePlan) {
+          if (["inventaris", "posyandu", "bank-sampah"].includes(item.id))
+            return false;
+        }
+
+        const rolePermissions: { [key: string]: string[] } = {
+          SUPER_ADMIN: [
+            "dashboard",
+            "warga",
+            "buku-tamu",
+            "verifikasi",
+            "keuangan",
+            "posyandu",
+            "bank-sampah",
+            "etoko",
+            "voting",
+            "inventaris",
+            "surat",
+            "kop-template",
+            "users",
+            "super-admin",
+            "pengaturan",
+            "chat",
+            "ai-bot",
+            "monitoring",
+            "audit",
+          ],
+          KELURAHAN_ADMIN: [
+            "dashboard",
+            "warga",
+            "keuangan",
+            "posyandu",
+            "bank-sampah",
+            "etoko",
+            "voting",
+            "inventaris",
+            "surat",
+            "users",
+            "chat",
+            "ai-bot",
+            "monitoring",
+            "audit",
+          ],
+          ADMIN: [
+            "dashboard",
+            "warga",
+            "buku-tamu",
+            "verifikasi",
+            "keuangan",
+            "posyandu",
+            "bank-sampah",
+            "etoko",
+            "voting",
+            "inventaris",
+            "surat",
+            "kop-template",
+            "users",
+            "pengaturan",
+            "chat",
+            "ai-bot",
+            "monitoring",
+            "audit",
+          ],
+          RW: [
+            "dashboard",
+            "warga",
+            "buku-tamu",
+            "verifikasi",
+            "keuangan",
+            "posyandu",
+            "bank-sampah",
+            "etoko",
+            "voting",
+            "inventaris",
+            "surat",
+            "kop-template",
+            "users",
+            "chat",
+            "ai-bot",
+            "monitoring",
+            "audit",
+          ],
+          RT: [
+            "dashboard",
+            "warga",
+            "buku-tamu",
+            "verifikasi",
+            "keuangan",
+            "posyandu",
+            "bank-sampah",
+            "etoko",
+            "voting",
+            "inventaris",
+            "surat",
+            "kop-template",
+            "users",
+            "chat",
+            "ai-bot",
+            "complaint",
+            "booking",
+          ],
+          SEKRETARIS: [
+            "dashboard",
+            "warga",
+            "buku-tamu",
+            "verifikasi",
+            "inventaris",
+            "surat",
+            "kop-template",
+            "chat",
+            "ai-bot",
+            "complaint",
+            "booking",
+          ],
+          BENDAHARA: ["dashboard", "keuangan", "bank-sampah", "chat", "ai-bot"],
+          SATPAM: ["dashboard", "buku-tamu"],
+          KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot"],
+          WARGA: [
+            "dashboard",
+            "verifikasi",
+            "keuangan",
+            "posyandu",
+            "bank-sampah",
+            "etoko",
+            "voting",
+            "surat",
+            "chat",
+            "ai-bot",
+            "complaint",
+            "booking",
+            "inventaris",
+          ],
+          TAMU: ["dashboard", "etoko"],
+          Viewer: ["dashboard", "etoko"],
+        };
+
+        const allowed = rolePermissions[role] || ["dashboard"];
+        return allowed.includes(item.id);
+      })
+      .map((item) => {
+        const planConfig = getPlanFeatures(currentTenant?.status);
+        const isLocked =
+          item.plan &&
+          (!currentTenant || (planConfig as any)[item.plan] === false);
+        return { ...item, isLocked };
+      });
   }, [currentUser, linkedWarga, currentTenant, settings]);
 
   if (window.location.pathname.startsWith("/guestbook/")) {
@@ -2675,16 +3035,18 @@ export default function App() {
           <div className="fixed inset-0 z-[200] overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4">
             <div className="min-h-full flex items-center justify-center py-10">
               <div className="bg-white rounded-[3rem] w-full max-w-5xl relative overflow-hidden">
-                <button 
+                <button
                   onClick={() => setShowPricingModal(false)}
                   className="absolute top-8 right-8 z-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200"
                 >
                   <X className="w-6 h-6" />
                 </button>
-                <PricingSection onSelectFreeTrial={() => {
-                  setShowPricingModal(false);
-                  setShowFreeTrialModal(true);
-                }} />
+                <PricingSection
+                  onSelectFreeTrial={() => {
+                    setShowPricingModal(false);
+                    setShowFreeTrialModal(true);
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -2709,7 +3071,7 @@ export default function App() {
         handleFirestoreError={handleFirestoreError}
         kopSettings={kopSettings}
         getSetting={getSetting}
-        usersData={usersData}
+        usersData={filteredUsersDataCentral}
         generateSuratHTML={generateSuratHTML}
         settings={settings}
       />
@@ -2775,7 +3137,11 @@ export default function App() {
             </div>
           </div>
           <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors">
-            <span className="font-bold"><span className="text-[#04a8f4]">Smart</span><span className="text-[#1ba0ce]">RW</span> <span className="text-brand-pink">AI</span></span>
+            <span className="font-bold">
+              <span className="text-[#04a8f4]">Smart</span>
+              <span className="text-[#1ba0ce]">RW</span>{" "}
+              <span className="text-brand-pink">AI</span>
+            </span>
           </h2>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">
             Berdampak & Memberdayakan
@@ -2848,13 +3214,22 @@ export default function App() {
             </div>
             <div className="px-6 mb-2">
               <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 flex flex-col leading-none font-elegant">
-                {(currentTenant?.name || settings?.nama_rt) ? (
-                  <div className="flex flex-col leading-tight" title={currentTenant?.name || settings?.nama_rt}>
-                    {(currentTenant?.name || settings?.nama_rt).includes('SUPER ADMIN') ? (
+                {currentTenant?.name || settings?.nama_rt ? (
+                  <div
+                    className="flex flex-col leading-tight"
+                    title={currentTenant?.name || settings?.nama_rt}
+                  >
+                    {(currentTenant?.name || settings?.nama_rt).includes(
+                      "SUPER ADMIN",
+                    ) ? (
                       <>
-                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border-none leading-[18px] w-[139.906px] inline-block uppercase">SUPER ADMIN</span>
+                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border-none leading-[18px] w-[139.906px] inline-block uppercase">
+                          SUPER ADMIN
+                        </span>
                         <span className="text-[14px] truncate ml-[38px] mt-[6px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center mr-[32px] pt-0 pb-0">
-                          <span className="text-[#04a8f4] font-bold border-[#1d3840]">Smart</span>
+                          <span className="text-[#04a8f4] font-bold border-[#1d3840]">
+                            Smart
+                          </span>
                           <span className="text-brand-blue">RW</span>&nbsp;
                           <span className="text-brand-pink">AI</span>
                         </span>
@@ -2867,7 +3242,8 @@ export default function App() {
                   </div>
                 ) : (
                   <>
-                    <span className="text-[#89CFF0]">Smart</span><span className="text-brand-blue">RW</span>
+                    <span className="text-[#89CFF0]">Smart</span>
+                    <span className="text-brand-blue">RW</span>
                     <span className="text-brand-pink">AI</span>
                   </>
                 )}
@@ -2897,9 +3273,9 @@ export default function App() {
         <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 transition-colors">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-brand-green  shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
-            <p 
+            <p
               className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors"
-                style={{ width: '128.899px', lineHeight: '13.8571px' }}
+              style={{ width: "128.899px", lineHeight: "13.8571px" }}
             >
               AI ACTIVE
             </p>
@@ -2931,63 +3307,62 @@ export default function App() {
         </div>
         <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto pb-20 scrollbar-hide dark:bg-slate-900">
           {renderableNavItems.map((item: any) => {
-              const isLocked = item.isLocked;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    if (isLocked) {
-                      setShowUpgradeModal(true);
-                    } else {
-                      setActiveTab(item.id);
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-300 relative group overflow-hidden ${
-                    activeTab === item.id
-                      ? "bg-brand-blue text-white shadow-xl shadow-brand-blue/30 scale-[1.02]"
-                      : isLocked
-                        ? "text-slate-300 bg-slate-50 cursor-not-allowed opacity-60"
-                        : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-blue font-black"
-                  }`}
+            const isLocked = item.isLocked;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (isLocked) {
+                    setShowUpgradeModal(true);
+                  } else {
+                    setActiveTab(item.id);
+                    setIsSidebarOpen(false);
+                  }
+                }}
+                className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-300 relative group overflow-hidden ${
+                  activeTab === item.id
+                    ? "bg-brand-blue text-white shadow-xl shadow-brand-blue/30 scale-[1.02]"
+                    : isLocked
+                      ? "text-slate-300 bg-slate-50 cursor-not-allowed opacity-60"
+                      : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-blue font-black"
+                }`}
+              >
+                {activeTab === item.id && (
+                  <motion.div
+                    layoutId="activeIndicator"
+                    className="absolute left-0 w-1.5 h-6 bg-brand-yellow rounded-r-full"
+                  />
+                )}
+                <div
+                  className={`relative transition-all duration-300 ${activeTab === item.id ? "scale-110 drop-shadow-md" : "group-hover:scale-110"}`}
                 >
-                  {activeTab === item.id && (
-                    <motion.div
-                      layoutId="activeIndicator"
-                      className="absolute left-0 w-1.5 h-6 bg-brand-yellow rounded-r-full"
-                    />
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {isLocked && (
+                    <div className="absolute -top-1.5 -right-1.5 bg-slate-800 text-white p-0.5 rounded-full border border-white">
+                      <Lock className="w-2 h-2" />
+                    </div>
                   )}
-                  <div
-                    className={`relative transition-all duration-300 ${activeTab === item.id ? "scale-110 drop-shadow-md" : "group-hover:scale-110"}`}
+                </div>
+                <div className="flex-1 text-left flex flex-col">
+                  <span
+                    className={`text-[15px] font-black uppercase tracking-widest ${isLocked ? "text-slate-400" : ""}`}
                   >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {isLocked && (
-                      <div className="absolute -top-1.5 -right-1.5 bg-slate-800 text-white p-0.5 rounded-full border border-white">
-                        <Lock className="w-2 h-2" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-left flex flex-col">
-                    <span
-                      className={`text-[15px] font-black uppercase tracking-widest ${isLocked ? "text-slate-400" : ""}`}
-                    >
-                      {item.label}
+                    {item.label}
+                  </span>
+                  {isLocked && (
+                    <span className="text-[7px] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-100 self-start mt-0.5 animate-pulse">
+                      LEVEL: {item.minPlan || "PRO"}
                     </span>
-                    {isLocked && (
-                      <span className="text-[7px] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-100 self-start mt-0.5 animate-pulse">
-                        LEVEL: {item.minPlan || "PRO"}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </nav>
       </aside>
 
       {/* Main Workspace */}
       <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible w-full bg-slate-50 dark:bg-slate-950 relative transition-colors duration-300">
-        
         {/* Subtle Unique Background Pattern / Gradient */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50/10 to-teal-50/30 dark:from-indigo-900/10 dark:via-slate-950 dark:to-cyan-900/10 pointer-events-none z-0"></div>
 
@@ -3004,9 +3379,17 @@ export default function App() {
               <span className="bg-soft-yellow dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] px-2.5 py-1 rounded-full border border-amber-100 dark:border-amber-500/20 uppercase font-black tracking-widest shadow-sm transition-colors">
                 V4.0 Active
               </span>
-              <div className={`flex items-center gap-2 ${dbStatus === 'UNAVAILABLE' ? 'bg-red-50 text-red-600' : dbStatus === 'OFFLINE' ? 'bg-amber-50 text-amber-600' : 'bg-soft-green text-brand-green'} dark:bg-emerald-500/10 text-[10px] px-3 py-1 rounded-full border ${dbStatus === 'UNAVAILABLE' ? 'border-red-200' : 'border-brand-green/20'} uppercase font-black tracking-widest shadow-sm transition-colors`}>
-                <div className={`w-2 h-2 ${dbStatus === 'UNAVAILABLE' ? 'bg-red-500' : dbStatus === 'OFFLINE' ? 'bg-amber-500' : 'bg-brand-green'} rounded-full animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]`}></div>
-                {dbStatus === 'UNAVAILABLE' ? 'Connection Blocked' : dbStatus === 'OFFLINE' ? 'Offline Mode' : 'Connected'}
+              <div
+                className={`flex items-center gap-2 ${dbStatus === "UNAVAILABLE" ? "bg-red-50 text-red-600" : dbStatus === "OFFLINE" ? "bg-amber-50 text-amber-600" : "bg-soft-green text-brand-green"} dark:bg-emerald-500/10 text-[10px] px-3 py-1 rounded-full border ${dbStatus === "UNAVAILABLE" ? "border-red-200" : "border-brand-green/20"} uppercase font-black tracking-widest shadow-sm transition-colors`}
+              >
+                <div
+                  className={`w-2 h-2 ${dbStatus === "UNAVAILABLE" ? "bg-red-500" : dbStatus === "OFFLINE" ? "bg-amber-500" : "bg-brand-green"} rounded-full animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]`}
+                ></div>
+                {dbStatus === "UNAVAILABLE"
+                  ? "Connection Blocked"
+                  : dbStatus === "OFFLINE"
+                    ? "Offline Mode"
+                    : "Connected"}
               </div>
             </div>
             <div className="h-6 w-px bg-slate-100 mx-2 hidden md:block"></div>
@@ -3074,25 +3457,28 @@ export default function App() {
 
         {currentUser?.isSuperAdmin && selectedTenantId && (
           <div className="mx-3 md:mx-6 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm animate-pulse-subtle">
-             <div className="flex items-center gap-3">
-               <Shield className="w-4 h-4 text-amber-600" />
-               <p className="text-[10px] md:text-xs font-bold text-amber-800 uppercase tracking-widest">
-                 Mode Bypass Aktif: Mengakses Data {currentTenant?.name || selectedTenantId}
-               </p>
-             </div>
-             <button 
-               onClick={() => setSelectedTenantId(null)}
-               className="px-3 py-1 bg-amber-600 text-white text-[10px] font-black rounded-lg hover:bg-amber-700 uppercase tracking-tighter transition-all"
-             >
-               Reset Master
-             </button>
+            <div className="flex items-center gap-3">
+              <Shield className="w-4 h-4 text-amber-600" />
+              <p className="text-[10px] md:text-xs font-bold text-amber-800 uppercase tracking-widest">
+                Mode Bypass Aktif: Mengakses Data{" "}
+                {currentTenant?.name || selectedTenantId}
+              </p>
+            </div>
+            <button
+              onClick={() => setSelectedTenantId(null)}
+              className="px-3 py-1 bg-amber-600 text-white text-[10px] font-black rounded-lg hover:bg-amber-700 uppercase tracking-tighter transition-all"
+            >
+              Reset Master
+            </button>
           </div>
         )}
 
         {/* Content Area */}
         <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0 relative z-10">
           {activeTab === "dashboard" && (
-            <DashboardView allowedMenuItems={renderableNavItems} kasData={filteredKasDataCentral}
+            <DashboardView
+              allowedMenuItems={renderableNavItems}
+              kasData={filteredKasDataCentral}
               wargaData={cappedWargaData}
               suratData={filteredSuratDataCentral}
               iuranData={filteredIuranDataCentral}
@@ -3174,7 +3560,9 @@ export default function App() {
               currentTenant={currentTenant}
             />
           )}
-          {activeTab === "ai-bot" && <AIChatBot currentUser={currentUser} plan={currentTenant?.status} />}
+          {activeTab === "ai-bot" && (
+            <AIChatBot currentUser={currentUser} plan={currentTenant?.status} />
+          )}
           {activeTab === "keuangan" && (
             <FinansialDashboardView
               ppobData={ppobData}
@@ -3297,7 +3685,7 @@ export default function App() {
               suratData={filteredSuratDataCentral}
               setSuratData={setSuratData}
               wargaData={filteredWargaDataCentral}
-              usersData={usersData}
+              usersData={filteredUsersDataCentral}
               userRole={currentUser.role}
               currentUser={currentUser}
               getSetting={getSetting}
@@ -3343,12 +3731,13 @@ export default function App() {
 
           {activeTab === "users" && (
             <UsersView
-              usersData={usersData}
+              usersData={filteredUsersDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               tenantId={currentUser.tenantId || "RW26_SMART"}
               showNotification={showNotification}
               settings={settings}
+              currentUser={currentUser}
             />
           )}
           {activeTab === "super-admin" && (
@@ -3573,8 +3962,8 @@ export default function App() {
                 Kirimi Sinyal Darurat?
               </h2>
               <p className="text-slate-600 text-base font-medium leading-relaxed mb-8 px-2">
-                Tindakan ini akan memberitahukan seluruh pengurus dan warga RW / RT
-                secara instan. Gunakan hanya untuk keadaan mendesak.
+                Tindakan ini akan memberitahukan seluruh pengurus dan warga RW /
+                RT secara instan. Gunakan hanya untuk keadaan mendesak.
               </p>
               <div className="flex flex-col gap-4">
                 <button
@@ -3610,67 +3999,70 @@ export default function App() {
           showNotification={showNotification}
         />
       )}
-      
+
       {showPricingModal && (
         <div className="fixed inset-0 z-[200] overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4">
-           <div className="min-h-full flex items-center justify-center py-10">
-              <div className="bg-white rounded-[3rem] w-full max-w-5xl relative overflow-hidden">
-                <button 
-                  onClick={() => setShowPricingModal(false)}
-                  className="absolute top-8 right-8 z-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-                <PricingSection onSelectFreeTrial={() => {
+          <div className="min-h-full flex items-center justify-center py-10">
+            <div className="bg-white rounded-[3rem] w-full max-w-5xl relative overflow-hidden">
+              <button
+                onClick={() => setShowPricingModal(false)}
+                className="absolute top-8 right-8 z-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <PricingSection
+                onSelectFreeTrial={() => {
                   setShowPricingModal(false);
                   setShowFreeTrialModal(true);
-                }} />
-              </div>
-           </div>
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
-      
+
       {showInfoPopup && (!currentUser || currentUser?.isAnonymous) && (
         <div className="fixed inset-0 z-[250] flex items-end md:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-           <motion.div 
-             initial={{ y: 100, opacity: 0 }}
-             animate={{ y: 0, opacity: 1 }}
-             className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative border-t-4 border-brand-pink"
-           >
-              <button 
-                onClick={() => setShowInfoPopup(false)}
-                className="absolute top-4 right-4 p-2"
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative border-t-4 border-brand-pink"
+          >
+            <button
+              onClick={() => setShowInfoPopup(false)}
+              className="absolute top-4 right-4 p-2"
+            >
+              <X className="w-5 h-5 text-slate-300" />
+            </button>
+            <div className="w-20 h-20 bg-brand-pink/10 rounded-3xl flex items-center justify-center mb-6">
+              <Sparkles className="w-10 h-10 text-brand-pink" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-3">
+              SmartRW AI <br />
+              <span className="text-brand-pink">Telah Hadir!</span>
+            </h3>
+            <p className="text-slate-500 text-sm leading-relaxed mb-6">
+              Nikmati kemudahan pengelolaan RT/RW dengan teknologi AI terbaru.
+              Daftar sekarang dan dapatkan Free Trial 30 hari.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowInfoPopup(false);
+                  setShowFreeTrialModal(true);
+                }}
+                className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 hover:shadow-2xl hover:shadow-pink-500/40 hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
               >
-                <X className="w-5 h-5 text-slate-300" />
+                Coba Sekarang
               </button>
-              <div className="w-20 h-20 bg-brand-pink/10 rounded-3xl flex items-center justify-center mb-6">
-                <Sparkles className="w-10 h-10 text-brand-pink" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-3">
-                SmartRW AI <br/>
-                <span className="text-brand-pink">Telah Hadir!</span>
-              </h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                Nikmati kemudahan pengelolaan RT/RW dengan teknologi AI terbaru. Daftar sekarang dan dapatkan Free Trial 30 hari.
-              </p>
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => { 
-                    setShowInfoPopup(false); 
-                    setShowFreeTrialModal(true);
-                  }}
-                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-2xl shadow-xl shadow-pink-500/30 hover:shadow-2xl hover:shadow-pink-500/40 hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
-                >
-                  Coba Sekarang
-                </button>
-                <button 
-                  onClick={() => setShowInfoPopup(false)}
-                  className="w-full py-4 bg-white text-slate-500 font-bold rounded-2xl border-2 border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-all duration-300 active:scale-95"
-                >
-                  Nanti Saja
-                </button>
-              </div>
-           </motion.div>
+              <button
+                onClick={() => setShowInfoPopup(false)}
+                className="w-full py-4 bg-white text-slate-500 font-bold rounded-2xl border-2 border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-all duration-300 active:scale-95"
+              >
+                Nanti Saja
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>
@@ -4552,8 +4944,8 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
             🛡️ INTEGRASI CCTV LINGKUNGAN
           </h2>
           <p className="text-slate-500 font-medium text-sm">
-            Pantauan real-time area strategis melalui link IP Camera /
-            Streaming atau Kamera Lokal.
+            Pantauan real-time area strategis melalui link IP Camera / Streaming
+            atau Kamera Lokal.
           </p>
         </div>
         <div className="flex gap-2">
@@ -4571,32 +4963,32 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
           </button>
         </div>
       </div>
-      
+
       <div className="flex gap-4">
-          <button
-            onClick={() => setShowLocalCamera(!showLocalCamera)}
-            className={`px-6 py-3 rounded-full font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-lg ${showLocalCamera ? 'bg-red-600 text-white' : 'bg-[#008bb5] text-white'}`}
-          >
-            {showLocalCamera ? 'Tutup Kamera Lokal' : 'Buka Kamera Lokal'}
-          </button>
+        <button
+          onClick={() => setShowLocalCamera(!showLocalCamera)}
+          className={`px-6 py-3 rounded-full font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-lg ${showLocalCamera ? "bg-red-600 text-white" : "bg-[#008bb5] text-white"}`}
+        >
+          {showLocalCamera ? "Tutup Kamera Lokal" : "Buka Kamera Lokal"}
+        </button>
       </div>
-      
+
       {showLocalCamera && (
         <div className="rounded-[2rem] overflow-hidden border-4 border-slate-200 shadow-xl aspect-video md:w-1/2">
-            <Webcam 
-              audio={false} 
-              videoConstraints={{ facingMode: "user" }} 
-              className="w-full h-full object-cover"
-              mirrored={true}
-              screenshotFormat="image/jpeg"
-              forceScreenshotSourceSize={false}
-              audioConstraints={false}
-              disablePictureInPicture={true}
-              imageSmoothing={true}
-              onUserMedia={() => {}}
-              onUserMediaError={() => {}}
-              screenshotQuality={0.92}
-            />
+          <Webcam
+            audio={false}
+            videoConstraints={{ facingMode: "user" }}
+            className="w-full h-full object-cover"
+            mirrored={true}
+            screenshotFormat="image/jpeg"
+            forceScreenshotSourceSize={false}
+            audioConstraints={false}
+            disablePictureInPicture={true}
+            imageSmoothing={true}
+            onUserMedia={() => {}}
+            onUserMediaError={() => {}}
+            screenshotQuality={0.92}
+          />
         </div>
       )}
 
@@ -4672,7 +5064,9 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
     // Stop all audio/vibration if not emergency or muted
     if (!emergency || isMuted) {
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        try { navigator.vibrate(0); } catch (e) {}
+        try {
+          navigator.vibrate(0);
+        } catch (e) {}
       }
       if (sirenIntervalRef.current) {
         clearTimeout(sirenIntervalRef.current);
@@ -4684,12 +5078,13 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
     const startAudioContext = async () => {
       try {
         if (!audioCtxRef.current) {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          const AudioContextClass =
+            window.AudioContext || (window as any).webkitAudioContext;
           if (AudioContextClass) {
             audioCtxRef.current = new AudioContextClass();
           }
         }
-        
+
         const audioCtx = audioCtxRef.current;
         if (!audioCtx) return;
 
@@ -4702,7 +5097,7 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
           }
         }
         setAudioBlocked(false);
-        
+
         if (audioCtx.state === "running") {
           startWarSiren();
         }
@@ -4717,10 +5112,10 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
 
     const startWarSiren = () => {
       if (!audioCtxRef.current || isMuted || !emergency) return;
-      
+
       const ctx = audioCtxRef.current;
       const now = ctx.currentTime;
-      
+
       // Main Siren Oscillator
       activeOsc = ctx.createOscillator();
       activeOsc.type = "sawtooth"; // Karakter suara gergaji yang berat/mekanis
@@ -4730,7 +5125,7 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
       activeLFO = ctx.createOscillator();
       activeLFO.type = "sine";
       activeLFO.frequency.setValueAtTime(0.25, now); // Kecepatan ayun lambat (4 detik per siklus)
-      
+
       const lfoGain = ctx.createGain();
       lfoGain.gain.setValueAtTime(150, now); // Rentang ayunan: 450 +/- 150 = 300Hz ke 600Hz
 
@@ -4743,7 +5138,7 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
 
       activeOsc.connect(activeGain);
       activeGain.connect(ctx.destination);
-      
+
       activeOsc.start(now);
       activeLFO.start(now);
     };
@@ -4752,22 +5147,42 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
 
     // Getaran terpisah (lebih lambat mengikuti irama sirine)
     const vibInterval = setInterval(() => {
-      if (!isMuted && typeof navigator !== "undefined" && "vibrate" in navigator) {
+      if (
+        !isMuted &&
+        typeof navigator !== "undefined" &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate([800, 400]);
       }
     }, 2000);
 
     return () => {
       if (vibInterval) clearInterval(vibInterval);
-      if (activeOsc) { try { activeOsc.stop(); activeOsc.disconnect(); } catch(e){} }
-      if (activeLFO) { try { activeLFO.stop(); activeLFO.disconnect(); } catch(e){} }
-      if (activeGain) { try { activeGain.disconnect(); } catch(e){} }
+      if (activeOsc) {
+        try {
+          activeOsc.stop();
+          activeOsc.disconnect();
+        } catch (e) {}
+      }
+      if (activeLFO) {
+        try {
+          activeLFO.stop();
+          activeLFO.disconnect();
+        } catch (e) {}
+      }
+      if (activeGain) {
+        try {
+          activeGain.disconnect();
+        } catch (e) {}
+      }
       if (sirenIntervalRef.current) {
         clearTimeout(sirenIntervalRef.current);
         sirenIntervalRef.current = null;
       }
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        try { navigator.vibrate(0); } catch (e) {}
+        try {
+          navigator.vibrate(0);
+        } catch (e) {}
       }
     };
   }, [isMuted, emergency?.id]);
@@ -5305,13 +5720,15 @@ function ETokoView({
                     ))}
                   </select>
                   {categories.map((c, i) => (
-                  <StyledButton
-                    key={`toko-cat-${c}-${i}`}
-                    onClick={() => setSelectedCategory(c)}
-                    label={c}
-                    colorType={selectedCategory === c ? "primary" : "secondary"}
-                    className="text-xs px-4 py-2 whitespace-nowrap"
-                  />
+                    <StyledButton
+                      key={`toko-cat-${c}-${i}`}
+                      onClick={() => setSelectedCategory(c)}
+                      label={c}
+                      colorType={
+                        selectedCategory === c ? "primary" : "secondary"
+                      }
+                      className="text-xs px-4 py-2 whitespace-nowrap"
+                    />
                   ))}
                 </div>
               </div>
@@ -5391,9 +5808,13 @@ function ETokoView({
                         <StyledButton
                           disabled={p.stock <= 0}
                           onClick={() => addToCart(p)}
-                          label={p.stock <= 0 ? "Stok Habis" : "Tambah Keranjang"}
+                          label={
+                            p.stock <= 0 ? "Stok Habis" : "Tambah Keranjang"
+                          }
                           colorType={p.stock <= 0 ? "danger" : "success"}
-                          icon={p.stock > 0 && <ShoppingBag className="w-4 h-4" />}
+                          icon={
+                            p.stock > 0 && <ShoppingBag className="w-4 h-4" />
+                          }
                           className="w-full py-3 text-[10px]"
                         />
                       </div>
@@ -6898,7 +7319,10 @@ function PengaturanView({
       if (typeof handleFirestoreError === "function") {
         handleFirestoreError(error, "update", `settings/${tenantId}`);
       } else {
-        showNotification("Gagal menyimpan pengaturan. Periksa koneksi atau izin anda.", "error");
+        showNotification(
+          "Gagal menyimpan pengaturan. Periksa koneksi atau izin anda.",
+          "error",
+        );
       }
     } finally {
       setIsSaving(false);
@@ -7252,7 +7676,9 @@ function PengaturanView({
               <Settings className="w-4 h-4 mr-2 text-blue-600" />
               Pengaturan Sistem
             </h3>
-            {(userRole === "ADMIN" || userRole === "SUPER_ADMIN" || userRole === "SUPER ADMIN") && (
+            {(userRole === "ADMIN" ||
+              userRole === "SUPER_ADMIN" ||
+              userRole === "SUPER ADMIN") && (
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
                 Mode Editor
               </span>
@@ -7271,12 +7697,15 @@ function PengaturanView({
                   className="w-full px-4 py-3 bg-white border border-orange-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 transition-all font-bold text-slate-800 shadow-sm"
                 >
                   <option value="rt_rw">Mode Lingkungan (RT/RW)</option>
-                  <option value="apartemen">Mode Apartemen / Perumahan Mandiri</option>
+                  <option value="apartemen">
+                    Mode Apartemen / Perumahan Mandiri
+                  </option>
                 </select>
                 <div className="flex items-start gap-2 mt-2">
                   <div className="w-1 h-1 rounded-full bg-orange-400 mt-1.5 shrink-0"></div>
                   <p className="text-[10px] text-slate-500 italic leading-tight">
-                    Mode Apartemen akan menyesuaikan beberapa istilah (misal: Kas Warga menjadi IPL, RT/RW menjadi Tower/Lantai, dsb).
+                    Mode Apartemen akan menyesuaikan beberapa istilah (misal:
+                    Kas Warga menjadi IPL, RT/RW menjadi Tower/Lantai, dsb).
                   </p>
                 </div>
               </div>
@@ -7296,7 +7725,8 @@ function PengaturanView({
                 <div className="flex items-start gap-2 mt-2">
                   <div className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
                   <p className="text-[10px] text-slate-500 italic leading-tight">
-                    Nama ini akan menjadi identitas utama di sidebar menu dan kop surat dokumen warga.
+                    Nama ini akan menjadi identitas utama di sidebar menu dan
+                    kop surat dokumen warga.
                   </p>
                 </div>
               </div>
@@ -8441,7 +8871,7 @@ function LoginView({
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<"admin" | "warga" | "verifikasi">(
     initialMode,
-  ); 
+  );
 
   useEffect(() => {
     if (initialEmail) {
@@ -8627,11 +9057,7 @@ function LoginView({
                 if (found) break;
                 const q = query(
                   collection(db, "data_warga"),
-                  where(
-                    "tenantId",
-                    "==",
-                    tenantId,
-                  ),
+                  where("tenantId", "==", tenantId),
                   where(field, "==", value),
                   limit(5),
                 );
@@ -8706,6 +9132,7 @@ function LoginView({
                 const q = query(
                   collection(db, "verifikasi_warga"),
                   where(field, "==", value),
+                  where("tenantId", "==", tenantId),
                   limit(5),
                 );
                 const snap = await getDocs(q);
@@ -8828,19 +9255,24 @@ function LoginView({
 
       // If the input doesn't contain '@', search for a username in public_usernames
       if (!inputEmail.includes("@")) {
-        console.log("Checking username in public_usernames:", inputEmail.toLowerCase());
+        console.log(
+          "Checking username in public_usernames:",
+          inputEmail.toLowerCase(),
+        );
         const usernameRef = doc(
           db,
           "public_usernames",
           inputEmail.toLowerCase(),
         );
-        
+
         let usernameDoc;
         try {
           usernameDoc = await getDoc(usernameRef);
         } catch (err: any) {
           if (err.code === "permission-denied") {
-            console.error("Permission denied reading public_usernames. Check firestore.rules.");
+            console.error(
+              "Permission denied reading public_usernames. Check firestore.rules.",
+            );
           }
           throw err;
         }
@@ -8875,7 +9307,11 @@ function LoginView({
             adminErr.code === "auth/invalid-credential"
           ) {
             try {
-              await createUserWithEmailAndPassword(auth, loginEmail, targetPass);
+              await createUserWithEmailAndPassword(
+                auth,
+                loginEmail,
+                targetPass,
+              );
             } catch (createErr: any) {
               if (createErr.code === "auth/email-already-in-use") {
                 // If it already exists, then the original signIn failed because of wrong password
@@ -8888,7 +9324,44 @@ function LoginView({
           }
         }
       } else {
-        await signInWithEmailAndPassword(auth, loginEmail, targetPass);
+        try {
+          await signInWithEmailAndPassword(auth, loginEmail, targetPass);
+        } catch (loginErr: any) {
+          if (
+            loginErr.code === "auth/user-not-found" ||
+            loginErr.code === "auth/invalid-credential"
+          ) {
+            let wasCreated = false;
+            try {
+              // Sign in anonymously to query the users collection
+              await signInAnonymously(auth);
+              const usersRef = collection(db, "users");
+              const q = query(usersRef, where("email", "==", loginEmail));
+              // getDocs(q) will work because anonymous users can read /users
+              const snap = await getDocs(q);
+
+              if (!snap.empty) {
+                // Verify password matches the one set by Admin in Firestore
+                const matchFound = snap.docs.some(
+                  (d) => d.data().password === targetPass,
+                );
+                if (matchFound) {
+                  await createUserWithEmailAndPassword(
+                    auth,
+                    loginEmail,
+                    targetPass,
+                  );
+                  wasCreated = true;
+                }
+              }
+            } catch (autoErr) {
+              console.warn("Auto-registration check failed:", autoErr);
+            }
+            if (!wasCreated) throw loginErr;
+          } else {
+            throw loginErr;
+          }
+        }
       }
     } catch (err: any) {
       console.error("Login Error:", err);
@@ -8915,7 +9388,8 @@ function LoginView({
       } else if (err.code === "auth/invalid-email") {
         msg = "FORMAT EMAIL SALAH: Masukkan format email yang benar.";
       } else if (err.code === "auth/email-already-in-use") {
-        msg = "EMAIL SUDAH TERDAFTAR: Email ini sudah digunakan oleh akun lain. Silakan masuk menggunakan email tersebut.";
+        msg =
+          "EMAIL SUDAH TERDAFTAR: Email ini sudah digunakan oleh akun lain. Silakan masuk menggunakan email tersebut.";
       } else if (err.code === "auth/operation-not-allowed") {
         msg =
           'METODE LOGIN NON-AKTIF: Aktifkan "Email/Password" di Firebase Console > Authentication > Sign-in method.';
@@ -8976,11 +9450,15 @@ function LoginView({
         }
       }
 
-      const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
+      const isTrihUser =
+        user.email?.toLowerCase().includes("trihprw26") ||
+        user.email?.toLowerCase().includes("handoko");
 
       if (!userDoc.exists() && !isPreRegistered && !isArif && !isTrihUser) {
         await signOut(auth);
-        setError("Akun Google Anda belum terdaftar di sistem. Silakan minta Admin RT/RW untuk mendaftarkan email Anda, atau gunakan login Warga/Verifikasi WA.");
+        setError(
+          "Akun Google Anda belum terdaftar di sistem. Silakan minta Admin RT/RW untuk mendaftarkan email Anda, atau gunakan login Warga/Verifikasi WA.",
+        );
         setIsLoading(false);
         return;
       }
@@ -9010,7 +9488,13 @@ function LoginView({
       await setDoc(userRef, userData, { merge: true });
     } catch (err: any) {
       console.error("Google Login Error:", err);
-      setError(`Gagal login dengan Google: ${err.message}`);
+      if (err.code === "auth/popup-blocked") {
+        setError(
+          "Gagal login: Popup diblokir. Silakan buka aplikasi di tab baru (jika di dalam preview) atau izinkan popup browser Anda.",
+        );
+      } else {
+        setError(`Gagal login dengan Google: ${err.message}`);
+      }
       setIsLoading(false);
     }
   };
@@ -9037,7 +9521,11 @@ function LoginView({
             />
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 leading-none mb-2 font-elegant">
-            <span className="font-bold"><span className="text-[#04a8f4]">Smart</span><span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span></span>
+            <span className="font-bold">
+              <span className="text-[#04a8f4]">Smart</span>
+              <span className="text-brand-blue">RW</span>{" "}
+              <span className="text-brand-pink">AI</span>
+            </span>
           </h1>
           <p className="text-brand-blue font-bold tracking-[0.2em] text-sm uppercase">
             BERDAMPAK &amp; MEMBERDAYAKAN
@@ -9177,7 +9665,6 @@ function LoginView({
                   "Masuk"
                 )}
               </button>
-
             </form>
           )}
 
@@ -9324,8 +9811,6 @@ function LoginView({
             </div>
           )}
 
-
-
           {/* Free Trial Banner - More Prominent CTA */}
           <div className="mt-8 flex flex-col items-center w-full px-4">
             <motion.div
@@ -9335,13 +9820,13 @@ function LoginView({
               whileTap={{ scale: 0.98 }}
               className="w-full max-w-sm"
             >
-              <button 
+              <button
                 onClick={onShowFreeTrial}
                 className="w-full group relative overflow-hidden bg-gradient-to-br from-white to-slate-50 border-2 border-brand-pink/30 p-6 rounded-[2.5rem] transition-all hover:bg-white hover:border-brand-pink shadow-2xl shadow-brand-pink/10 hover:shadow-brand-pink/20 text-left"
               >
                 {/* Decorative background light */}
                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-brand-pink/5 rounded-full blur-3xl group-hover:bg-brand-pink/10 transition-colors"></div>
-                
+
                 <div className="flex items-center gap-5 relative z-10">
                   <div className="w-16 h-16 rounded-3xl bg-brand-pink flex items-center justify-center text-white shadow-xl shadow-brand-pink/30 group-hover:rotate-12 transition-transform duration-500">
                     <Sparkles className="w-8 h-8 fill-white/20" />
@@ -9351,15 +9836,20 @@ function LoginView({
                       <span className="px-3 py-1 bg-amber-500 text-[10px] font-black uppercase tracking-widest text-white rounded-full shadow-lg shadow-amber-500/20 animate-pulse">
                         Terbatas!
                       </span>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-pink">Promo Launching</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-pink">
+                        Promo Launching
+                      </p>
                     </div>
                     <h3 className="text-xl font-black text-slate-800 leading-tight tracking-tight">
-                      Gunakan <span className="text-brand-pink">SmartRW AI</span>
+                      Gunakan{" "}
+                      <span className="text-brand-pink">SmartRW AI</span>
                     </h3>
                     <p className="text-sm font-bold text-slate-500 mb-4 whitespace-nowrap overflow-hidden text-ellipsis">
-                      Dapatkan <span className="text-brand-blue">Free Trial</span> Sekarang!
+                      Dapatkan{" "}
+                      <span className="text-brand-blue">Free Trial</span>{" "}
+                      Sekarang!
                     </p>
-                    
+
                     <div className="flex items-center gap-2">
                       <div className="px-5 py-2.5 bg-brand-pink text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-brand-pink/20 group-hover:bg-brand-blue group-hover:shadow-brand-blue/20 transition-all flex items-center gap-2">
                         Daftar Gratis
@@ -9373,39 +9863,45 @@ function LoginView({
                 </div>
               </button>
             </motion.div>
-            
+
             <div className="flex flex-col items-center gap-3 mt-6 w-full max-w-sm">
-              <motion.button 
+              <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onShowPricing}
                 className="w-full py-4 bg-white/50 backdrop-blur-sm border-2 border-slate-200 text-slate-600 rounded-2xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:border-brand-blue hover:text-brand-blue transition-all"
               >
                 <Tag className="w-4 h-4" />
-                <span className="text-[11px] font-black uppercase tracking-widest">Pricing & List Fitur</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">
+                  Pricing & List Fitur
+                </span>
               </motion.button>
-              
+
               <div className="grid grid-cols-2 gap-3 w-full">
-                <motion.a 
+                <motion.a
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  href="https://smartrwai.vercel.app/" 
-                  target="_blank" 
+                  href="https://smartrwai.vercel.app/"
+                  target="_blank"
                   className="py-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl flex items-center justify-center gap-2 hover:bg-brand-blue/5 hover:text-brand-blue hover:border-brand-blue/20 transition-all"
                 >
                   <Globe className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Website</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    Website
+                  </span>
                 </motion.a>
-                
-                <motion.a 
+
+                <motion.a
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  href="https://wa.me/087726741143" 
-                  target="_blank" 
+                  href="https://wa.me/087726741143"
+                  target="_blank"
                   className="py-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all"
                 >
                   <Phone className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">WA Admin</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    WA Admin
+                  </span>
                 </motion.a>
               </div>
             </div>
@@ -9423,6 +9919,7 @@ function UsersView({
   tenantId,
   showNotification,
   settings,
+  currentUser,
 }: {
   usersData: any[];
   setIsLoadingDB: any;
@@ -9430,6 +9927,7 @@ function UsersView({
   tenantId: string;
   showNotification: (m: string, t?: any) => void;
   settings: any;
+  currentUser: any;
 }) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
@@ -9794,7 +10292,9 @@ function UsersView({
                     defaultValue={editingUser?.role || "RT"}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold"
                   >
-                    <option value="SUPER_ADMIN">SUPER ADMIN</option>
+                    {currentUser?.isSuperAdmin && (
+                      <option value="SUPER_ADMIN">SUPER ADMIN</option>
+                    )}
                     <option value="ADMIN">ADMIN (RT/RW)</option>
                     <option value="RW">RW</option>
                     <option value="RT">RT</option>
@@ -9807,19 +10307,25 @@ function UsersView({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
-                    Akses Khusus
-                  </label>
-                  <select
-                    name="isSuperAdmin"
-                    defaultValue={editingUser?.isSuperAdmin ? "true" : "false"}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold"
-                  >
-                    <option value="false">Standard User</option>
-                    <option value="true">Super Admin Power</option>
-                  </select>
-                </div>
+                {currentUser?.isSuperAdmin ? (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                      Akses Khusus
+                    </label>
+                    <select
+                      name="isSuperAdmin"
+                      defaultValue={
+                        editingUser?.isSuperAdmin ? "true" : "false"
+                      }
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold"
+                    >
+                      <option value="false">Standard User</option>
+                      <option value="true">Super Admin Power</option>
+                    </select>
+                  </div>
+                ) : (
+                  <input type="hidden" name="isSuperAdmin" value="false" />
+                )}
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
@@ -9912,6 +10418,7 @@ function TenantsView({
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
   const [tenantToDelete, setTenantToDelete] = useState<any>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const runMigration = async () => {
     setIsLoadingDB(true);
@@ -9926,9 +10433,13 @@ function TenantsView({
         if (!docId) return;
 
         let maxWarga = 50;
-        
+
         // Specific overrides requested by user
-        if (docId === "test" || docId === "TRIAL_ARIFRAJ_MCI_4348" || docId === "RW26_SMART") {
+        if (
+          docId === "test" ||
+          docId === "TRIAL_ARIFRAJ_MCI_4348" ||
+          docId === "RW26_SMART"
+        ) {
           maxWarga = 50;
         } else if (paketStatus.includes("STARTER")) {
           maxWarga = 50;
@@ -9942,18 +10453,24 @@ function TenantsView({
           maxWarga = 20000;
         } else {
           // Fallback to resolving via global map if none of the above matches specifically
-          const normalizedStatus = paketStatus.replace("V4.0 ", "").replace("PLAN", "").trim();
+          const normalizedStatus = paketStatus
+            .replace("V4.0 ", "")
+            .replace("PLAN", "")
+            .trim();
           const baseKey = PLAN_ALIASES[normalizedStatus] || normalizedStatus;
           maxWarga = (PLAN_FEATURES as any)[baseKey]?.maxWarga || 50;
         }
-        
+
         batch.update(doc(db, "tenants", docId), { maxWarga });
         updatedCount++;
       });
 
       if (updatedCount > 0) {
         await batch.commit();
-        showNotification(`Berhasil melakukan standardisasi pada ${updatedCount} tenant!`, "success");
+        showNotification(
+          `Berhasil melakukan standardisasi pada ${updatedCount} tenant!`,
+          "success",
+        );
       } else {
         showNotification("Tidak ada data tenant yang ditemukan.", "info");
       }
@@ -10017,7 +10534,7 @@ function TenantsView({
       rtTarget: rtCount,
       rwTarget: rwNumber,
       createdAt: editingTenant
-        ? (editingTenant.createdAt || new Date().toISOString())
+        ? editingTenant.createdAt || new Date().toISOString()
         : new Date().toISOString(),
     };
 
@@ -10055,15 +10572,19 @@ function TenantsView({
       // 3. Sync Admin User Password/Email if changed
       let hasAdminUser = false;
       if (editingTenant) {
-        const usersRef = collection(db, 'users');
-        const qAdmin = query(usersRef, where('tenantId', '==', tenantId));
+        const usersRef = collection(db, "users");
+        const qAdmin = query(usersRef, where("tenantId", "==", tenantId));
         const userSnap = await getDocs(qAdmin);
-        
+
         userSnap.forEach((userDoc) => {
           const userData = userDoc.data();
-          const userRole = (userData.role || '').toUpperCase();
-          
-          if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userData.email === editingTenant.adminEmail) {
+          const userRole = (userData.role || "").toUpperCase();
+
+          if (
+            userRole === "ADMIN" ||
+            userRole === "SUPER_ADMIN" ||
+            userData.email === editingTenant.adminEmail
+          ) {
             hasAdminUser = true;
             const updateData: any = { email: email };
             if (password && password.length >= 6) {
@@ -10083,7 +10604,7 @@ function TenantsView({
           name: `Admin ${name}`,
           username: email.split("@")[0],
           email: email,
-          password: password, 
+          password: password,
           role: "ADMIN",
           tenantId: tenantId,
           rt: "01",
@@ -10122,7 +10643,6 @@ function TenantsView({
     }
   };
 
-  
   const handleDeleteTenant = async () => {
     if (!tenantToDelete) return;
     setIsLoadingDB(true);
@@ -10330,7 +10850,10 @@ function TenantsView({
                       <button
                         onClick={() => {
                           setSelectedTenantId(tenant.id);
-                          showNotification(`Berhasil berpindah ke akses ${tenant.name}`, "info");
+                          showNotification(
+                            `Berhasil berpindah ke akses ${tenant.name}`,
+                            "info",
+                          );
                         }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border font-bold active:scale-95 shadow-sm ${
                           selectedTenantId === tenant.id
@@ -10338,8 +10861,16 @@ function TenantsView({
                             : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                         }`}
                       >
-                        {selectedTenantId === tenant.id ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
-                        <span>{selectedTenantId === tenant.id ? "Akses Aktif" : "Bypass Akses"}</span>
+                        {selectedTenantId === tenant.id ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        )}
+                        <span>
+                          {selectedTenantId === tenant.id
+                            ? "Akses Aktif"
+                            : "Bypass Akses"}
+                        </span>
                       </button>
                       <button
                         onClick={() => {
@@ -10450,7 +10981,7 @@ function TenantsView({
                   </label>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
                       Email Admin
                     </label>
@@ -10460,21 +10991,34 @@ function TenantsView({
                       required
                       type="email"
                       placeholder="Email Admin"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm"
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm mt-auto"
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
                       Password{" "}
                       {editingTenant ? "(Kosongkan jika tidak ubah)" : ""}
                     </label>
-                    <input
-                      name="adminPassword"
-                      required={!editingTenant}
-                      type="password"
-                      placeholder="Password Admin (Min 6 Karakter)"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm"
-                    />
+                    <div className="relative mt-auto">
+                      <input
+                        name="adminPassword"
+                        required={!editingTenant}
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password Admin (Min 6 Karakter)"
+                        className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className="col-span-2">
                     <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
@@ -10802,7 +11346,8 @@ function PosyanduView({
   const filteredBalita = useMemo(() => {
     if (isWarga && currentUser?.nik) {
       return (balitaData || []).filter(
-        (b: any) => b.nikOrangTua === currentUser.nik || b.nik === currentUser.nik
+        (b: any) =>
+          b.nikOrangTua === currentUser.nik || b.nik === currentUser.nik,
       );
     }
     return balitaData || [];
@@ -10810,9 +11355,7 @@ function PosyanduView({
 
   const filteredIbuHamil = useMemo(() => {
     if (isWarga && currentUser?.nik) {
-      return (ibuHamilData || []).filter(
-        (i: any) => i.nik === currentUser.nik
-      );
+      return (ibuHamilData || []).filter((i: any) => i.nik === currentUser.nik);
     }
     return ibuHamilData || [];
   }, [ibuHamilData, isWarga, currentUser?.nik]);
@@ -10820,7 +11363,7 @@ function PosyanduView({
   const filteredPosbinduKegiatan = useMemo(() => {
     if (isWarga && currentUser?.nik) {
       return (posbinduKegiatanData || []).filter(
-        (p: any) => p.nik === currentUser.nik
+        (p: any) => p.nik === currentUser.nik,
       );
     }
     return posbinduKegiatanData || [];
@@ -11385,7 +11928,7 @@ function PosyanduView({
   const filteredPosbindu = useMemo(() => {
     if (isWarga && currentUser?.nik) {
       return (pemeriksaanPosbinduData || []).filter(
-        (p: any) => p.nik === currentUser.nik
+        (p: any) => p.nik === currentUser.nik,
       );
     }
     return pemeriksaanPosbinduData || [];
@@ -11394,8 +11937,9 @@ function PosyanduView({
   // Dashboard Stats
   const stats = {
     totalBalita: filteredBalita.length,
-    balitaSehat: filteredBalita.filter((b: any) => b.statusStunting === "Normal")
-      .length,
+    balitaSehat: filteredBalita.filter(
+      (b: any) => b.statusStunting === "Normal",
+    ).length,
     balitaRisiko: filteredBalita.filter(
       (b: any) => b.statusStunting === "Risiko Stunting",
     ).length,
@@ -13848,21 +14392,28 @@ function BankSampahView({
             { id: "setoran", label: "Setoran", icon: PlusCircle },
             { id: "tarik", label: "Tarik Saldo", icon: HandCoins },
             { id: "nasabah", label: "Nasabah", icon: Users },
-            { id: "kategori", label: "Kategori", icon: Settings, adminOnly: true },
-          ].filter(tab => !tab.adminOnly || canEdit).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                activeSubTab === tab.id
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-100"
-                  : "text-slate-500 hover:bg-slate-50"
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
+            {
+              id: "kategori",
+              label: "Kategori",
+              icon: Settings,
+              adminOnly: true,
+            },
+          ]
+            .filter((tab) => !tab.adminOnly || canEdit)
+            .map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeSubTab === tab.id
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-100"
+                    : "text-slate-500 hover:bg-slate-50"
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
         </div>
       </div>
 
@@ -14016,14 +14567,14 @@ function BankSampahView({
                 />
               </div>
             </div>
-              {canEdit && (
-                <StyledButton
-                  label="Catat Setoran"
-                  onClick={() => setShowSetoranForm(true)}
-                  colorType="success"
-                  icon={<PlusCircle className="w-4 h-4" />}
-                />
-              )}
+            {canEdit && (
+              <StyledButton
+                label="Catat Setoran"
+                onClick={() => setShowSetoranForm(true)}
+                colorType="success"
+                icon={<PlusCircle className="w-4 h-4" />}
+              />
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -14526,14 +15077,14 @@ function BankSampahView({
             <h3 className="font-bold text-slate-800">
               Kategori Sampah & Harga
             </h3>
-              {canEdit && (
-                <StyledButton
-                  label="Tambah Kategori"
-                  onClick={() => setShowKategoriForm(true)}
-                  colorType="success"
-                  icon={<PlusCircle className="w-4 h-4" />}
-                />
-              )}
+            {canEdit && (
+              <StyledButton
+                label="Tambah Kategori"
+                onClick={() => setShowKategoriForm(true)}
+                colorType="success"
+                icon={<PlusCircle className="w-4 h-4" />}
+              />
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
             {sampahKategoriData.map((kat: any) => (
