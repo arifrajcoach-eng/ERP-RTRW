@@ -997,9 +997,12 @@ export default function App() {
   // Keep toggleDarkMode for compatibility
   const toggleDarkMode = cycleTheme;
 
-  const activeEmergency = emergenciesData.find(
-    (e) => e.status === "ACTIVE" && e.id !== hiddenEmergencyId,
-  );
+  const activeEmergency = emergenciesData.find((e) => {
+    if (e.status !== "ACTIVE" || e.id === hiddenEmergencyId) return false;
+    const emTime = e.timestamp ? new Date(e.timestamp).getTime() : Date.now();
+    const ageHours = (Date.now() - emTime) / (1000 * 60 * 60);
+    return ageHours < 24;
+  });
 
   useEffect(() => {
     // Redundant - audio logic is in SOSOverlay
@@ -1333,12 +1336,14 @@ export default function App() {
     // Build array of supported database tenant IDs by resolving child and virtual relationships
     const tIdsTemp = [tId];
     if (
-      tId === "RW_BERJUANG" ||
-      tId === "trihprw26" ||
-      tId.toLowerCase().includes("rt01") ||
-      tId.toLowerCase().includes("rw26_rt") ||
-      tId.toLowerCase().includes("rt_01") ||
-      tId.toLowerCase().includes("berjuang")
+      (tId === "RW_BERJUANG" ||
+        tId === "trihprw26" ||
+        tId.toLowerCase().includes("rt01") ||
+        tId.toLowerCase().includes("rw26_rt") ||
+        tId.toLowerCase().includes("rt_01") ||
+        tId.toLowerCase().includes("berjuang") ||
+        tId.toLowerCase().includes("trih")) &&
+      !tId.toLowerCase().includes("rw26")
     ) {
       tIdsTemp.push("RW_BERJUANG", "trihprw26");
     }
@@ -3926,7 +3931,7 @@ export default function App() {
           drag
           dragMomentum={false}
           whileDrag={{ scale: 1.1, cursor: "grabbing" }}
-          onClick={handleTriggerSOS}
+          onTap={handleTriggerSOS}
           disabled={isSOSTriggering}
           className="fixed bottom-6 right-6 z-[60] w-16 h-16 bg-red-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-red-300 hover:bg-red-700 transition-colors active:scale-90 group ring-4 ring-white cursor-grab touch-none"
           title="TOMBOL DARURAT (SOS)"
@@ -5380,6 +5385,13 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
               <Volume2 className="w-5 h-5" /> Nyalakan Suara/Getar
             </button>
           )}
+
+          <button
+            onClick={onCloseLocal}
+            className="px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+          >
+            <XCircle className="w-5 h-5" /> Tutup Sementara
+          </button>
         </div>
 
         <p className="mt-8 text-[10px] font-bold opacity-60 uppercase tracking-widest">

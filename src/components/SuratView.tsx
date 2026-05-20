@@ -93,7 +93,35 @@ export function SuratView({
   
   const formRef = useRef<HTMLFormElement>(null);
   
-  const isPengurus = userRole === 'Admin' || userRole === 'RW' || userRole === 'RT' || userRole === 'Bendahara' || currentUser?.isSuperAdmin;
+  const normalizedRole = (userRole || '').toUpperCase();
+  const isRT_Tenant = tenantId?.toLowerCase().startsWith('rt') || tenantId?.toLowerCase().includes('_rt') || tenantId?.toLowerCase().includes('rt_');
+  
+  const isRTUser = normalizedRole === 'RT' || 
+                   normalizedRole.includes('RT') || 
+                   normalizedRole === 'ADMIN RT' || 
+                   normalizedRole.includes('RT_') ||
+                   normalizedRole.includes('_RT') ||
+                   (isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
+
+  const isRWUser = normalizedRole === 'RW' || 
+                   normalizedRole.includes('RW') || 
+                   normalizedRole === 'ADMIN RW' || 
+                   (!isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
+
+  const isAdminUser = normalizedRole === 'SUPER_ADMIN' || 
+                      normalizedRole === 'ADMIN' || 
+                      !!currentUser?.isSuperAdmin ||
+                      currentUser?.role === 'SUPER_ADMIN' ||
+                      currentUser?.role === 'ADMIN';
+
+  const isPengurus = isRTUser || isRWUser || isAdminUser || normalizedRole === 'BENDAHARA' || normalizedRole === 'SEKRETARIS';
+  
+  const [approvalConfirm, setApprovalConfirm] = useState<{
+    s: any;
+    action: 'approve' | 'reject';
+    msg: string;
+    nextStatus?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (editingSurat) {
@@ -510,19 +538,32 @@ export function SuratView({
     }
   };
 
-  const handleApproveSurat = async (s: any) => {
+  const handleApproveSurat = (s: any) => {
+    console.log("[SuratView] handleApproveSurat invoked", {
+      status: s?.status,
+      isRTUser,
+      isRWUser,
+      isAdminUser,
+      userRole,
+      normalizedRole,
+      isRT_Tenant,
+      tenantId
+    });
+
     let nextStatus = 'Selesai';
     let msg = 'Surat disetujui';
 
     if (s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') {
-      if (userRole !== 'RT' && userRole !== 'Admin' && userRole !== 'SUPER_ADMIN' && !currentUser?.isSuperAdmin) {
+      if (!isRTUser && !isAdminUser) {
+        console.warn("[SuratView] Blocked RT approval check: not RT or Admin user", { isRTUser, isAdminUser });
         showNotification('Hanya RT yang dapat menyetujui tahap ini', 'error');
         return;
       }
       nextStatus = 'Menunggu Persetujuan RW';
       msg = 'Disetujui oleh RT. Sekarang menunggu persetujuan RW.';
     } else if (s.status === 'Menunggu Persetujuan RW') {
-      if (userRole !== 'RW' && userRole !== 'Admin' && userRole !== 'SUPER_ADMIN' && !currentUser?.isSuperAdmin) {
+      if (!isRWUser && !isAdminUser) {
+        console.warn("[SuratView] Blocked RW approval check: not RW or Admin user", { isRWUser, isAdminUser });
         showNotification('Hanya RW yang dapat menyetujui tahap ini', 'error');
         return;
       }
@@ -530,45 +571,68 @@ export function SuratView({
       msg = 'Surat disetujui oleh RW. Selesai.';
     }
 
-    if (!window.confirm(`${msg} Lanjutkan?`)) return;
+    setApprovalConfirm({
+      s,
+      action: 'approve',
+      msg,
+      nextStatus
+    });
+  };
+
+  const handleRejectSurat = (s: any) => {
+    setApprovalConfirm({
+      s,
+      action: 'reject',
+      msg: 'Apakah Anda yakin ingin menolak permohonan surat pengantar ini?'
+    });
+  };
+
+  const executeApprovalConfirm = async () => {
+    if (!approvalConfirm) return;
+    const { s, action, msg, nextStatus } = approvalConfirm;
+
+    console.log("[SuratView] executeApprovalConfirm executing", {
+      suratId: s?.id,
+      action,
+      nextStatus,
+      isRTUser,
+      isRWUser,
+      isAdminUser
+    });
     
     setIsLoadingDB(true);
     try {
-      const updateData: any = { 
-        status: nextStatus, 
-        updatedAt: new Date().toISOString() 
-      };
-      
-      if (nextStatus === 'Selesai') {
-        updateData.approvedAt = new Date().toISOString();
+      if (action === 'approve') {
+        const updateData: any = { 
+          status: nextStatus, 
+          updatedAt: new Date().toISOString() 
+        };
+        
+        if (nextStatus === 'Selesai') {
+          updateData.approvedAt = new Date().toISOString();
+        }
+
+        if (isRTUser || (isAdminUser && (s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan'))) {
+          updateData.approvedByRT = currentUser?.nama || currentUser?.name || 'Ketua RT';
+        }
+        if (isRWUser || (isAdminUser && s.status === 'Menunggu Persetujuan RW')) {
+          updateData.approvedByRW = currentUser?.nama || currentUser?.name || 'Ketua RW';
+        }
+
+        console.log("[SuratView] Writing approved status update to firestore", { id: s.id, updateData });
+        await updateDoc(doc(db, 'surat', s.id), updateData);
+        showNotification(msg, 'success');
+      } else if (action === 'reject') {
+        console.log("[SuratView] Writing rejected status update to firestore", { id: s.id });
+        await updateDoc(doc(db, 'surat', s.id), { status: 'Ditolak' });
+        showNotification('Surat ditolak', 'success');
       }
-
-      if (userRole === 'RT' || (userRole === 'SUPER_ADMIN' && s.status === 'Menunggu Persetujuan RT')) updateData.approvedByRT = currentUser.nama || currentUser.name || 'Admin';
-      if (userRole === 'RW' || (userRole === 'SUPER_ADMIN' && s.status === 'Menunggu Persetujuan RW')) updateData.approvedByRW = currentUser.nama || currentUser.name || 'Admin';
-      
-      // Handle the generic "Admin" role if present in old configs
-      if (userRole === 'Admin' && s.status === 'Menunggu Persetujuan RT') updateData.approvedByRT = currentUser.nama || currentUser.name || 'Admin';
-      if (userRole === 'Admin' && s.status === 'Menunggu Persetujuan RW') updateData.approvedByRW = currentUser.nama || currentUser.name || 'Admin';
-
-      await updateDoc(doc(db, 'surat', s.id), updateData);
-      showNotification(msg, 'success');
     } catch (err: any) {
+      console.error("[SuratView] Error updating approval status", err);
       handleFirestoreError(err, 'update', 'surat');
     } finally {
       setIsLoadingDB(false);
-    }
-  };
-
-  const handleRejectSurat = async (s: any) => {
-    if (!window.confirm("Tolak permohonan surat ini?")) return;
-    setIsLoadingDB(true);
-    try {
-      await updateDoc(doc(db, 'surat', s.id), { status: 'Ditolak' });
-      showNotification('Surat ditolak', 'success');
-    } catch (err: any) {
-      handleFirestoreError(err, 'update', 'surat');
-    } finally {
-      setIsLoadingDB(false);
+      setApprovalConfirm(null);
     }
   };
 
@@ -685,8 +749,8 @@ export function SuratView({
                           </button>
                         ) : (
                           /* Approval logic visibility */
-                          (((s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && (userRole === 'RT' || userRole === 'Admin' || userRole === 'SUPER_ADMIN' || currentUser?.isSuperAdmin)) || 
-                           (s.status === 'Menunggu Persetujuan RW' && (userRole === 'RW' || userRole === 'Admin' || userRole === 'SUPER_ADMIN' || currentUser?.isSuperAdmin))) && (
+                          (((s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && (isRTUser || isAdminUser)) || 
+                           (s.status === 'Menunggu Persetujuan RW' && (isRWUser || isAdminUser))) && (
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleApproveSurat(s); }} 
                               className="p-2 rounded-xl border border-slate-100 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all"
@@ -698,8 +762,8 @@ export function SuratView({
                         )}
                         
                         {(s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan RW' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && 
-                         (((s.status.includes('RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && (userRole === 'RT' || userRole === 'Admin' || userRole === 'SUPER_ADMIN')) || 
-                          (s.status.includes('RW') && (userRole === 'RW' || userRole === 'Admin' || userRole === 'SUPER_ADMIN')) || 
+                         (((s.status.includes('RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && (isRTUser || isAdminUser)) || 
+                          (s.status.includes('RW') && (isRWUser || isAdminUser)) || 
                           currentUser?.isSuperAdmin) && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleRejectSurat(s); }}
@@ -1295,12 +1359,89 @@ export function SuratView({
                            <p className="text-sm font-bold text-slate-700 mt-0.5">{new Date(viewingSurat.tanggal).toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
                         </div>
                       </div>
+
+                      {/* Timeline Pelacakan Status */}
+                      <div className="space-y-4 pt-4 border-t border-slate-100">
+                         <h5 className="text-[11px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                           <ShieldCheck className="w-4 h-4" /> Alur Pelacakan Surat
+                         </h5>
+                         
+                         <div className="relative pl-6 space-y-6 before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100">
+                            {/* Step 1: Pengajuan */}
+                            <div className="relative">
+                               <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow" />
+                               <div>
+                                  <p className="text-xs font-black text-slate-800">1. Permohonan Dikirim</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">Oleh Pemohon • {new Date(viewingSurat.tanggal).toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
+                               </div>
+                            </div>
+
+                            {/* Step 2: Persetujuan RT */}
+                            <div className="relative">
+                               <div className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center shadow ${
+                                 viewingSurat.approvedByRT || viewingSurat.status === 'Menunggu Persetujuan RW' || viewingSurat.status === 'Selesai'
+                                   ? 'bg-emerald-500' 
+                                   : viewingSurat.status === 'Ditolak'
+                                   ? 'bg-red-500'
+                                   : 'bg-amber-400 animate-pulse'
+                               }`} />
+                               <div>
+                                  <p className="text-xs font-black text-slate-800">2. Verifikasi & Approval RT</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                     {viewingSurat.approvedByRT || viewingSurat.status === 'Menunggu Persetujuan RW' || viewingSurat.status === 'Selesai'
+                                        ? `Disetujui ${viewingSurat.approvedByRT ? `oleh ${viewingSurat.approvedByRT}` : 'oleh Ketua RT'}`
+                                        : viewingSurat.status === 'Ditolak'
+                                        ? 'Ditolak / Gagal Verifikasi'
+                                        : 'Menunggu Persetujuan Ketua RT (Surat masih di RT)'
+                                     }
+                                  </p>
+                               </div>
+                            </div>
+
+                            {/* Step 3: Persetujuan RW */}
+                            <div className="relative">
+                               <div className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center shadow ${
+                                 viewingSurat.status === 'Selesai'
+                                   ? 'bg-emerald-500'
+                                   : (viewingSurat.status === 'Menunggu Persetujuan RW' ? 'bg-amber-400 animate-pulse' : 'bg-slate-200')
+                               }`} />
+                               <div>
+                                  <p className="text-xs font-black text-slate-800">3. Verifikasi & Approval RW</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                     {viewingSurat.status === 'Selesai'
+                                        ? `Disetujui ${viewingSurat.approvedByRW ? `oleh ${viewingSurat.approvedByRW}` : 'oleh Ketua RW'}`
+                                        : (viewingSurat.status === 'Menunggu Persetujuan RW'
+                                           ? 'Menunggu Persetujuan Ketua RW (Surat sudah diteruskan ke RW)'
+                                           : 'Menunggu antrean approval RT selesai'
+                                        )
+                                     }
+                                  </p>
+                               </div>
+                            </div>
+
+                            {/* Step 4: Selesai */}
+                            <div className="relative">
+                               <div className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center shadow ${
+                                 viewingSurat.status === 'Selesai' ? 'bg-blue-600' : 'bg-slate-200'
+                               }`} />
+                               <div>
+                                  <p className="text-xs font-black text-slate-800">4. Surat Siap Unduh (Selesai)</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                     {viewingSurat.status === 'Selesai' 
+                                        ? 'Dokumen pdf siap dicetak / diunduh oleh pemohon.' 
+                                        : 'Dokumen akan diterbitkan otomatis setelah disetujui RW.'
+                                     }
+                                  </p>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
                    </div>
                 </div>
-
+                
                 <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
-                   {(((viewingSurat.status === 'Menunggu Persetujuan RT' || viewingSurat.status === 'Menunggu Persetujuan' || viewingSurat.status === 'Diajukan') && (userRole === 'RT' || userRole === 'Admin' || userRole === 'SUPER_ADMIN' || currentUser?.isSuperAdmin)) || 
-                     (viewingSurat.status === 'Menunggu Persetujuan RW' && (userRole === 'RW' || userRole === 'Admin' || userRole === 'SUPER_ADMIN' || currentUser?.isSuperAdmin))) && (
+                   {(((viewingSurat.status === 'Menunggu Persetujuan RT' || viewingSurat.status === 'Menunggu Persetujuan' || viewingSurat.status === 'Diajukan') && (isRTUser || isAdminUser)) || 
+                     (viewingSurat.status === 'Menunggu Persetujuan RW' && (isRWUser || isAdminUser))) && (
                      <>
                         <button onClick={() => { handleApproveSurat(viewingSurat); setViewingSurat(null); }} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-200">Setujui</button>
                         <button onClick={() => { handleRejectSurat(viewingSurat); setViewingSurat(null); }} className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-200">Tolak</button>
@@ -1328,6 +1469,22 @@ export function SuratView({
             confirmText="Ya, Hapus"
             cancelText="Batal"
             isLoading={isDeleting}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {approvalConfirm && (
+          <ConfirmModal 
+            isOpen={true}
+            title={approvalConfirm.action === 'approve' ? 'Setujui Permohonan Surat' : 'Tolak Permohonan Surat'}
+            message={approvalConfirm.msg}
+            onConfirm={executeApprovalConfirm}
+            onCancel={() => setApprovalConfirm(null)}
+            confirmText={approvalConfirm.action === 'approve' ? 'Ya, Setujui' : 'Ya, Tolak'}
+            cancelText="Batal"
+            type={approvalConfirm.action === 'approve' ? 'info' : 'danger'}
+            isLoading={isLoadingDB}
           />
         )}
       </AnimatePresence>
