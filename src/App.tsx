@@ -58,6 +58,7 @@ import {
   BookCopy,
   Store,
   ShieldCheck,
+  Star,
   UserCheck,
   Image,
   Camera,
@@ -934,6 +935,7 @@ export default function App() {
   const [userVotes, setUserVotes] = useState<any[]>([]);
   const [tokoProducts, setTokoProducts] = useState<any[]>([]);
   const [tokoOrders, setTokoOrders] = useState<any[]>([]);
+  const [tokoReviews, setTokoReviews] = useState<any[]>([]);
   const [complaintsData, setComplaintsData] = useState<any[]>([]);
   const [bookingsData, setBookingsData] = useState<any[]>([]);
   const [isSOSTriggering, setIsSOSTriggering] = useState(false);
@@ -2102,6 +2104,18 @@ export default function App() {
       },
     );
 
+    const unsubTokoReviews = onSnapshot(
+      query(collection(db, "toko_reviews")),
+      (snap) => {
+        setTokoReviews(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        onDataLoaded();
+      },
+      (err) => {
+        handleFirestoreError(err, "list", "toko_reviews");
+        onDataLoaded();
+      },
+    );
+
     const getVerifikasiQuery = () => {
       const base = collection(db, "verifikasi_warga");
 
@@ -2120,11 +2134,11 @@ export default function App() {
       if (!isOperatorRole) {
         // If it's a citizen (logged in via anonymous auth or linked)
         const uid = auth.currentUser.uid;
-        // We ONLY filter by authUid for citizens to satisfy rules
-        return query(base, where("authUid", "==", uid));
+        // Include tenantId in constraints for additional security layer
+        return query(base, where("authUid", "==", uid), where("tenantId", "in", tIds));
       }
 
-      if (currentUser?.isSuperAdmin) return query(base);
+      if (currentUser?.isSuperAdmin && !selectedTenantId) return query(base);
 
       const constraints = [where("tenantId", "in", tIds)];
       return query(base, ...constraints);
@@ -2336,6 +2350,7 @@ export default function App() {
       unsubUserVotes();
       unsubTokoProducts();
       unsubTokoOrders();
+      unsubTokoReviews();
       unsubVerifikasi();
       unsubUsers();
       unsubTenants();
@@ -2983,8 +2998,10 @@ export default function App() {
             logoUrl={settings?.org_logo_url || settings?.logo_url}
           />
         </div>
-        <h2 className="text-xl font-black text-slate-800 tracking-tight font-elegant mb-2">
-          SmartRW <span className="text-brand-pink">AI</span>
+        <h2 className="text-xl font-black text-slate-800 tracking-tight font-['Georgia'] mb-2">
+          <span className="bg-gradient-to-r from-sky-500 via-blue-700 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+          {' '}
+          <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)]">AI</span>
         </h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
           Menyiapkan Sesi Keamanan...
@@ -3248,7 +3265,7 @@ export default function App() {
                             Smart
                           </span>
                           <span className="text-brand-blue">RW</span>&nbsp;
-                          <span className="text-brand-pink">AI</span>
+                          <span className="text-brand-pink text-[15px] w-[81.89px] mt-[11px] mb-[-4px] leading-[15.5px]">AI</span>
                         </span>
                       </>
                     ) : (
@@ -3267,10 +3284,10 @@ export default function App() {
               </h1>
               {currentTenant?.name && (
                 <div className="mt-1.5 ml-[18px] space-y-1">
-                  <p className="text-[9px] font-bold text-[#5779ab] dark:text-slate-400 bg-transparent font-[Georgia] uppercase tracking-widest">
-                    Eksosistem Digital
+                  <p className="text-[8px] font-bold text-[#5779ab] dark:text-slate-400 bg-transparent font-[Georgia] uppercase tracking-widest text-center w-[125px] -ml-[1px] mb-1 leading-[12.86px]">
+                    Powered by Nexapps
                   </p>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg pb-[1px] ml-0">
                     <Zap className="w-2.5 h-2.5 text-brand-blue" />
                     <span className="text-[9px] font-black text-brand-blue uppercase tracking-tight">
                       PAKET {currentTenant?.status || "STARTER"}
@@ -3512,6 +3529,7 @@ export default function App() {
               votingConfig={votingConfig}
               userVotes={userVotes}
               tokoOrders={tokoOrders}
+              tokoReviews={tokoReviews}
               complaintsData={complaintsData}
               bookingsData={bookingsData}
               handleLinkToWarga={handleLinkToWarga}
@@ -3822,6 +3840,7 @@ export default function App() {
               tenantId={currentUser.tenantId || "RW26_SMART"}
               products={tokoProducts}
               orders={tokoOrders}
+              reviews={tokoReviews}
               currentUser={currentUser}
               wargaAuth={wargaAuth}
               handleFirestoreError={handleFirestoreError}
@@ -5425,6 +5444,7 @@ function ETokoView({
   tenantId,
   products,
   orders,
+  reviews,
   currentUser,
   wargaAuth,
   handleFirestoreError,
@@ -5436,6 +5456,7 @@ function ETokoView({
   tenantId: string;
   products: any[];
   orders: any[];
+  reviews: any[];
   currentUser: any;
   wargaAuth: any;
   handleFirestoreError: any;
@@ -5457,6 +5478,11 @@ function ETokoView({
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "TRANSFER">("COD");
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [targetOrderForReview, setTargetOrderForReview] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [activeDetailTab, setActiveDetailTab] = useState<"detail" | "reviews">("detail");
 
   // Admin states
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
@@ -5639,6 +5665,41 @@ function ETokoView({
       );
     } catch (err) {
       handleFirestoreError(err, "update", "toko_orders");
+    }
+  };
+
+  const handleSaveReview = async () => {
+    if (!reviewComment.trim() || !targetOrderForReview) return;
+    setIsLoading(true);
+    try {
+      const reviewId = `REV-${targetOrderForReview.id}-${Date.now()}`;
+      const firstItem = targetOrderForReview.items[0];
+      await setDoc(doc(db, "toko_reviews", reviewId), {
+        id: reviewId,
+        orderId: targetOrderForReview.id,
+        productId: firstItem.id,
+        productName: firstItem.name,
+        rating: reviewRating,
+        comment: reviewComment,
+        customerName: wargaAuth?.nama || currentUser?.name || "Warga",
+        customerId: wargaAuth?.nik || currentUser?.uid,
+        timestamp: new Date().toISOString(),
+        tenantId,
+      });
+
+      await updateDoc(doc(db, "toko_orders", targetOrderForReview.id), {
+        isReviewed: true,
+      });
+
+      showNotification("Ulasan berhasil dikirim!", "success");
+      setReviewComment("");
+      setReviewRating(5);
+      setShowReviewModal(false);
+      setTargetOrderForReview(null);
+    } catch (err) {
+      handleFirestoreError(err, "create", "toko_reviews");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -5927,6 +5988,17 @@ function ETokoView({
                       >
                         {order.status}
                       </span>
+                      {order.status === "COMPLETED" && !order.isReviewed && (
+                        <button
+                          onClick={() => {
+                            setTargetOrderForReview(order);
+                            setShowReviewModal(true);
+                          }}
+                          className="mt-2 block w-full px-3 py-1.5 bg-brand-blue text-white text-[9px] font-black uppercase tracking-widest rounded-full hover:bg-blue-600 transition-all"
+                        >
+                          Beri Ulasan
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -6278,27 +6350,117 @@ function ETokoView({
                 </button>
               </div>
               <div className="p-8">
-                <h2 className="text-3xl font-black text-slate-800 mb-2">
-                  {selectedProduct.name}
-                </h2>
-                <p className="text-xl font-black text-brand-blue mb-4">
-                  Rp {selectedProduct.price.toLocaleString()}
-                </p>
-                <p className="text-slate-600 mb-6">
-                  {selectedProduct.description ||
-                    "Tidak ada deskripsi tersedia."}
-                </p>
-                <div className="flex gap-4">
+                <div className="flex border-b border-slate-100 mb-6 gap-6">
                   <button
-                    onClick={() => {
-                      addToCart(selectedProduct);
-                      setShowProductModal(false);
-                    }}
-                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                    onClick={() => setActiveDetailTab("detail")}
+                    className={`pb-2 text-[10px] font-black uppercase tracking-widest relative ${activeDetailTab === "detail" ? "text-brand-blue" : "text-slate-400"}`}
                   >
-                    Tambah Ke Keranjang
+                    Detail Produk
+                    {activeDetailTab === "detail" && (
+                      <motion.div
+                        layoutId="detailtab"
+                        className="absolute bottom-0 left-0 right-0 h-1 bg-brand-blue rounded-full"
+                      />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveDetailTab("reviews")}
+                    className={`pb-2 text-[10px] font-black uppercase tracking-widest relative ${activeDetailTab === "reviews" ? "text-brand-blue" : "text-slate-400"}`}
+                  >
+                    Ulasan (
+                    {
+                      reviews.filter((r) => r.productId === selectedProduct.id)
+                        .length
+                    }
+                    )
+                    {activeDetailTab === "reviews" && (
+                      <motion.div
+                        layoutId="detailtab"
+                        className="absolute bottom-0 left-0 right-0 h-1 bg-brand-blue rounded-full"
+                      />
+                    )}
                   </button>
                 </div>
+
+                {activeDetailTab === "detail" ? (
+                  <>
+                    <h2 className="text-3xl font-black text-slate-800 mb-2">
+                      {selectedProduct.name}
+                    </h2>
+                    <div className="flex items-center gap-2 mb-4">
+                      <p className="text-xl font-black text-brand-blue">
+                        Rp {selectedProduct.price.toLocaleString()}
+                      </p>
+                      <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold">
+                        Stok: {selectedProduct.stock}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 mb-6 text-sm leading-relaxed">
+                      {selectedProduct.description ||
+                        "Kualitas terjamin untuk warga RW 26."}
+                    </p>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => {
+                          addToCart(selectedProduct);
+                          setShowProductModal(false);
+                        }}
+                        className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200"
+                      >
+                        Tambah Ke Keranjang
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4 max-h-[300px] overflow-auto pr-2 custom-scrollbar">
+                    {reviews.filter((r) => r.productId === selectedProduct.id)
+                      .length === 0 ? (
+                      <div className="py-14 text-center text-slate-300">
+                        <ShoppingBag className="w-12 h-12 mx-auto opacity-10 mb-2" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">
+                          Belum ada ulasan
+                        </p>
+                      </div>
+                    ) : (
+                      reviews
+                        .filter((r) => r.productId === selectedProduct.id)
+                        .sort(
+                          (a, b) =>
+                            new Date(b.timestamp).getTime() -
+                            new Date(a.timestamp).getTime(),
+                        )
+                        .map((rev) => (
+                          <div
+                            key={rev.id}
+                            className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100"
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight">
+                                {rev.customerName}
+                              </span>
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-3 h-3 ${i < rev.rating ? "text-yellow-400 fill-yellow-400" : "text-slate-200"}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                              {rev.comment}
+                            </p>
+                            <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase">
+                              {new Date(rev.timestamp).toLocaleDateString(
+                                "id-ID",
+                                { month: "short", year: "numeric" },
+                              )}
+                            </p>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
@@ -9881,7 +10043,9 @@ function LoginView({
                     </div>
                     <h3 className="text-xl font-black text-slate-800 leading-tight tracking-tight">
                       Gunakan{" "}
-                      <span className="text-brand-pink">SmartRW AI</span>
+                    <span className="font-['Georgia'] bg-gradient-to-r from-sky-500 via-blue-700 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+                    {' '}
+                    <span className="font-['Georgia'] bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)]">AI</span>
                     </h3>
                     <p className="text-sm font-bold text-slate-500 mb-4 whitespace-nowrap overflow-hidden text-ellipsis">
                       Dapatkan{" "}

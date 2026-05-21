@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'motion/react';
-import { doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query, collection, where } from 'firebase/firestore';                
 import { db } from '../firebase';
 
 interface WargaViewProps {
@@ -166,6 +166,69 @@ function WargaView(props: WargaViewProps) {
       handleFirestoreError(error, 'delete', '/data_warga');
     } finally {
       setIsDeletingWarga(false);
+    }
+  };
+
+  const cleanupWarga = async () => {
+    setIsLoadingDB(true);
+    try {
+        // Query ALL data_warga for the target tenant
+        const q = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId));
+        const snapshot = await getDocs(q);
+        const docs = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+        
+        console.log(`Analyzing ${docs.length} documents for duplicates in tenant: ${tenantId}...`);
+        
+        const map = new Map<string, any[]>();
+        
+        for (const doc of docs) {
+            // Ensure nik exists and is normalized
+            const nik = (doc.nik || '').toString().trim();
+            if (!nik || nik === 'Belum Ada') continue;
+            
+            if (!map.has(nik)) map.set(nik, []);
+            map.get(nik)!.push(doc);
+        }
+        
+        console.log(`Processed ${map.size} unique NIKs.`);
+        
+        const toDelete: any[] = [];
+        for (const [nik, items] of map.entries()) {
+            if (items.length > 1) {
+                console.log(`Found ${items.length} docs for NIK: '${nik}'`);
+                // Sort to keep the "best" one. 
+                // Currently sorting by total fields count (proxy for completeness)
+                items.sort((a,b) => Object.keys(b).length - Object.keys(a).length);                
+                toDelete.push(...items.slice(1));
+            }
+        }
+        
+        if (toDelete.length === 0) {
+            showNotification(`Tidak ditemukan data duplikat (analisis ${docs.length} data).`, 'info');
+            return;
+        }
+        
+        console.log(`Preparing to delete ${toDelete.length} documents.`);
+        
+        // Batch delete
+        const CHUNK_SIZE = 450; 
+        for (let i = 0; i < toDelete.length; i += CHUNK_SIZE) {
+            const chunk = toDelete.slice(i, i + CHUNK_SIZE);
+            const batch = writeBatch(db);
+            chunk.forEach(d => {
+                batch.delete(doc(db, 'data_warga', d.id));
+            });
+            await batch.commit();
+            console.log(`Deleted chunk ${Math.floor(i / CHUNK_SIZE) + 1}`);
+        }
+        
+        showNotification(`Berhasil menghapus ${toDelete.length} data duplikat.`, 'success');
+        
+    } catch (e: any) {
+        console.error("Cleanup error:", e);
+        handleFirestoreError(e, 'delete', 'data_warga');
+    } finally {
+        setIsLoadingDB(false);
     }
   };
 
@@ -366,6 +429,11 @@ function WargaView(props: WargaViewProps) {
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredWargaData.length} {isApt ? "Penghuni" : "Warga"} Terdaftar</p>
         </div>
         <div className="flex gap-2">
+          {userRole === 'SUPER_ADMIN' && (
+            <button onClick={cleanupWarga} className="bg-purple-50 hover:bg-purple-100 text-purple-600 border border-[#cf93ff] px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+                <Trash2 size={18} /> Bersihkan Data Ganda
+             </button>
+          )}
           {selectedWargaIds.length > 0 && (
             <button onClick={promptBulkDelete} className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
               <Trash size={18} /> Hapus ({selectedWargaIds.length})

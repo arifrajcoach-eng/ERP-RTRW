@@ -326,6 +326,15 @@ export default function DashboardView({
         dateObj: new Date(b.createdAt || 0),
         isPersonal: b.userId === currentUser?.uid || b.userName === currentUser?.name
       })),
+      ...verifikasiWargaData.map(v => ({
+        title: 'Verifikasi Data Warga',
+        desc: `${v.nama}: Pembaruan data mandiri`,
+        date: v.timestamp ? new Date(v.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
+        status: v.status || 'Diajukan',
+        type: 'doc',
+        dateObj: new Date(v.timestamp || 0),
+        isPersonal: v.authUid === currentUser?.uid || v.nik === currentUser?.nik
+      })),
     ];
 
     if (isWarga) {
@@ -333,7 +342,7 @@ export default function DashboardView({
     }
 
     return rawActivities.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()).slice(0, 15);
-  }, [isWarga, currentUser, kasData, suratData, bukuTamuData, posyanduKegiatanData, sampahSetoranData, userVotes, tokoOrders, emergenciesData, complaintsData, bookingsData]);
+  }, [isWarga, currentUser, kasData, suratData, bukuTamuData, posyanduKegiatanData, sampahSetoranData, userVotes, tokoOrders, emergenciesData, complaintsData, bookingsData, verifikasiWargaData]);
 
   const activityChartData = useMemo(() => {
     const getActData = (period: string) => {

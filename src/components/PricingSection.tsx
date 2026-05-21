@@ -27,8 +27,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
             <Sparkles className="w-3 h-3" />
             Promo Terbatas
           </div>
-          <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-2">
-            Pilih Paket <span className="text-brand-pink">SmartRW AI</span>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-2 font-['Georgia']">
+            Pilih Paket <span className="bg-gradient-to-r from-sky-500 via-blue-700 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span> <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)]">AI</span>
           </h2>
           <p className="text-slate-500 text-sm max-w-lg mx-auto leading-relaxed">
             Solusi digitalisasi RT/RW tercanggih di Indonesia. <br className="hidden md:block" />
