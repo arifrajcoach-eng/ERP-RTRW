@@ -29,6 +29,7 @@ interface DashboardViewProps {
   votingConfig: any;
   userVotes: any[];
   tokoOrders: any[];
+  tokoReviews?: any[];
   complaintsData: any[];
   bookingsData: any[];
   handleLinkToWarga: (nik: string, pin: string) => void;

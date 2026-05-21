@@ -175,7 +175,7 @@ function WargaView(props: WargaViewProps) {
         // Query ALL data_warga for the target tenant
         const q = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId));
         const snapshot = await getDocs(q);
-        const docs = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+        const docs = snapshot.docs.map(d => ({id: d.id, ...(d.data() as any)}));
         
         console.log(`Analyzing ${docs.length} documents for duplicates in tenant: ${tenantId}...`);
         
@@ -295,6 +295,89 @@ function WargaView(props: WargaViewProps) {
         // Refresh data ideally, but here we rely on the component re-rendering/props
     } catch (e: any) {
         console.error("Sync error:", e);
+        handleFirestoreError(e, 'write', 'data_warga');
+    } finally {
+        setIsLoadingDB(false);
+    }
+  };
+
+  const syncWargaFromRTsToRW = async () => {
+    setIsLoadingDB(true);
+    console.log(`Starting reverse sync from RTs to RW tenant "${tenantId}"...`);
+    try {
+        const CHILD_TENANT_IDS = [
+            "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
+            "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04", "RW26_RT05"
+        ];
+        
+        let allRTDocs: any[] = [];
+        
+        for (const childId of CHILD_TENANT_IDS) {
+            console.log(`Fetching citizens from RT child: "${childId}"`);
+            const q = query(
+                collection(db, 'data_warga'),
+                where('tenantId', '==', childId)
+            );
+            const snapshot = await getDocs(q);
+            snapshot.docs.forEach(d => {
+                allRTDocs.push({ id: d.id, ...d.data() });
+            });
+        }
+        
+        console.log(`Found total of ${allRTDocs.length} citizens in all RTs.`);
+        
+        if (allRTDocs.length === 0) {
+            showNotification("Tidak ada data warga ditemukan di tenant-tenant RT anggota.", "info");
+            setIsLoadingDB(false);
+            return;
+        }
+
+        const currentWargaMap = new Map<string, any>();
+        wargaData.forEach(w => {
+            const nik = (w.nik || '').toString().trim();
+            if (nik) {
+                currentWargaMap.set(nik, w);
+            }
+        });
+
+        const docsToSync: any[] = [];
+        allRTDocs.forEach(rtWarga => {
+            const nik = (rtWarga.nik || '').toString().trim();
+            if (!nik) return;
+            
+            if (!currentWargaMap.has(nik)) {
+                docsToSync.push(rtWarga);
+            }
+        });
+
+        if (docsToSync.length === 0) {
+            showNotification("Semua data warga dari RT sudah tersinkron dengan RW ini. Tidak ada data baru.", "info");
+            setIsLoadingDB(false);
+            return;
+        }
+
+        console.log(`Syncing ${docsToSync.length} new records from RTs to RW tenant.`);
+        
+        const CHUNK_SIZE = 450;
+        for (let i = 0; i < docsToSync.length; i += CHUNK_SIZE) {
+            const chunk = docsToSync.slice(i, i + CHUNK_SIZE);
+            const batch = writeBatch(db);
+            chunk.forEach(docSnap => {
+                const data = docSnap;
+                const newId = `${tenantId}_${data.nik || new Date().getTime() + Math.random()}`;
+                
+                const { id, ...dataToSave } = data;
+                batch.set(doc(db, 'data_warga', newId), {
+                    ...dataToSave,
+                    tenantId: tenantId,
+                    docId: newId
+                });
+            });
+            await batch.commit();
+        }
+        showNotification(`Berhasil menarik ${docsToSync.length} data warga baru dari RT anggota ke RW.`, 'success');
+    } catch (e: any) {
+        console.error("Reverse sync error:", e);
         handleFirestoreError(e, 'write', 'data_warga');
     } finally {
         setIsLoadingDB(false);
@@ -498,14 +581,20 @@ function WargaView(props: WargaViewProps) {
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredWargaData.length} {isApt ? "Penghuni" : "Warga"} Terdaftar</p>
         </div>
         <div className="flex gap-2">
-          {userRole === 'SUPER_ADMIN' && (
+          {['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(userRole) && (
             <>
               <button onClick={cleanupWarga} className="bg-purple-50 hover:bg-purple-100 text-purple-600 border border-[#cf93ff] px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
                   <Trash2 size={18} /> Bersihkan Data Ganda
                </button>
-               <button onClick={syncWargaFromRW} className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
-                  <ClipboardList size={18} /> Sinkron RW
-               </button>
+               {detectedRT ? (
+                 <button onClick={syncWargaFromRW} className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+                    <ClipboardList size={18} /> Sinkron RW
+                 </button>
+               ) : (
+                 <button onClick={syncWargaFromRTsToRW} className="bg-teal-50 hover:bg-teal-100 text-teal-600 border border-teal-200 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+                    <ClipboardList size={18} /> Sinkron Dari RT
+                 </button>
+               )}
             </>
           )}
           {selectedWargaIds.length > 0 && (
