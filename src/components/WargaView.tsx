@@ -241,31 +241,63 @@ function WargaView(props: WargaViewProps) {
     setIsLoadingDB(true);
     console.log(`Starting sync for RT "${detectedRT}" to tenant "${tenantId}"...`);
     try {
-        const PARENT_TENANT_ID = 'RW_BERJUANG';
-        const formattedRT = detectedRT.padStart(2, '0');
-        console.log(`Querying parent tenant: ${PARENT_TENANT_ID}, looking for RT: "${formattedRT}"`);
+        const potentialParentIDs = Array.from(new Set([
+            currentTenant?.parentId,
+            'RW_BERJUANG',
+            'rw_berjuang',
+            'trihprw26'
+        ].filter(Boolean) as string[]));
+
+        console.log("Querying potential parent tenants:", potentialParentIDs);
+
+        let allParentDocs: any[] = [];
+        for (const pId of potentialParentIDs) {
+            try {
+                const q = query(
+                    collection(db, 'data_warga'),
+                    where('tenantId', '==', pId)
+                );
+                const snapshot = await getDocs(q);
+                console.log(`Parent tenant "${pId}" returned ${snapshot.docs.length} citizen documents.`);
+                snapshot.docs.forEach(docSnap => {
+                    allParentDocs.push(docSnap);
+                });
+            } catch (err) {
+                console.warn(`Query for parent tenant "${pId}" failed (possible rules constraint):`, err);
+            }
+        }
+
+        console.log(`Found total ${allParentDocs.length} potential parent documents across all queried tenants.`);
         
-        // Loosen query to debug
-        const q = query(
-            collection(db, 'data_warga'),
-            where('tenantId', '==', PARENT_TENANT_ID)
-        );
-        const snapshot = await getDocs(q);
-        const allParentDocs = snapshot.docs;
+        const cleanNumberNode = (val: any): string => {
+            if (val === null || val === undefined) return "";
+            return val.toString().replace(/[^0-9]/g, '').replace(/^0+/, '');
+        };
         
-        console.log(`Found ${allParentDocs.length} total docs in ${PARENT_TENANT_ID}.`);
-        
-        // Filter in JS for now to identify mismatch
+        const targetRTCode = cleanNumberNode(detectedRT);
+        console.log(`Normalized target RT code to match is "${targetRTCode}" (from raw "${detectedRT}")`);
+
+        // Filter parent documents with lenient and comprehensive matching rules
         const docsToSync = allParentDocs.filter(d => {
             const data = d.data();
-            const docRT = (data.rt || '').toString().trim();
-            return docRT === formattedRT || docRT === parseInt(formattedRT).toString();
+            const docRT = data.rt;
+            if (!docRT) return false;
+            
+            const normalizedDocRT = cleanNumberNode(docRT);
+            const looseDocRT = docRT.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+            const looseTargetRT = detectedRT.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            return (
+                normalizedDocRT === targetRTCode || 
+                looseDocRT.includes(looseTargetRT) || 
+                looseTargetRT.includes(looseDocRT)
+            );
         });
         
-        console.log(`Found ${docsToSync.length} docs matching RT "${formattedRT}" after manual filter.`);
+        console.log(`Found ${docsToSync.length} docs matching RT "${detectedRT}" after lenient matching.`);
         
         if (docsToSync.length === 0) {
-            showNotification(`Tidak ada data warga ditemukan di ${PARENT_TENANT_ID} untuk RT "${detectedRT}".`, "info");
+            showNotification(`Tidak ada data warga ditemukan di tenant RW induk untuk RT "${detectedRT}".`, "info");
             setIsLoadingDB(false);
             return;
         }
@@ -286,13 +318,13 @@ function WargaView(props: WargaViewProps) {
                     ...data,
                     tenantId: tenantId,
                     docId: newId
-                });
+                }, { merge: true });
             });
             await batch.commit();
             console.log(`Committed batch of ${chunk.length}`);
         }
-        showNotification(`Berhasil menyinkronkan ${docsToSync.length} data warga.`, 'success');
-        // Refresh data ideally, but here we rely on the component re-rendering/props
+        showNotification(`Berhasil menyinkronkan ${docsToSync.length} data warga ke tenant Anda.`, 'success');
+        // Let the state update or local refresh trigger
     } catch (e: any) {
         console.error("Sync error:", e);
         handleFirestoreError(e, 'write', 'data_warga');
