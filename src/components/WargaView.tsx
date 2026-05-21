@@ -232,6 +232,58 @@ function WargaView(props: WargaViewProps) {
     }
   };
 
+  const syncWargaFromRW = async () => {
+    if (!detectedRT) {
+        showNotification("Tidak dapat mendeteksi RT tujuan sinkronisasi.", "error");
+        return;
+    }
+    if (!window.confirm(`Sinkronisasi warga RT ${detectedRT} dari RW Induk & RW_BERJUANG?`)) return;
+
+    setIsLoadingDB(true);
+    try {
+        const PARENT_TENANT_ID = 'RW_BERJUANG';
+        // Query parent data
+        const q = query(
+            collection(db, 'data_warga'),
+            where('tenantId', '==', PARENT_TENANT_ID),
+            where('rt', '==', detectedRT.padStart(2, '0'))
+        );
+        const snapshot = await getDocs(q);
+        const docsToSync = snapshot.docs;
+        
+        if (docsToSync.length === 0) {
+            showNotification("Tidak ada data warga ditemukan di RW Induk untuk RT tersebut.", "info");
+            setIsLoadingDB(false);
+            return;
+        }
+
+        // Batch Sync
+        const CHUNK_SIZE = 450;
+        for (let i = 0; i < docsToSync.length; i += CHUNK_SIZE) {
+            const chunk = docsToSync.slice(i, i + CHUNK_SIZE);
+            const batch = writeBatch(db);
+            chunk.forEach(docSnap => {
+                const data = docSnap.data();
+                // Create new ID with child tenant
+                const newId = `${tenantId}_${data.nik || new Date().getTime() + Math.random()}`;
+                batch.set(doc(db, 'data_warga', newId), {
+                    ...data,
+                    tenantId: tenantId,
+                    docId: newId
+                });
+            });
+            await batch.commit();
+        }
+        showNotification(`Berhasil menyinkronkan ${docsToSync.length} data warga.`, 'success');
+        // Refresh data ideally, but here we rely on the component re-rendering/props
+    } catch (e: any) {
+        console.error("Sync error:", e);
+        handleFirestoreError(e, 'write', 'data_warga');
+    } finally {
+        setIsLoadingDB(false);
+    }
+  };
+
   const toggleSelectAll = () => {
     if (selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0) {
       setSelectedWargaIds([]);
@@ -430,9 +482,14 @@ function WargaView(props: WargaViewProps) {
         </div>
         <div className="flex gap-2">
           {userRole === 'SUPER_ADMIN' && (
-            <button onClick={cleanupWarga} className="bg-purple-50 hover:bg-purple-100 text-purple-600 border border-[#cf93ff] px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
-                <Trash2 size={18} /> Bersihkan Data Ganda
-             </button>
+            <>
+              <button onClick={cleanupWarga} className="bg-purple-50 hover:bg-purple-100 text-purple-600 border border-[#cf93ff] px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+                  <Trash2 size={18} /> Bersihkan Data Ganda
+               </button>
+               <button onClick={syncWargaFromRW} className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
+                  <ClipboardList size={18} /> Sinkron RW
+               </button>
+            </>
           )}
           {selectedWargaIds.length > 0 && (
             <button onClick={promptBulkDelete} className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
