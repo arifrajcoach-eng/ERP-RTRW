@@ -111,10 +111,10 @@ service cloud.firestore {
             getUserData().tenantId == tenantId || 
             getUserData().tenantId.lower() == tenantId.lower() || 
             
-            // Allow sub-tenant to read parent
-            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26$') && tenantId.lower() == 'rw26_smart') ||
-            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
-            (getUserData().tenantId.lower().matches('^rt[0-9]+_trih.*') && (tenantId.lower() in ['rw_berjuang', 'trihprw26'])) ||
+            // Allow sub-tenant to read parent (flexible across ecosystem)
+            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26$') && (tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26'])) ||
+            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
+            (getUserData().tenantId.lower().matches('^rt[0-9]+_trih.*') && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
 
             (getUserData().tenantId == 'RW_BERJUANG' && (tenantId in ['trihprw26', 'RW_BERJUANG', 'RW26_SMART'])) ||
             (getUserData().tenantId == 'trihprw26' && (tenantId in ['RW_BERJUANG', 'trihprw26', 'RW26_SMART'])) ||
@@ -243,7 +243,7 @@ service cloud.firestore {
     // --- Warga & Kependudukan ---
 
     match /data_warga/{docId} {
-      allow list: if isTenantMemberStatic(resource.data.tenantId);
+      allow list: if isTenantMember(resource.data.tenantId) || isTenantMemberStatic(resource.data.tenantId);
       allow get: if isTenantMember(resource.data.tenantId);
       allow create: if isTenantMember(request.resource.data.tenantId);
       allow update: if isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId);
