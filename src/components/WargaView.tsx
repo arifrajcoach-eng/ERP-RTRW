@@ -237,26 +237,41 @@ function WargaView(props: WargaViewProps) {
         showNotification("Tidak dapat mendeteksi RT tujuan sinkronisasi.", "error");
         return;
     }
-    if (!window.confirm(`Sinkronisasi warga RT ${detectedRT} dari RW Induk & RW_BERJUANG?`)) return;
-
+    
     setIsLoadingDB(true);
+    console.log(`Starting sync for RT "${detectedRT}" to tenant "${tenantId}"...`);
     try {
         const PARENT_TENANT_ID = 'RW_BERJUANG';
-        // Query parent data
+        const formattedRT = detectedRT.padStart(2, '0');
+        console.log(`Querying parent tenant: ${PARENT_TENANT_ID}, looking for RT: "${formattedRT}"`);
+        
+        // Loosen query to debug
         const q = query(
             collection(db, 'data_warga'),
-            where('tenantId', '==', PARENT_TENANT_ID),
-            where('rt', '==', detectedRT.padStart(2, '0'))
+            where('tenantId', '==', PARENT_TENANT_ID)
         );
         const snapshot = await getDocs(q);
-        const docsToSync = snapshot.docs;
+        const allParentDocs = snapshot.docs;
+        
+        console.log(`Found ${allParentDocs.length} total docs in ${PARENT_TENANT_ID}.`);
+        
+        // Filter in JS for now to identify mismatch
+        const docsToSync = allParentDocs.filter(d => {
+            const data = d.data();
+            const docRT = (data.rt || '').toString().trim();
+            return docRT === formattedRT || docRT === parseInt(formattedRT).toString();
+        });
+        
+        console.log(`Found ${docsToSync.length} docs matching RT "${formattedRT}" after manual filter.`);
         
         if (docsToSync.length === 0) {
-            showNotification("Tidak ada data warga ditemukan di RW Induk untuk RT tersebut.", "info");
+            showNotification(`Tidak ada data warga ditemukan di ${PARENT_TENANT_ID} untuk RT "${detectedRT}".`, "info");
             setIsLoadingDB(false);
             return;
         }
-
+        
+        console.log(`Preparing to sync ${docsToSync.length} documents.`);
+        
         // Batch Sync
         const CHUNK_SIZE = 450;
         for (let i = 0; i < docsToSync.length; i += CHUNK_SIZE) {
@@ -266,6 +281,7 @@ function WargaView(props: WargaViewProps) {
                 const data = docSnap.data();
                 // Create new ID with child tenant
                 const newId = `${tenantId}_${data.nik || new Date().getTime() + Math.random()}`;
+                console.log(`Syncing doc ${docSnap.id} to new ID ${newId}`);
                 batch.set(doc(db, 'data_warga', newId), {
                     ...data,
                     tenantId: tenantId,
@@ -273,6 +289,7 @@ function WargaView(props: WargaViewProps) {
                 });
             });
             await batch.commit();
+            console.log(`Committed batch of ${chunk.length}`);
         }
         showNotification(`Berhasil menyinkronkan ${docsToSync.length} data warga.`, 'success');
         // Refresh data ideally, but here we rely on the component re-rendering/props

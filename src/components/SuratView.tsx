@@ -198,6 +198,13 @@ export function SuratView({
   });
 
   const generateSuratPDF = (surat: any) => {
+    // Identity verification check
+    const warga = wargaData.find(w => w.nik === surat.nik);
+    if (!warga?.terverifikasi) {
+        showNotification('Surat tidak dapat dicetak: Identitas belum terverifikasi oleh Admin.', 'error');
+        return;
+    }
+    
     // Priority: use kopSettings (from tenant_settings), fallback to settings["KOP_SURAT"], then hardcoded defaults
     const kop = kopSettings || getSetting("KOP_SURAT") || {};
     
@@ -550,6 +557,13 @@ export function SuratView({
       isRT_Tenant,
       tenantId
     });
+
+    // Check identity verification
+    const warga = wargaData.find(w => w.nik === s.nik);
+    if (!warga?.terverifikasi) {
+        showNotification('Identitas pemohon (Nama, NIK, KK) belum terverifikasi oleh Admin.', 'error');
+        return;
+    }
 
     let nextStatus = 'Selesai';
     let msg = 'Surat disetujui';
