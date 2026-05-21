@@ -239,13 +239,15 @@ function WargaView(props: WargaViewProps) {
     }
     
     setIsLoadingDB(true);
-    console.log(`Starting sync for RT "${detectedRT}" to tenant "${tenantId}"...`);
+    console.log(`Starting bidirectional sync for RT "${detectedRT}" to/from parent RW...`);
     try {
         const potentialParentIDs = Array.from(new Set([
             currentTenant?.parentId,
             'RW_BERJUANG',
             'rw_berjuang',
-            'trihprw26'
+            'trihprw26',
+            'RW26_SMART',
+            'rw26_smart'
         ].filter(Boolean) as string[]));
 
         console.log("Querying potential parent tenants:", potentialParentIDs);
@@ -260,7 +262,7 @@ function WargaView(props: WargaViewProps) {
                 const snapshot = await getDocs(q);
                 console.log(`Parent tenant "${pId}" returned ${snapshot.docs.length} citizen documents.`);
                 snapshot.docs.forEach(docSnap => {
-                    allParentDocs.push(docSnap);
+                    allParentDocs.push({ id: docSnap.id, data: docSnap.data(), parentId: pId });
                 });
             } catch (err) {
                 console.warn(`Query for parent tenant "${pId}" failed (possible rules constraint):`, err);
@@ -278,9 +280,8 @@ function WargaView(props: WargaViewProps) {
         console.log(`Normalized target RT code to match is "${targetRTCode}" (from raw "${detectedRT}")`);
 
         // Filter parent documents with lenient and comprehensive matching rules
-        const docsToSync = allParentDocs.filter(d => {
-            const data = d.data();
-            const docRT = data.rt;
+        const parentDocsToPull = allParentDocs.filter(item => {
+            const docRT = item.data.rt;
             if (!docRT) return false;
             
             const normalizedDocRT = cleanNumberNode(docRT);
@@ -293,40 +294,83 @@ function WargaView(props: WargaViewProps) {
                 looseTargetRT.includes(looseDocRT)
             );
         });
-        
-        console.log(`Found ${docsToSync.length} docs matching RT "${detectedRT}" after lenient matching.`);
-        
-        if (docsToSync.length === 0) {
-            showNotification(`Tidak ada data warga ditemukan di tenant RW induk untuk RT "${detectedRT}".`, "info");
-            setIsLoadingDB(false);
-            return;
-        }
-        
-        console.log(`Preparing to sync ${docsToSync.length} documents.`);
-        
-        // Batch Sync
-        const CHUNK_SIZE = 450;
-        for (let i = 0; i < docsToSync.length; i += CHUNK_SIZE) {
-            const chunk = docsToSync.slice(i, i + CHUNK_SIZE);
-            const batch = writeBatch(db);
-            chunk.forEach(docSnap => {
-                const data = docSnap.data();
-                // Create new ID with child tenant
-                const newId = `${tenantId}_${data.nik || new Date().getTime() + Math.random()}`;
-                console.log(`Syncing doc ${docSnap.id} to new ID ${newId}`);
-                batch.set(doc(db, 'data_warga', newId), {
-                    ...data,
-                    tenantId: tenantId,
-                    docId: newId
-                }, { merge: true });
+
+        // B. Fetch local citizens in this RT tenant
+        const localQuery = query(
+            collection(db, 'data_warga'),
+            where('tenantId', '==', tenantId)
+        );
+        const localSnapshot = await getDocs(localQuery);
+        const localDocs = localSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as any) }));
+        console.log(`Found ${localDocs.length} local citizens in tenant "${tenantId}".`);
+
+        let pullCount = 0;
+        let pushCount = 0;
+
+        // Perform Pull (Write from RW parent into this RT child tenant)
+        if (parentDocsToPull.length > 0) {
+            const localNIKs = new Set(localDocs.map(d => (d.nik || '').toString().trim()).filter(Boolean));
+            const docsToPull = parentDocsToPull.filter(item => {
+                const nik = (item.data.nik || '').toString().trim();
+                return !nik || !localNIKs.has(nik);
             });
-            await batch.commit();
-            console.log(`Committed batch of ${chunk.length}`);
+
+            if (docsToPull.length > 0) {
+                const CHUNK_SIZE = 450;
+                for (let i = 0; i < docsToPull.length; i += CHUNK_SIZE) {
+                    const chunk = docsToPull.slice(i, i + CHUNK_SIZE);
+                    const batch = writeBatch(db);
+                    chunk.forEach(item => {
+                        const data = item.data;
+                        const newId = `${tenantId}_${data.nik || new Date().getTime() + Math.random()}`;
+                        batch.set(doc(db, 'data_warga', newId), {
+                            ...data,
+                            tenantId: tenantId,
+                            docId: newId
+                        }, { merge: true });
+                    });
+                    await batch.commit();
+                    pullCount += chunk.length;
+                }
+            }
         }
-        showNotification(`Berhasil menyinkronkan ${docsToSync.length} data warga ke tenant Anda.`, 'success');
-        // Let the state update or local refresh trigger
+
+        // Perform Push (Write local citizens from this RT child tenant up to the parent RW)
+        const primaryParentID = currentTenant?.parentId || potentialParentIDs[0] || 'RW_BERJUANG';
+        if (localDocs.length > 0 && primaryParentID) {
+            const parentNIKs = new Set(allParentDocs.map(item => (item.data.nik || '').toString().trim()).filter(Boolean));
+            const docsToPush = localDocs.filter(d => {
+                const nik = (d.nik || '').toString().trim();
+                return !nik || !parentNIKs.has(nik);
+            });
+
+            if (docsToPush.length > 0) {
+                const CHUNK_SIZE = 450;
+                for (let i = 0; i < docsToPush.length; i += CHUNK_SIZE) {
+                    const chunk = docsToPush.slice(i, i + CHUNK_SIZE);
+                    const batch = writeBatch(db);
+                    chunk.forEach(localWarga => {
+                        const { id, docId, tenantId: oldTenantId, ...rest } = localWarga;
+                        const newId = `${primaryParentID}_${localWarga.nik || new Date().getTime() + Math.random()}`;
+                        batch.set(doc(db, 'data_warga', newId), {
+                            ...rest,
+                            tenantId: primaryParentID,
+                            docId: newId
+                        }, { merge: true });
+                    });
+                    await batch.commit();
+                    pushCount += chunk.length;
+                }
+            }
+        }
+
+        if (pullCount === 0 && pushCount === 0) {
+            showNotification(`Sinkronisasi selesai! Data warga sudah sama sepenuhnya dengan RW.`, "success");
+        } else {
+            showNotification(`Sinkronisasi Dua Arah Sukses! Berhasil mengirim ${pushCount} warga ke RW, dan menarik ${pullCount} warga dari RW.`, 'success');
+        }
     } catch (e: any) {
-        console.error("Sync error:", e);
+        console.error("Bidirectional sync error:", e);
         handleFirestoreError(e, 'write', 'data_warga');
     } finally {
         setIsLoadingDB(false);
@@ -337,23 +381,41 @@ function WargaView(props: WargaViewProps) {
     setIsLoadingDB(true);
     console.log(`Starting reverse sync from RTs to RW tenant "${tenantId}"...`);
     try {
-        const CHILD_TENANT_IDS = [
+        let CHILD_TENANT_IDS = [
             "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
+            "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang", "rt05_rw_berjuang",
+            "rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26", "rt05_trihprw26",
             "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04", "RW26_RT05"
         ];
+
+        try {
+            const childTenantsSnapshot = await getDocs(
+                query(collection(db, 'tenants'), where('parentId', '==', tenantId))
+            );
+            const dynamicChildren = childTenantsSnapshot.docs.map(doc => doc.id);
+            if (dynamicChildren.length > 0) {
+                CHILD_TENANT_IDS = Array.from(new Set([...CHILD_TENANT_IDS, ...dynamicChildren]));
+            }
+        } catch (err) {
+            console.warn("Could not dynamically query child tenants:", err);
+        }
         
         let allRTDocs: any[] = [];
         
         for (const childId of CHILD_TENANT_IDS) {
             console.log(`Fetching citizens from RT child: "${childId}"`);
-            const q = query(
-                collection(db, 'data_warga'),
-                where('tenantId', '==', childId)
-            );
-            const snapshot = await getDocs(q);
-            snapshot.docs.forEach(d => {
-                allRTDocs.push({ id: d.id, ...d.data() });
-            });
+            try {
+                const q = query(
+                    collection(db, 'data_warga'),
+                    where('tenantId', '==', childId)
+                );
+                const snapshot = await getDocs(q);
+                snapshot.docs.forEach(d => {
+                    allRTDocs.push({ id: d.id, ...d.data() });
+                });
+            } catch (err) {
+                console.warn(`Could not read citizens from RT child "${childId}":`, err);
+            }
         }
         
         console.log(`Found total of ${allRTDocs.length} citizens in all RTs.`);

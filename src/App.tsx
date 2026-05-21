@@ -3170,7 +3170,7 @@ export default function App() {
               LOADING
             </div>
           </div>
-          <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors">
+          <h2 className="font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors" style={{ fontSize: "29px" }}>
             <span className="font-bold">
               <span className="text-[#04a8f4]">Smart</span>
               <span className="text-[#00aefc]">RW</span>{" "}
