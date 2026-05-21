@@ -21,7 +21,6 @@ import {
   MapPin,
   Calendar,
   Smartphone,
-  Mail,
   Image as ImageIcon,
   CreditCard,
   Map,
@@ -31,7 +30,6 @@ import {
   Baby,
   Globe,
   Files,
-  Camera,
   RefreshCw
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -82,11 +80,8 @@ export function SuratView({
   const [suratToDelete, setSuratToDelete] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isUploadingKTP, setIsUploadingKTP] = useState(false);
-  const [isUploadingKK, setIsUploadingKK] = useState(false);
   const [ktpUrl, setKtpUrl] = useState("");
   const [kkUrl, setKkUrl] = useState("");
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedWargaId, setSelectedWargaId] = useState("");
   const [wargaSearch, setWargaSearch] = useState("");
   const [showWargaDropdown, setShowWargaDropdown] = useState(false);
@@ -427,29 +422,6 @@ export function SuratView({
     printWindow.document.write(content);
     printWindow.document.close();
     showNotification("Pratinjau cetak terbuka di tab baru", "info");
-  };
-
-  const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'ktp' | 'kk') => {
-    const file = e.target.files?.[0];
-    if (!file || !handleFileUpload) return;
-
-    if (type === 'ktp') setIsUploadingKTP(true);
-    else setIsUploadingKK(true);
-    
-    setUploadProgress(0);
-
-    try {
-      const folder = `surat/${currentUser.uid || 'guest'}_${Date.now()}`;
-      const url = await handleFileUpload(file, folder, (pct: number) => setUploadProgress(pct));
-      if (type === 'ktp') setKtpUrl(url);
-      else setKkUrl(url);
-      showNotification(`${type.toUpperCase()} berhasil diunggah`, 'success');
-    } catch (err) {
-      showNotification(`Gagal mengunggah ${type.toUpperCase()}`, 'error');
-    } finally {
-      if (type === 'ktp') setIsUploadingKTP(false);
-      else setIsUploadingKK(false);
-    }
   };
 
   const handleSaveSurat = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -1091,8 +1063,8 @@ export function SuratView({
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1.5 md:col-span-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Kabupaten / Kota</label>
                        <input name="kota" defaultValue={getInitialValue('kota')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
@@ -1102,67 +1074,6 @@ export function SuratView({
                         <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                         <input name="phone" defaultValue={getInitialValue('phone')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</label>
-                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                        <input type="email" name="email" defaultValue={getInitialValue('email')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. Lampiran Dokumen */}
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-2 text-blue-600">
-                    <ImageIcon className="w-5 h-5" />
-                    <h4 className="text-sm font-black uppercase tracking-widest">Lampiran Dokumen</h4>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Foto KTP</label>
-                      <label className="group relative block w-full aspect-video rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all cursor-pointer overflow-hidden bg-slate-50">
-                        {ktpUrl ? (
-                          <img src={ktpUrl} alt="KTP" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                            <Camera className="w-8 h-8 text-slate-300 mb-2 group-hover:text-blue-500 transition-colors" />
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Klik untuk upload KTP</p>
-                          </div>
-                        )}
-                        {isUploadingKTP && (
-                          <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center p-4">
-                            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mb-2" />
-                            <p className="text-[10px] font-black text-blue-600">{uploadProgress}%</p>
-                          </div>
-                        )}
-                        <input type="file" onChange={(e) => onFileUpload(e, 'ktp')} className="hidden" accept="image/*" />
-                      </label>
-                      {ktpUrl && <p className="text-[9px] text-green-600 font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Berhasil Diunggah</p>}
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Foto KK</label>
-                      <label className="group relative block w-full aspect-video rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all cursor-pointer overflow-hidden bg-slate-50">
-                        {kkUrl ? (
-                          <img src={kkUrl} alt="KK" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                            <Files className="w-8 h-8 text-slate-300 mb-2 group-hover:text-blue-500 transition-colors" />
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Klik untuk upload KK</p>
-                          </div>
-                        )}
-                        {isUploadingKK && (
-                          <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center p-4">
-                            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mb-2" />
-                            <p className="text-[10px] font-black text-blue-600">{uploadProgress}%</p>
-                          </div>
-                        )}
-                        <input type="file" onChange={(e) => onFileUpload(e, 'kk')} className="hidden" accept="image/*" />
-                      </label>
-                      {kkUrl && <p className="text-[9px] text-green-600 font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Berhasil Diunggah</p>}
                     </div>
                   </div>
                 </div>
@@ -1190,14 +1101,9 @@ export function SuratView({
                   </button>
                   <button 
                     type="submit" 
-                    disabled={isUploadingKTP || isUploadingKK}
                     className="flex-[2] py-4 text-xs font-black bg-[#0cbb97] hover:bg-[#0aa88a] disabled:bg-slate-300 text-white rounded-2xl transition-all shadow-xl shadow-emerald-200 uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
                   >
-                    {isUploadingKTP || isUploadingKK ? (
-                      <><RefreshCw className="w-4 h-4 animate-spin" /> Menunggu Unggahan...</>
-                    ) : (
-                      editingSurat ? 'Simpan Perubahan' : 'Kirim Permohonan'
-                    )}
+                    {editingSurat ? 'Simpan Perubahan' : 'Kirim Permohonan'}
                   </button>
                 </div>
               </form>

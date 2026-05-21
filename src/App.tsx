@@ -3265,7 +3265,7 @@ export default function App() {
                             Smart
                           </span>
                           <span className="text-brand-blue">RW</span>&nbsp;
-                          <span className="text-brand-pink text-[15px] w-[81.89px] mt-[11px] mb-[-4px] leading-[15.5px]">AI</span>
+                          <span className="text-brand-pink text-[15px] w-[81.89px] mt-[-4px] mb-[-4px] leading-[15.5px]">AI</span>
                         </span>
                       </>
                     ) : (
