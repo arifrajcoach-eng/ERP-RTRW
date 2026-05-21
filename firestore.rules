@@ -108,6 +108,8 @@ service cloud.firestore {
       return isTenantMemberStatic(tenantId) || (
         isSignedIn() && (
           getUserData() != null && 'tenantId' in getUserData() && getUserData().tenantId != null && (
+            getUserData().tenantId == 'MASTER' || 
+            getUserData().tenantId == 'master' ||
             getUserData().tenantId == tenantId || 
             getUserData().tenantId.lower() == tenantId.lower() || 
             
@@ -115,6 +117,13 @@ service cloud.firestore {
             (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26$') && (tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26'])) ||
             (getUserData().tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
             (getUserData().tenantId.lower().matches('^rt[0-9]+_trih.*') && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
+
+            // Allow parent to access sub-tenants (bidirectional)
+            ((getUserData().tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26']) && (
+              tenantId.lower().matches('^rt[0-9]+_rw26$') ||
+              tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') ||
+              tenantId.lower().matches('^rt[0-9]+_trih.*')
+            )) ||
 
             (getUserData().tenantId == 'RW_BERJUANG' && (tenantId in ['trihprw26', 'RW_BERJUANG', 'RW26_SMART'])) ||
             (getUserData().tenantId == 'trihprw26' && (tenantId in ['RW_BERJUANG', 'trihprw26', 'RW26_SMART'])) ||
@@ -146,7 +155,10 @@ service cloud.firestore {
     function isPengurus() {
       return isPengurusStatic() || (
         isSignedIn() && (
-          getUserData() != null && 'role' in getUserData() && getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS', 'KADER']
+          getUserData() != null && (
+            ('role' in getUserData() && getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS', 'KADER']) ||
+            ('tenantId' in getUserData() && (getUserData().tenantId == 'MASTER' || getUserData().tenantId == 'master'))
+          )
         )
       );
     }
@@ -279,7 +291,13 @@ service cloud.firestore {
       allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || request.auth.uid == resource.data.authUid);
       allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || request.auth.uid == resource.data.authUid);
       allow create: if isSignedIn();
-      allow update, delete: if isPengurus() && isTenantMember(resource.data.tenantId);
+      allow update, delete: if isAdmin() || isAdminStatic() || (
+        isSignedIn() && getUserData() != null && (
+          getUserData().role in ['SUPER_ADMIN', 'ADMIN'] ||
+          ('tenantId' in getUserData() && (getUserData().tenantId == 'MASTER' || getUserData().tenantId == 'master')) ||
+          (isPengurus() && isTenantMember(resource.data.tenantId))
+        )
+      );
     }
 
     // --- Social & Interaction ---
