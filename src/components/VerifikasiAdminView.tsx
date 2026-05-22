@@ -8,7 +8,6 @@ import {
   CheckCircle, 
   XCircle, 
   Eye, 
-  Trash2, 
   X, 
   ShieldAlert
 } from 'lucide-react';
@@ -217,22 +216,6 @@ export function VerifikasiAdminView({
     }
   };
 
-  const handleDelete = async (itemId: string) => {
-    if (actionLoading) return;
-    if (!confirm("Hapus data verifikasi ini secara permanen?")) return;
-
-    setActionLoading(true);
-    try {
-      await deleteDoc(doc(db, 'verifikasi_warga', itemId));
-      showNotification("Data verifikasi berhasil dihapus permanen.", "success");
-      if (selectedItem?.id === itemId) setSelectedItem(null);
-    } catch (err) {
-      handleFirestoreError(err, 'delete', 'verifikasi_warga');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const statusColors: Record<string, string> = {
     'Menunggu Persetujuan': 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-lg shadow-orange-500/20',
     'Disetujui': 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white border-transparent shadow-lg shadow-emerald-500/20',
@@ -411,9 +394,9 @@ export function VerifikasiAdminView({
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end gap-3">
-                        {(!item.isFinalized && (item.status === 'Menunggu Persetujuan' || item.status === 'Disetujui')) && (
+                        {!item.isFinalized && (
                           <>
-                            {item.status === 'Menunggu Persetujuan' && (
+                            {item.status !== 'Disetujui' && (
                               <button 
                                 onClick={() => handleApprove(item)}
                                 disabled={actionLoading}
@@ -423,14 +406,16 @@ export function VerifikasiAdminView({
                                 {actionLoading ? <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div> : <CheckCircle className="w-5 h-5" />}
                               </button>
                             )}
-                            <button 
-                              onClick={() => handleReject(item)}
-                              disabled={actionLoading}
-                              className="p-3 bg-white text-rose-500 hover:bg-rose-50 rounded-2xl transition-all border border-slate-100 hover:border-rose-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
-                              title={item.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
-                            >
-                               {actionLoading ? <div className="w-5 h-5 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div> : <XCircle className="w-5 h-5" />}
-                            </button>
+                            {item.status !== 'Ditolak' && (
+                              <button 
+                                onClick={() => handleReject(item)}
+                                disabled={actionLoading}
+                                className="p-3 bg-white text-rose-500 hover:bg-rose-50 rounded-2xl transition-all border border-slate-100 hover:border-rose-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
+                                title={item.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
+                              >
+                                {actionLoading ? <div className="w-5 h-5 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div> : <XCircle className="w-5 h-5" />}
+                              </button>
+                            )}
                           </>
                         )}
                         <button 
@@ -442,14 +427,6 @@ export function VerifikasiAdminView({
                           title="Detail"
                         >
                           <Eye className="w-5 h-5" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(item.id)}
-                          disabled={actionLoading}
-                          className="p-3 bg-white text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-slate-100 hover:border-red-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
-                          title="Hapus Permanen"
-                        >
-                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </td>
@@ -476,14 +453,6 @@ export function VerifikasiAdminView({
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Detail Verifikasi: {selectedItem.nama}</h2>
                 <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => handleDelete(selectedItem.id)}
-                    disabled={actionLoading}
-                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
-                    title="Hapus Permanen"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
                   <button onClick={() => { setSelectedItem(null); setCatatan(''); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
                 </div>
               </div>
