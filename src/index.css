@@ -245,3 +245,22 @@ div#root:nth-of-type(1) > div:nth-of-type(1) > aside:nth-of-type(1) > div:nth-of
 div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(5) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1) {
   border-color: #2299f5 !important;
 }
+
+/* Pan Mode Scroll Hand styles */
+body.pan-mode-active {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+body.pan-mode-active,
+body.pan-mode-active * {
+  cursor: grab !important;
+}
+body.pan-mode-active .cursor-grabbing-active,
+body.pan-mode-active .cursor-grabbing-active * {
+  cursor: grabbing !important;
+}
+body.cursor-grabbing-active,
+body.cursor-grabbing-active * {
+  cursor: grabbing !important;
+}
+

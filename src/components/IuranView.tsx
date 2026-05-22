@@ -573,12 +573,12 @@ export function IuranView({
   
   return (
     <div className="space-y-6">
-      <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-2.5 rounded-3xl border border-slate-100 dark:border-slate-800 w-fit shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700">
+      <div className="flex w-full md:w-fit bg-slate-100/50 dark:bg-slate-800/50 p-1.5 sm:p-2.5 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700 justify-between md:justify-start">
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setActiveSubTab('pembayaran')}
-          className={`group flex items-center gap-4 px-12 py-5 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
+          className={`group flex flex-1 md:flex-initial flex-col sm:flex-row items-center justify-center gap-1 sm:gap-4 px-2 py-2.5 sm:px-12 sm:py-5 rounded-xl md:rounded-2xl text-[9px] sm:text-[11px] font-black transition-all duration-500 uppercase tracking-normal sm:tracking-widest relative overflow-hidden ${
             activeSubTab === 'pembayaran' 
               ? 'bg-slate-900 dark:bg-brand-blue text-white shadow-2xl scale-100' 
               : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -587,15 +587,15 @@ export function IuranView({
           {activeSubTab === 'pembayaran' && (
              <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
           )}
-          <CreditCard className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'pembayaran' ? 'scale-110' : 'group-hover:scale-110'}`} />
-          Mutasi Kas
+          <CreditCard className={`w-4 h-4 sm:w-5 h-5 transition-transform duration-500 ${activeSubTab === 'pembayaran' ? 'scale-110' : 'group-hover:scale-110'}`} />
+          <span>Mutasi Kas</span>
         </motion.button>
         {isPengurus && (
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setActiveSubTab('rekap')}
-            className={`group flex items-center gap-4 px-12 py-5 ml-2 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
+            className={`group flex flex-1 md:flex-initial flex-col sm:flex-row items-center justify-center gap-1 sm:gap-4 px-2 py-2.5 sm:px-12 sm:py-5 ml-1.5 sm:ml-2 rounded-xl md:rounded-2xl text-[9px] sm:text-[11px] font-black transition-all duration-500 uppercase tracking-normal sm:tracking-widest relative overflow-hidden ${
               activeSubTab === 'rekap' 
                 ? 'bg-brand-blue dark:bg-slate-800 text-white shadow-2xl scale-100' 
                 : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -604,8 +604,8 @@ export function IuranView({
              {activeSubTab === 'rekap' && (
                <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
             )}
-            <Users className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'rekap' ? 'scale-110' : 'group-hover:scale-110'}`} />
-            Rekap Global
+            <Users className={`w-4 h-4 sm:w-5 h-5 transition-transform duration-500 ${activeSubTab === 'rekap' ? 'scale-110' : 'group-hover:scale-110'}`} />
+            <span>Rekap Global</span>
           </motion.button>
         )}
       </div>
