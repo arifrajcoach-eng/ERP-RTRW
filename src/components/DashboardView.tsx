@@ -809,32 +809,32 @@ export default function DashboardView({
               <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 <button 
                   onClick={() => setShowQRModal(true)}
-                  className="w-32 flex-shrink-0 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
+                  className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
                 >
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
                     <QrCode className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">Pendaftaran</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Pendaftaran</span>
                 </button>
                 
                 <button 
                   onClick={() => setActiveTab('surat')}
-                  className="w-32 flex-shrink-0 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
+                  className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
                 >
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
                     <Search className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">Cek Pengajuan</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Cek Pengajuan</span>
                 </button>
 
                 <button 
                     onClick={() => setActiveTab('surat')}
-                  className="w-32 flex-shrink-0 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
+                  className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
                 >
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
                     <FileText className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">Buat Surat</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Buat Surat</span>
                 </button>
               </div>
             </div>

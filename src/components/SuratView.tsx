@@ -732,115 +732,59 @@ export function SuratView({
                <p className="font-bold text-xs uppercase tracking-widest">Arsip Dokumen Kosong</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-              {filteredSurat.map((s, idx) => (
-                <motion.div 
-                  layout 
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  key={`surat-${s.id || idx}`} 
-                  className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-10 shadow-2xl shadow-slate-200/30 dark:shadow-none hover:shadow-brand-blue/20 hover:border-brand-blue/30 transition-all duration-500 cursor-pointer flex flex-col overflow-hidden"
-                  onClick={() => setViewingSurat(s)}
-                >
-                  <div className="absolute -right-12 -top-12 w-48 h-48 bg-slate-50 dark:bg-slate-800/50 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700"></div>
-                  
-                  <div className="flex justify-between items-start mb-10 relative z-10">
-                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-700 group-hover:rotate-6 ${
-                      s.status === 'Selesai' ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 
-                      s.status === 'Ditolak' ? 'bg-rose-500 text-white shadow-rose-500/20' : 
-                      'bg-brand-blue text-white shadow-brand-blue/20'
-                    }`}>
-                      <FileText className="w-8 h-8" />
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                       <div className={`flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm ${
-                         s.status === 'Selesai' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                         s.status === 'Ditolak' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                         'bg-slate-50 border-slate-100 text-slate-500'
-                       }`}>
-                         <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'Selesai' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
-                         <span className="text-[9px] font-black uppercase tracking-widest">{s.status === 'Selesai' ? 'Verified' : s.status}</span>
-                       </div>
-                       <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest font-mono">
-                         #{s.id?.slice(-6)}
-                       </span>
-                    </div>
-                  </div>
-    
-                  <div className="flex-1 mb-10 relative z-10">
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 leading-none italic">
-                      {new Date(s.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
-                    
-                    <h4 className="font-black text-slate-800 dark:text-slate-100 text-[1.4rem] leading-tight mb-6 group-hover:text-brand-blue transition-colors font-elegant uppercase tracking-tight line-clamp-2">
-                      {s.jenis}
-                    </h4>
-                    
-                    <div className="flex items-center gap-4 p-6 bg-slate-50/50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 group-hover:bg-brand-blue group-hover:border-brand-blue/30 group-hover:shadow-2xl group-hover:shadow-brand-blue/20 transition-all duration-500">
-                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center shrink-0 shadow-xl group-hover:bg-white/20 group-hover:shadow-none transition-colors">
-                        <User className="w-6 h-6 text-slate-600 dark:text-slate-300 group-hover:text-white" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-white/60 mb-0.5 transition-colors">Pemohon Aktif</p>
-                        <p className="text-sm font-black truncate uppercase tracking-tight group-hover:text-white transition-colors">{s.pemohon}</p>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between relative z-10">
-                      <div className="flex items-center gap-3">
+            <div className="w-full min-w-[1350px] overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[13px] text-slate-700 dark:text-slate-300">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 uppercase text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-widest">
+                  <tr>
+                    <th className="px-6 py-4 rounded-tl-2xl">Tanggal</th>
+                    <th className="px-6 py-4">Jenis</th>
+                    <th className="px-6 py-4">Pemohon</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 rounded-tr-2xl text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredSurat.map((s, idx) => (
+                    <tr key={`surat-${s.id || idx}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4">
+                        {new Date(s.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 font-bold">{s.jenis}</td>
+                      <td className="px-6 py-4">{s.pemohon}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                          s.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' :
+                          s.status === 'Ditolak' ? 'bg-rose-100 text-rose-700' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 flex items-center justify-center gap-2">
                         {isPengurus && (
                           <>
                             {s.status === 'Selesai' ? (
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); generateSuratPDF(s); }} 
-                                className="w-12 h-12 rounded-2xl bg-brand-blue text-white flex items-center justify-center shadow-2xl shadow-brand-blue/30 hover:shadow-brand-blue/50 transition-all active:scale-95"
-                              >
-                                <Printer className="w-6 h-6" />
-                              </button>
+                              <button onClick={() => generateSuratPDF(s)} className="p-2 text-brand-blue hover:text-brand-blue/80"><Printer className="w-4 h-4" /></button>
                             ) : (
-                              (((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
+                               (((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
                                (s.status.includes('Persetujuan RW') && isRWUser)) && (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApproveSurat(s); }} 
-                                  className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all active:scale-95"
-                                >
-                                  <CheckCircle2 className="w-6 h-6" />
-                                </button>
+                                <button onClick={() => handleApproveSurat(s)} className="p-2 text-emerald-600 hover:text-emerald-700"><CheckCircle2 className="w-4 h-4" /></button>
                               )
                             )}
-                            
                             {(s.status.includes('Menunggu') || s.status === 'Diajukan') && (
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleRejectSurat(s); }}
-                                className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-2xl shadow-rose-500/30 hover:shadow-rose-500/50 transition-all active:scale-95"
-                              >
-                                <X className="w-6 h-6" />
-                              </button>
+                              <button onClick={() => handleRejectSurat(s)} className="p-2 text-rose-600 hover:text-rose-700"><X className="w-4 h-4" /></button>
                             )}
                           </>
                         )}
-                      </div>
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setEditingSurat(s); setShowForm(true); }}
-                          className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-600 hover:text-brand-blue transition-all bg-slate-50 dark:bg-slate-800/50 active:scale-95"
-                        >
-                          <Edit className="w-6 h-6" />
-                        </button>
-                        {isGlobalSuperAdmin && (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setSuratToDelete(s); }}
-                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-600 hover:text-rose-500 transition-all bg-slate-50 dark:bg-slate-800/50 active:scale-95"
-                          >
-                            <Trash2 className="w-6 h-6" />
-                          </button>
+                        <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 text-slate-400 hover:text-slate-600"><Edit className="w-4 h-4" /></button>
+                         {isGlobalSuperAdmin && (
+                          <button onClick={() => setSuratToDelete(s)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>
                         )}
-                      </div>
-                  </div>
-                </motion.div>
-              ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
