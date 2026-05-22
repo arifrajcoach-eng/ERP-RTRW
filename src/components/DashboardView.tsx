@@ -454,7 +454,7 @@ export default function DashboardView({
             </div>
           </div>
         ) : isWarga ? (
-          <div className="flex-1 bg-gradient-to-tr from-brand-blue via-indigo-600 to-indigo-800 p-10 rounded-3xl shadow-2xl shadow-brand-blue/30 text-white relative overflow-hidden group border border-white/10">
+          <div className="flex-1 bg-gradient-to-tr from-brand-blue via-indigo-600 to-indigo-800 p-4 sm:p-10 rounded-3xl shadow-2xl shadow-brand-blue/30 text-white relative overflow-hidden group border border-white/10">
             <div className="absolute top-0 right-0 p-10 opacity-10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700">
               <ShieldCheck className="w-64 h-64" />
             </div>
@@ -489,7 +489,7 @@ export default function DashboardView({
             </div>
           </div>
         ) : (
-          <div className="flex-1 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-all duration-300">
+          <div className="flex-1 bg-white dark:bg-slate-900 p-4 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-all duration-300">
             <div className="absolute -right-6 -bottom-6 w-48 h-48 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-blue/10 transition-colors"></div>
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-6">
@@ -514,7 +514,7 @@ export default function DashboardView({
       </div>
 
       {allowedMenuItems && allowedMenuItems.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-2 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <LayoutGrid className="w-5 h-5 text-brand-blue" />
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase">Modul & Pintasan</h3>
@@ -530,7 +530,7 @@ export default function DashboardView({
                     setActiveTab(item.id);
                   }
                 }}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 gap-2 ${
+                className={`flex flex-col items-center justify-center p-4 sm:p-6 rounded-3xl border transition-all duration-300 gap-3 ${
                   item.isLocked
                     ? "bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-800 opacity-60 cursor-not-allowed"
                     : "bg-slate-50 border-transparent hover:border-brand-blue/30 hover:shadow-lg hover:shadow-brand-blue/10 dark:bg-slate-800/50 dark:border-transparent dark:hover:border-brand-blue/30 group"
@@ -578,7 +578,7 @@ export default function DashboardView({
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:border-brand-blue/30 relative overflow-hidden group">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-4 sm:p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:border-brand-blue/30 relative overflow-hidden group">
           <div className="absolute -right-12 -top-12 w-64 h-64 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-blue/10 transition-colors"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
             <div className="flex items-center gap-6">

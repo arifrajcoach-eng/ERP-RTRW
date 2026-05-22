@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   Users, Trash2, Edit2, Download, Printer, UserPlus, 
   MapPin, Phone, Info, Search, X, CheckCircle, AlertCircle, Eye, EyeOff, ClipboardList, Trash, ShieldCheck, LogOut, Menu, Lock,
-  ChevronDown
+  ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import autoTable from 'jspdf-autotable';
@@ -138,7 +138,20 @@ function WargaView(props: WargaViewProps) {
     }).sort((a: any, b: any) => (a.nama || "").localeCompare(b.nama || ""));
   }, [wargaData, filterRT, filterRW, filterKategoriUmur, searchQuery]);
 
-  const displayedWarga = filteredWargaData;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterRT, filterRW, filterKategoriUmur, searchQuery]);
+
+  const totalItems = filteredWargaData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const displayedWarga = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredWargaData.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredWargaData, currentPage, itemsPerPage]);
 
   const startEdit = (warga: any) => {
     setEditingWarga(warga);
@@ -754,7 +767,7 @@ function WargaView(props: WargaViewProps) {
         </div>
       </div>
 
-      <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl p-10 rounded-3xl border border-white/20 dark:border-slate-800 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] dark:shadow-none transition-all">
+      <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl p-4 sm:p-10 rounded-3xl border border-white/20 dark:border-slate-800 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] dark:shadow-none transition-all">
          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-10">
             <div className="relative md:col-span-3 group">
               <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
@@ -811,7 +824,8 @@ function WargaView(props: WargaViewProps) {
          </div>
 
          <div className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
-            <div className="overflow-x-auto">
+            {/* DESKTOP VIEW: Sleek Table Layout */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800">
@@ -866,11 +880,11 @@ function WargaView(props: WargaViewProps) {
                             </div>
                             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
                          </div>
-                         <div className="space-y-1.5">
-                            <p className="text-[17px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-none group-hover:text-brand-blue transition-colors uppercase font-verdana">{w.nama}</p>
+                         <div className={`space-y-1.5 ${idx === 7 ? 'hidden' : ''}`}>
+                            <p className="text-[18px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-none group-hover:text-brand-blue transition-colors uppercase font-verdana">{w.nama}</p>
                             <div className="flex items-center gap-2 px-3 py-1 bg-slate-100/50 dark:bg-white/5 rounded-full w-fit">
                               <ShieldCheck className="w-3.5 h-3.5 text-brand-blue" />
-                              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 font-mono tracking-widest">{w.nik}</p>
+                              <p className="text-[13px] font-black text-slate-500 dark:text-slate-400 font-mono tracking-widest">{w.nik}</p>
                             </div>
                          </div>
                       </div>
@@ -938,7 +952,218 @@ function WargaView(props: WargaViewProps) {
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </div>
+
+            {/* MOBILE VIEW: Horizontal sliding deck grouped per 10 or 20 citizens */}
+            <div className="block md:hidden p-4 space-y-6">
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Tampilkan:</span>
+                  <select 
+                    value={itemsPerPage} 
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 py-1 px-2.5 rounded-xl text-[11px] font-black text-slate-700 dark:text-slate-300 outline-none"
+                  >
+                    <option value={10}>10 Orang</option>
+                    <option value={20}>20 Orang</option>
+                    <option value={50}>50 Orang</option>
+                    <option value={100}>100 Orang</option>
+                    <option value={999999}>Semua Orang</option>
+                  </select>
+                </div>
+                <div className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">
+                  Total: {filteredWargaData.length} Warga
+                </div>
+              </div>
+
+              <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                {displayedWarga.map((w: any, idx: number) => {
+                  const idWarga = w.docId || w.id || w.nik || `w-idx-${idx}`;
+                  const isSelected = selectedWargaIds.includes(idWarga);
+                  return (
+                    <div 
+                      key={`wg-mob-card-${idWarga}-${idx}`}
+                      className={`w-[260px] shrink-0 snap-center p-5 rounded-3xl border transition-all duration-300 relative flex flex-col justify-between ${
+                        isSelected 
+                          ? 'bg-brand-blue/[0.04] border-brand-blue shadow-lg shadow-brand-blue/10 dark:bg-brand-blue/5' 
+                          : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/80 shadow-md'
+                      }`}
+                    >
+                      {/* Top actions line */}
+                      <div className="flex items-center justify-between mb-4">
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected} 
+                          onChange={() => toggleSelectWarga(idWarga)} 
+                          className="w-5 h-5 rounded-lg text-brand-blue border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:ring-brand-blue transition-all cursor-pointer shadow-sm" 
+                        />
+                        
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => setViewWarga(w)} 
+                            className="p-2 text-brand-blue bg-brand-blue/5 border border-brand-blue/10 rounded-xl transition-all dark:bg-white/5"
+                            title="Lihat Profil"
+                          > 
+                            <Eye size={16} /> 
+                          </button>
+                          {(['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(currentUser?.role) || currentUser?.isSuperAdmin) && (
+                            <>
+                              <button 
+                                onClick={() => startEdit(w)} 
+                                className="p-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl transition-all dark:bg-white/5"
+                                title="Edit"
+                              > 
+                                <Edit2 size={16} /> 
+                              </button>
+                              <button 
+                                onClick={() => setWargaToDelete(w)} 
+                                className="p-2 text-rose-500 bg-rose-50 border border-rose-100 rounded-xl transition-all dark:bg-white/5"
+                                title="Hapus"
+                              > 
+                                <Trash2 size={16} /> 
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Middle: Profile Image, Name, NIK */}
+                      <div className="flex flex-col items-center text-center space-y-3 my-2">
+                        <div className="relative">
+                          <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black shadow-inner border border-slate-100 dark:border-slate-700 overflow-hidden">
+                             {w.foto ? (
+                               <img src={w.foto} className="w-full h-full object-cover" />
+                             ) : (
+                               <span className="text-xl uppercase font-elegant">{w.nama ? w.nama.charAt(0) : "W"}</span>
+                             )}
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
+                        </div>
+                        
+                        <div className="space-y-1 w-full px-1">
+                          <p className="text-[18px] font-bold text-slate-800 dark:text-slate-100 tracking-tight uppercase truncate" title={w.nama}>
+                            {w.nama}
+                          </p>
+                          <p className="text-[13px] font-black text-slate-400 dark:text-slate-500 font-mono tracking-widest bg-slate-100/50 dark:bg-slate-800/60 px-2 py-0.5 rounded-full w-auto mx-auto inline-block">
+                            {w.nik}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Bottom: House Location, Status, Pekerjaan */}
+                      <div className="mt-4 pt-4 border-t border-slate-50 dark:border-slate-800/80 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Rumah:</span>
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-blue/5 dark:bg-brand-blue/10 text-brand-blue rounded-xl text-[10px] font-black tracking-widest border border-brand-blue/10">
+                            <MapPin className="w-3 h-3" />
+                            RT {w.rt || '00'} / RW {w.rw || '00'}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Status:</span>
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${
+                            w.status === 'Warga Tetap' ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-900 text-white border-slate-700'
+                          }`}>
+                            {w.status}
+                          </span>
+                        </div>
+
+                        {w.pekerjaan && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Profesi:</span>
+                            <span className="text-[9px] font-black text-slate-500 dark:text-xs uppercase tracking-wider bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg truncate max-w-[120px]" title={w.pekerjaan}>
+                              {w.pekerjaan}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Swipe prompt hint on sliding list */}
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-50/50 dark:bg-slate-800/20 py-2.5 rounded-xl">
+                <span>GESER KANAN UNTUK LAINNYA</span>
+                <ChevronRight className="w-4 h-4 text-brand-blue animate-bounceHorizontal" />
+              </div>
+            </div>
+
+            {/* SHARED PAGINATION CONTROLS */}
+            {filteredWargaData.length > 0 && (
+              <div className="p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/20 rounded-b-3xl">
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                  <div className="text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    Menampilkan {totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} Dari {totalItems} {isApt ? "Penghuni" : "Warga"}
+                  </div>
+                  <div className="hidden sm:flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 whitespace-nowrap">Batas Tampilan:</span>
+                    <select 
+                      value={itemsPerPage} 
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 py-1 px-2.5 rounded-xl text-[11px] font-black text-slate-700 dark:text-slate-300 outline-none cursor-pointer hover:border-brand-blue/50 transition-all shadow-sm"
+                    >
+                      <option value={10}>10 Orang</option>
+                      <option value={20}>20 Orang</option>
+                      <option value={50}>50 Orang</option>
+                      <option value={100}>100 Orang</option>
+                      <option value={999999}>Semua Orang</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all"
+                      title="Halaman Sebelumnya"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    
+                    <div className="flex items-center gap-1.5 overflow-x-auto max-w-[150px] sm:max-w-xs scrollbar-hide">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
+                        if (totalPages > 5 && Math.abs(pg - currentPage) > 1 && pg !== 1 && pg !== totalPages) {
+                          return null;
+                        }
+                        return (
+                          <button
+                            key={`pg-btn-${pg}`}
+                            onClick={() => setCurrentPage(pg)}
+                            className={`w-9 h-9 shrink-0 rounded-xl text-[11px] font-black transition-all ${
+                              currentPage === pg
+                                ? 'bg-gradient-to-tr from-brand-blue to-blue-600 text-white shadow-md shadow-brand-blue/25 scale-110'
+                                : 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            {pg}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all"
+                      title="Halaman Selanjutnya"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           {displayedWarga.length === 0 && (
@@ -951,7 +1176,6 @@ function WargaView(props: WargaViewProps) {
             </div>
           )}
       </div>
-    </div>
 
       {/* ADD / EDIT WARGA MODAL */}
       <AnimatePresence>
@@ -1222,7 +1446,7 @@ function WargaView(props: WargaViewProps) {
       <AnimatePresence>
         {viewWarga && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden p-6 relative">
+             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden p-6 relative h-[545px] mb-[-46px]">
                 <button onClick={() => setViewWarga(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 text-slate-400 rounded-xl transition-colors z-10"><X size={20} /></button>
                 <div className="flex flex-col items-center text-center mb-6 shrink-0">
                    <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center text-brand-blue text-4xl font-black shadow-inner mb-4 overflow-hidden">

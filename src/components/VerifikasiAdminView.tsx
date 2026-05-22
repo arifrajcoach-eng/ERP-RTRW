@@ -297,7 +297,7 @@ export function VerifikasiAdminView({
   };
 
   return (
-    <div className="p-4 md:p-12 w-full max-w-full overflow-hidden space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+    <div className="p-2 sm:p-4 md:p-12 w-full max-w-full overflow-hidden space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 w-full">
         <div className="w-full relative group">
           <div className="absolute -left-12 -top-12 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-500/10 transition-colors duration-1000"></div>

@@ -683,7 +683,7 @@ export function SuratView({
       </div>
 
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl rounded-3xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden transition-all">
-        <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="p-2 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 bg-slate-50/50 dark:bg-slate-800/30">
           <div>
             <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase font-elegant">
               <div className="w-2.5 h-8 bg-brand-blue rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
@@ -716,7 +716,7 @@ export function SuratView({
           </div>
         </div>
 
-        <div className="p-10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 bg-slate-50/30 dark:bg-transparent">
+        <div className="p-2 sm:p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 bg-slate-50/30 dark:bg-transparent">
           {!isPengurus ? (
             <div className="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
                <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800/50 rounded-2xl flex items-center justify-center mb-8 border border-white dark:border-slate-800">
