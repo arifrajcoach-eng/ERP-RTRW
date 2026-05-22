@@ -209,11 +209,13 @@ export function PPOBView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
-              {myPPOB.length === 0 && (
+              {!isPengurus ? (
+                <tr><td colSpan={6} className="px-5 py-12 text-center text-slate-400 italic font-bold">Akses riwayat ditutup. Anda hanya dapat melakukan transaksi PPOB.<br/>Riwayat lengkap dikelola oleh Admin.</td></tr>
+              ) : myPPOB.length === 0 ? (
                 <tr><td colSpan={isPengurus ? 8 : 6} className="px-5 py-12 text-center text-slate-400 italic font-bold">Belum ada transaksi.</td></tr>
-              )}
-              {myPPOB.map((trx: any) => (
-                <tr key={trx.id} className="hover:bg-slate-50">
+              ) : (
+                myPPOB.map((trx: any) => (
+                  <tr key={trx.id} className="hover:bg-slate-50">
                   <td className="px-5 py-3 text-xs">{new Date(trx.tanggal).toLocaleString('id-ID', {day: '2-digit', month: 'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
                   <td className="px-5 py-3 font-bold text-slate-800">{trx.namaPembeli}</td>
                   <td className="px-5 py-3 font-bold text-blue-600">{trx.layanan}</td>
@@ -231,7 +233,7 @@ export function PPOBView({
                     </span>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

@@ -685,13 +685,18 @@ export function SuratView({
         </div>
 
         <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredSurat.length === 0 && (
+          {!isPengurus ? (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
+               <History className="w-12 h-12 mb-3 opacity-20" />
+               <p className="font-bold">Akses riwayat surat ditutup untuk menjaga kerahasiaan. Hubungi Admin jika butuh akses.</p>
+            </div>
+          ) : filteredSurat.length === 0 ? (
             <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
                <History className="w-12 h-12 mb-3 opacity-20" />
                <p className="font-bold">Tidak ada permohonan surat ditemukan.</p>
             </div>
-          )}
-          {filteredSurat.map((s, idx) => (
+          ) : (
+            filteredSurat.map((s, idx) => (
             <motion.div 
               layout key={`surat-${s.id || idx}`} 
               className="group bg-white border border-slate-100 rounded-[2rem] p-5 shadow-sm hover:shadow-xl hover:border-blue-200 hover:ring-1 hover:ring-blue-100 transition-all cursor-pointer relative flex flex-col"
@@ -788,7 +793,7 @@ export function SuratView({
                  </div>
               </div>
             </motion.div>
-          ))}
+          )))}
         </div>
       </div>
 

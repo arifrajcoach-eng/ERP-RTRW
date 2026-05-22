@@ -637,10 +637,12 @@ export function IuranView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
-                {filteredTransactions.length === 0 && (
+                {(!isPengurus) ? (
+                  <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Akses riwayat ditutup. Anda hanya dapat menggunakan fitur Create (Entri Pembayaran).<br/>Sesuai aturan keamanan data, riwayat hanya dapat diakses oleh Admin/Operator.</td></tr>
+                ) : filteredTransactions.length === 0 ? (
                   <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Tidak ada data.</td></tr>
-                )}
-                {filteredTransactions.map((trx: any, idx: number) => (
+                ) : (
+                  filteredTransactions.map((trx: any, idx: number) => (
                   <tr key={`iuran-row-${trx.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-3 text-xs">{new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td className="px-5 py-3">
@@ -713,7 +715,7 @@ export function IuranView({
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

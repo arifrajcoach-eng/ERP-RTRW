@@ -205,9 +205,6 @@ export function WargaProfileView({
                 <button onClick={() => setActiveCitizenTab('layanan')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeCitizenTab === 'layanan' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-slate-400 hover:bg-slate-50'}`}>
                    <LifeBuoy className="w-4 h-4" /> Layanan Mandiri
                 </button>
-                <button onClick={() => setActiveCitizenTab('riwayat')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeCitizenTab === 'riwayat' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-slate-400 hover:bg-slate-50'}`}>
-                   <Clock className="w-4 h-4" /> Riwayat Surat
-                </button>
              </div>
           </div>
 
@@ -321,46 +318,6 @@ export function WargaProfileView({
                                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Buat Permohonan Baru</p>
                             </div>
                          </button>
-                      ))}
-                   </div>
-                </motion.div>
-             )}
-
-             {activeCitizenTab === 'riwayat' && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="max-w-4xl mx-auto space-y-8">
-                   <div>
-                      <h1 className="text-3xl font-black text-slate-800 tracking-tight">Riwayat Surat</h1>
-                      <p className="text-slate-500 font-medium">Daftar permohonan surat pengantar Anda.</p>
-                   </div>
-
-                   <div className="space-y-4">
-                      {mySurat.length === 0 && (
-                         <div className="py-20 text-center font-bold text-slate-400 bg-white rounded-[2.5rem] border border-dashed border-slate-200">
-                            Belum ada riwayat permohonan surat.
-                         </div>
-                      )}
-                      {mySurat.map(s => (
-                         <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                               <div className={`p-3 rounded-2xl ${s.status === 'Selesai' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
-                                  <FileText className="w-6 h-6" />
-                               </div>
-                               <div>
-                                  <h4 className="font-black text-slate-800 uppercase tracking-tight">{s.jenis}</h4>
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(s.tanggal).toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
-                               </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                               <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${s.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                  {s.status}
-                               </span>
-                               {s.status === 'Selesai' && (
-                                  <button className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                                     <Download className="w-4 h-4" />
-                                  </button>
-                               )}
-                            </div>
-                         </div>
                       ))}
                    </div>
                 </motion.div>

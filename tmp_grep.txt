@@ -1,0 +1,34 @@
+917:  const [posyanduKegiatanData, setPosyanduKegiatanData] = useState<any[]>([]);
+1181:        activeTab === "posyandu"
+1850:        query(getRTFilter("posyandu_kegiatan"), limit(50)),
+1858:          handleFirestoreError(err, "list", "posyandu_kegiatan");
+2707:        id: "posyandu",
+2710:        plan: "posyandu",
+2804:          if (["inventaris", "posyandu", "bank-sampah"].includes(item.id))
+2815:            "posyandu",
+2834:            "posyandu",
+2852:            "posyandu",
+2872:            "posyandu",
+2891:            "posyandu",
+2919:          KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot"],
+2924:            "posyandu",
+3452:                : activeTab === "posyandu"
+3531:              posyanduKegiatanData={posyanduKegiatanData}
+3661:          {activeTab === "posyandu" &&
+3662:            (getPlanFeatures(currentTenant?.status).posyandu ? (
+3668:                posyanduKegiatanData={posyanduKegiatanData}
+11569:  posyanduKegiatanData,
+11683:            await setDoc(doc(db, "posyandu_balita", id), newBalita);
+11812:    const tableData = posyanduKegiatanData.map((k: any) => [
+11833:      posyanduKegiatanData.map((k: any) => ({
+12084:      await setDoc(doc(db, "posyandu_kegiatan", id), data);
+12089:      handleFirestoreError(err, "write", "posyandu_kegiatan");
+12216:    posyanduTerakhir: posyanduKegiatanData.sort((a: any, b: any) =>
+12623:              {stats.posyanduTerakhir ? (
+12627:                    {formatTgl(stats.posyanduTerakhir.tanggal)}
+12630:                    {stats.posyanduTerakhir.lokasi}
+12634:                      Petugas: {stats.posyanduTerakhir.kaderId?.split("@")[0]}
+13526:            {posyanduKegiatanData
+13548:                        onClick={() => deleteItem("posyandu_kegiatan", kgt.id)}
+13571:            {posyanduKegiatanData.length === 0 && (
+13573:                Belum ada agenda posyandu.

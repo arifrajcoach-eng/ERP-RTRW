@@ -582,50 +582,64 @@ export default function App() {
     if (alertedSOSRef.current.has(sosId)) return;
     alertedSOSRef.current.add(sosId);
 
-    // Vibration
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    // Continuous Alert System (Audio + Vibration)
+    const runAlertLoop = () => {
       try {
-        navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
-      } catch (e) {}
-    }
-
-    // Audio Alert
-    try {
-      const audioCtx = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
-
-      const playSiren = (delay: number) => {
-        setTimeout(() => {
-          if (audioCtx.state === "suspended") audioCtx.resume();
-          const oscillator = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-          oscillator.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-          oscillator.type = "sawtooth";
-
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) return;
+        
+        const audioCtx = new AudioContextClass();
+        
+        const playSirenBurst = () => {
+          if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+          
           const now = audioCtx.currentTime;
-          oscillator.frequency.setValueAtTime(400, now);
-          oscillator.frequency.exponentialRampToValueAtTime(1000, now + 1);
-          oscillator.frequency.exponentialRampToValueAtTime(400, now + 2);
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          
+          osc.type = "sawtooth";
+          oscillatorFrequencySweep(osc, now, 1.4);
+          
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.7, now + 0.1);
+          gain.gain.setValueAtTime(0.7, now + 1.2);
+          gain.gain.linearRampToValueAtTime(0, now + 1.4);
+          
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          
+          osc.start(now);
+          osc.stop(now + 1.4);
 
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(0.6, now + 0.1);
-          gainNode.gain.setValueAtTime(0.6, now + 1.8);
-          gainNode.gain.linearRampToValueAtTime(0, now + 2.2);
+          // Rhythmic Vibration
+          if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+            try { navigator.vibrate([800, 400]); } catch (e) {}
+          }
+        };
 
-          oscillator.start(now);
-          oscillator.stop(now + 2.2);
-        }, delay);
-      };
+        const oscillatorFrequencySweep = (osc: OscillatorNode, start: number, duration: number) => {
+          osc.frequency.setValueAtTime(450, start);
+          osc.frequency.exponentialRampToValueAtTime(900, start + duration * 0.5);
+          osc.frequency.exponentialRampToValueAtTime(450, start + duration);
+        };
 
-      // Play sequence
-      playSiren(0);
-      playSiren(2500);
-      playSiren(5000);
-    } catch (e) {
-      console.error("SOS Audio Alert failed", e);
-    }
+        // Start cycling every 1.6 seconds
+        playSirenBurst();
+        const intervalId = setInterval(playSirenBurst, 1600);
+
+        // Auto-stop after 15 minutes of inactivity to prevent endless battery drain if ignored
+        // User requested "terus menerus", 15m is a practical "forever" for web apps.
+        setTimeout(() => {
+          clearInterval(intervalId);
+          audioCtx.close().catch(() => {});
+        }, 900000); 
+
+      } catch (e) {
+        console.error("SOS Alert System Error:", e);
+      }
+    };
+
+    runAlertLoop();
   };
   const [currentUser, setCurrentUser] = useState<{
     name: string;
@@ -2944,7 +2958,15 @@ export default function App() {
         const isLocked =
           item.plan &&
           (!currentTenant || (planConfig as any)[item.plan] === false);
-        return { ...item, isLocked };
+
+        let label = item.label;
+        let icon = item.icon;
+        if (item.id === "verifikasi" && currentUser?.role === "WARGA") {
+          label = "Profil & Layanan";
+          icon = User;
+        }
+
+        return { ...item, isLocked, label, icon };
       });
   }, [currentUser, linkedWarga, currentTenant, settings]);
 
@@ -3257,15 +3279,15 @@ export default function App() {
                       "SUPER ADMIN",
                     ) ? (
                       <>
-                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[11px] border-none leading-[18px] w-[139.906px] inline-block uppercase">
+                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[21px] border-none leading-[18px] w-[139.906px] inline-block uppercase">
                           SUPER ADMIN
                         </span>
-                        <span className="text-[14px] truncate ml-[38px] mt-[6px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center mr-[32px] pt-0 pb-0">
-                          <span className="text-[#04a8f4] font-bold border-[#1d3840]">
+                        <span className="text-[14px] truncate ml-[42px] mt-[4px] mr-[32px] w-[92.8958px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center pt-0 pb-0">
+                          <span className="text-[#04a8f4] font-bold border-[#1d3840] w-[41.066px] inline-block">
                             Smart
                           </span>
-                          <span className="text-brand-blue">RW</span>&nbsp;
-                          <span className="text-brand-pink text-[15px] w-[81.89px] mt-[-4px] mb-[-4px] leading-[15.5px]">AI</span>
+                          <span className="text-brand-blue w-[1.6597px] inline-block">RW</span>&nbsp;
+                          <span className="text-brand-pink text-[15px] ml-[20px] mt-[-5px] mb-[-5px] w-[0px] leading-[15.5px] inline-block">AI</span>
                         </span>
                       </>
                     ) : (
@@ -3284,10 +3306,10 @@ export default function App() {
               </h1>
               {currentTenant?.name && (
                 <div className="mt-1.5 ml-[18px] space-y-1">
-                  <p className="text-[8px] font-bold text-[#5779ab] dark:text-slate-400 bg-transparent font-[Georgia] uppercase tracking-widest text-center w-[125px] -ml-[1px] mb-1 leading-[12.86px]">
+                  <p className="text-[8px] font-bold text-[#5779ab] dark:text-slate-400 bg-transparent font-[Georgia] uppercase tracking-widest text-center w-[125px] ml-[6px] mb-1 leading-[12.86px]">
                     Powered by Nexapps
                   </p>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg pb-[1px] ml-0">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg pb-[1px] ml-[9px]">
                     <Zap className="w-2.5 h-2.5 text-brand-blue" />
                     <span className="text-[9px] font-black text-brand-blue uppercase tracking-tight">
                       PAKET {currentTenant?.status || "STARTER"}
@@ -3576,16 +3598,45 @@ export default function App() {
             />
           )}
           {activeTab === "verifikasi" && (
-            <VerifikasiAdminView
-              verifikasiData={filteredVerifikasiWargaDataCentral}
-              wargaData={filteredWargaDataCentral}
-              tenantId={currentUser.tenantId || "RW26_SMART"}
-              isLoadingDB={isLoadingDB}
-              setIsLoadingDB={setIsLoadingDB}
-              showNotification={showNotification}
-              handleFirestoreError={handleFirestoreError}
-              currentUser={currentUser}
-            />
+            currentUser?.role === "WARGA" ? (
+              <WargaProfileView
+                wargaData={linkedWarga || {
+                  nik: currentUser.nik || "",
+                  nama: currentUser.name || currentUser.displayName || "Warga",
+                  email: currentUser.email || "",
+                  rt: currentUser.rt || "01",
+                  rw: currentUser.rw || "26",
+                  tenantId: currentUser.tenantId || "RW26_SMART",
+                  terverifikasi: false
+                }}
+                verifikasiData={verifikasiWargaData}
+                suratData={suratData}
+                setSuratData={setSuratData}
+                setWargaAuth={handleLogout}
+                tenantId={currentUser.tenantId || "RW26_SMART"}
+                isLoadingDB={isLoadingDB}
+                setIsLoadingDB={setIsLoadingDB}
+                handleFileUpload={handleFileUpload}
+                showNotification={showNotification}
+                handleFirestoreError={handleFirestoreError}
+                kopSettings={kopSettings}
+                getSetting={getSetting}
+                usersData={filteredUsersDataCentral}
+                generateSuratHTML={generateSuratHTML}
+                settings={settings}
+              />
+            ) : (
+              <VerifikasiAdminView
+                verifikasiData={filteredVerifikasiWargaDataCentral}
+                wargaData={filteredWargaDataCentral}
+                tenantId={currentUser.tenantId || "RW26_SMART"}
+                isLoadingDB={isLoadingDB}
+                setIsLoadingDB={setIsLoadingDB}
+                showNotification={showNotification}
+                handleFirestoreError={handleFirestoreError}
+                currentUser={currentUser}
+              />
+            )
           )}
           {activeTab === "chat" && (
             <ChatWargaView
@@ -5105,7 +5156,7 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
         } catch (e) {}
       }
       if (sirenIntervalRef.current) {
-        clearTimeout(sirenIntervalRef.current);
+        clearInterval(sirenIntervalRef.current);
         sirenIntervalRef.current = null;
       }
       return;
@@ -5150,33 +5201,35 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
       if (!audioCtxRef.current || isMuted || !emergency) return;
 
       const ctx = audioCtxRef.current;
-      const now = ctx.currentTime;
+      
+      const playSirenCycle = () => {
+        if (!emergency || isMuted) return;
+        const now = ctx.currentTime;
 
-      // Main Siren Oscillator
-      activeOsc = ctx.createOscillator();
-      activeOsc.type = "sawtooth"; // Karakter suara gergaji yang berat/mekanis
-      activeOsc.frequency.setValueAtTime(450, now); // Frekuensi dasar rendah
+        // Main Siren Burst
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.type = "sawtooth";
+        
+        // Frequency sweep for urgency
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.6);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 1.2);
 
-      // LFO (Low Frequency Oscillator) untuk kontrol ayunan nada
-      activeLFO = ctx.createOscillator();
-      activeLFO.type = "sine";
-      activeLFO.frequency.setValueAtTime(0.25, now); // Kecepatan ayun lambat (4 detik per siklus)
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.8, now + 0.1);
+        gainNode.gain.setValueAtTime(0.8, now + 1.0);
+        gainNode.gain.linearRampToValueAtTime(0, now + 1.2);
 
-      const lfoGain = ctx.createGain();
-      lfoGain.gain.setValueAtTime(150, now); // Rentang ayunan: 450 +/- 150 = 300Hz ke 600Hz
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 1.2);
+      };
 
-      activeLFO.connect(lfoGain);
-      lfoGain.connect(activeOsc.frequency); // Modulasi frekuensi osc utama
-
-      activeGain = ctx.createGain();
-      activeGain.gain.setValueAtTime(0, now);
-      activeGain.gain.linearRampToValueAtTime(0.8, now + 1); // Fade in berat
-
-      activeOsc.connect(activeGain);
-      activeGain.connect(ctx.destination);
-
-      activeOsc.start(now);
-      activeLFO.start(now);
+      // Loop rhythmic siren for continuous attention
+      playSirenCycle();
+      sirenIntervalRef.current = setInterval(playSirenCycle, 1400);
     };
 
     startAudioContext();
@@ -5212,7 +5265,7 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
         } catch (e) {}
       }
       if (sirenIntervalRef.current) {
-        clearTimeout(sirenIntervalRef.current);
+        clearInterval(sirenIntervalRef.current);
         sirenIntervalRef.current = null;
       }
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
@@ -5501,6 +5554,11 @@ function ETokoView({
     userRole === "SUPER_ADMIN" ||
     userRole === "RW" ||
     userRole === "RT";
+
+  const isWarga = userRole === "WARGA" || userRole === "USER";
+
+  // Allow Warga to toggle to seller view too
+  const canToggleView = isAdmin || isWarga;
   const categories = [
     "Semua",
     "Sembako",
@@ -5617,12 +5675,14 @@ function ETokoView({
     setIsLoading(true);
     try {
       const id = editingProduct ? editingProduct.id : `PROD-${Date.now()}`;
+      const sellerId = wargaAuth?.nik || currentUser?.email || currentUser?.uid || "unknown";
       await setDoc(
         doc(db, "toko_products", id),
         {
           ...productForm,
           id,
           tenantId,
+          sellerId,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -5703,6 +5763,17 @@ function ETokoView({
     }
   };
 
+  const displayProducts = view === "seller" && isWarga 
+    ? products.filter(p => p.sellerId === (wargaAuth?.nik || currentUser?.email || currentUser?.uid))
+    : products;
+
+  const displayOrders = view === "seller" && isWarga
+    ? orders.filter(o => o.items.some((item: any) => {
+        const prod = products.find(p => p.id === item.id);
+        return prod?.sellerId === (wargaAuth?.nik || currentUser?.email || currentUser?.uid);
+      }))
+    : orders;
+
   return (
     <div className="max-w-6xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -5716,7 +5787,7 @@ function ETokoView({
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
-          {isAdmin && (
+          {canToggleView && (
             <div className="bg-slate-100 p-1 rounded-2xl flex border border-slate-200">
               <StyledButton
                 onClick={() => setView("buyer")}
@@ -9369,8 +9440,26 @@ function LoginView({
           uid = userCredential.user.uid;
         }
 
-        // Update the document with authUid for security rules
         const docId = found.docId || found.id || found.nik;
+
+        // 1. Create/update user document FIRST for Firestore security rules support (getUserData() mapping)
+        // This grants the anonymous user the tenant status of the resident they are linking to,
+        // which allows the subsequent verifikasi_warga update to pass 'isTenantMember' rule checks.
+        const userRef = doc(db, "users", uid);
+        await setDoc(
+          userRef,
+          {
+            role: "Warga",
+            nik: found.nik || "",
+            name: found.nama || "Warga",
+            tenantId: found.tenantId || "RW26_SMART",
+            linkedResidentId: docId,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true },
+        );
+
+        // 2. Update the verifikasi_warga document SECOND with authUid
         const vRef = doc(db, "verifikasi_warga", docId);
         await setDoc(
           vRef,
@@ -9385,21 +9474,6 @@ function LoginView({
                 : "Menunggu Persetujuan",
             tenantId: found.tenantId || "RW26_SMART",
             lastLogin: new Date().toISOString(),
-          },
-          { merge: true },
-        );
-
-        // Also create/update user document for Firestore security rules support (getUserData() mapping)
-        const userRef = doc(db, "users", uid);
-        await setDoc(
-          userRef,
-          {
-            role: "Warga",
-            nik: found.nik || "",
-            name: found.nama || "Warga",
-            tenantId: found.tenantId || "RW26_SMART",
-            linkedResidentId: docId,
-            updatedAt: new Date().toISOString(),
           },
           { merge: true },
         );
@@ -9423,9 +9497,9 @@ function LoginView({
           setWargaAuth(wargaAuthData);
           setIsLoading(false);
         }, 800);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Login Error:", err);
-        setError("Gagal masuk. Silakan coba lagi.");
+        setError(`Gagal masuk: ${err.message || String(err)}`);
         setIsLoading(false);
       }
     } else {
@@ -11563,14 +11637,14 @@ function PosyanduView({
     return ibuHamilData || [];
   }, [ibuHamilData, isWarga, currentUser?.nik]);
 
-  const filteredPosbinduKegiatan = useMemo(() => {
+  const filteredPosbindu = useMemo(() => {
     if (isWarga && currentUser?.nik) {
-      return (posbinduKegiatanData || []).filter(
+      return (pemeriksaanPosbinduData || []).filter(
         (p: any) => p.nik === currentUser.nik,
       );
     }
-    return posbinduKegiatanData || [];
-  }, [posbinduKegiatanData, isWarga, currentUser?.nik]);
+    return pemeriksaanPosbinduData || [];
+  }, [pemeriksaanPosbinduData, isWarga, currentUser?.nik]);
 
   const [activeSubTab, setActiveSubTab] = useState<
     | "dashboard"
@@ -12127,15 +12201,6 @@ function PosyanduView({
       setIsLoadingDB(false);
     }
   };
-
-  const filteredPosbindu = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
-      return (pemeriksaanPosbinduData || []).filter(
-        (p: any) => p.nik === currentUser.nik,
-      );
-    }
-    return pemeriksaanPosbinduData || [];
-  }, [pemeriksaanPosbinduData, isWarga, currentUser?.nik]);
 
   // Dashboard Stats
   const stats = {
@@ -12695,7 +12760,7 @@ function PosyanduView({
                   <th className="px-6 py-3">Tanggal</th>
                   <th className="px-6 py-3">Tekanan Darah</th>
                   <th className="px-6 py-3">Gula Darah</th>
-                  <th className="px-6 py-3">Aksi</th>
+                  {!isWarga && <th className="px-6 py-3">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -12715,28 +12780,30 @@ function PosyanduView({
                       <td className="px-6 py-3">{item.tanggal}</td>
                       <td className="px-6 py-3">{item.tekananDarah}</td>
                       <td className="px-6 py-3">{item.gulaDarah} mg/dL</td>
-                      <td className="px-6 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              setEditingPosbinduItem(item);
-                              setShowPosbinduForm(true);
-                            }}
-                            className="p-1 px-2 text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 font-bold transition-all"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() =>
-                              deleteItem("pemeriksaan_posbindu", item.id)
-                            }
-                            className="p-1.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Hapus"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                      {!isWarga && (
+                        <td className="px-6 py-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingPosbinduItem(item);
+                                setShowPosbinduForm(true);
+                              }}
+                              className="p-1 px-2 text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 font-bold transition-all"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() =>
+                                deleteItem("pemeriksaan_posbindu", item.id)
+                              }
+                              className="p-1.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Hapus"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
               </tbody>
@@ -13056,23 +13123,27 @@ function PosyanduView({
                             >
                               <FileText className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditingItem(balita);
-                                setShowBalitaForm(true);
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteItem("balita", balita.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                              title="Hapus"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isWarga && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingItem(balita);
+                                    setShowBalitaForm(true);
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                  title="Edit"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteItem("balita", balita.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                                  title="Hapus"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -13419,23 +13490,27 @@ function PosyanduView({
                           >
                             <FileText className="w-3.5 h-3.5" />
                           </button>
-                          <button
-                            onClick={() => {
-                              setEditingItem(mil);
-                              setShowIbuHamilForm(true);
-                            }}
-                            className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-100 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => deleteItem("ibu_hamil", mil.id)}
-                            className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100 transition-colors"
-                            title="Hapus"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {!isWarga && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingItem(mil);
+                                  setShowIbuHamilForm(true);
+                                }}
+                                className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-100 transition-colors"
+                                title="Edit"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => deleteItem("ibu_hamil", mil.id)}
+                                className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100 transition-colors"
+                                title="Hapus"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -13471,16 +13546,18 @@ function PosyanduView({
                 </button>
               </div>
             </div>
-            <button
-              onClick={() => {
-                setEditingItem(null);
-                setShowKegiatanForm(true);
-              }}
-              className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 transition-all flex items-center gap-2 active:scale-95"
-            >
-              <PlusCircle className="w-5 h-5" />
-              Buat Agenda
-            </button>
+            {!isWarga && !isViewer && (
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  setShowKegiatanForm(true);
+                }}
+                className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 transition-all flex items-center gap-2 active:scale-95"
+              >
+                <PlusCircle className="w-5 h-5" />
+                Buat Agenda
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
             {posyanduKegiatanData
@@ -13494,23 +13571,25 @@ function PosyanduView({
                     <div className="p-3 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100">
                       <Calendar className="w-5 h-5" />
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                      <button
-                        onClick={() => {
-                          setEditingItem(kgt);
-                          setShowKegiatanForm(true);
-                        }}
-                        className="p-1 text-blue-600 hover:bg-white rounded border border-transparent hover:border-blue-100"
-                      >
-                        <Edit className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => deleteItem("posyandu_kegiatan", kgt.id)}
-                        className="p-1 text-red-600 hover:bg-white rounded border border-transparent hover:border-red-100"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
+                    {!isWarga && !isViewer && (
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          onClick={() => {
+                            setEditingItem(kgt);
+                            setShowKegiatanForm(true);
+                          }}
+                          className="p-1 text-blue-600 hover:bg-white rounded border border-transparent hover:border-blue-100"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => deleteItem("posyandu_kegiatan", kgt.id)}
+                          className="p-1 text-red-600 hover:bg-white rounded border border-transparent hover:border-red-100"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <h4 className="text-lg font-black text-slate-800">
                     {formatTgl(kgt.tanggal)}
@@ -14141,13 +14220,13 @@ function BankSampahView({
   // Auto-select self as nasabah for WARGA
   useEffect(() => {
     if (isWarga && currentUser?.nik && activeSubTab === "dashboard") {
-      const match = nasabahSummary.find((n: any) => n.nik === currentUser.nik);
+      // Find matching nasabah by NIK
+      const match = nasabahSummary.find((n: any) => n.nik === currentUser.nik || n.email === currentUser.email);
       if (match) {
         setSelectedNasabahId(match.nik);
-        setActiveSubTab("nasabah_detail");
       }
     }
-  }, [isWarga, currentUser?.nik, nasabahSummary, activeSubTab]);
+  }, [isWarga, currentUser?.nik, currentUser?.email, nasabahSummary, activeSubTab]);
 
   // Statistics
   const stats = {
@@ -14576,6 +14655,20 @@ function BankSampahView({
     showNotification("Eksport Ringkasan Nasabah PDF Berhasil!");
   };
 
+  const filteredSampahSetoran = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (sampahSetoranData || []).filter((s: any) => s.nasabahId === currentUser.nik);
+    }
+    return sampahSetoranData || [];
+  }, [sampahSetoranData, isWarga, currentUser?.nik]);
+
+  const filteredSampahTarikSaldo = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (sampahTarikSaldoData || []).filter((t: any) => t.nasabahId === currentUser.nik);
+    }
+    return sampahTarikSaldoData || [];
+  }, [sampahTarikSaldoData, isWarga, currentUser?.nik]);
+
   return (
     <div className="space-y-6 pb-20">
       {/* Header & Tabs */}
@@ -14793,7 +14886,7 @@ function BankSampahView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium whitespace-nowrap">
-                {sampahSetoranData
+                {filteredSampahSetoran
                   .filter((s: any) =>
                     s.namaNasabah
                       ?.toLowerCase()
@@ -14908,7 +15001,7 @@ function BankSampahView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {sampahTarikSaldoData
+                {filteredSampahTarikSaldo
                   .filter((t: any) =>
                     t.namaNasabah
                       ?.toLowerCase()
@@ -15121,17 +15214,19 @@ function BankSampahView({
       {activeSubTab === "nasabah" && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
           <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h3 className="font-bold text-slate-800">Daftar Nasabah & Saldo</h3>
+            <h3 className="font-bold text-slate-800">{isWarga ? "Pendaftaran Nasabah" : "Daftar Nasabah & Saldo"}</h3>
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Cari nasabah..."
-                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 ring-emerald-500/20"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+              {!isWarga && (
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Cari nasabah..."
+                    className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 ring-emerald-500/20"
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              )}
               <div className="flex gap-2">
                 <input
                   type="file"
@@ -15140,17 +15235,15 @@ function BankSampahView({
                   accept=".xlsx,.xls,.csv"
                   onChange={handleImportExcel}
                 />
-                {canEdit && (
-                  <StyledButton
-                    label="Nasabah"
-                    onClick={() => {
-                      setEditingItem(null);
-                      setShowNasabahForm(true);
-                    }}
-                    colorType="success"
-                    icon={<PlusCircle className="w-4 h-4" />}
-                  />
-                )}
+                <StyledButton
+                  label={isWarga ? "Daftar Jadi Nasabah" : "Nasabah"}
+                  onClick={() => {
+                    setEditingItem(null);
+                    setShowNasabahForm(true);
+                  }}
+                  colorType="success"
+                  icon={<PlusCircle className="w-4 h-4" />}
+                />
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-all active:scale-95"

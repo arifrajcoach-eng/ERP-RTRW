@@ -194,71 +194,78 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
         <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">
           {['ADMIN', 'SUPER_ADMIN', 'RW', 'RT'].includes(currentUser?.role) ? 'Daftar Peminjaman Wilayah' : 'Riwayat Peminjaman Saya'}
         </h3>
-        <div className="space-y-4">
-          {myBookings.length === 0 && (
-            <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-              <Calendar className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Belum ada riwayat peminjaman</p>
+        
+        {(!isAtLeastPengurus) ? (
+            <div className="py-20 text-center font-bold text-slate-400">
+              Akses riwayat peminjaman ditutup untuk menjaga kerahasiaan. Hubungi Admin jika butuh akses.
             </div>
-          )}
-          {myBookings.map((b) => (
-            <div key={b.id} className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white transition-all hover:shadow-md border-l-4 border-l-[#52abcb]">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="text-[10px] font-black text-[#0184bb] uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md">{b.namaFasilitas}</span>
-                  <p className="text-xs font-bold text-slate-800 mt-2 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(b.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
-                  </p>
-                </div>
-                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                  b.status === 'APPROVED' || b.status === 'Disetujui' ? 'bg-green-100 text-green-700' :
-                  b.status === 'REJECTED' || b.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
-                  'bg-orange-100 text-orange-700'
-                }`}>
-                  {b.status === 'APPROVED' || b.status === 'Disetujui' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                  {b.status}
-                </div>
-                {(b.status === 'APPROVED' || b.status === 'Disetujui') && (
-                   <button 
-                     onClick={(e) => { e.stopPropagation(); handlePrintBooking(b); }}
-                     className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm"
-                     title="Cetak Izin Pemakaian"
-                   >
-                     <Printer className="w-3 h-3" />
-                     Cetak
-                   </button>
-                )}
+        ) : (
+          <div className="space-y-4">
+            {myBookings.length === 0 && (
+              <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                <Calendar className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Belum ada riwayat peminjaman</p>
               </div>
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 italic">"{b.keperluan}"</p>
-                  <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">
-                    Oleh: {b.namaWarga} • Diajukan: {new Date(b.createdAt).toLocaleString('id-ID')}
-                  </p>
-                </div>
-                {isAtLeastPengurus && b.status === 'PENDING' && (
-                  <div className="flex gap-2 ml-4">
-                    <button 
-                      onClick={() => handleUpdateStatus(b.id, 'REJECTED')}
-                      className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                      title="Tolak"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleUpdateStatus(b.id, 'APPROVED')}
-                      className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                      title="Setujui"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
+            )}
+            {myBookings.map((b: any) => (
+              <div key={b.id} className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white transition-all hover:shadow-md border-l-4 border-l-[#52abcb]">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <span className="text-[10px] font-black text-[#0184bb] uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md">{b.namaFasilitas}</span>
+                    <p className="text-xs font-bold text-slate-800 mt-2 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(b.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </p>
                   </div>
-                )}
+                  <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                    b.status === 'APPROVED' || b.status === 'Disetujui' ? 'bg-green-100 text-green-700' :
+                    b.status === 'REJECTED' || b.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
+                    'bg-orange-100 text-orange-700'
+                  }`}>
+                    {b.status === 'APPROVED' || b.status === 'Disetujui' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                    {b.status}
+                  </div>
+                  {(b.status === 'APPROVED' || b.status === 'Disetujui') && (
+                     <button 
+                       onClick={(e) => { e.stopPropagation(); handlePrintBooking(b); }}
+                       className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm"
+                       title="Cetak Izin Pemakaian"
+                     >
+                       <Printer className="w-3 h-3" />
+                       Cetak
+                     </button>
+                  )}
+                </div>
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 italic">"{b.keperluan}"</p>
+                    <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">
+                      Oleh: {b.namaWarga} • Diajukan: {new Date(b.createdAt).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                  {isAtLeastPengurus && b.status === 'PENDING' && (
+                    <div className="flex gap-2 ml-4">
+                      <button 
+                        onClick={() => handleUpdateStatus(b.id, 'REJECTED')}
+                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Tolak"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleUpdateStatus(b.id, 'APPROVED')}
+                        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                        title="Setujui"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
