@@ -88,7 +88,6 @@ import {
   Moon,
   Sparkles,
   Tag,
-  Hand,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -578,96 +577,7 @@ export default function App() {
   const [showInfoPopup, setShowInfoPopup] = useState(true); // Default show for announcement
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isPanMode, setIsPanMode] = useState(false);
   const alertedSOSRef = useRef<Set<string>>(new Set());
-
-  // --- PAN MODE & DRAG-SCROLL (MODE GESER TANGAN) IMPLEMENTATION ---
-  useEffect(() => {
-    if (!isPanMode) {
-      document.body.classList.remove("pan-mode-active");
-      document.body.classList.remove("cursor-grabbing-active");
-      return;
-    }
-
-    document.body.classList.add("pan-mode-active");
-
-    const handleMouseDown = (e: MouseEvent) => {
-      // Ignore right-click/middle-click
-      if (e.button !== 0) return;
-
-      const target = e.target as HTMLElement;
-      // Skip interactive elements
-      if (target.closest('button, input, select, textarea, a, svg, [role="button"], img, label')) {
-        return;
-      }
-
-      // Find the closest scrollable container up the DOM tree
-      let scrollContainer: HTMLElement | null = null;
-      let element: HTMLElement | null = target;
-
-      while (element && element !== document.body && element !== document.documentElement) {
-        const style = window.getComputedStyle(element);
-        const overflowX = style.overflowX;
-        const overflowY = style.overflowY;
-        const isScrollableX = (element.scrollWidth > element.clientWidth) && (overflowX === "auto" || overflowX === "scroll");
-        const isScrollableY = (element.scrollHeight > element.clientHeight) && (overflowY === "auto" || overflowY === "scroll");
-
-        if (isScrollableX || isScrollableY) {
-          scrollContainer = element;
-          break;
-        }
-        element = element.parentElement;
-      }
-
-      // Fallback: If clicked on blank workspace space, scroll the main view's content panel
-      if (!scrollContainer) {
-        const activeScrollable = document.querySelector('main, .overflow-y-auto, .overflow-x-auto, .overflow-auto') as HTMLElement;
-        if (activeScrollable) {
-          scrollContainer = activeScrollable;
-        }
-      }
-
-      if (!scrollContainer) return;
-
-      // Prevent default selection highlight during scroll drag
-      e.preventDefault();
-
-      const startX = e.pageX;
-      const startY = e.pageY;
-      const scrollLeft = scrollContainer.scrollLeft;
-      const scrollTop = scrollContainer.scrollTop;
-
-      document.body.classList.add("cursor-grabbing-active");
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        if (!scrollContainer) return;
-        moveEvent.preventDefault();
-
-        const walkX = (moveEvent.pageX - startX) * 1.5; // multiplier for drag sensitivity
-        const walkY = (moveEvent.pageY - startY) * 1.5;
-
-        scrollContainer.scrollLeft = scrollLeft - walkX;
-        scrollContainer.scrollTop = scrollTop - walkY;
-      };
-
-      const handleMouseUp = () => {
-        document.body.classList.remove("cursor-grabbing-active");
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    };
-
-    document.addEventListener("mousedown", handleMouseDown);
-
-    return () => {
-      document.body.classList.remove("pan-mode-active");
-      document.body.classList.remove("cursor-grabbing-active");
-      document.removeEventListener("mousedown", handleMouseDown);
-    };
-  }, [isPanMode]);
 
 
   const triggerLocalSOSAlert = (sosId: string) => {
@@ -3558,22 +3468,7 @@ export default function App() {
                 </span>
               </div>
 
-              {/* PAN MODE HEADER TOGGLE BUTTON */}
-              <button
-                onClick={() => setIsPanMode(!isPanMode)}
-                className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all duration-300 shadow-sm hover:scale-[1.02] active:scale-95 cursor-pointer ${
-                  isPanMode
-                    ? "bg-brand-blue/15 text-brand-blue border-brand-blue/30 dark:bg-brand-blue/20"
-                    : "bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-800/30 dark:border-slate-800"
-                }`}
-                title="Aktifkan Mode Geser Tangan (Drag Scroll)"
-              >
-                <Hand className={`w-3.5 h-3.5 ${isPanMode ? "text-brand-blue animate-pulse" : "text-slate-400"}`} />
-                <span className="text-[10px] uppercase font-black tracking-wider">
-                  {isPanMode ? "Mode Tangan: Aktif" : "Mode Tangan"}
-                </span>
-                <span className={`w-1.5 h-1.5 rounded-full ${isPanMode ? "bg-brand-blue animate-pulse" : "bg-slate-300 dark:bg-slate-600"}`}></span>
-              </button>
+
             </div>
 
             <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1 hidden md:block"></div>
@@ -4144,38 +4039,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* FLOATING PAN MODE CONTROL CAPSULE (DRAG SCROLL / PAN GESTURE) */}
-      {currentUser && (
-        <motion.div 
-          className="fixed bottom-28 right-7 z-50 flex flex-col items-center group/pan"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          {/* Tooltip */}
-          <div className="absolute bottom-16 right-0 bg-slate-900/95 dark:bg-slate-800/95 text-white text-[9px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider shadow-xl opacity-0 group-hover/pan:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-slate-700/30">
-            {isPanMode ? "Nonaktifkan Mode Geser" : "Aktifkan Mode Geser Tangan"}
-          </div>
-          
-          <button
-            onClick={() => setIsPanMode(!isPanMode)}
-            className={`w-14 h-14 rounded-full flex flex-col items-center justify-center shadow-xl border-2 transition-all active:scale-95 cursor-pointer relative overflow-hidden ${
-              isPanMode
-                ? "bg-brand-blue border-brand-blue text-white ring-4 ring-brand-blue/30 shadow-brand-blue/20"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-brand-blue/40"
-            }`}
-            title="Mode Geser Tangan (Drag with Hand)"
-          >
-            {isPanMode && (
-              <span className="absolute inset-0 bg-white/10 animate-ping rounded-full pointer-events-none"></span>
-            )}
-            <Hand className={`w-5 h-5 ${isPanMode ? "animate-bounce text-white" : "text-slate-600 dark:text-slate-400"}`} />
-            <span className="text-[7px] font-black uppercase tracking-tighter mt-1 block leading-none">
-              {isPanMode ? "ON" : "GESER"}
-            </span>
-          </button>
-        </motion.div>
-      )}
+
 
       {/* PANIC BUTTON (SOS) - BOTTOM RIGHT (NOW DRAGGABLE) */}
       {currentUser && (

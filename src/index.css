@@ -246,23 +246,7 @@ div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(5) > div:nth-of-t
   border-color: #2299f5 !important;
 }
 
-/* Pan Mode Scroll Hand styles */
-body.pan-mode-active {
-  user-select: none !important;
-  -webkit-user-select: none !important;
-}
-body.pan-mode-active,
-body.pan-mode-active * {
-  cursor: grab !important;
-}
-body.pan-mode-active .cursor-grabbing-active,
-body.pan-mode-active .cursor-grabbing-active * {
-  cursor: grabbing !important;
-}
-body.cursor-grabbing-active,
-body.cursor-grabbing-active * {
-  cursor: grabbing !important;
-}
+
 
 div#root:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) {
   height: 576.997px !important;
