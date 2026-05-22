@@ -8,6 +8,7 @@ import {
   CheckCircle, 
   XCircle, 
   Eye, 
+  Trash2, 
   X, 
   ShieldAlert
 } from 'lucide-react';
@@ -263,6 +264,38 @@ export function VerifikasiAdminView({
     }
   };
 
+  const handlePeriodicCleanup = async () => {
+    if (!confirm("Peringatan: Aksi ini akan menghapus semua data verifikasi (Disetujui/Ditolak) yang berusia lebih dari 30 hari secara permanen. Lanjutkan?")) return;
+
+    setIsLoadingDB(true);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const staleData = verifikasiData.filter(v => 
+      (v.status === 'Disetujui' || v.status === 'Ditolak') &&
+      new Date(v.submittedAt || v.approvedAt || v.rejectedAt || 0) < thirtyDaysAgo
+    );
+
+    if (staleData.length === 0) {
+      showNotification("Tidak ada data lama yang ditemukan untuk dibersihkan.", "info");
+      setIsLoadingDB(false);
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      staleData.forEach(item => {
+        batch.delete(doc(db, 'verifikasi_warga', item.id));
+      });
+      await batch.commit();
+      showNotification(`Berhasil membersihkan ${staleData.length} data lama.`, "success");
+    } catch (err) {
+      handleFirestoreError(err, 'delete', 'periodic_cleanup');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-12 w-full max-w-full overflow-hidden space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 w-full">
@@ -294,6 +327,14 @@ export function VerifikasiAdminView({
           >
             <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" />
             SINKRONKAN
+          </button>
+          
+          <button 
+            onClick={handlePeriodicCleanup}
+            className="px-6 py-4 bg-white text-rose-500 border border-rose-100 hover:border-rose-200 hover:bg-rose-50 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-xl shadow-rose-500/10 flex items-center gap-3 whitespace-nowrap shrink-0"
+          >
+            <Trash2 className="w-4 h-4" />
+            BERSIHKAN DATA
           </button>
           
           <div className="hidden sm:block h-8 w-px bg-slate-200/60 mx-1 shrink-0" />
