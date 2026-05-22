@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
   MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot, LayoutGrid,
-  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap
+  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap,
+  PieChart as PieIcon
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, 
@@ -403,112 +403,110 @@ export default function DashboardView({
   }, [trialEndDate]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 font-sans">
       {daysRemaining !== null && isStarter && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-amber-500 to-orange-600 p-4 rounded-[2rem] flex items-center justify-between shadow-lg shadow-orange-200 dark:shadow-none text-white overflow-hidden relative"
+        <div 
+          className="bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 p-6 rounded-3xl flex items-center justify-between shadow-2xl shadow-orange-500/30 dark:shadow-none text-white overflow-hidden relative border border-white/20"
         >
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Clock className="w-16 h-16" />
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <Clock className="w-24 h-24" />
           </div>
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30">
-              <Zap className="w-6 h-6 text-white animate-pulse" />
+          <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 shadow-inner">
+              <Zap className="w-8 h-8 text-white animate-pulse" />
             </div>
             <div>
-              <h3 className="text-sm font-black uppercase tracking-widest leading-tight">Masa Percobaan Aktif</h3>
-              <p className="text-[10px] font-bold text-white/80 uppercase">Nikmati Fitur SmartRW AI Tanpa Batas</p>
+              <h3 className="text-lg font-black uppercase tracking-widest leading-tight font-elegant">Masa Percobaan Aktif</h3>
+              <p className="text-[11px] font-bold text-white/80 uppercase tracking-wider mt-1">Status: Open Beta • Nikmati Full Fitur AI</p>
             </div>
           </div>
           <div className="text-right relative z-10">
-            <p className="text-[10px] font-black uppercase tracking-tighter opacity-80 mb-0.5">Berakhir Dalam</p>
-            <span className="font-mono text-2xl font-black tabular-nums">
-              {daysRemaining} Hari
-            </span>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Berakhir Dalam</p>
+            <div className="flex items-baseline justify-end gap-1 font-elegant text-white">
+              <span className="text-4xl font-black tabular-nums drop-shadow-lg leading-none">
+                {daysRemaining}
+              </span>
+              <span className="text-sm font-black uppercase">Hari</span>
+            </div>
           </div>
-        </motion.div>
+        </div>
       )}
       {/* SOS Alert & Plan Info */}
-      <div className="flex flex-col md:flex-row gap-4 mb-2">
+      <div className="flex flex-col md:flex-row gap-6 mb-2">
         {activeSOS ? (
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+          <div 
             onClick={() => setActiveTab('dashboard')}
-            className="flex-1 bg-red-600 p-6 rounded-[2.5rem] shadow-red-200 shadow-xl border-4 border-red-500 overflow-hidden relative group cursor-pointer"
+            className="flex-1 bg-gradient-to-tr from-rose-600 via-red-600 to-rose-700 p-8 rounded-3xl shadow-2xl shadow-rose-500/40 border-4 border-white/20 overflow-hidden relative group cursor-pointer"
           >
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-150 transition-transform">
-              <Siren size={80} />
+            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-125 transition-transform duration-700">
+              <Siren size={120} />
             </div>
             <div className="flex items-center gap-6 relative z-10">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center animate-pulse border border-white/30">
-                <Siren className="w-8 h-8 text-white" />
+              <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center animate-pulse border border-white/30 shadow-inner">
+                <Siren className="w-10 h-10 text-white" />
               </div>
               <div>
-                <h3 className="text-2xl font-black uppercase tracking-tighter leading-none mb-1 text-white">DARURAT: {activeSOS.lokasi || 'LINGKUNGAN'}</h3>
-                <p className="font-bold text-white/90 text-xs uppercase tracking-widest">{activeSOS.keterangan || 'Bantuan segera dibutuhkan.'}</p>
+                <h3 className="text-3xl font-black uppercase tracking-tight leading-none mb-2 text-white font-elegant">DARURAT: {activeSOS.lokasi?.toUpperCase() || 'LINGKUNGAN'}</h3>
+                <p className="font-bold text-white/90 text-sm uppercase tracking-wider leading-relaxed">{activeSOS.keterangan || 'Bantuan segera dibutuhkan oleh warga.'}</p>
               </div>
             </div>
-          </motion.div>
+          </div>
         ) : isWarga ? (
-          <div className="flex-1 bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 -mr-10 -mt-10">
-              <ShieldCheck className="w-48 h-48" />
+          <div className="flex-1 bg-gradient-to-tr from-brand-blue via-indigo-600 to-indigo-800 p-10 rounded-3xl shadow-2xl shadow-brand-blue/30 text-white relative overflow-hidden group border border-white/10">
+            <div className="absolute top-0 right-0 p-10 opacity-10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700">
+              <ShieldCheck className="w-64 h-64" />
             </div>
             <div className="relative z-10">
-              <h2 className="text-2xl font-black mb-1">Halo, {currentUser?.name || 'Warga'}!</h2>
-              <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-6">Nikmati layanan mandiri & pantau keuangan pribadi Anda.</p>
+              <div className="flex items-center gap-4 mb-2">
+                 <div className="w-1.5 h-8 bg-cyan-400 rounded-full"></div>
+                 <h2 className="text-4xl font-black font-elegant tracking-tight">Halo, {currentUser?.name || 'Warga'}!</h2>
+              </div>
+              <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmartRW AI Dashboard</p>
               
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Tabungan Sampah</p>
-                  <p className="text-lg font-black leading-none flex items-center gap-1 group/item">
-                    <Recycle className="w-3 h-3 text-emerald-400 group-hover/item:rotate-180 transition-transform" />
-                    Rp {personalStats?.saldoSampah.toLocaleString('id-ID')}
-                  </p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Iuran Belum Lunas</p>
-                  <p className="text-lg font-black leading-none flex items-center gap-1">
-                    <CreditCard className="w-3 h-3 text-red-400" />
-                    {personalStats?.unpaidIuran} Tagihan
-                  </p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Pesanan E-Lapak</p>
-                  <p className="text-lg font-black leading-none flex items-center gap-1">
-                    <ShoppingBag className="w-3 h-3 text-orange-400" />
-                    {personalStats?.pendingOrders} Diproses
-                  </p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Status Akun</p>
-                  <p className="text-lg font-black leading-none flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                    Terverifikasi
-                  </p>
-                </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: 'Saldo Sampah', val: `Rp ${personalStats?.saldoSampah.toLocaleString('id-ID')}`, icon: Recycle, color: 'text-emerald-400' },
+                  { label: 'Belum Lunas', val: `${personalStats?.unpaidIuran} Bulan`, icon: CreditCard, color: 'text-rose-400' },
+                  { label: 'Pesanan Lapak', val: `${personalStats?.pendingOrders} Proses`, icon: ShoppingBag, color: 'text-amber-400' },
+                  { label: 'Status Akun', val: 'Verified', icon: ShieldCheck, color: 'text-cyan-400' },
+                ].map((item, i) => (
+                  <div 
+                    key={i}
+                    className="bg-white/10 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-inner group/item"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                       <div className="p-2 bg-white/5 rounded-xl">
+                         <item.icon className={`w-4 h-4 ${item.color}`} />
+                       </div>
+                       <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest">{item.label}</p>
+                    </div>
+                    <p className="text-lg font-black tracking-tight font-elegant">{item.val}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex-1 bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-colors">
-            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-brand-blue/5 rounded-full blur-2xl group-hover:bg-brand-blue/10 transition-colors"></div>
+          <div className="flex-1 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-all duration-300">
+            <div className="absolute -right-6 -bottom-6 w-48 h-48 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-blue/10 transition-colors"></div>
             <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-brand-blue/10 rounded-2xl flex items-center justify-center">
-                  <Smartphone className="w-7 h-7 text-brand-blue" />
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-brand-blue/10 rounded-[1.5rem] flex items-center justify-center shadow-inner">
+                  <Smartphone className="w-8 h-8 text-brand-blue" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight mb-0.5 uppercase">SISTEM AKTIF</h3>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{currentTenant?.name || settings?.nama_rt || 'SmartRW AI'}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">System Live</h3>
+                  </div>
+                  <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{currentTenant?.name || settings?.nama_rt || 'Digital Environment'}</p>
                 </div>
               </div>
-              <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-2 transition-colors">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-200"></div>
-                Cloud Secured
+              <div className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-100 dark:border-slate-700 flex items-center gap-3 transition-colors shadow-sm">
+                <Shield className="w-4 h-4 text-brand-blue" />
+                V.2.4.0 • Secured
               </div>
             </div>
           </div>
@@ -516,7 +514,7 @@ export default function DashboardView({
       </div>
 
       {allowedMenuItems && allowedMenuItems.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <LayoutGrid className="w-5 h-5 text-brand-blue" />
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase">Modul & Pintasan</h3>
@@ -551,97 +549,78 @@ export default function DashboardView({
       )}
 
       {!isWarga && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#4aa379] p-6 rounded-[2rem] border border-white/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors text-white">
-            <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
-              <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
-                <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { label: 'Total Warga', val: stats.totalWarga, sub: `KK: ${stats.kepalaKeluarga} Terdaftar`, icon: Users, gradient: 'from-emerald-600 to-teal-700', shadow: 'shadow-emerald-500/20' },
+            { label: 'Saldo Kas RW', val: `Rp ${formatRupiah(stats.saldoTotal)}`, sub: 'Perekaman Otomatis', icon: CreditCard, gradient: 'from-brand-blue to-indigo-800', shadow: 'shadow-brand-blue/20' },
+            { label: 'Permohonan Surat', val: stats.suratPending, sub: 'Menunggu Persetujuan', icon: FileText, gradient: 'from-rose-600 to-pink-700', shadow: 'shadow-pink-500/20' }
+          ].map((item, i) => (
+            <div 
+              key={i}
+              className={`bg-gradient-to-br ${item.gradient} p-8 rounded-3xl border border-white/20 shadow-2xl ${item.shadow} dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-all text-white`}
+            >
+              <div className="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform"></div>
+              <p className="text-[11px] text-white/80 font-black uppercase tracking-widest mb-6 drop-shadow-sm">{item.label}</p>
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md shadow-inner border border-white/30">
+                  <item.icon className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-3xl font-black text-white leading-none mb-2 font-elegant drop-shadow-lg tracking-tight">
+                    {item.val}
+                  </p>
+                  <p className="text-[10px] font-black text-white/50 uppercase tracking-wider">{item.sub}</p>
+                </div>
               </div>
             </div>
-            <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.2em] mb-2">Total Warga</p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-3xl font-black text-white leading-none mb-1">
-                  {stats.totalWarga}
-                </p>
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">KK: {stats.kepalaKeluarga} Terdaftar</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#67a9e9] dark:bg-blue-600/20 p-6 rounded-[2rem] border border-slate-50 dark:border-blue-500/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors">
-            <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
-              <div className="w-10 h-10 opacity-30 -rotate-12 group-hover:rotate-0 group-hover:opacity-50 transition-all duration-500">
-                <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
-              </div>
-            </div>
-            <p className="text-[10px] text-white/70 dark:text-blue-200/70 font-black uppercase tracking-[0.2em] mb-2">Saldo Kas RW</p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 dark:bg-blue-500/30 flex items-center justify-center backdrop-blur-md">
-                <CreditCard className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-white dark:text-blue-100 leading-none mb-1">
-                  Rp {formatRupiah(stats.saldoTotal)}
-                </p>
-                <p className="text-[10px] font-bold text-white/60 dark:text-blue-200/60 uppercase tracking-tighter">Update Real-time</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#cb6497] p-6 rounded-[2rem] border border-white/20 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col justify-center relative overflow-hidden group hover:scale-[1.02] transition-all transition-colors text-white">
-            <div className="absolute right-4 top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors flex items-center justify-center text-white">
-              <div className="w-10 h-10 opacity-20 -rotate-12 group-hover:rotate-0 group-hover:opacity-40 transition-all duration-500">
-                <AppLogo size={10} className="w-full h-full" logoUrl={settings?.org_logo_url || settings?.logo_url} />
-              </div>
-            </div>
-            <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.2em] mb-2">Permohonan Surat</p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-3xl font-black text-white leading-none mb-1">
-                  {stats.suratPending}
-                </p>
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">Butuh Persetujuan</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-brand-blue" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:border-brand-blue/30 relative overflow-hidden group">
+          <div className="absolute -right-12 -top-12 w-64 h-64 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-blue/10 transition-colors"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-brand-blue/10 rounded-2xl flex items-center justify-center shadow-inner border border-brand-blue/10">
+                <TrendingUp className="w-8 h-8 text-brand-blue" />
               </div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Tren Kas RW</h3>
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant leading-none">Keuangan</h3>
+                <div className="flex items-center gap-2 mt-2">
+                   <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                   <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Cash Flow Statistics</p>
+                </div>
+              </div>
             </div>
-            <select 
-              value={kasPeriod}
-              onChange={(e) => setKasPeriod(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 px-3 py-2 outline-none focus:ring-2 ring-brand-blue/20 transition-colors"
-            >
-              <option value="yearly">Seluruh Tahun 2026</option>
-              {months.map(m => <option key={m.id} value={m.id}>Bulan {m.label}</option>)}
-            </select>
+            <div className="relative">
+              <select 
+                value={kasPeriod}
+                onChange={(e) => setKasPeriod(e.target.value)}
+                className="bg-slate-50 dark:bg-slate-800 border-2 border-transparent hover:border-brand-blue/20 rounded-2xl text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 px-8 py-4 outline-none focus:ring-4 ring-brand-blue/5 shadow-sm transition-all appearance-none cursor-pointer pr-14"
+              >
+                <optgroup label="Periodic View">
+                  <option value="yearly">Full 2026 Archive</option>
+                </optgroup>
+                <optgroup label="Monthly Deep Dive">
+                  {months.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                </optgroup>
+              </select>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
           </div>
-          <div className="h-72 w-full">
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={currentChartData}>
                 <defs>
                   <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.25}/>
                     <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25}/>
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
@@ -650,64 +629,92 @@ export default function DashboardView({
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}}
+                  tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 900, fontFamily: 'JetBrains Mono'}}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}}
+                  tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 900, fontFamily: 'JetBrains Mono'}}
+                  tickFormatter={formatRupiah}
+                  width={80}
                 />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px' }}
+                  contentStyle={{ borderRadius: '2rem', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '24px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}
+                  itemStyle={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'JetBrains Mono' }}
                 />
-                <Area type="monotone" dataKey="masuk" stroke="#4f46e5" strokeWidth={4} fillOpacity={1} fill="url(#colorIn)" />
-                <Area type="monotone" dataKey="keluar" stroke="#ef4444" strokeWidth={4} fillOpacity={1} fill="url(#colorOut)" />
+                <Area type="monotone" dataKey="masuk" stroke="#4f46e5" strokeWidth={5} fillOpacity={1} fill="url(#colorIn)" animationDuration={1500} />
+                <Area type="monotone" dataKey="keluar" stroke="#ef4444" strokeWidth={5} fillOpacity={1} fill="url(#colorOut)" animationDuration={1500} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-brand-pink/10 rounded-xl flex items-center justify-center">
-                <FileText className="w-5 h-5 text-brand-pink" />
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:border-pink-500/30 relative overflow-hidden group">
+          <div className="absolute -right-12 -top-12 w-64 h-64 bg-pink-500/5 rounded-full blur-3xl group-hover:bg-pink-500/10 transition-colors"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-pink-50 dark:bg-pink-500/10 rounded-2xl flex items-center justify-center shadow-inner border border-pink-500/10">
+                <PieIcon className="w-8 h-8 text-pink-500" />
               </div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Persentase Aktivitas</h3>
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant leading-none">Distribusi</h3>
+                <div className="flex items-center gap-2 mt-2">
+                   <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                   <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Public Service Metrics</p>
+                </div>
+              </div>
             </div>
-            <select 
-              value={piePeriod}
-              onChange={(e) => setPiePeriod(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 px-3 py-2 outline-none focus:ring-2 ring-brand-blue/20 transition-colors"
-            >
-              <option value="30days">Terakhir 30 Hari</option>
-              <option value="yearly">Seluruh 2026</option>
-            </select>
+            <div className="relative">
+              <select 
+                value={piePeriod}
+                onChange={(e) => setPiePeriod(e.target.value)}
+                className="bg-slate-50 dark:bg-slate-800 border-2 border-transparent hover:border-pink-500/20 rounded-2xl text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 px-8 py-4 outline-none focus:ring-4 ring-pink-500/5 shadow-sm transition-all appearance-none cursor-pointer pr-14"
+              >
+                <option value="30days">Last 30 Days</option>
+                <option value="yearly">Full 2026</option>
+              </select>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <Calendar className="w-4 h-4" />
+              </div>
+            </div>
           </div>
-          <div className="h-72 w-full flex items-center justify-center">
-            <ResponsiveContainer width={240} height={240}>
-              <PieChart>
-                <Pie
-                  data={activityChartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={8}
-                  dataKey="value"
-                >
-                  {activityChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="white" strokeWidth={4} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-col gap-3 justify-center ml-4">
+          <div className="h-80 w-full flex flex-col md:flex-row items-center justify-center">
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Total</p>
+                 <p className="text-3xl font-black text-slate-800 dark:text-slate-100 font-elegant leading-none mt-1">{activityChartData.reduce((acc, curr) => acc + curr.value, 0)}</p>
+              </div>
+              <ResponsiveContainer width={260} height={260}>
+                <PieChart>
+                  <Pie
+                    data={activityChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={75}
+                    outerRadius={105}
+                    paddingAngle={8}
+                    dataKey="value"
+                    animationDuration={1500}
+                  >
+                    {activityChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke={document.documentElement.classList.contains('dark') ? '#0f172a' : 'white'} strokeWidth={6} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                    itemStyle={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'JetBrains Mono' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-col gap-4 justify-center md:ml-12 mt-8 md:mt-0 w-full md:w-auto">
               {activityChartData.map((entry, index) => (
-                <div key={entry.name} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-tight">{entry.name}</span>
+                <div key={entry.name} className="flex items-center justify-between md:justify-start gap-6 p-2 rounded-[1.5rem] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.1)] group-hover:scale-125 transition-transform" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">{entry.name}</span>
+                  </div>
+                  <span className="text-sm font-black text-slate-800 dark:text-slate-200 tabular-nums font-mono">{entry.value}</span>
                 </div>
               ))}
             </div>
@@ -715,60 +722,69 @@ export default function DashboardView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center">
-                <Clock className="w-5 h-5 text-indigo-500" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-colors">
+          <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center shadow-inner border border-indigo-500/5">
+                <Clock className="w-7 h-7 text-indigo-500" />
               </div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Log Aktivitas Lingkungan</h3>
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">Log Aktivitas</h3>
+                <div className="flex items-center gap-2 mt-1">
+                   <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                   <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Sinkronisasi Real-time Lingkungan</p>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
             {recentActivities.map((act, i) => (
-              <div key={`activity-${act.id || i}`} className="flex items-center gap-5 p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
-                  act.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 
-                  act.type === 'out' ? 'bg-rose-50 text-rose-600' :
-                  act.type === 'doc' ? 'bg-blue-50 text-blue-600' :
-                  act.type === 'tamu' ? 'bg-amber-50 text-amber-600' :
-                  act.type === 'kesehatan' ? 'bg-pink-50 text-pink-600' :
-                  act.type === 'sampah_in' ? 'bg-teal-50 text-teal-600' :
-                  act.type === 'voting' ? 'bg-purple-50 text-purple-600' :
-                  act.type === 'sos' ? 'bg-red-50 text-red-600' :
-                  'bg-slate-100 text-slate-600'
+              <div 
+                key={`activity-${act.id || i}`}
+                className="flex items-center gap-6 p-6 rounded-[2rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+              >
+                <div className={`w-16 h-16 rounded-[1.2rem] flex items-center justify-center shrink-0 shadow-lg ${
+                  act.type === 'in' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 
+                  act.type === 'out' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10' :
+                  act.type === 'doc' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
+                  act.type === 'tamu' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
+                  act.type === 'kesehatan' ? 'bg-pink-50 text-pink-600 dark:bg-pink-500/10' :
+                  act.type === 'sampah_in' ? 'bg-teal-50 text-teal-600 dark:bg-teal-500/10' :
+                  act.type === 'voting' ? 'bg-purple-50 text-purple-600 dark:bg-purple-500/10' :
+                  act.type === 'sos' ? 'bg-red-50 text-red-600 dark:bg-red-500/10' :
+                  'bg-slate-100 text-slate-600 dark:bg-slate-800'
                 }`}>
-                  {act.type === 'in' && <TrendingUp size={22} />}
-                  {act.type === 'out' && <TrendingUp size={22} className="rotate-180" />}
-                  {act.type === 'doc' && <FileText size={22} />}
-                  {act.type === 'tamu' && <Users size={22} />}
-                  {act.type === 'kesehatan' && <CheckCircle2 size={22} />}
-                  {act.type === 'sampah_in' && <TrendingUp size={22} />}
-                  {act.type === 'voting' && <FileText size={22} />}
-                  {act.type === 'toko' && <CreditCard size={22} />}
-                  {act.type === 'sos' && <Siren size={22} />}
-                  {act.type === 'complaint' && <MessageSquare size={22} />}
-                  {act.type === 'booking' && <Calendar size={22} />}
+                  {act.type === 'in' && <TrendingUp size={24} />}
+                  {act.type === 'out' && <TrendingUp size={24} className="rotate-180" />}
+                  {act.type === 'doc' && <FileText size={24} />}
+                  {act.type === 'tamu' && <Users size={24} />}
+                  {act.type === 'kesehatan' && <CheckCircle2 size={24} />}
+                  {act.type === 'sampah_in' && <TrendingUp size={24} />}
+                  {act.type === 'voting' && <FileText size={24} />}
+                  {act.type === 'toko' && <CreditCard size={24} />}
+                  {act.type === 'sos' && <Siren size={24} />}
+                  {act.type === 'complaint' && <MessageSquare size={24} />}
+                  {act.type === 'booking' && <Calendar size={24} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-50 truncate tracking-tight">{act.title}</h4>
-                    <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{act.date}</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 truncate tracking-tight font-elegant">{act.title}</h4>
+                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg uppercase tracking-widest">{act.date}</span>
                   </div>
-                  <p className="text-sm text-slate-500 font-medium truncate leading-tight">{act.desc}</p>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400 font-bold truncate leading-tight tracking-tight">{act.desc}</p>
                 </div>
                 {act.amount && (
-                  <span className={`text-base font-black tracking-tight ml-4 ${act.type === 'in' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                  <span className={`text-lg font-black tracking-tighter ml-4 font-elegant tabular-nums ${act.type === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
                     {act.type === 'in' ? '+' : ''}{formatRupiah(act.amount)}
                   </span>
                 )}
                 {act.status && (
-                  <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border ml-4 ${
-                    act.status === 'Selesai' || act.status === 'Disetujui' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                    act.status === 'Diajukan' || act.status === 'Menunggu' || act.status === 'Diproses' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                    act.status === 'Ditolak' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                    'bg-slate-50 text-slate-500 border-slate-100'
+                  <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ml-4 shadow-sm ${
+                    act.status === 'Selesai' || act.status === 'Disetujui' || act.status === 'Suara Masuk' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' :
+                    act.status === 'Diajukan' || act.status === 'Menunggu' || act.status === 'Diproses' || act.status === 'Aktif' ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
+                    act.status === 'Ditolak' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20' :
+                    'bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                   }`}>
                     {act.status}
                   </span>
@@ -778,44 +794,47 @@ export default function DashboardView({
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-slate-900 p-8 rounded-[2.5rem] relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 group-hover:rotate-0 transition-transform">
-              <QrCode size={120} className="text-white" />
+        <div className="space-y-8">
+          <div className="bg-slate-900 p-10 rounded-3xl relative overflow-hidden group shadow-2xl shadow-slate-900/40">
+            <div className="absolute top-0 right-0 p-10 opacity-10 rotate-12 group-hover:rotate-0 transition-transform duration-700">
+              <QrCode size={180} className="text-white" />
             </div>
             <div className="relative z-10">
-              <h3 className="text-2xl font-black text-white tracking-tighter leading-none mb-2">SELF-SERVICE PORTAL</h3>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Akses mandiri bagi seluruh warga</p>
+              <div className="flex items-center gap-3 mb-2">
+                 <div className="w-1.5 h-6 bg-brand-blue rounded-full"></div>
+                 <h3 className="text-2xl font-black text-white tracking-tight leading-none font-verdana uppercase">Portal Mandiri</h3>
+              </div>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mb-10 ml-5 opacity-70">Layanan Akses Cepat Warga</p>
               
-              <div className="space-y-3">
+              <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 <button 
                   onClick={() => setShowQRModal(true)}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white h-[34px] p-5 rounded-3xl flex items-center justify-between transition-all group/btn border border-white/10 backdrop-blur-sm"
+                  className="w-32 flex-shrink-0 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                      <QrCode className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-sm font-black uppercase tracking-widest">QR Pendaftaran</span>
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                    <QrCode className="w-6 h-6 text-white" />
                   </div>
-                  <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
-                    <Search className="w-4 h-4 text-white" />
-                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">Pendaftaran</span>
                 </button>
                 
                 <button 
                   onClick={() => setActiveTab('surat')}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white p-5 rounded-3xl flex items-center justify-between transition-all group/btn border border-white/10 backdrop-blur-sm"
+                  className="w-32 flex-shrink-0 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                      <Search className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-sm font-black uppercase tracking-widest">Cek Status Pengajuan</span>
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                    <Search className="w-6 h-6 text-white" />
                   </div>
-                  <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
-                    <Search className="w-4 h-4 text-white" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">Cek Pengajuan</span>
+                </button>
+
+                <button 
+                    onClick={() => setActiveTab('surat')}
+                  className="w-32 flex-shrink-0 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
+                >
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                    <FileText className="w-6 h-6 text-white" />
                   </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">Buat Surat</span>
                 </button>
               </div>
             </div>
@@ -854,29 +873,22 @@ export default function DashboardView({
       
       {/* Floating AI Chat Button */}
       {currentTenant?.id !== 'RW26_SMART' && currentTenant?.status !== 'STARTER' && (
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={() => setShowAIChat(!showAIChat)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50"
+          className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-95"
         >
           <Bot className="w-8 h-8" />
-        </motion.button>
+        </button>
       )}
 
       {/* AI Chat Window */}
-      <AnimatePresence>
         {showAIChat && currentTenant?.id !== 'RW26_SMART' && currentTenant?.status !== 'STARTER' && (
-          <motion.div
-            initial={{ opacity: 0, y: 100, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 100, scale: 0.9 }}
-            className="fixed bottom-24 right-6 z-50 w-full max-w-md"
-          >
+          <div
+              className="fixed bottom-24 right-6 z-50 w-full max-w-md"
+            >
             <AIChatBot currentUser={currentUser} agentType="cs" plan={currentTenant?.status} />
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

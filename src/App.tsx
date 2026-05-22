@@ -30,6 +30,7 @@ import {
   Eye,
   EyeOff,
   ChevronRight,
+  ChevronDown,
   Database,
   Shield,
   CheckCircle,
@@ -3224,18 +3225,18 @@ export default function App() {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col h-full print:hidden transition-all duration-300 md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full shadow-2xl md:shadow-none"} rounded-r-[2.5rem] md:rounded-none`}
+        className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800 flex flex-col h-full print:hidden transition-all duration-300 md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full shadow-2xl md:shadow-none"} rounded-r-3xl md:rounded-none`}
       >
-        <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex-shrink-0 flex items-center justify-between bg-white dark:bg-slate-900 relative overflow-hidden group rounded-tr-[2.5rem] md:rounded-none">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-pink/10 transition-all duration-700"></div>
+        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex-shrink-0 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 relative overflow-hidden group rounded-tr-3xl md:rounded-none">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-blue/10 rounded-full blur-3xl group-hover:bg-brand-pink/20 transition-all duration-700"></div>
+          <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-brand-yellow/10 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-all duration-700"></div>
+          
           <div className="relative z-10 flex flex-col items-center w-full">
-            <div className="flex justify-between w-full mb-4">
+            <div className="flex justify-between w-full mb-6">
               <button
                 onClick={cycleTheme}
-                className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm border border-slate-200 dark:border-slate-700"
-                title={
-                  darkMode ? "Switch to Light Mode" : "Switch to Night View"
-                }
+                className="p-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-90 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-brand-blue/30"
+                title={darkMode ? "Switch to Light Mode" : "Switch to Night View"}
               >
                 {darkMode ? (
                   <Sun className="w-5 h-5 text-amber-500" />
@@ -3245,11 +3246,13 @@ export default function App() {
               </button>
               <div className="w-10 h-10 md:hidden"></div>
             </div>
-            <div className="relative group/logo">
-              <div className="w-[82.9931px] h-[69.9931px] rounded-2xl bg-[#ffffff] dark:bg-slate-800 flex items-center justify-center p-2 mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
+
+            <div className="relative group/logo mb-6 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/20 to-brand-pink/20 rounded-3xl blur-md opacity-0 group-hover/logo:opacity-100 transition-all duration-500 scale-110"></div>
+              <div className="relative w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center p-3 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 group-hover/logo:scale-105 transition-all duration-500">
                 <AppLogo
                   size={12}
-                  className="w-12 h-12 truncate"
+                  className="w-12 h-12"
                   logoUrl={
                     currentTenant?.logo_url ||
                     settings?.tenant_system_logo ||
@@ -3261,112 +3264,104 @@ export default function App() {
               {hasFullAccess && (
                 <button
                   onClick={() => setActiveTab("pengaturan")}
-                  className="absolute bottom-2 -right-1 bg-white p-1.5 rounded-full shadow-lg border border-slate-100 text-brand-blue hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/logo:opacity-100"
-                  title="Ganti Logo"
+                  className="absolute -bottom-2 -right-2 bg-brand-blue text-white p-2 rounded-xl shadow-lg border-2 border-white dark:border-slate-800 hover:scale-110 active:scale-90 transition-all opacity-0 group-hover/logo:opacity-100 backdrop-blur-sm z-20"
                 >
-                  <Edit2 className="w-3.5 h-3.5" />
+                  <Edit2 className="w-3 h-3" />
                 </button>
               )}
             </div>
-            <div className="px-6 mb-2">
-              <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 flex flex-col leading-none font-elegant">
+
+            <div className="text-center px-2">
+              <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant leading-none">
                 {currentTenant?.name || settings?.nama_rt ? (
-                  <div
-                    className="flex flex-col leading-tight"
-                    title={currentTenant?.name || settings?.nama_rt}
-                  >
-                    {(currentTenant?.name || settings?.nama_rt).includes(
-                      "SUPER ADMIN",
-                    ) ? (
-                      <>
-                        <span className="text-brand-pink text-[17px] font-sans font-bold tracking-widest opacity-80 ml-[21px] border-none leading-[18px] w-[139.906px] inline-block uppercase">
-                          SUPER ADMIN
-                        </span>
-                        <span className="text-[14px] truncate ml-[42px] mt-[4px] mr-[32px] w-[92.8958px] h-[18.5px] leading-[15.5px] font-bold font-elegant flex items-center pt-0 pb-0">
-                          <span className="text-[#04a8f4] font-bold border-[#1d3840] w-[41.066px] inline-block">
-                            Smart
-                          </span>
-                          <span className="text-brand-blue w-[1.6597px] inline-block">RW</span>&nbsp;
-                          <span className="text-brand-pink text-[15px] ml-[20px] mt-[-5px] mb-[-5px] w-[0px] leading-[15.5px] inline-block">AI</span>
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-brand-pink text-lg truncate uppercase">
-                        {currentTenant?.name || settings?.nama_rt}
-                      </span>
-                    )}
-                  </div>
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-blue to-brand-pink uppercase">
+                    {currentTenant?.name || settings?.nama_rt}
+                  </span>
                 ) : (
-                  <>
+                  <span className="flex items-center gap-1 justify-center">
                     <span className="text-[#89CFF0]">Smart</span>
                     <span className="text-brand-blue">RW</span>
-                    <span className="text-brand-pink">AI</span>
-                  </>
+                    <span className="text-brand-pink italic">AI</span>
+                  </span>
                 )}
               </h1>
               {currentTenant?.name && (
-                <div className="mt-1.5 ml-[18px] space-y-1">
-                  <p className="text-[8px] font-bold text-[#5779ab] dark:text-slate-400 bg-transparent font-[Georgia] uppercase tracking-widest text-center w-[125px] ml-[6px] mb-1 leading-[12.86px]">
-                    Powered by Nexapps
+                <div className="mt-2 space-y-1.5 flex flex-col items-center">
+                  <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">
+                    Nexapps Intelligent
                   </p>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg pb-[1px] ml-[9px]">
-                    <Zap className="w-2.5 h-2.5 text-brand-blue" />
-                    <span className="text-[9px] font-black text-brand-blue uppercase tracking-tight">
-                      PAKET {currentTenant?.status || "STARTER"}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-brand-blue/5 to-cyan-500/5 border border-brand-blue/10 rounded-full">
+                    <Zap className="w-2.5 h-2.5 text-brand-blue animate-pulse" />
+                    <span className="text-[10px] font-black text-brand-blue uppercase tracking-wider">
+                      {(currentTenant?.status || "STARTER").toUpperCase()} PLAN
                     </span>
                   </div>
                 </div>
               )}
             </div>
           </div>
+          
           <button
             onClick={() => setIsSidebarOpen(false)}
-            className="p-2 text-slate-400 hover:text-red-500 md:hidden bg-slate-50 rounded-lg transition-colors absolute top-4 right-4"
+            className="p-2 text-slate-400 hover:text-red-500 md:hidden bg-white/80 dark:bg-slate-800/80 rounded-2xl transition-all absolute top-4 right-4 border border-slate-100 dark:border-slate-700"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 transition-colors">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-brand-green  shadow-[0_0_8px_rgba(0,250,154,0.5)]"></div>
-            <p
-              className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors"
-              style={{ width: "128.899px", lineHeight: "13.8571px" }}
-            >
-              AI ACTIVE
+
+        <div className="flex-shrink-0 px-6 py-5 bg-slate-50/30 dark:bg-slate-800/30 border-b border-slate-100/50 dark:border-slate-800/50">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="relative flex">
+              <div className="w-2.5 h-2.5 rounded-full bg-brand-green shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse"></div>
+              <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-brand-green animate-ping opacity-20"></div>
+            </div>
+            <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              System Active
             </p>
           </div>
-          <div className="p-2 bg-soft-blue dark:bg-blue-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20 transition-colors">
+          <div className="p-3 bg-white/80 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-brand-blue/20">
             {getPlanFeatures(currentTenant?.status).multiRegion ? (
-              <div className="space-y-1">
-                <p className="text-[8px] text-brand-blue font-black uppercase tracking-widest">
-                  Wilayah Kerja:
-                </p>
-                <select className="w-full bg-white border border-blue-100 rounded-lg text-[10px] font-bold p-1 outline-none text-slate-700">
-                  <option>🏢 KELURAHAN (PUSAT)</option>
-                  <option>🏠 RW 05 (AKTIF)</option>
-                  <option>🏠 RW 01</option>
-                  <option>🏠 RW 02</option>
-                </select>
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-brand-blue font-black uppercase tracking-widest pl-1">
+                  Wilayah Kerja
+                </label>
+                <div className="relative">
+                  <select className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[11px] font-bold py-2 pl-3 pr-8 outline-none text-slate-700 dark:text-slate-200 appearance-none shadow-inner">
+                    <option>🏢 KELURAHAN (PUSAT)</option>
+                    <option>🏠 RW 05 (AKTIF)</option>
+                    <option>🏠 RW 01</option>
+                    <option>🏠 RW 02</option>
+                  </select>
+                  <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
               </div>
             ) : (
-              <>
-                <p className="text-[9px] text-brand-blue font-bold uppercase tracking-tight">
-                  ID Klien:
+              <div className="flex flex-col">
+                <p className="text-[10px] text-brand-blue font-black uppercase tracking-wider mb-0.5">
+                  Tenant ID
                 </p>
-                <p className="text-[10px] text-slate-700 font-mono font-bold truncate">
-                  {currentUser.tenantId || "RW26_SMART"}
-                </p>
-              </>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-800 dark:text-slate-200 font-mono font-black truncate bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50 flex-1">
+                    {currentUser.tenantId || "RW26_SMART"}
+                  </span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-green"></div>
+                </div>
+              </div>
             )}
           </div>
         </div>
-        <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto pb-20 scrollbar-hide dark:bg-slate-900">
-          {renderableNavItems.map((item: any) => {
+
+        <nav className="flex-1 px-4 space-y-2.5 mt-8 overflow-y-auto pb-24 scrollbar-hide">
+          {renderableNavItems.map((item: any, idx: number) => {
             const isLocked = item.isLocked;
+            const isActive = activeTab === item.id;
+            
             return (
-              <button
+              <motion.button
                 key={item.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
                 onClick={() => {
                   if (isLocked) {
                     setShowUpgradeModal(true);
@@ -3375,43 +3370,55 @@ export default function App() {
                     setIsSidebarOpen(false);
                   }
                 }}
-                className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-300 relative group overflow-hidden ${
-                  activeTab === item.id
-                    ? "bg-brand-blue text-white shadow-xl shadow-brand-blue/30 scale-[1.02]"
+                className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl transition-all duration-500 relative group overflow-hidden ${
+                  isActive
+                    ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white shadow-xl shadow-brand-blue/30 scale-[1.02]"
                     : isLocked
-                      ? "text-slate-300 bg-slate-50 cursor-not-allowed opacity-60"
-                      : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-blue font-black"
+                      ? "text-slate-300 bg-slate-50 dark:bg-slate-800/20 cursor-not-allowed opacity-50"
+                      : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-brand-blue font-bold"
                 }`}
               >
-                {activeTab === item.id && (
+                {isActive && (
                   <motion.div
                     layoutId="activeIndicator"
-                    className="absolute left-0 w-1.5 h-6 bg-brand-yellow rounded-r-full"
+                    className="absolute left-0 w-1.5 h-7 bg-brand-yellow rounded-r-full z-10"
                   />
                 )}
-                <div
-                  className={`relative transition-all duration-300 ${activeTab === item.id ? "scale-110 drop-shadow-md" : "group-hover:scale-110"}`}
-                >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                
+                <div className="relative group-hover:scale-110 transition-transform duration-500">
+                  <div className={`p-2 rounded-2xl transition-colors duration-500 ${isActive ? "bg-white/20" : "bg-transparent group-hover:bg-brand-blue/5"}`}>
+                    <item.icon className={`w-5 h-5 flex-shrink-0 transition-colors ${isActive ? "text-white" : "group-hover:text-brand-blue"}`} />
+                  </div>
                   {isLocked && (
-                    <div className="absolute -top-1.5 -right-1.5 bg-slate-800 text-white p-0.5 rounded-full border border-white">
-                      <Lock className="w-2 h-2" />
+                    <div className="absolute -top-1 -right-1 bg-slate-800 text-white p-1 rounded-full border-2 border-white scale-75 shadow-lg">
+                      <Lock className="w-2.5 h-2.5" />
                     </div>
                   )}
                 </div>
+
                 <div className="flex-1 text-left flex flex-col">
                   <span
-                    className={`text-[15px] font-black uppercase tracking-widest ${isLocked ? "text-slate-400" : ""}`}
+                    className={`text-[12px] font-black uppercase tracking-wider text-wrap ${isLocked ? "text-slate-400" : ""}`}
                   >
                     {item.label}
                   </span>
-                  {isLocked && (
-                    <span className="text-[7px] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-100 self-start mt-0.5 animate-pulse">
-                      LEVEL: {item.minPlan || "PRO"}
+                  {isLocked ? (
+                    <span className="text-[8px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-100 dark:border-amber-500/20 self-start mt-1 uppercase tracking-widest">
+                      {item.minPlan || "PREMIUM"}
                     </span>
+                  ) : (
+                    isActive && (
+                      <span className="text-[9px] font-black text-brand-yellow uppercase tracking-widest mt-0.5 animate-in fade-in slide-in-from-left-2 drop-shadow-sm">
+                        Active Now
+                      </span>
+                    )
                   )}
                 </div>
-              </button>
+                
+                {!isLocked && !isActive && (
+                  <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-slate-300" />
+                )}
+              </motion.button>
             );
           })}
         </nav>
@@ -3423,89 +3430,105 @@ export default function App() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50/10 to-teal-50/30 dark:from-indigo-900/10 dark:via-slate-950 dark:to-cyan-900/10 pointer-events-none z-0"></div>
 
         {/* Header */}
-        <header className="h-20 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/80 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30 shadow-sm relative">
+        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-b border-slate-200/40 dark:border-slate-800/80 flex items-center justify-between px-6 md:px-10 shrink-0 print:hidden sticky top-0 z-30 shadow-[0_4px_30px_rgba(0,0,0,0.03)] dark:shadow-none relative">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="p-3 -ml-2 text-slate-500 dark:text-slate-400 hover:text-brand-blue md:hidden bg-slate-50 dark:bg-slate-800 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100 dark:border-slate-700"
+              className="p-3 -ml-2 text-slate-500 dark:text-slate-400 hover:text-brand-blue md:hidden bg-slate-50 dark:bg-slate-800 rounded-2xl transition-all active:scale-95 border border-slate-100 dark:border-slate-700 shadow-sm"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="hidden sm:flex items-center gap-2 text-[#03c97d]">
-              <span className="bg-soft-yellow dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] px-2.5 py-1 rounded-full border border-amber-100 dark:border-amber-500/20 uppercase font-black tracking-widest shadow-sm transition-colors">
-                V4.0 Active
-              </span>
-              <div
-                className={`flex items-center gap-2 ${dbStatus === "UNAVAILABLE" ? "bg-red-50 text-red-600" : dbStatus === "OFFLINE" ? "bg-amber-50 text-amber-600" : "bg-soft-green text-brand-green"} dark:bg-emerald-500/10 text-[10px] px-3 py-1 rounded-full border ${dbStatus === "UNAVAILABLE" ? "border-red-200" : "border-brand-green/20"} uppercase font-black tracking-widest shadow-sm transition-colors`}
-              >
-                <div
-                  className={`w-2 h-2 ${dbStatus === "UNAVAILABLE" ? "bg-red-500" : dbStatus === "OFFLINE" ? "bg-amber-500" : "bg-brand-green"} rounded-full animate-pulse shadow-[0_0_8px_rgba(0,250,154,0.5)]`}
-                ></div>
-                {dbStatus === "UNAVAILABLE"
-                  ? "Connection Blocked"
-                  : dbStatus === "OFFLINE"
-                    ? "Offline Mode"
-                    : "Connected"}
-              </div>
-            </div>
-            <div className="h-6 w-px bg-slate-100 mx-2 hidden md:block"></div>
-            <button
-              onClick={toggleDarkMode}
-              className="p-3 text-slate-500 dark:text-slate-400 hover:text-brand-blue bg-slate-50 dark:bg-slate-800 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100 dark:border-slate-700 md:flex hidden items-center justify-center mr-4"
-              title={darkMode ? "Switch to Light Mode" : "Switch to Night View"}
-            >
-              {darkMode ? (
-                <Sun className="w-5 h-5 text-amber-500" />
-              ) : (
-                <Moon className="w-5 h-5 text-indigo-600" />
-              )}
-            </button>
-            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 capitalize tracking-tight hidden md:block">
-              {activeTab === "etoko"
-                ? "E-LAPAK26"
-                : activeTab === "posyandu"
-                  ? "Kesehatan"
-                  : activeTab.replace("-", " ")}
-            </h2>
-          </div>
-          <div className="flex items-center space-x-3 md:space-x-6">
-            <div className="flex items-center space-x-3 md:space-x-4 pl-4 border-l border-slate-100 dark:border-slate-800">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-black leading-none text-slate-800 dark:text-slate-100 flex items-center justify-end gap-2 mb-1">
-                  {currentUser.name}
-                  {currentUser.isSuperAdmin && (
-                    <ShieldCheck className="w-4 h-4 text-brand-blue" />
-                  )}
-                </p>
-                <span
-                  className={`text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border shadow-sm inline-block ${
-                    currentUser.isSuperAdmin
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-brand-blue/10 text-brand-blue border-brand-blue/20"
-                  }`}
-                >
-                  {currentUser.isSuperAdmin ? "SUPER ADMIN" : currentUser.role}
-                </span>
-              </div>
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-brand-blue p-0.5 shadow-xl shadow-brand-blue/20 border-2 border-white ring-1 ring-slate-100 overflow-hidden group hover:scale-105 transition-transform duration-300 cursor-pointer">
-                <div className="w-full h-full rounded-[0.9rem] overflow-hidden flex items-center justify-center text-white text-lg font-black bg-gradient-to-tr from-brand-blue to-cyan-400">
-                  {userPhoto ? (
-                    <img
-                      src={userPhoto}
-                      alt={currentUser.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    currentUser.name.charAt(0)
-                  )}
+            
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="flex items-center gap-2 group">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-brand-yellow/20 rounded-full blur-sm scale-150 group-hover:bg-brand-yellow/30 transition-all"></div>
+                  <span className="relative bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-500 text-[10px] px-3 py-1 rounded-full border border-amber-100 dark:border-amber-500/20 uppercase font-black tracking-widest shadow-sm">
+                    V4.0 PRIME
+                  </span>
                 </div>
               </div>
+
+              <div className="h-5 w-px bg-slate-200 dark:bg-slate-800"></div>
+
+              <div
+                className={`flex items-center gap-2.5 px-4 py-1 rounded-full border transition-all duration-500 
+                  ${dbStatus === "UNAVAILABLE" ? "bg-red-50 text-red-600 border-red-100" : 
+                    dbStatus === "OFFLINE" ? "bg-amber-50 text-amber-600 border-amber-100" : 
+                    "bg-emerald-50 text-brand-green border-emerald-100"} 
+                  dark:bg-slate-800/50 dark:border-slate-700 shadow-sm group`}
+              >
+                <div className="relative flex">
+                  <div className={`w-2 h-2 ${dbStatus === "UNAVAILABLE" ? "bg-red-500" : dbStatus === "OFFLINE" ? "bg-amber-500" : "bg-brand-green"} animate-pulse`}></div>
+                  <div className={`absolute inset-0 w-2 h-2 rounded-full ${dbStatus === "UNAVAILABLE" ? "bg-red-500" : dbStatus === "OFFLINE" ? "bg-amber-500" : "bg-brand-green"} animate-ping opacity-20`}></div>
+                </div>
+                <span className="text-[10px] uppercase font-black tracking-wider">
+                  {dbStatus === "UNAVAILABLE" ? "Blocked" : dbStatus === "OFFLINE" ? "Offline" : "Live Sync"}
+                </span>
+              </div>
+            </div>
+
+            <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1 hidden md:block"></div>
+            
+            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 capitalize tracking-tight hidden lg:block font-elegant">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-400 dark:from-white dark:to-slate-500">
+                {activeTab === "etoko"
+                  ? "E-LAPAK26"
+                  : activeTab === "posyandu"
+                    ? "Care Center"
+                    : activeTab.replace("-", " ")}
+              </span>
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-4 md:gap-8">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="text-right hidden sm:block">
+                <div className="text-sm font-black leading-none text-slate-800 dark:text-slate-100 flex items-center justify-end gap-2 mb-1.5 font-elegant">
+                  {currentUser.name}
+                  {currentUser.isSuperAdmin && (
+                    <div className="relative">
+                      <ShieldCheck className="w-4 h-4 text-brand-blue" />
+                      <div className="absolute inset-0 bg-brand-blue/20 blur-[2px] rounded-full scale-110"></div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <span
+                    className={`text-[9px] uppercase font-black tracking-widest px-3 py-1 rounded-full border shadow-sm inline-block transition-all
+                      ${currentUser.isSuperAdmin
+                        ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/20"
+                        : "bg-brand-blue/5 text-brand-blue border-brand-blue/10"
+                      }`}
+                  >
+                    {currentUser.isSuperAdmin ? "Authority Role" : (currentUser.role || "Citizen")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative group/avatar">
+                <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue to-indigo-600 rounded-2xl blur opacity-20 group-hover/avatar:opacity-40 transition-all duration-500"></div>
+                <div className="relative w-11 h-11 md:w-13 md:h-13 rounded-2xl bg-white dark:bg-slate-800 p-0.5 shadow-xl border-2 border-white dark:border-slate-800 overflow-hidden cursor-pointer group-hover/avatar:scale-105 transition-transform duration-300">
+                  <div className="w-full h-full rounded-[0.9rem] overflow-hidden flex items-center justify-center text-white text-lg font-black bg-gradient-to-tr from-brand-blue to-indigo-500 shadow-inner">
+                    {userPhoto ? (
+                      <img
+                        src={userPhoto}
+                        alt={currentUser.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/avatar:scale-110"
+                      />
+                    ) : (
+                      <span className="drop-shadow-md">{currentUser.name.charAt(0)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
               <button
                 onClick={handleLogout}
-                className="p-2.5 ml-[12px] bg-[#e71173] text-white hover:bg-[#c40e62] rounded-2xl transition-all md:ml-2 shadow-lg shadow-brand-pink/20 flex items-center justify-center active:scale-95"
+                className="w-11 h-11 md:w-12 md:h-12 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center active:scale-90 group"
                 title="Keluar"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -5024,29 +5047,38 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">
-            🛡️ INTEGRASI CCTV LINGKUNGAN
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="bg-gradient-to-r from-[#008bb5] to-[#014e66] p-10 rounded-[3.5rem] text-white shadow-2xl shadow-[#008bb5]/20 flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:scale-125 transition-transform duration-1000"></div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl">
+              <ShieldCheck className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Security Protocol</span>
+          </div>
+          <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">
+            INTEGRASI CCTV <span className="text-white/30">SEMATA</span>
           </h2>
-          <p className="text-slate-500 font-medium text-sm">
-            Pantauan real-time area strategis melalui link IP Camera / Streaming
-            atau Kamera Lokal.
+          <p className="text-white/70 font-medium text-sm mt-4 max-w-xl leading-relaxed">
+            Sistem pantauan keamanan modern berbasis web. Hubungkan perangkat kamera lokal atau 
+            integrasikan protokol streaming IP dari vendor pihak ketiga melalui input URL.
           </p>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex flex-col sm:flex-row gap-4 relative z-10 bg-black/10 backdrop-blur-md p-4 rounded-[2.5rem] border border-white/10">
           <input
             value={newLink}
             onChange={(e) => setNewLink(e.target.value)}
-            placeholder="Masukkan Link URL CCTV..."
-            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm w-full md:w-64"
+            placeholder="Url Stream (HTTP/HTTPS)..."
+            className="px-6 py-4 bg-white/10 border-none rounded-2xl text-sm w-full lg:w-64 placeholder:text-white/40 text-white outline-none focus:ring-2 ring-white/50 transition-all shadow-inner font-medium"
           />
           <button
             onClick={addLink}
-            className="p-3 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-100 flex-shrink-0"
+            className="p-4 bg-white text-[#008bb5] rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.03] active:scale-95 transition-all flex items-center justify-center font-black group/btn shrink-0"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-6 h-6 group-hover/btn:rotate-90 transition-all duration-500" />
+            <span className="ml-2 mr-1 sm:hidden">Tambah Kamera</span>
           </button>
         </div>
       </div>
@@ -5054,66 +5086,105 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
       <div className="flex gap-4">
         <button
           onClick={() => setShowLocalCamera(!showLocalCamera)}
-          className={`px-6 py-3 rounded-full font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-lg ${showLocalCamera ? "bg-red-600 text-white" : "bg-[#008bb5] text-white"}`}
+          className={`group px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.25em] transition-all duration-500 shadow-2xl flex items-center gap-4 ${
+            showLocalCamera 
+              ? "bg-gradient-to-r from-red-600 to-red-800 text-white shadow-red-200" 
+              : "bg-gradient-to-r from-slate-900 to-slate-800 text-white hover:shadow-slate-300"
+          }`}
         >
-          {showLocalCamera ? "Tutup Kamera Lokal" : "Buka Kamera Lokal"}
+          <div className="relative">
+            <div className={`w-3 h-3 rounded-full ${showLocalCamera ? 'bg-white animate-ping' : 'bg-red-500'}`} />
+            <div className={`absolute inset-0 w-3 h-3 rounded-full ${showLocalCamera ? 'bg-white' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] animate-pulse'}`} />
+          </div>
+          {showLocalCamera ? "Hentikan Local Feed" : "Aktifkan Local Feed"}
         </button>
       </div>
 
       {showLocalCamera && (
-        <div className="rounded-[2rem] overflow-hidden border-4 border-slate-200 shadow-xl aspect-video md:w-1/2">
-          <Webcam
-            audio={false}
-            videoConstraints={{ facingMode: "user" }}
-            className="w-full h-full object-cover"
-            mirrored={true}
-            screenshotFormat="image/jpeg"
-            forceScreenshotSourceSize={false}
-            audioConstraints={false}
-            disablePictureInPicture={true}
-            imageSmoothing={true}
-            onUserMedia={() => {}}
-            onUserMediaError={() => {}}
-            screenshotQuality={0.92}
-          />
+        <div className="relative group max-w-2xl">
+          <div className="absolute -inset-2 bg-gradient-to-r from-[#008bb5] via-blue-500 to-indigo-600 rounded-[3.2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+          <div className="relative rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl aspect-video bg-black ring-1 ring-slate-100">
+            <Webcam
+              audio={false}
+              videoConstraints={{ facingMode: "user" }}
+              className="w-full h-full object-cover grayscale brightness-110 group-hover:grayscale-0 transition-all duration-700"
+              mirrored={true}
+              screenshotFormat="image/jpeg"
+              forceScreenshotSourceSize={false}
+              audioConstraints={false}
+              disablePictureInPicture={true}
+              imageSmoothing={true}
+              onUserMedia={() => {}}
+              onUserMediaError={() => {}}
+              screenshotQuality={0.92}
+            />
+            <div className="absolute top-8 left-8 flex items-center gap-3 bg-black/50 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/20">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,1)]" />
+              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">LIVE FEED • DEVICE#01</span>
+            </div>
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+          </div>
         </div>
       )}
 
       {links.length === 0 && !showLocalCamera ? (
-        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center">
-          <Video className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
-            Belum ada kamera yang ditautkan
-          </p>
+        <div className="bg-white border border-slate-100 rounded-[4rem] p-24 text-center shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,139,181,0.02),transparent)] group-hover:scale-150 transition-transform duration-1000"></div>
+          <div className="relative z-10">
+            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-white">
+              <Video className="w-12 h-12 text-slate-200" />
+            </div>
+            <h4 className="text-slate-800 font-black uppercase text-xs tracking-[0.4em] mb-3">No Active Channels</h4>
+            <p className="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
+              Silahkan tambahkan URL transmisi kamera di atas atau aktifkan kamera lokal untuk memulai pemantauan.
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {links.map((url, i) => (
             <div
               key={i}
-              className="group relative bg-slate-900 aspect-video rounded-[2.5rem] overflow-hidden shadow-2xl ring-4 ring-white"
+              className="group relative bg-slate-900 aspect-video rounded-[3.5rem] overflow-hidden shadow-2xl ring-1 ring-slate-100 hover:ring-[#008bb5]/50 transition-all duration-700 hover:scale-[1.02]"
             >
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-800 animate-pulse">
-                <Video className="w-12 h-12 text-slate-600" />
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
+                <div className="flex flex-col items-center gap-5">
+                  <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center animate-pulse border border-white/5">
+                    <Video className="w-10 h-10 text-white/10" />
+                  </div>
+                  <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Connecting Transceiver...</span>
+                </div>
               </div>
-              {/* Emulating CCTV embed */}
+              
               <iframe
                 src={url}
-                className="absolute inset-0 w-full h-full border-0 grayscale hover:grayscale-0 transition-all"
+                className="absolute inset-0 w-full h-full border-0 relative z-10 opacity-90 group-hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-1000"
                 title={`Kamera ${i + 1}`}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
               />
-              <div className="absolute top-6 left-6 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                <div className="w-2 h-2 bg-white rounded-full"></div>
-                <span className="text-[10px] font-bold text-white uppercase tracking-widest">
-                  LIVE - CAM 0{i + 1}
-                </span>
+
+              <div className="absolute top-8 left-8 z-20 flex items-center gap-3 bg-black/60 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/10 group-hover:border-white/30 transition-all">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_12px_rgba(59,130,246,1)]" />
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">CHANNEL-0{i + 1}</span>
               </div>
-              <button
-                onClick={() => setLinks(links.filter((_, idx) => idx !== i))}
-                className="absolute top-6 right-6 p-3 bg-black/40 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="w-4 h-4" />
-              </button>
+
+              <div className="absolute top-8 right-8 z-20 opacity-0 group-hover:opacity-100 transition-all translate-x-10 group-hover:translate-x-0 duration-500">
+                <button
+                  onClick={() => setLinks(links.filter((_, idx) => idx !== i))}
+                  className="p-4 bg-red-500/80 hover:bg-red-600 text-white rounded-2xl backdrop-blur-md shadow-2xl transition-all hover:rotate-12"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 z-20 h-32 bg-gradient-to-t from-black to-transparent transform translate-y-full group-hover:translate-y-0 transition-transform duration-700 p-8 flex items-end">
+                 <div className="w-full">
+                    <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Source Address</p>
+                    <p className="text-white/70 text-xs font-medium truncate italic">{url}</p>
+                 </div>
+              </div>
             </div>
           ))}
         </div>
@@ -14717,48 +14788,48 @@ function BankSampahView({
         <div className="space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 transition-transform hover:scale-110">
-                <Recycle className="w-5 h-5 text-emerald-600" />
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:border-emerald-300/50">
+              <div className="w-12 h-12 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4 transition-transform hover:scale-110">
+                <Recycle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
                 Total Sampah
               </p>
-              <p className="text-2xl font-black text-slate-800">
+              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
                 {stats.totalSampah.toFixed(1)}{" "}
                 <span className="text-sm font-bold text-slate-400">kg</span>
               </p>
             </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
-                <Wallet className="w-5 h-5 text-blue-600" />
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:border-blue-300/50">
+              <div className="w-12 h-12 bg-blue-500/10 dark:bg-blue-500/20 rounded-2xl flex items-center justify-center mb-4">
+                <Wallet className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
                 Total Tabungan
               </p>
-              <p className="text-2xl font-black text-slate-800">
+              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
                 Rp {stats.totalTabungan.toLocaleString()}
               </p>
             </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center mb-4">
-                <TrendingUp className="w-5 h-5 text-orange-600" />
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:border-orange-300/50">
+              <div className="w-12 h-12 bg-orange-500/10 dark:bg-orange-500/20 rounded-2xl flex items-center justify-center mb-4">
+                <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
                 Setoran Bulan Ini
               </p>
-              <p className="text-2xl font-black text-slate-800">
+              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
                 {stats.transaksiBulanIni}
               </p>
             </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-4">
-                <Users className="w-5 h-5 text-purple-600" />
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:border-purple-300/50">
+              <div className="w-12 h-12 bg-purple-500/10 dark:bg-purple-500/20 rounded-2xl flex items-center justify-center mb-4">
+                <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
                 Nasabah Aktif
               </p>
-              <p className="text-2xl font-black text-slate-800">
+              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
                 {stats.nasabahAktif}
               </p>
             </div>
@@ -14766,47 +14837,47 @@ function BankSampahView({
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Recent Transactions */}
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <div className="lg:col-span-2 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
+              <div className="px-2 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 uppercase tracking-tight text-sm">
                   <History className="w-4 h-4 text-emerald-600" />
                   Setoran Terakhir
                 </h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-widest">
+                  <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 font-black uppercase text-[10px] tracking-wider">
                     <tr>
-                      <th className="px-6 py-3">Nasabah</th>
-                      <th className="px-6 py-3">Kategori</th>
-                      <th className="px-6 py-3 text-right">Berat</th>
-                      <th className="px-6 py-3 text-right">Total</th>
-                      <th className="px-6 py-3">Tanggal</th>
+                      <th className="px-6 py-4">Nasabah</th>
+                      <th className="px-6 py-4">Kategori</th>
+                      <th className="px-6 py-4 text-right">Berat</th>
+                      <th className="px-6 py-4 text-right">Total</th>
+                      <th className="px-6 py-4">Tanggal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
                     {sampahSetoranData
                       .slice(0, 5)
                       .map((item: any, idx: number) => (
                         <tr
                           key={`sampah-item-${item.id || idx}-${idx}`}
-                          className="hover:bg-slate-50 transition-colors"
+                          className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
                         >
-                          <td className="px-6 py-4 font-bold text-slate-700">
+                          <td className="px-6 py-4 font-black">
                             {item.namaNasabah}
                           </td>
                           <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
+                            <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-black uppercase tracking-tight">
                               {item.namaKategori}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-right text-emerald-600 font-bold">
+                          <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400 font-black">
                             {item.berat} kg
                           </td>
                           <td className="px-6 py-4 text-right font-black">
                             Rp {item.total.toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 text-slate-400 text-xs">
+                          <td className="px-6 py-4 text-slate-400 text-[11px] font-bold">
                             {item.tanggal}
                           </td>
                         </tr>
@@ -14817,25 +14888,25 @@ function BankSampahView({
             </div>
 
             {/* Price List Card */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-              <div className="px-6 py-4 border-b border-slate-100 bg-emerald-50/30">
-                <h3 className="font-bold text-emerald-800 flex items-center gap-2">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-emerald-500/5 dark:bg-emerald-500/10">
+                <h3 className="font-black text-emerald-800 dark:text-emerald-400 flex items-center gap-2 uppercase tracking-tight text-sm">
                   <TrendingUp className="w-4 h-4" />
                   Harga Hari Ini
                 </h3>
               </div>
-              <div className="p-4 space-y-3 overflow-y-auto max-h-[300px]">
+              <div className="p-4 space-y-2 overflow-y-auto max-h-[300px]">
                 {sampahKategoriData.map((kat: any) => (
                   <div
                     key={kat.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100"
+                    className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800"
                   >
                     <div>
-                      <p className="text-sm font-bold text-slate-700">
+                      <p className="text-sm font-black text-slate-700 dark:text-slate-200">
                         {kat.nama}
                       </p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">
-                        per {kat.satuan}
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">
+                        {kat.hargaBeli.toLocaleString()} / {kat.satuan}
                       </p>
                     </div>
                     <p className="text-emerald-600 font-black">

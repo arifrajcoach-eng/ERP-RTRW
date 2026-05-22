@@ -22,6 +22,7 @@ import {
   Sparkles,
   Loader2,
   Camera,
+  MapPin,
 } from "lucide-react";
 import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -467,250 +468,214 @@ export function KasView({
   const saldo = totalMasuk - totalKeluar;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Dashboard Ringkasan Kas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
-            <TrendingUp className="w-24 h-24 text-green-600" />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none overflow-hidden relative group transition-all duration-300"
+        >
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
           <div className="flex flex-col relative z-10">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-              <span className="bg-green-500 w-1.5 h-3 rounded-full"></span>
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
               Pemasukan Bulan Ini
             </span>
-            <h3 className="text-2xl font-black text-slate-800 tracking-tighter">
-              {formatRupiah(totalMasuk)}
-            </h3>
-            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 w-fit px-2.5 py-1 rounded-full">
-              <ArrowUpRight className="w-3.5 h-3.5" />
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black text-emerald-600/50 italic select-none">Rp</span>
+              <h3 className="text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tighter font-elegant">
+                {new Intl.NumberFormat('id-ID').format(totalMasuk)}
+              </h3>
+            </div>
+            <div className="mt-8 flex items-center gap-2.5 text-[10px] font-black text-emerald-600 bg-emerald-50/50 dark:bg-emerald-500/10 w-fit px-4 py-2.5 rounded-2xl border border-emerald-100/50 dark:border-emerald-500/20 uppercase tracking-widest shadow-sm">
+              <TrendingUp className="w-4 h-4" />
               <span>Total Dana Masuk</span>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
-            <TrendingDown className="w-24 h-24 text-red-600" />
-          </div>
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none overflow-hidden relative group transition-all duration-300"
+        >
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-rose-500/10 rounded-full blur-3xl group-hover:bg-rose-500/20 transition-all duration-700"></div>
           <div className="flex flex-col relative z-10">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-              <span className="bg-red-500 w-1.5 h-3 rounded-full"></span>
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
               Pengeluaran Bulan Ini
             </span>
-            <h3 className="text-2xl font-black text-slate-800 tracking-tighter">
-              {formatRupiah(totalKeluar)}
-            </h3>
-            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 w-fit px-2.5 py-1 rounded-full">
-              <ArrowDownRight className="w-3.5 h-3.5" />
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black text-rose-600/50 italic select-none">Rp</span>
+              <h3 className="text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tighter font-elegant">
+                {new Intl.NumberFormat('id-ID').format(totalKeluar)}
+              </h3>
+            </div>
+            <div className="mt-8 flex items-center gap-2.5 text-[10px] font-black text-rose-600 bg-rose-50/50 dark:bg-rose-500/10 w-fit px-4 py-2.5 rounded-2xl border border-rose-100/50 dark:border-rose-500/20 uppercase tracking-widest shadow-sm">
+              <TrendingDown className="w-4 h-4" />
               <span>Biaya & Operasional</span>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-blue-600 p-6 rounded-3xl shadow-xl shadow-blue-100 overflow-hidden relative group text-white">
-          <div className="absolute top-0 right-0 p-4 opacity-10 translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
-            <Wallet className="w-24 h-24" />
-          </div>
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="bg-gradient-to-br from-brand-blue via-indigo-600 to-indigo-900 p-8 rounded-3xl shadow-2xl shadow-brand-blue/30 overflow-hidden relative group transition-all duration-300 text-white border-2 border-white/10"
+        >
+          <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl"></div>
+          
           <div className="flex flex-col relative z-10">
-            <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-              <span className="bg-white w-1.5 h-3 rounded-full"></span>
-              Saldo Akhir Kas
+            <span className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+              Saldo Kas Berjalan
             </span>
-            <h3 className="text-2xl font-black tracking-tighter">
-              {formatRupiah(saldo)}
-            </h3>
-            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-600 bg-white w-fit px-2.5 py-1 rounded-full">
-              <Info className="w-3.5 h-3.5" />
-              <span>
-                {months[selectedMonth]} {selectedYear}
-              </span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black text-blue-200 italic select-none">Rp</span>
+              <h3 className="text-4xl font-black tracking-tighter font-elegant drop-shadow-xl">
+                {new Intl.NumberFormat('id-ID').format(saldo)}
+              </h3>
+            </div>
+            <div className="mt-8 flex items-center gap-3 text-[11px] font-black text-brand-blue bg-white shadow-xl shadow-blue-900/30 w-fit px-5 py-3 rounded-2xl uppercase tracking-widest transition-transform group-hover:translate-x-1">
+              <Wallet className="w-4 h-4" />
+              <span>{months[selectedMonth].toUpperCase()} {selectedYear}</span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Tabel Kas */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            <span className="bg-blue-600 w-1.5 h-4 rounded-full"></span>
-            Buku Kas
-          </h3>
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+      <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/30 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden relative transition-all">
+        <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-slate-50/50 dark:bg-slate-800/30">
+          <div>
+            <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase italic font-elegant">
+              <div className="w-2 h-8 bg-brand-blue rounded-full shadow-lg shadow-brand-blue/40"></div>
+              Log Transaksi <span className="text-brand-blue font-black tracking-tighter">Buku Kas</span>
+            </h3>
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mt-1.5 ml-6 leading-relaxed">Pencatatan alur keuangan digital secara sistematis</p>
+          </div>
+          
+          <div className="flex flex-wrap gap-3 items-center w-full xl:w-auto">
+            <div className="relative flex-1 xl:flex-none group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-brand-blue transition-colors" />
               <input
                 type="text"
                 placeholder="Cari transaksi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-full md:w-64"
+                className="pl-11 pr-5 py-3.5 bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 text-sm font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/10 w-full xl:w-64 transition-all shadow-sm placeholder:text-slate-300 dark:text-slate-200"
               />
             </div>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              {months.map((m, i) => (
-                <option key={i} value={i}>
-                  {m}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            <input
-              type="file"
-              ref={scanInputRef}
-              className="hidden"
-              accept="image/*,application/pdf"
-              capture="environment"
-              onChange={handleScanReceipt}
-            />
-            <button
-              onClick={() => scanInputRef.current?.click()}
-              disabled={isScanning}
-              type="button"
-              className="flex items-center gap-1.5 bg-[#0cbb97] text-[#fffdfd] px-4 h-[36px] rounded-lg text-xs font-bold transition-all hover:opacity-90 shadow-sm disabled:opacity-50"
-            >
-              {isScanning ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Camera className="w-3.5 h-3.5" />
-              )}
-              {isScanning ? "Memindai..." : "Pindai Struk (AI)"}
-            </button>
-            <button
-              onClick={() => {
-                setTrxType("Masuk");
-                setShowMasukForm(true);
-              }}
-              className="flex items-center gap-2 bg-[#0cbb97] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all hover:opacity-90 shadow-lg shadow-[#0cbb97]/25"
-            >
-              <PlusCircle className="w-4 h-4" /> Entri Kas Baru
-            </button>
+            <div className="flex gap-2 w-full lg:w-auto">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="flex-1 lg:flex-none bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-blue/10 shadow-sm transition-all appearance-none cursor-pointer"
+              >
+                {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="flex-1 lg:flex-none bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-blue/10 shadow-sm transition-all appearance-none cursor-pointer"
+              >
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            
+            <div className="flex gap-3 w-full lg:w-auto">
+              <input type="file" ref={scanInputRef} className="hidden" accept="image/*,application/pdf" capture="environment" onChange={handleScanReceipt} />
+              <button
+                onClick={() => scanInputRef.current?.click()}
+                disabled={isScanning}
+                className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 shadow-sm group disabled:opacity-50"
+              >
+                {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg group-hover:bg-brand-blue/10 transition-colors"><Camera className="w-3.5 h-3.5 text-brand-blue" /></div>}
+                {isScanning ? "Memindai..." : "AI SCAN STRUK"}
+              </button>
+              
+              <button
+                onClick={() => { setTrxType("Masuk"); setShowMasukForm(true); }}
+                className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-tr from-brand-blue to-indigo-700 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-brand-blue/20 active:scale-95 shadow-xl shadow-brand-blue/20 group"
+              >
+                <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> 
+                ENTRI KAS BARU
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-white text-slate-400 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100">
-              <tr>
-                <th className="px-5 py-4">Tanggal</th>
-                <th className="px-5 py-4">Tipe</th>
-                <th className="px-5 py-4">Nama / Pihak</th>
-                <th className="px-5 py-4">Transaksi & Keterangan</th>
-                <th className="px-5 py-4 text-right">Debit (Masuk)</th>
-                <th className="px-5 py-4 text-right">Kredit (Keluar)</th>
-                <th className="px-5 py-4 text-center">Aksi</th>
+          <table className="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] border-b border-slate-100">
+                <th className="px-8 py-7">Log Waktu</th>
+                <th className="px-8 py-7">Entitas</th>
+                <th className="px-8 py-7">Kategori / Keterangan</th>
+                <th className="px-8 py-7 text-right">Debit (+)</th>
+                <th className="px-8 py-7 text-right">Kredit (-)</th>
+                <th className="px-8 py-7 text-right">Opsi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
-              {currentMonthTransactions.length === 0 && (
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800 font-medium text-slate-600 dark:text-slate-300">
+              {currentMonthTransactions.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-5 py-12 text-center text-slate-400 italic font-bold"
-                  >
-                    Tidak ada data transaksi di bulan ini.
+                  <td colSpan={6} className="px-8 py-32 text-center">
+                    <div className="max-w-xs mx-auto flex flex-col items-center">
+                      <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white dark:border-slate-700 shadow-inner overflow-hidden">
+                        <FileText className="w-10 h-10 text-slate-200 dark:text-slate-600" />
+                      </div>
+                      <p className="text-slate-400 dark:text-slate-500 font-black uppercase text-[10px] tracking-[0.3em]">Nihil Transaksi</p>
+                      <p className="text-slate-300 dark:text-slate-600 text-[10px] mt-2 italic font-bold">Belum ada aktivitas keuangan tercatat pada periode ini.</p>
+                    </div>
                   </td>
                 </tr>
-              )}
-              {currentMonthTransactions.map((trx: any, idx: number) => (
-                <tr
-                  key={`kas-trx-${trx.id || idx}-${idx}`}
-                  className="hover:bg-slate-50 transition-colors"
-                >
-                  <td className="px-5 py-3 text-xs">{trx.tanggal}</td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${trx.tipe === "Masuk" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                    >
-                      {trx.tipe}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="font-bold text-slate-800">{trx.nama}</div>
-                    <div className="text-[10px] text-slate-400">
-                      {trx.alamat || "-"}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="font-bold text-blue-600 truncate max-w-[200px]">
-                      {trx.transaksi}
-                    </div>
-                    <div
-                      className="text-[10px] text-slate-400 italic truncate max-w-[200px]"
-                      title={trx.keterangan}
-                    >
-                      {trx.keterangan || "-"}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-right font-black text-green-600">
-                    {trx.debit > 0 ? formatRupiah(trx.debit) : "-"}
-                  </td>
-                  <td className="px-5 py-3 text-right font-black text-red-600">
-                    {trx.kredit > 0 ? formatRupiah(trx.kredit) : "-"}
-                  </td>
-                    <td className="px-5 py-3">
-                      <div className="flex gap-2 justify-end items-center shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setViewingKas(trx);
-                          }}
-                          className="p-2 text-white bg-[#c9a60d] hover:bg-[#b0920a] rounded-lg transition-all border border-[#c9a60d] shadow-sm transform hover:scale-105 active:scale-95"
-                          title="Lihat Detail"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            exportSingleTrxPDF(trx);
-                          }}
-                          className="p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all border border-slate-100 shadow-sm transform hover:scale-105 active:scale-95"
-                          title="Cetak Receipt"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingKas(trx);
-                            setTrxType(trx.tipe);
-                            setShowMasukForm(true);
-                          }}
-                          className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all border border-amber-100 shadow-sm transform hover:scale-105 active:scale-95"
-                          title="Edit"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setKasToDelete(trx);
-                          }}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all border border-red-100 shadow-sm transform hover:scale-105 active:scale-95"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+              ) : (
+                currentMonthTransactions.map((trx: any, idx: number) => (
+                  <motion.tr 
+                    key={`kas-trx-${trx.id || idx}-${idx}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(idx * 0.02, 0.5) }}
+                    className="hover:bg-brand-blue/[0.02] dark:hover:bg-brand-blue/[0.05] transition-all duration-300 group items-center"
+                  >
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-2 h-10 rounded-full ${trx.tipe === 'Masuk' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)]'} transition-all duration-500`} />
+                        <div>
+                          <p className="text-[12px] font-black text-slate-800 dark:text-slate-100 group-hover:text-brand-blue transition-colors font-elegant">{trx.tanggal}</p>
+                          <span className={`text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg mt-1 inline-block ${trx.tipe === 'Masuk' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'}`}>
+                            {trx.tipe}
+                          </span>
+                        </div>
                       </div>
                     </td>
-                </tr>
-              ))}
+                    <td className="px-8 py-6">
+                      <div className="font-black text-slate-800 dark:text-slate-100 tracking-tight text-sm group-hover:text-brand-blue transition-colors uppercase font-elegant leading-none">{trx.nama}</div>
+                      <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                        <MapPin className="w-3 h-3" />
+                        {trx.alamat || "UMUM"}
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="font-black text-brand-blue bg-brand-blue/5 dark:bg-brand-blue/10 px-4 py-1.5 rounded-2xl border border-brand-blue/10 text-[10px] inline-block mb-2 tracking-widest uppercase shadow-sm">{trx.transaksi}</div>
+                      <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 italic max-w-[200px] truncate" title={trx.keterangan}>{trx.keterangan || '-'}</div>
+                    </td>
+                    <td className={`px-8 py-6 text-right font-black text-sm tabular-nums font-elegant ${trx.debit > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                      {trx.debit > 0 ? `+ ${new Intl.NumberFormat('id-ID').format(trx.debit)}` : "—"}
+                    </td>
+                    <td className={`px-8 py-6 text-right font-black text-sm tabular-nums font-elegant ${trx.kredit > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                      {trx.kredit > 0 ? `- ${new Intl.NumberFormat('id-ID').format(trx.kredit)}` : "—"}
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex gap-2 justify-end items-center transition-all">
+                        <button onClick={() => setViewingKas(trx)} className="p-3 text-white bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl shadow-lg shadow-amber-500/20 transform hover:scale-110 active:scale-95 transition-all border border-white/10 outline-none"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => setEditingKas(trx)} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => setKasToDelete(trx)} className="p-3 text-rose-600 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white hover:scale-110 active:scale-95 transition-all outline-none"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -719,66 +684,69 @@ export function KasView({
       {/* Form Modal */}
       <AnimatePresence>
         {showMasukForm && (
-          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[110] p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white/90 backdrop-blur-xl w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[90vh]"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white/90 backdrop-blur-2xl w-full max-w-xl rounded-[3rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[95vh] relative"
             >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50 shrink-0">
-                <h3 className="font-black text-slate-800 flex items-center gap-3">
-                  <div className="p-2 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
-                    <Wallet className="w-5 h-5" />
-                  </div>
-                  {editingKas ? "Edit Transaksi Kas" : "Entri Kas Baru"}
-                </h3>
+              <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                <div>
+                   <h3 className="text-2xl font-black text-slate-800 flex items-center gap-4 tracking-tighter uppercase italic">
+                    <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl shadow-xl shadow-blue-500/30">
+                      <Wallet className="w-6 h-6" />
+                    </div>
+                    {editingKas ? "Ubah Transaksi Kas" : "Entri Kas Baru"}
+                  </h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 ml-14">Rekonsiliasi Arus Keuangan Digital</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowMasukForm(false);
                     setEditingKas(null);
                   }}
-                  className="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-all active:scale-90"
+                  className="w-12 h-12 flex items-center justify-center bg-white text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-2xl transition-all active:scale-90 shadow-sm border border-slate-100"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
               <form
                 onSubmit={handleSaveKas}
                 ref={formRef}
-                className="p-6 overflow-y-auto space-y-5"
+                className="p-10 overflow-y-auto space-y-8"
               >
                 {scannedData && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                      AI Telah Memindai Struk Anda
+                  <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex items-center gap-3 animate-pulse">
+                    <Sparkles className="w-5 h-5 text-emerald-600" />
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest leading-loose">
+                      AI Vision Smart Scan: Struk Berhasil Diproses
                     </span>
                   </div>
                 )}
 
-                <div className="p-1 bg-slate-100 rounded-xl flex gap-1 border border-slate-200">
+                <div className="p-1.5 bg-slate-100/50 rounded-2xl flex gap-1.5 border border-slate-200/50 shadow-inner">
                   <button
                     type="button"
                     onClick={() => setTrxType("Masuk")}
-                    className={`flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${trxType === "Masuk" ? "bg-white text-green-600 shadow-sm border border-green-100" : "text-slate-400"}`}
+                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${trxType === "Masuk" ? "bg-white text-emerald-600 shadow-lg border border-emerald-50 scale-[1.02]" : "text-slate-400 hover:text-slate-600"}`}
                   >
-                    Pemasukan
+                    Pemasukan (+)
                   </button>
                   <button
                     type="button"
                     onClick={() => setTrxType("Keluar")}
-                    className={`flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${trxType === "Keluar" ? "bg-white text-red-600 shadow-sm border border-red-100" : "text-slate-400"}`}
+                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${trxType === "Keluar" ? "bg-white text-rose-600 shadow-lg border border-rose-50 scale-[1.02]" : "text-slate-400 hover:text-slate-600"}`}
                   >
-                    Pengeluaran
+                    Pengeluaran (-)
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      Tanggal
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+                      Tanggal Log
                     </label>
                     <input
                       name="tanggal"
@@ -789,32 +757,35 @@ export function KasView({
                           : scannedData?.tanggal ||
                             new Date().toISOString().split("T")[0]
                       }
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      Nominal (Rp)
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+                      Nominal (IDR)
                     </label>
-                    <input
-                      name="nominal"
-                      type="text"
-                      defaultValue={
-                        editingKas
-                          ? editingKas.debit || editingKas.kredit
-                          : scannedData?.nominal || ""
-                      }
-                      placeholder="0"
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                      required
-                    />
+                    <div className="relative">
+                       <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">Rp</span>
+                       <input
+                        name="nominal"
+                        type="text"
+                        defaultValue={
+                          editingKas
+                            ? editingKas.debit || editingKas.kredit
+                            : scannedData?.nominal || ""
+                        }
+                        placeholder="0"
+                        className="w-full pl-12 pr-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                    Kategori Transaksi
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+                    Kategori & Jenis Transaksi
                   </label>
                   <input
                     name="transaksi"
@@ -822,108 +793,119 @@ export function KasView({
                     defaultValue={editingKas?.transaksi || scannedData?.transaksi || ""}
                     placeholder={
                       trxType === "Masuk"
-                        ? "Iuran Warga, Donasi, dll"
-                        : "Perbaikan Fasum, Listrik, dll"
+                        ? "Misal: Iuran Warga, Donasi, dll"
+                        : "Misal: Perbaikan Fasum, Listrik, dll"
                     }
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      Nama / Pihak Kedua
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+                      Nama / Entitas
                     </label>
                     <input
                       name="nama"
                       type="text"
                       defaultValue={editingKas?.nama || scannedData?.nama || ""}
                       placeholder="Bpk. Budi / Toko Maju"
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      No. Rumah / Alamat
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+                      Blok / Alamat (Opsional)
                     </label>
                     <input
                       name="alamat"
                       type="text"
                       defaultValue={editingKas?.alamat || ""}
                       placeholder="Blok A No. 1"
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                    Keterangan Detail
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+                    Detail Keterangan
                   </label>
                   <textarea
                     name="keterangan"
                     defaultValue={editingKas?.keterangan || scannedData?.keterangan || ""}
-                    rows={3}
-                    placeholder="Penjelasan rincian penggunaan/sumber dana..."
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    rows={2}
+                    placeholder="Penjelasan rincian penggunaan/sumber dana secara mendetail..."
+                    className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-bold text-slate-600 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm resize-none"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                    Upload Bukti / Struk (Opsional)
+                <div className="space-y-3">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex justify-between">
+                    <span>Lampiran Struk / Invoice</span>
+                    <span className="text-[8px] text-blue-500">Maksimal 5MB</span>
                   </label>
-                  <div className="flex gap-3 items-center">
-                    <div className="flex-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            try {
-                              const url = await handleFileUpload(
-                                file,
-                                "kas_struk",
-                              );
-                              setStrukUrl(url);
-                            } catch (err) {
-                              showNotification("Gagal upload struk", "error");
-                            }
-                          }
-                        }}
-                        className="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-black file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer"
-                      />
-                    </div>
-                    {(strukUrl || editingKas?.strukUrl) && (
-                      <div className="w-12 h-12 rounded border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center bg-slate-50">
+                  <div className="flex gap-4 items-center">
+                    {(strukUrl || editingKas?.strukUrl) ? (
+                      <div className="relative w-24 h-24 rounded-2xl border-2 border-blue-100 overflow-hidden shrink-0 group">
                         <img
                           src={strukUrl || editingKas?.strukUrl}
                           className="w-full h-full object-cover"
                         />
+                        <button type="button" onClick={() => setStrukUrl('')} className="absolute inset-0 bg-rose-600/60 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                           <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          id="kas-struk-upload"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const url = await handleFileUpload(file, "kas_struk");
+                                setStrukUrl(url);
+                              } catch (err) {
+                                showNotification("Gagal upload struk", "error");
+                              }
+                            }
+                          }}
+                        />
+                        <button 
+                           type="button" 
+                           onClick={() => document.getElementById('kas-struk-upload')?.click()}
+                           className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black text-slate-400 hover:bg-slate-50 hover:border-blue-300 hover:text-blue-600 transition-all"
+                        >
+                           <Upload className="w-4 h-4" /> UNGGAH BUKTI FISIK
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                <div className="flex flex-col sm:flex-row gap-4 pt-6">
                   <button
+                    type="submit"
+                    className={`flex-[2] py-5 text-[11px] font-black uppercase tracking-widest rounded-2xl shadow-2xl transition-all active:scale-95 text-white flex items-center justify-center gap-3 ${trxType === "Masuk" ? "bg-gradient-to-r from-emerald-500 to-teal-600 shadow-emerald-500/30" : "bg-gradient-to-r from-rose-500 to-red-700 shadow-rose-500/30"}`}
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    {editingKas ? "SIMPAN PERUBAHAN" : `KONFIRMASI ${trxType.toUpperCase()}`}
+                  </button>
+                   <button
                     type="button"
                     onClick={() => {
                       setShowMasukForm(false);
                       setEditingKas(null);
                     }}
-                    className="flex-1 py-3 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all"
+                    className="flex-1 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] bg-white border border-slate-100 rounded-[1.5rem] hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
                   >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className={`flex-[2] py-3 text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95 text-white ${trxType === "Masuk" ? "bg-green-600 hover:bg-green-700 shadow-green-100" : "bg-red-600 hover:bg-red-700 shadow-red-100"}`}
-                  >
-                    {editingKas ? "Simpan Perubahan" : "Catat Transaksi"}
+                    BATAL
                   </button>
                 </div>
               </form>
@@ -934,110 +916,128 @@ export function KasView({
 
       <AnimatePresence>
         {viewingKas && (
-          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[110] p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white/95 backdrop-blur-2xl w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden border border-white"
             >
               <div
-                className={`p-6 ${viewingKas.tipe === "Masuk" ? "bg-emerald-600" : "bg-red-600"} text-white flex justify-between items-center`}
+                className={`p-8 ${viewingKas.tipe === "Masuk" ? "bg-gradient-to-br from-emerald-600 to-teal-700" : "bg-gradient-to-br from-rose-600 to-red-800"} text-white flex justify-between items-center relative overflow-hidden`}
               >
-                <h3 className="font-black uppercase tracking-widest text-xs flex items-center gap-2">
-                  <Wallet className="w-4 h-4" /> Detail Kas {viewingKas.tipe}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10">
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                    <Wallet className="w-4 h-4" /> 
+                  </div>
+                  Detail Rekonsiliasi Kas
                 </h3>
                 <button
                   onClick={() => setViewingKas(null)}
-                  className="text-white/70 hover:text-white transition-colors"
+                  className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-all active:scale-90 relative z-10"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-8 space-y-6">
+              <div className="p-10 space-y-8">
                 <div className="flex flex-col items-center">
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                    Nominal Transaksi
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
+                    Nominal Transaksi Digital
                   </div>
                   <div
-                    className={`text-3xl font-black ${viewingKas.tipe === "Masuk" ? "text-emerald-600" : "text-red-600"}`}
+                    className={`text-4xl font-black tracking-tighter ${viewingKas.tipe === "Masuk" ? "text-emerald-600" : "text-rose-600"}`}
                   >
                     {formatRupiah(viewingKas.debit || viewingKas.kredit)}
                   </div>
+                  <div className={`mt-4 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] ${viewingKas.tipe === 'Masuk' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                    TRANSAKSI {viewingKas.tipe.toUpperCase()}
+                  </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                        Tanggal
-                      </p>
-                      <p className="text-sm font-bold text-slate-700">
-                        {viewingKas.tanggal}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                        Kategori
-                      </p>
-                      <p className="text-sm font-bold text-blue-600">
-                        {viewingKas.transaksi}
-                      </p>
-                    </div>
-                  </div>
-
+                <div className="grid grid-cols-2 gap-y-6 gap-x-10 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
                   <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                      ID Transaksi
+                    </p>
+                    <p className="text-xs font-black text-slate-800 family-mono break-all leading-tight">
+                      {viewingKas.id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                      Tanggal
+                    </p>
+                    <p className="text-xs font-black text-slate-800">
+                      {viewingKas.tanggal}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
                       Pihak Terkait
                     </p>
-                    <p className="text-sm font-bold text-slate-700">
+                    <p className="text-xs font-black text-slate-800 uppercase italic">
                       {viewingKas.nama}
                     </p>
-                    <p className="text-[10px] text-slate-500 font-medium">
-                      {viewingKas.alamat || "-"}
-                    </p>
                   </div>
-
                   <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                      Keterangan
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                      Kategori
                     </p>
-                    <p className="text-sm font-medium text-slate-600 leading-relaxed">
-                      {viewingKas.keterangan || "-"}
+                    <p className="text-xs font-black text-blue-600">
+                      {viewingKas.transaksi}
                     </p>
                   </div>
-
-                  {viewingKas.strukUrl && (
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">
-                        Dokumen / Struk
-                      </p>
-                      <div className="rounded-xl overflow-hidden border border-slate-200 group relative">
-                        <img
-                          src={viewingKas.strukUrl}
-                          alt="Struk"
-                          className="w-full max-h-48 object-contain bg-slate-50"
-                        />
-                        <a
-                          href={viewingKas.strukUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs"
-                        >
-                          Lihat Ukuran Penuh
-                        </a>
-                      </div>
-                    </div>
-                  )}
+                  <div className="col-span-2 border-t border-slate-100 pt-4">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                      Keterangan Detail
+                    </p>
+                    <p className="text-xs font-bold text-slate-600 italic">
+                      "{viewingKas.keterangan || "-"}"
+                    </p>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => setViewingKas(null)}
-                  className="w-full py-4 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
-                >
-                  Tutup Detail
-                </button>
+                {viewingKas.strukUrl && (
+                  <div className="space-y-3">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      Lampiran Dokumen Keuangan
+                    </p>
+                    <div className="w-full aspect-[4/3] bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden group relative">
+                      <img
+                        src={viewingKas.strukUrl}
+                        alt="Struk"
+                        className="w-full h-full object-contain"
+                      />
+                      <a
+                        href={viewingKas.strukUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm"
+                      >
+                         <div className="bg-white text-blue-600 px-6 py-3 rounded-2xl text-[10px] font-black flex items-center gap-3 shadow-2xl">
+                            <Eye className="w-5 h-5" /> LIHAT UKURAN PENUH
+                         </div>
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => exportSingleTrxPDF(viewingKas)}
+                    className="flex-1 py-5 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    <Printer className="w-5 h-5" /> CETAK BUKTI
+                  </button>
+                  <button
+                    onClick={() => setViewingKas(null)}
+                    className="flex-1 py-5 bg-white text-slate-400 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] border border-slate-100 hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
+                  >
+                    TUTUP
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

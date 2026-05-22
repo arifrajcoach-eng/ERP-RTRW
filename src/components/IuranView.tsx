@@ -573,148 +573,229 @@ export function IuranView({
   
   return (
     <div className="space-y-6">
-      <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 w-fit shadow-sm">
-        <button
+      <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-2.5 rounded-3xl border border-slate-100 dark:border-slate-800 w-fit shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setActiveSubTab('pembayaran')}
-          className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'pembayaran' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+          className={`group flex items-center gap-4 px-12 py-5 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
+            activeSubTab === 'pembayaran' 
+              ? 'bg-slate-900 dark:bg-brand-blue text-white shadow-2xl scale-100' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
         >
-          <CreditCard className="w-3.5 h-3.5" />
-          Riwayat
-        </button>
+          {activeSubTab === 'pembayaran' && (
+             <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
+          )}
+          <CreditCard className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'pembayaran' ? 'scale-110' : 'group-hover:scale-110'}`} />
+          Mutasi Kas
+        </motion.button>
         {isPengurus && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setActiveSubTab('rekap')}
-            className={`flex items-center gap-2.5 px-6 py-3 ml-1 rounded-xl text-[11px] font-black transition-all duration-300 uppercase tracking-widest ${activeSubTab === 'rekap' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+            className={`group flex items-center gap-4 px-12 py-5 ml-2 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
+              activeSubTab === 'rekap' 
+                ? 'bg-brand-blue dark:bg-slate-800 text-white shadow-2xl scale-100' 
+                : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
           >
-            <Users className="w-3.5 h-3.5" />
-            Rekap Iuran
-          </button>
+             {activeSubTab === 'rekap' && (
+               <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
+            )}
+            <Users className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'rekap' ? 'scale-110' : 'group-hover:scale-110'}`} />
+            Rekap Global
+          </motion.button>
         )}
       </div>
 
       {activeSubTab === 'pembayaran' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <span className="bg-blue-600 w-1.5 h-4 rounded-full"></span>
-              {isPengurus ? "Semua Transaksi Masuk" : "Riwayat Pembayaran Saya"}
-            </h3>
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl rounded-3xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden transition-all">
+          <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-10 bg-slate-50/50 dark:bg-slate-800/30">
+            <div>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase font-elegant">
+                <div className="w-2.5 h-8 bg-brand-blue rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                {isPengurus ? "Monitoring Iuran" : "Histori Pembayaran"}
+              </h3>
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2 ml-7">Record Transparan & Akuntabel</p>
+            </div>
+
+            <div className="flex flex-wrap gap-4 items-center w-full xl:w-auto">
+              <div className="relative flex-1 xl:flex-none group">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-brand-blue transition-colors" />
                 <input
                   type="text"
-                  placeholder="Cari transaksi..."
+                  placeholder="Cari Entri..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-full md:w-64"
+                  className="pl-14 pr-8 py-5 bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[13px] font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/20 w-full xl:w-72 shadow-sm transition-all placeholder:text-slate-300 placeholder:italic"
                 />
               </div>
-              <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <option value={-1}>Semua Bulan</option>
-                {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
-              <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-[#008bb5] text-white px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all hover:opacity-90 shadow-lg shadow-[#008bb5]/25">
-                <PlusCircle className="w-4 h-4" /> Entri Pembayaran
-              </button>
+              <div className="flex gap-3 w-full sm:w-auto">
+                <select 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))} 
+                  className="flex-1 sm:flex-none bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[11px] font-black rounded-xl px-6 py-4 focus:outline-none focus:ring-4 focus:ring-brand-blue/5 shadow-sm transition-all appearance-none cursor-pointer text-slate-600 dark:text-slate-300"
+                >
+                  <option value={-1}>Kalender</option>
+                  {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
+                <select 
+                  value={selectedYear} 
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))} 
+                  className="flex-1 sm:flex-none bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[11px] font-black rounded-xl px-6 py-4 focus:outline-none focus:ring-4 focus:ring-brand-blue/5 shadow-sm transition-all appearance-none cursor-pointer text-slate-600 dark:text-slate-300"
+                >
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <motion.button 
+                whileHover={{ scale: 1.03, shadow: '0 20px 25px -5px rgba(59, 130, 246, 0.4)' }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setShowForm(true)} 
+                className="w-full sm:w-auto flex items-center justify-center gap-4 bg-slate-900 dark:bg-brand-blue text-white px-10 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-full blur-xl -mr-6 -mt-6"></div>
+                <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-700" /> 
+                Input Transaksi
+              </motion.button>
             </div>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-white text-slate-400 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100">
-                <tr>
-                  <th className="px-5 py-4">Tanggal</th>
-                  <th className="px-5 py-4">Penyetor</th>
-                  <th className="px-5 py-4">Jenis Pembayaran</th>
-                  <th className="px-5 py-4 text-right">Nominal</th>
-                  <th className="px-5 py-4 text-center">Status</th>
-                  <th className="px-5 py-4 text-center">Bukti</th>
-                  <th className="px-5 py-4 text-right">Aksi</th>
+            <table className="w-full text-left whitespace-nowrap">
+              <thead>
+                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest text-[10px] border-b border-slate-100 dark:border-slate-800">
+                  <th className="px-10 py-8">Kronologi</th>
+                  <th className="px-10 py-8">Entitas Penyetor</th>
+                  <th className="px-10 py-8">Kategori / Memo</th>
+                  <th className="px-10 py-8 text-right">Value (IDR)</th>
+                  <th className="px-10 py-8 text-center">Status Keamanan</th>
+                  <th className="px-10 py-8 text-center">Dokumen</th>
+                  <th className="px-10 py-8 text-right">Opsi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {(!isPengurus) ? (
-                  <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Akses riwayat ditutup. Anda hanya dapat menggunakan fitur Create (Entri Pembayaran).<br/>Sesuai aturan keamanan data, riwayat hanya dapat diakses oleh Admin/Operator.</td></tr>
+                  <tr><td colSpan={7} className="px-10 py-32 text-center">
+                    <div className="max-w-md mx-auto">
+                      <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center mx-auto mb-8 border-4 border-white dark:border-slate-700 shadow-inner">
+                         <ShieldCheck className="w-12 h-12 text-slate-200 dark:text-slate-700" />
+                      </div>
+                      <p className="text-slate-400 dark:text-slate-500 font-bold text-sm leading-relaxed uppercase tracking-widest italic">Akses Terbatas • Secure Protocol Active</p>
+                    </div>
+                  </td></tr>
                 ) : filteredTransactions.length === 0 ? (
-                  <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 italic font-bold">Tidak ada data.</td></tr>
+                  <tr><td colSpan={7} className="px-10 py-32 text-center">
+                    <div className="flex flex-col items-center opacity-30 text-slate-400">
+                       <CreditCard className="w-20 h-20 mb-6" />
+                       <p className="font-black uppercase tracking-widest text-xs">Arsip Kosong</p>
+                    </div>
+                  </td></tr>
                 ) : (
                   filteredTransactions.map((trx: any, idx: number) => (
-                  <tr key={`iuran-row-${trx.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3 text-xs">{new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                    <td className="px-5 py-3">
-                      <div className="font-bold text-slate-800">{trx.namaPenyetor}</div>
-                      <div className="text-[10px] text-slate-400 max-w-[150px] truncate" title={trx.alamat}>{trx.alamat}</div>
+                  <motion.tr 
+                    key={`iuran-row-${trx.id || idx}-${idx}`} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="hover:bg-brand-blue/5 transition-all duration-300 group cursor-default"
+                  >
+                    <td className="px-10 py-6">
+                       <div className="flex items-center gap-4">
+                          <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-brand-blue group-hover:scale-150 transition-all duration-500" />
+                          <div className="flex flex-col">
+                            <span className="text-[13px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(trx.tanggal).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                       </div>
                     </td>
-                    <td className="px-5 py-3">
-                      <div className="font-bold text-blue-600">{trx.jenis}</div>
-                      <div className="text-[10px] text-slate-400 italic max-w-[200px] truncate" title={trx.keterangan}>{trx.keterangan || '-'}</div>
+                    <td className="px-10 py-6">
+                      <div className="font-black text-slate-800 dark:text-slate-100 tracking-tight text-[15px] group-hover:text-brand-blue transition-colors font-elegant">{trx.namaPenyetor}</div>
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic truncate max-w-[200px]" title={trx.alamat}>Loc: {trx.alamat}</div>
                     </td>
-                    <td className="px-5 py-3 text-right font-black">
-                      Rp {new Intl.NumberFormat('id-ID').format(trx.nominal)}
+                    <td className="px-10 py-6">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5 border border-slate-200 dark:border-slate-700">
+                         {trx.jenis}
+                      </div>
+                      <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 italic truncate max-w-[220px]" title={trx.keterangan}>Memo: {trx.keterangan || '-'}</p>
                     </td>
-                    <td className="px-5 py-3 text-center">
-                      <span className={`px-2 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${trx.status === 'Lunas' ? 'bg-green-100 text-green-700' : trx.status === 'Ditolak' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                    <td className="px-10 py-6 text-right">
+                       <span className="text-[15px] font-black text-slate-800 dark:text-slate-100 group-hover:text-brand-blue transition-colors font-mono tracking-tighter">Rp {new Intl.NumberFormat('id-ID').format(trx.nominal)}</span>
+                    </td>
+                    <td className="px-10 py-6 text-center">
+                      <span className={`px-6 py-2 text-[10px] font-black rounded-full uppercase tracking-[0.2em] shadow-xl ${
+                        trx.status === 'Lunas' 
+                          ? 'bg-emerald-500 text-white shadow-emerald-500/20 border border-emerald-400' 
+                          : trx.status === 'Ditolak' 
+                          ? 'bg-rose-500 text-white shadow-rose-500/20 border border-rose-400' 
+                          : 'bg-amber-500 text-white shadow-amber-500/20 border border-amber-400'
+                      }`}>
                         {trx.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-center">
+                    <td className="px-10 py-6 text-center">
                       {trx.strukUrl ? (
-                        <a href={trx.strukUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded px-2 py-1 hover:bg-slate-200 transition-colors text-[10px] font-bold" title="Lihat Bukti">
-                          <Image className="w-3 h-3" />
-                        </a>
-                      ) : '-'}
+                        <motion.a 
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          whileTap={{ scale: 0.9 }}
+                          href={trx.strukUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="inline-flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 text-slate-400 rounded-2xl hover:text-brand-blue transition-all duration-500 border border-slate-100 dark:border-slate-700 shadow-lg group-hover:border-brand-blue/30" 
+                          title="Lihat Bukti"
+                        >
+                          <Image className="w-6 h-6" />
+                        </motion.a>
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-slate-200 mx-auto" />
+                      )}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex gap-2 justify-end items-center">
-                        <button 
+                    <td className="px-10 py-6 text-right">
+                      <div className="flex gap-3 justify-end items-center font-elegant">
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           onClick={(e) => { e.stopPropagation(); handleViewDetails(trx); }} 
-                          className="p-2 text-white bg-[#c9a60d] hover:bg-[#b0920a] rounded-lg transition-all border border-[#c9a60d] shadow-sm transform hover:scale-105 active:scale-95" 
-                          title="Lihat Detail"
+                          className="p-3.5 text-white bg-slate-900 dark:bg-slate-800 rounded-2xl shadow-xl hover:bg-brand-blue transition-all border border-white/10" 
+                          title="Review"
                         >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button 
+                          <Eye className="w-5 h-5" />
+                        </motion.button>
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           onClick={(e) => { e.stopPropagation(); handlePrint(trx); }} 
-                          className="p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all border border-slate-100 shadow-sm transform hover:scale-105 active:scale-95" 
-                          title="Cetak Receipt"
+                          className="p-3.5 text-slate-500 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-lg hover:text-brand-blue transition-all" 
+                          title="Receipt"
                         >
-                          <Printer className="w-4 h-4" />
-                        </button>
+                          <Printer className="w-5 h-5" />
+                        </motion.button>
                         {isPengurus && (
                           <>
-                            <button 
+                            <motion.button 
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
                               onClick={(e) => { e.stopPropagation(); handleEdit(trx); }} 
-                              className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all border border-amber-100 shadow-sm transform hover:scale-105 active:scale-95" 
+                              className="p-3.5 text-emerald-600 bg-emerald-50 dark:bg-slate-800 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl shadow-lg hover:bg-emerald-600 hover:text-white transition-all" 
                               title="Edit"
                             >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button 
+                              <Edit2 className="w-5 h-5" />
+                            </motion.button>
+                            <motion.button 
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
                               onClick={(e) => { e.stopPropagation(); setTrxToDelete(trx); }} 
-                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all border border-red-100 shadow-sm transform hover:scale-105 active:scale-95" 
-                              title="Hapus"
+                              className="p-3.5 text-rose-600 bg-rose-50 dark:bg-slate-800 border border-rose-100 dark:border-rose-500/20 rounded-2xl shadow-lg hover:bg-rose-600 hover:text-white transition-all" 
+                              title="Delete"
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                              <Trash2 className="w-5 h-5" />
+                            </motion.button>
                           </>
-                        )}
-                        {isPengurus && trx.status === 'Menunggu Verifikasi' && (
-                          <div className="flex gap-1 border-l border-slate-100 pl-2 ml-1">
-                            <button onClick={(e) => { e.stopPropagation(); handleApprove(trx); }} className="p-2 text-green-600 hover:bg-green-50 rounded-lg border border-green-100 transition-colors" title="Terima">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); handleReject(trx); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg border border-red-100 transition-colors" title="Tolak">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
                         )}
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 )))}
               </tbody>
             </table>
@@ -723,17 +804,28 @@ export function IuranView({
       )}
 
       {activeSubTab === 'rekap' && isPengurus && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="font-bold text-slate-800 mb-2">Rekapitulasi Iuran Wajib Warga</h3>
-          <p className="text-xs text-slate-500 mb-6 font-medium">Tabel di bawah menunjukkan status pembayaran iuran wajib bulanan untuk warga (Kepala Keluarga) di tahun {selectedYear}.</p>
+        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/40 border border-slate-100/50 p-8 md:p-12 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
           
-          <div className="overflow-x-auto min-h-[400px]">
+          <div className="relative z-10 mb-10">
+            <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic flex items-center gap-4">
+              <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              Rekapitulasi <span className="text-emerald-600">Iuran Wajib</span>
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest max-w-2xl leading-relaxed">
+              Monitoring kepatuhan iuran bulanan warga tahun <span className="text-emerald-500 font-black">{selectedYear}</span>. Pastikan semua warga berkontribusi aktif.
+            </p>
+          </div>
+          
+          <div className="overflow-x-auto min-h-[400px] rounded-2xl border border-slate-100 shadow-inner bg-slate-50/20">
             <table className="w-full text-left text-sm border-collapse">
-              <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
-                <tr>
-                  <th className="px-4 py-3 border border-slate-100 sticky left-0 bg-slate-50 z-10 w-48 shadow-[1px_0_0_#f1f5f9]">Data Kepala Keluarga</th>
+              <thead>
+                <tr className="bg-slate-100/50 text-slate-400 font-bold uppercase tracking-[0.2em] text-[9px]">
+                  <th className="px-6 py-5 border-b border-slate-200 sticky left-0 bg-slate-100 z-10 w-64 shadow-[2px_0_10px_rgba(0,0,0,0.05)]">Kepala Keluarga</th>
                   {months.map((m, i) => (
-                    <th key={i} className="px-2 py-3 border border-slate-100 text-center min-w-[60px]">{m.substring(0, 3)}</th>
+                    <th key={i} className="px-3 py-5 border-b border-slate-200 text-center min-w-[70px]">{m.substring(0, 3)}</th>
                   ))}
                 </tr>
               </thead>
@@ -742,48 +834,39 @@ export function IuranView({
                   const p = (w.posisi || w.posisiKeluarga || w.status_keluarga || "").toLowerCase();
                   return p.includes('kepala keluarga') || p.includes('kk') || p.includes('pemilik');
                 }).sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || "")).map((w: any, index: number) => (
-                  <tr key={`kk-${index}`} className="hover:bg-blue-50/30 transition-colors">
-                    <td className="px-4 py-3 border border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50/10 z-10 shadow-[1px_0_0_#f1f5f9]">
-                      <div className="font-bold text-slate-800">{w.nama}</div>
-                      <div className="text-[9px] text-slate-400 truncate max-w-[180px]">{w.alamat}</div>
+                  <tr key={`kk-${index}`} className="hover:bg-blue-50/30 transition-all duration-300">
+                    <td className="px-8 py-7 border-b border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50/10 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.02)] transition-colors">
+                      <div className="font-black text-slate-800 tracking-tight text-sm uppercase italic">{w.nama}</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[200px] mt-1 italic">{w.alamat}</div>
                     </td>
                     {months.map((m, i) => {
                       const paid = iuranData.some((trx: any) => {
                         if (trx.status !== 'Lunas') return false;
-                        
-                        // Check if it's a mandatory fee payment
-                        const isIuranWajib = 
-                          trx.jenis === 'Iuran Warga' || 
-                          trx.jenis?.toLowerCase().includes('iuran wajib') || 
-                          trx.keterangan?.toLowerCase().includes('iuran wajib');
-                        
+                        const isIuranWajib = trx.jenis === 'Iuran Warga' || trx.jenis?.toLowerCase().includes('iuran wajib') || trx.keterangan?.toLowerCase().includes('iuran wajib');
                         if (!isIuranWajib) return false;
-
-                        // Match logic: NIK (strong), UserId (strong), or Name (robust fallback)
                         const matchNik = (trx.nik && w.nik && trx.nik !== '-' && trx.nik === w.nik);
                         const matchUserId = (trx.userId && (trx.userId === w.id || trx.userId === w.uid || trx.userId === w.id_user || trx.userId === w.docId));
-                        
-                        // Robust name matching for fallback
                         const cleanTrxNama = trx.namaPenyetor?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
                         const cleanWargaNama = w.nama?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
                         const matchNama = !!cleanTrxNama && !!cleanWargaNama && (cleanTrxNama.includes(cleanWargaNama) || cleanWargaNama.includes(cleanTrxNama));
-
                         if (!matchNik && !matchUserId && !matchNama) return false;
-
                         const d = new Date(trx.tanggal);
                         return d.getMonth() === i && d.getFullYear() === selectedYear;
                       });
                       return (
-                        <td key={i} className={`px-2 py-2 border border-slate-100 text-center ${paid ? 'bg-green-50/50' : 'bg-slate-50/30'}`}>
+                        <td key={i} className={`px-4 py-7 border-b border-slate-100 text-center transition-all duration-300 ${paid ? 'bg-emerald-50/30' : 'bg-slate-50/5'}`}>
                           {paid ? (
-                            <div className="w-5 h-5 rounded-md bg-green-500 text-white flex items-center justify-center mx-auto shadow-sm shadow-green-200">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            </div>
+                             <motion.div 
+                              whileHover={{ scale: 1.2 }}
+                              className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center mx-auto shadow-[0_5px_15px_-3px_rgba(16,185,129,0.4)]"
+                             >
+                              <CheckCircle2 className="w-5 h-5" />
+                            </motion.div>
                           ) : (
-                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200 mx-auto"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-slate-200 mx-auto opacity-30 shadow-inner"></div>
                           )}
                         </td>
-                      )
+                      );
                     })}
                   </tr>
                 ))}
@@ -794,82 +877,102 @@ export function IuranView({
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[100] p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/90 backdrop-blur-xl w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[90vh]"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white/90 backdrop-blur-2xl w-full max-w-xl rounded-[3rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[95vh] relative"
           >
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50 shrink-0">
-              <h3 className="font-black text-slate-800 flex items-center gap-3">
-                <div className="p-2 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                {editingTrx ? 'Edit Transaksi' : 'Entri Pembayaran'}
-              </h3>
+            <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 flex items-center gap-4 tracking-tighter uppercase italic">
+                  <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl shadow-xl shadow-blue-500/30">
+                    <CreditCard className="w-6 h-6" />
+                  </div>
+                  {editingTrx ? 'Ubah Transaksi' : 'Entri Pembayaran'}
+                </h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 ml-14">Protokol Pencatatan Kas Keuangan</p>
+              </div>
               <button 
                 onClick={() => {
                   setShowForm(false);
                   setEditingTrx(null);
                 }} 
-                className="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-all active:scale-90"
+                className="w-12 h-12 flex items-center justify-center bg-white text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-2xl transition-all active:scale-90 shadow-sm border border-slate-100"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
             
-            <form onSubmit={handleCreatePayment} className="p-6 overflow-y-auto space-y-5">
+            <form onSubmit={handleCreatePayment} className="p-10 overflow-y-auto space-y-8">
               {isPengurus && (
-                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
-                  <label className="block text-xs font-black text-blue-800 uppercase tracking-widest">Identitas Penyetor (Admin Mode)</label>
+                <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-6 rounded-[2rem] border border-blue-100/50 space-y-4 shadow-inner">
+                  <label className="block text-[10px] font-black text-blue-800 uppercase tracking-[0.3em] ml-1 mb-2">Identitas Penyetor (Admin Otoritas)</label>
                   <select 
                     name="wargaId" 
                     value={selectedWargaId} 
                     onChange={(e) => setSelectedWargaId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-5 py-4 border border-blue-100 rounded-2xl text-sm font-black text-slate-700 bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                   >
-                    <option value="">-- Bukan warga terdaftar --</option>
+                    <option value="">-- Bukan warga terdaftar (User Umum) --</option>
                     {[...wargaData].sort((a: any, b: any) => (a.nama || '').localeCompare(b.nama || '')).map((w:any, index: number) => <option key={`w-iuran-opt-${w.docId || w.id || w.nik || index}-${index}`} value={w.docId || w.id || w.nik}>{w.nama} ({w.nik})</option>)}
                   </select>
-                  <input type="text" name="namaPenyetor" defaultValue={editingTrx?.namaPenyetor || ""} placeholder="Tulis manual nama penyetor (jika luar warga)" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <div className="relative">
+                    <input type="text" name="namaPenyetor" defaultValue={editingTrx?.namaPenyetor || ""} placeholder="Atau ketik manual nama penyetor luar warga..." className="w-full px-5 py-4 border border-blue-100 rounded-2xl text-sm font-bold text-slate-600 bg-white outline-none focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-300 transition-all shadow-sm" />
+                  </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tanggal Bayar</label>
-                  <input name="tanggal" required type="date" defaultValue={editingTrx ? new Date(editingTrx.tanggal).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]} className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Tanggal Transaksi</label>
+                  <input name="tanggal" required type="date" defaultValue={editingTrx ? new Date(editingTrx.tanggal).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]} className="w-full px-5 py-4 border border-slate-100 bg-slate-50/50 rounded-2xl text-sm font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm" />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Nominal (Rp)</label>
-                  <input name="nominal" defaultValue={editingTrx?.nominal || ""} required type="text" placeholder="Contoh: 50000" className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Nominal Pembayaran (IDR)</label>
+                  <div className="relative">
+                     <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">Rp</span>
+                     <input name="nominal" defaultValue={editingTrx?.nominal || ""} required type="text" placeholder="50.000" className="w-full pl-12 pr-5 py-4 border border-slate-100 bg-slate-50/50 rounded-2xl text-sm font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm" />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Jenis Pembayaran & Peruntukkan</label>
-                <select value={jenisPembayaran} onChange={(e) => setJenisPembayaran(e.target.value)} name="jenis" className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Alokasi / Jenis Pembayaran</label>
+                <select value={jenisPembayaran} onChange={(e) => setJenisPembayaran(e.target.value)} name="jenis" className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm">
                   <option value="Iuran Warga">Iuran Wajib Bulanan Warga</option>
                   <option value="Retribusi Sampah / Keamanan">Retribusi Sampah / Keamanan</option>
                   <option value="Pajak Bumi Bangunan">Pembayaran Pajak (PBB)</option>
                   <option value="Listrik, Air & Fasum">Biaya Listrik, Air & Fasilititas Umum</option>
                   <option value="Donasi / ZIS / Qurban">Donasi / Zakat / Qurban</option>
-                  <option value="Lainnya">Lainnya</option>
+                  <option value="Lainnya">Lainnya (Insidentil)</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Keterangan Detail (Opsional)</label>
-                <input name="keterangan" defaultValue={editingTrx?.keterangan || ""} type="text" placeholder="Misal: Bayar Iuran Warga bulan Mei 2026 via QRIS" className="w-full px-4 py-3 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Catatan / Keterangan (Opsional)</label>
+                <textarea 
+                   name="keterangan" 
+                   defaultValue={editingTrx?.keterangan || ""} 
+                   rows={2}
+                   placeholder="Berikan detail tambahan jika diperlukan..." 
+                   className="w-full px-5 py-4 border border-slate-100 bg-slate-50/50 rounded-2xl text-sm font-bold text-slate-600 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm resize-none" 
+                />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between items-center">
-                  <span>Bukti Pembayaran / Struk (Wajib U/Warga)</span>
+              <div className="space-y-3">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex justify-between items-center">
+                  <span>Lampiran Bukti / Struk Fisik</span>
+                  <span className="text-blue-500 text-[8px] font-black">Maksimal 5MB</span>
                 </label>
                 {buktiUrl ? (
-                  <div className="relative w-full aspect-video bg-slate-100 rounded-xl overflow-hidden border-2 border-slate-200 shadow-inner group">
+                  <div className="relative w-full aspect-video bg-slate-50 rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-inner group">
                     <img src={buktiUrl} alt="Bukti" className="w-full h-full object-contain" />
-                    <button type="button" onClick={() => setBuktiUrl('')} className="absolute top-3 right-3 p-2 bg-red-600/90 text-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"><X className="w-4 h-4" /></button>
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                       <button type="button" onClick={() => setBuktiUrl('')} className="bg-white text-rose-600 px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/20">
+                         <Trash2 className="w-4 h-4" /> HAPUS FOTO
+                       </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="w-full">
@@ -885,50 +988,44 @@ export function IuranView({
                         setUploading(false);
                       }
                     }} />
-                    <button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className="w-full py-6 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all flex flex-col items-center justify-center gap-3 bg-slate-50/50 outline-none group focus:ring-2 disabled:opacity-50 disabled:cursor-wait">
+                    <button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className="w-full py-10 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-400 hover:bg-blue-50/50 hover:border-blue-300 hover:text-blue-600 transition-all flex flex-col items-center justify-center gap-4 bg-slate-50/30 outline-none group focus:ring-4 focus:ring-blue-500/10 disabled:opacity-50 disabled:cursor-wait">
                       {uploading ? (
-                        <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div>
+                        <div className="w-10 h-10 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
                       ) : (
-                        <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-200 group-hover:border-blue-200 group-hover:shadow-blue-100 transition-all">
-                          <Upload className="w-5 h-5 text-blue-500" />
-                        </div>
+                        <>
+                          <div className="p-4 bg-white rounded-2xl shadow-lg shadow-slate-100 border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+                             <Upload className="w-8 h-8 text-blue-500" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-500">Klik Untuk Unggah Dokumen</p>
+                            <p className="text-[10px] text-slate-400 mt-1">Format: JPG, PNG, WEBP</p>
+                          </div>
+                        </>
                       )}
-                      
-                      <div className="text-center">
-                        <span className="text-xs font-black block">{uploading ? 'Sedang Mengunggah...' : 'Upload/Foto Bukti Transaksi'}</span>
-                        <span className="text-[10px] font-bold text-slate-400 mt-0.5 max-w-[200px] leading-tight block">Format Gambar (JPG/PNG). Bisa foto dari kamera HP.</span>
-                      </div>
                     </button>
                   </div>
                 )}
               </div>
-
-              <div className="pt-6 flex flex-col sm:flex-row gap-3">
+              
+              <div className="flex flex-col sm:flex-row gap-4 pt-6">
                 <button 
-                  type="button" 
-                  onClick={() => setShowForm(false)} 
-                  className="py-4 px-6 text-[11px] font-black text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-2xl transition-all border border-slate-100 uppercase tracking-widest"
+                  type="submit" 
+                  disabled={uploading}
+                  className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  Batal
+                  <CheckCircle2 className="w-5 h-5" />
+                  {editingTrx ? 'SIMPAN PERUBAHAN' : 'CATAT PEMBAYARAN TUNAI'}
                 </button>
-                <div className="flex-1 flex gap-3">
-                  <button 
-                    type="submit" 
-                    disabled={uploading} 
-                    className="flex-1 py-4 text-[11px] font-black border-2 border-brand-blue/20 text-brand-blue hover:bg-brand-blue/5 rounded-2xl transition-all disabled:opacity-50 uppercase tracking-widest flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Manual
-                  </button>
+                {!editingTrx && (
                   <button 
                     type="button" 
                     onClick={handleStartPg} 
-                    disabled={uploading} 
-                    className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+                    className="flex-1 bg-gradient-to-r from-indigo-600 to-violet-700 text-white px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                   >
-                    <CreditCard className="w-4 h-4 group-hover:rotate-12 transition-transform" /> 
-                    Bayar Online
+                    <QrCode className="w-5 h-5" />
+                    BAYAR ONLINE (QRIS/VA)
                   </button>
-                </div>
+                )}
               </div>
             </form>
           </motion.div>
@@ -1024,71 +1121,100 @@ export function IuranView({
         </div>
       )}
       {viewingTrx && (
-        <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[110] p-4">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white/95 backdrop-blur-2xl w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden border border-white"
           >
-            <div className={`p-6 ${viewingTrx.status === 'Lunas' ? 'bg-emerald-600' : 'bg-orange-600'} text-white flex justify-between items-center`}>
-              <h3 className="font-black uppercase tracking-widest text-xs flex items-center gap-2">
-                <CreditCard className="w-4 h-4" /> Detail Transaksi {viewingTrx.jenis}
+            <div className={`p-8 ${viewingTrx.status === 'Lunas' ? 'bg-gradient-to-br from-emerald-600 to-teal-700' : 'bg-gradient-to-br from-orange-600 to-amber-700'} text-white flex justify-between items-center relative overflow-hidden`}>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10">
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                   <CreditCard className="w-4 h-4" /> 
+                </div>
+                Detail Transaksi Keuangan
               </h3>
               <button 
                 onClick={() => setViewingTrx(null)} 
-                className="text-white/70 hover:text-white transition-colors"
+                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-all active:scale-90 relative z-10"
                 id="close-detail-modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-8 space-y-6">
+            <div className="p-10 space-y-8">
               <div className="flex flex-col items-center">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pembayaran</div>
-                <div className={`text-3xl font-black ${viewingTrx.status === 'Lunas' ? 'text-emerald-600' : 'text-orange-600'}`}>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Total Pembayaran Berhasil</div>
+                <div className={`text-4xl font-black tracking-tighter ${viewingTrx.status === 'Lunas' ? 'text-emerald-600' : 'text-orange-600'}`}>
                   Rp {new Intl.NumberFormat('id-ID').format(viewingTrx.nominal)}
                 </div>
+                <div className={`mt-4 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] ${viewingTrx.status === 'Lunas' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+                  {viewingTrx.status}
+                </div>
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-slate-100">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Tanggal</p>
-                    <p className="text-sm font-bold text-slate-700">{new Date(viewingTrx.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Jenis</p>
-                    <p className="text-sm font-bold text-blue-600">{viewingTrx.jenis}</p>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-y-6 gap-x-10 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
                 <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Penyetor</p>
-                  <p className="text-sm font-bold text-slate-700">{viewingTrx.namaPenyetor}</p>
-                  <p className="text-[10px] text-slate-500 font-medium">{viewingTrx.alamat}</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Transaksi</p>
+                  <p className="text-xs font-black text-slate-800 break-all family-mono">{viewingTrx.id}</p>
                 </div>
-
                 <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Keterangan</p>
-                  <p className="text-sm font-medium text-slate-600 leading-relaxed">{viewingTrx.keterangan || '-'}</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Tanggal</p>
+                  <p className="text-xs font-black text-slate-800">{new Date(viewingTrx.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 </div>
-
-                {viewingTrx.buktiUrl && (
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Bukti Pembayaran</p>
-                    <div className="rounded-xl overflow-hidden border border-slate-200">
-                      <img src={viewingTrx.buktiUrl} alt="Bukti" className="w-full max-h-48 object-contain bg-slate-50" />
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Penyetor</p>
+                  <p className="text-xs font-black text-slate-800">{viewingTrx.namaPenyetor}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">NIK / UserID</p>
+                  <p className="text-xs font-black text-slate-800">{viewingTrx.nik || '-'}</p>
+                </div>
+                <div className="col-span-2 border-t border-slate-100 pt-4">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Jenis Pembayaran</p>
+                  <p className="text-xs font-black text-blue-600">{viewingTrx.jenis}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Keterangan</p>
+                  <p className="text-xs font-bold text-slate-600 italic">"{viewingTrx.keterangan || '-'}"</p>
+                </div>
               </div>
 
-              <button 
-                onClick={() => setViewingTrx(null)}
-                className="w-full py-4 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
-              >
-                Tutup
-              </button>
+              {viewingTrx.buktiUrl && (
+                <div className="space-y-3">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Lampiran Dokumen</p>
+                  <div className="w-full aspect-[4/3] bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden group relative">
+                    <img src={viewingTrx.buktiUrl} alt="Struk" className="w-full h-full object-contain" />
+                    <a 
+                       href={viewingTrx.buktiUrl} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm"
+                    >
+                       <div className="bg-white text-blue-600 px-6 py-3 rounded-2xl text-[10px] font-black flex items-center gap-3 shadow-2xl">
+                          <Eye className="w-5 h-5" /> LIHAT UKURAN PENUH
+                       </div>
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                 <button 
+                   onClick={() => handlePrint(viewingTrx)} 
+                   className="flex-1 py-5 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                 >
+                   <Printer className="w-5 h-5" /> CETAK STRUK
+                 </button>
+                 <button 
+                   onClick={() => setViewingTrx(null)} 
+                   className="flex-1 py-5 bg-white text-slate-400 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] border border-slate-100 hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
+                 >
+                   TUTUP
+                 </button>
+              </div>
             </div>
           </motion.div>
         </div>

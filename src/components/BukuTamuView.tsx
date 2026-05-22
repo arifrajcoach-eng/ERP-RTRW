@@ -180,161 +180,204 @@ export function BukuTamuView({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 animate-in fade-in duration-700">
       {/* CCTV & Status Security */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 bg-black rounded-[2.5rem] p-4 shadow-2xl relative overflow-hidden aspect-video lg:aspect-auto h-[300px]">
-          {/* Main camera feed */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3 bg-slate-900 rounded-[3.5rem] p-6 shadow-2xl relative overflow-hidden aspect-video lg:aspect-auto h-[400px] border-8 border-slate-800 group">
           <div className="absolute inset-0">
-             {/* Only show "monitoring" webcam if not actively capturing a guest photo to avoid conflicts */}
              {!showWebcam && (
                /* @ts-ignore */
-               <Webcam audio={false} videoConstraints={{ facingMode: "environment" }} mirrored={false} className="w-full h-full object-cover opacity-80" />
+               <Webcam audio={false} videoConstraints={{ facingMode: "environment" }} mirrored={false} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-1000" />
              )}
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/40 pointer-events-none"></div>
           
-          <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600/90 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            Live Monitoring - Pos Keamanan
-          </div>
-          <div className="absolute top-4 right-4 bg-black/50 px-3 py-1 rounded-full text-white/90 flex gap-4 text-[10px] font-mono border border-white/10 backdrop-blur-md">
-            <span>CH 01: MAIN GATE</span>
+          <div className="absolute top-8 left-8 flex items-center gap-4 bg-rose-600 text-white px-5 py-2 rounded-full text-[11px] font-black uppercase tracking-[0.3em] shadow-xl animate-pulse">
+            <div className="w-2.5 h-2.5 bg-white rounded-full shadow-[0_0_10px_white]"></div>
+            Live Secure Feed
           </div>
           
-          <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-             <div className="space-y-1 bg-black/40 p-2 rounded-xl backdrop-blur-md border border-white/10">
-                <div className="flex items-center gap-2 text-emerald-400 text-[10px] font-black uppercase">
-                   <ShieldCheck className="w-3 h-3" /> Area Steril & Aman
+          <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
+             <div className="space-y-2 bg-slate-950/60 p-5 rounded-[2rem] backdrop-blur-2xl border border-white/10 shadow-2xl">
+                <div className="flex items-center gap-3 text-emerald-400 text-[11px] font-black uppercase tracking-widest">
+                   <ShieldCheck className="w-5 h-5 animate-bounce" /> Area Monitoring Aktif
                 </div>
-                <p className="text-white/60 text-[9px] font-mono">Scanning face identifiers... OK</p>
+                <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest">Sensors: Active | Logs: Stabil</p>
              </div>
-             <button onClick={() => { setFormMode('add'); setCapturedImage(null); setSelectedTamu(null); setShowForm(true); }} className="bg-white text-slate-900 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-blue-50 transition-all active:scale-95 z-20">
+             
+             <motion.button 
+               whileHover={{ scale: 1.05, shadow: '0 25px 50px -12px rgba(59, 130, 246, 0.5)' }}
+               whileTap={{ scale: 0.95 }}
+               onClick={() => { setFormMode('add'); setCapturedImage(null); setSelectedTamu(null); setShowForm(true); }} 
+               className="bg-white text-slate-900 px-10 py-5 rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl hover:bg-blue-50 transition-all z-20 flex items-center gap-3"
+             >
+                <PlusCircle className="w-5 h-5" />
                 Registrasi Tamu
-             </button>
+             </motion.button>
           </div>
         </div>
 
-        <div className="space-y-4">
-           <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center text-center group cursor-pointer hover:border-blue-500 transition-all transition-colors" onClick={() => setShowQR(true)}>
-              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                 <QrCode className="w-8 h-8" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
+           <motion.div 
+             whileHover={{ y: -5 }}
+             className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col items-center text-center group cursor-pointer hover:border-brand-blue/30 transition-all" 
+             onClick={() => setShowQR(true)}
+           >
+              <div className="w-20 h-20 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-3xl flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                 <QrCode className="w-10 h-10" />
               </div>
-              <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter text-sm">Mandiri QR</h4>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase leading-tight">Tamu Scan QR di Pos untuk Lapor Mandiri</p>
-           </div>
-           <div className="bg-emerald-600 dark:bg-emerald-700 p-6 rounded-[2rem] shadow-xl shadow-emerald-100 dark:shadow-none flex flex-col items-center text-center text-white transition-colors">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-                 <History className="w-8 h-8" />
+              <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter text-lg">Self Check-in</h4>
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 mt-2 uppercase leading-relaxed tracking-widest max-w-[120px]">Scan QR Mandiri di Pos Penjagaan</p>
+           </motion.div>
+           
+           <motion.div 
+             whileHover={{ y: -5 }}
+             className="bg-brand-blue dark:bg-slate-800 p-8 rounded-[3rem] shadow-2xl shadow-brand-blue/20 dark:shadow-none flex flex-col items-center text-center text-white transition-all overflow-hidden relative"
+           >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-3xl"></div>
+              <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mb-6 backdrop-blur-md border border-white/20">
+                 <History className="w-10 h-10" />
               </div>
-              <h4 className="font-black uppercase tracking-tighter text-sm">Log 24 Jam</h4>
-              <p className="text-[10px] font-bold text-emerald-100 mt-1 uppercase leading-tight">Total {tamuData.length} Tamu Berkunjung Hari Ini</p>
-           </div>
+              <h4 className="font-black uppercase tracking-tighter text-lg">Kunjungan 24j</h4>
+              <p className="text-[10px] font-black text-blue-100 mt-2 uppercase leading-relaxed tracking-widest">Total {tamuData.length} Tamu Masuk Wilayah</p>
+           </motion.div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/50 dark:bg-slate-800/50 transition-colors">
-          <h3 className="font-black text-slate-800 dark:text-slate-100 text-lg flex items-center gap-2">
-            <span className="p-2 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl"><Users className="w-5 h-5" /></span>
-            Log Kunjungan Tamu
-          </h3>
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+      <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-3xl rounded-[3.5rem] shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
+        <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-white/50 dark:bg-slate-900/30">
+          <div className="flex items-center gap-5">
+            <div className="p-4 bg-slate-900 dark:bg-brand-blue text-white rounded-[1.5rem] shadow-xl">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 dark:text-slate-100 text-2xl uppercase tracking-tighter font-elegant">Log Kunjungan</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Daftar riwayat tamu hari ini</p>
+            </div>
+          </div>
+          <div className="relative w-full md:w-80 group">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-brand-blue transition-colors" />
             <input 
               type="text" 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Cari nama / tujuan..." 
-              className="pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold w-full focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100 transition-colors"
+              placeholder="Cari Identitas Tamu..." 
+              className="pl-14 pr-8 py-5 bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 rounded-[2rem] text-[13px] font-bold w-full focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/20 outline-none text-slate-800 dark:text-slate-100 transition-all placeholder:text-slate-300 placeholder:italic"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100 dark:border-slate-800 transition-colors">
-              <tr>
-                <th className="px-5 py-4">Waktu (Datang / Keluar)</th>
-                <th className="px-5 py-4">Tamu</th>
-                <th className="px-5 py-4">Asal / Instansi</th>
-                <th className="px-5 py-4">Tujuan / Keperluan</th>
-                <th className="px-5 py-4">Catatan</th>
-                <th className="px-5 py-4 text-center">Status</th>
-                <th className="px-5 py-4 text-right">Aksi</th>
+          <table className="w-full text-left whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] border-b border-slate-100 dark:border-slate-800 transition-colors">
+                <th className="px-10 py-8">Kronologi Waktu</th>
+                <th className="px-10 py-8">Profil Tamu</th>
+                <th className="px-10 py-8">Asal / Instansi</th>
+                <th className="px-10 py-8">Tujuan Kunjungan</th>
+                <th className="px-10 py-8">Catatan</th>
+                <th className="px-10 py-8 text-center">Status Keamanan</th>
+                <th className="px-10 py-8 text-right">Opsi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-600 dark:text-slate-400">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {filteredTamu.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 dark:text-slate-500 italic font-bold">Belum ada kunjungan tamu.</td></tr>
+                <tr><td colSpan={7} className="px-10 py-24 text-center">
+                  <div className="flex flex-col items-center opacity-30 text-slate-400">
+                    <History className="w-16 h-16 mb-4" />
+                    <p className="text-sm font-black uppercase tracking-widest italic">Nihil Laporan Tamu</p>
+                  </div>
+                </td></tr>
               )}
               {filteredTamu.map((tamu: any, idx: number) => (
-                <tr key={`tamu-row-${tamu.id || idx}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                  <td className="px-5 py-3">
-                    <div className="text-xs font-black text-slate-800">
-                      Datang: {new Date(tamu.tanggal).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}
-                    </div>
-                    {tamu.waktuKeluar ? (
-                      <div className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">
-                        Keluar: {new Date(tamu.waktuKeluar).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}
+                <motion.tr 
+                  key={`tamu-row-${tamu.id || idx}-${idx}`} 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="hover:bg-slate-50 dark:hover:bg-brand-blue/5 group transition-all"
+                >
+                  <td className="px-10 py-6">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="text-[13px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-brand-blue" />
+                        {new Date(tamu.tanggal).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}
                       </div>
-                    ) : (
-                      <div className="text-[10px] text-emerald-500 font-bold uppercase mt-0.5">Sedang Berkunjung</div>
-                    )}
-                    <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">
-                      {new Date(tamu.tanggal).toLocaleDateString('id-ID', {day:'2-digit', month:'short'})}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[10px] overflow-hidden border border-blue-100">
-                        {tamu.foto ? <img src={tamu.foto} className="w-full h-full object-cover" /> : tamu.nama?.substring(0,2).toUpperCase()}
+                      <div className="flex flex-col gap-1">
+                        {tamu.waktuKeluar ? (
+                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                            Out: {new Date(tamu.waktuKeluar).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-emerald-500 font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Staying
+                          </div>
+                        )}
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-3.5">{new Date(tamu.tanggal).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'})}</p>
                       </div>
-                      <div className="font-bold text-slate-800">{tamu.nama}</div>
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-xs font-bold">{tamu.asal}</td>
-                  <td className="px-5 py-3">
-                    <div className="font-bold text-blue-600 truncate max-w-[200px]">{tamu.tujuan}</div>
-                    <div className="text-[10px] text-slate-400 italic">{tamu.keperluan}</div>
+                  <td className="px-10 py-6">
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden shrink-0 group-hover:scale-110 transition-transform">
+                        {tamu.foto ? <img src={tamu.foto} className="w-full h-full object-cover" /> : <span className="text-xl font-elegant">{tamu.nama?.substring(0,1).toUpperCase()}</span>}
+                      </div>
+                      <div>
+                        <div className="font-black text-[15px] text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant leading-none">{tamu.nama}</div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Reg ID: {tamu.id?.substring(0,8)}</div>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-10 py-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                       {tamu.asal}
+                    </div>
+                  </td>
+                  <td className="px-10 py-6">
+                    <div className="font-black text-[13px] text-brand-blue uppercase tracking-tight leading-none mb-1.5">{tamu.tujuan}</div>
+                    <div className="text-[10px] font-medium text-slate-400 italic max-w-[200px] truncate">"{tamu.keperluan}"</div>
+                  </td>
+                  <td className="px-10 py-6">
                      <p className="text-[10px] text-slate-500 max-w-[150px] truncate">{tamu.catatan || '-'}</p>
                   </td>
-                  <td className="px-5 py-3 text-center">
+                  <td className="px-10 py-6 text-center">
                     {tamu.status === 'Check-in' ? (
-                      <span className="px-2 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest bg-emerald-100 text-emerald-700">
+                      <span className="px-6 py-2 text-[10px] font-black rounded-full uppercase tracking-[0.2em] bg-emerald-500 text-white shadow-xl shadow-emerald-500/20 border border-emerald-400 flex items-center justify-center gap-2 w-fit mx-auto">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                         Check-in
                       </span>
                     ) : (
-                      <span className="px-2 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest bg-slate-100 text-slate-600">
-                        Check-out
+                      <span className="px-6 py-2 text-[10px] font-black rounded-full uppercase tracking-[0.2em] bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center gap-2 w-fit mx-auto">
+                        <LogOut className="w-3.5 h-3.5" />
+                        Finish
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-3 gap-2">
-                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                  <td className="px-10 py-6">
+                    <div className="flex items-center justify-end gap-3 font-elegant">
                       {tamu.status === 'Check-in' && (
-                         <button onClick={() => handleCheckOut(tamu.id)} className="p-1.5 bg-brand-yellow/20 text-yellow-700 hover:bg-brand-yellow/40 rounded-lg transition-colors tooltip-wrapper" title="Check-out">
-                            <LogOut className="w-4 h-4" />
-                         </button>
+                         <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleCheckOut(tamu.id)} className="p-3 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20" title="Check-out">
+                            <LogOut className="w-5 h-5" />
+                         </motion.button>
                       )}
-                      <button onClick={() => { setFormMode('view'); setSelectedTamu(tamu); setShowForm(true); }} className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors tooltip-wrapper" title="Lihat">
-                         <Eye className="w-4 h-4" />
-                      </button>
+                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { setFormMode('view'); setSelectedTamu(tamu); setShowForm(true); }} className="p-3 bg-brand-blue text-white rounded-xl shadow-lg shadow-brand-blue/20" title="Review">
+                         <Eye className="w-5 h-5" />
+                      </motion.button>
                       {['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(userRole) && (
                         <>
-                          <button onClick={() => { setFormMode('edit'); setSelectedTamu(tamu); setCapturedImage(tamu.foto || null); setShowForm(true); }} className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors tooltip-wrapper" title="Edit">
-                             <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleDelete(tamu.id)} className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors tooltip-wrapper" title="Hapus">
-                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { setFormMode('edit'); setSelectedTamu(tamu); setCapturedImage(tamu.foto || null); setShowForm(true); }} className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-600/20" title="Edit">
+                             <Edit className="w-5 h-5" />
+                          </motion.button>
+                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleDelete(tamu.id)} className="p-3 bg-rose-600 text-white rounded-xl shadow-lg shadow-rose-600/20" title="Delete">
+                             <Trash2 className="w-5 h-5" />
+                          </motion.button>
                         </>
                       )}
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>

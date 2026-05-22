@@ -234,9 +234,9 @@ export function VerifikasiAdminView({
   };
 
   const statusColors: Record<string, string> = {
-    'Menunggu Persetujuan': 'bg-yellow-100 text-yellow-700',
-    'Disetujui': 'bg-green-100 text-green-700',
-    'Ditolak': 'bg-red-100 text-red-700'
+    'Menunggu Persetujuan': 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-lg shadow-orange-500/20',
+    'Disetujui': 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white border-transparent shadow-lg shadow-emerald-500/20',
+    'Ditolak': 'bg-gradient-to-br from-rose-400 to-red-500 text-white border-transparent shadow-lg shadow-red-500/20'
   };
 
   const handleMassSync = async () => {
@@ -281,34 +281,50 @@ export function VerifikasiAdminView({
   };
 
   return (
-    <div className="p-4 md:p-8 w-full max-w-full overflow-hidden">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 w-full">
-        <div className="w-full">
-          <h1 className="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">
-            <ShieldCheck className="w-8 h-8 text-blue-600 shrink-0" />
-            Verifikasi Data Mandiri
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 font-medium">Kelola pengajuan perbaikan data dari warga secara mandiri.</p>
+    <div className="p-4 md:p-12 w-full max-w-full overflow-hidden space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 w-full">
+        <div className="w-full relative group">
+          <div className="absolute -left-12 -top-12 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-500/10 transition-colors duration-1000"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 rounded-[2rem] shadow-2xl shadow-blue-500/30 ring-4 ring-white/50">
+                <ShieldCheck className="w-8 h-8 text-white shrink-0" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-blue-500 mb-1 block">Administrative Hub</span>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-tight">
+                  <span className="bg-gradient-to-r from-slate-800 to-slate-500 bg-clip-text text-transparent">Verifikasi</span> <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Data</span>
+                </h1>
+              </div>
+            </div>
+            <p className="text-xs md:text-sm text-slate-400 font-medium max-w-lg leading-relaxed">
+              Otorisasi and sinkronisasi perubahan identitas warga. Pastikan data yang diajukan sesuai dengan dokumen resmi kependudukan.
+            </p>
+          </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
           <button 
             onClick={handleMassSync}
             disabled={!verifikasiData.some(v => v.status === 'Disetujui' && !v.isFinalized)}
-            className="px-5 py-3 bg-gradient-to-tr from-indigo-600 to-blue-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-xl shadow-indigo-600/20 flex items-center gap-2 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0"
+            className="px-6 py-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-2xl shadow-indigo-500/30 flex items-center gap-3 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0 group"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Sinkronkan
+            <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" />
+            SINKRONKAN
           </button>
           
-          <div className="hidden sm:block h-4 w-px bg-slate-200 mx-1 shrink-0" />
+          <div className="hidden sm:block h-8 w-px bg-slate-200/60 mx-1 shrink-0" />
           
-          <div className="flex overflow-x-auto gap-2 w-full sm:w-auto pb-2 sm:pb-0 scrollbar-hide">
+          <div className="flex bg-slate-100/50 p-1.5 rounded-[1.5rem] overflow-x-auto gap-1 w-full sm:w-auto pb-1.5 sm:pb-1.5 scrollbar-hide border border-slate-200/40">
             {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`whitespace-nowrap shrink-0 px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${filter === f ? 'bg-slate-900 text-white shadow-lg shadow-slate-300' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
+                className={`whitespace-nowrap shrink-0 px-6 py-3 rounded-[1.25rem] text-[10px] font-bold uppercase tracking-wider transition-all duration-500 ${
+                  filter === f 
+                    ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-100 font-black' 
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
               >
                 {f}
               </button>
@@ -317,105 +333,124 @@ export function VerifikasiAdminView({
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-100 overflow-hidden w-full">
-        <div className="p-4 border-b border-slate-50 flex items-center gap-3">
-          <Search className="w-5 h-5 text-slate-400" />
+      <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/40 border border-slate-100/50 overflow-hidden w-full transition-all">
+        <div className="p-8 border-b border-slate-50 flex items-center gap-5 bg-slate-50/30">
+          <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
+            <Search className="w-5 h-5 text-blue-500" />
+          </div>
           <input 
             type="text" 
             placeholder="Cari NIK atau Nama..." 
-            className="flex-1 bg-transparent border-none focus:outline-none text-sm font-bold text-slate-600"
+            className="flex-1 bg-transparent border-none focus:outline-none text-base font-bold text-slate-600 placeholder:text-slate-300 placeholder:font-medium"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="px-6 py-4">Warga</th>
-                <th className="px-6 py-4">Agama</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Diajukan</th>
-                <th className="px-6 py-4">Terakhir Oleh</th>
-                <th className="px-6 py-4 text-right">Aksi</th>
+              <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-gradient-to-r from-slate-50/80 to-transparent">
+                <th className="px-8 py-7">Informasi Warga</th>
+                <th className="px-8 py-7">Agama</th>
+                <th className="px-8 py-7">Status Verifikasi</th>
+                <th className="px-8 py-7">Tgl Pengajuan</th>
+                <th className="px-8 py-7">Petugas</th>
+                <th className="px-8 py-7 text-right">Tindakan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredData.length === 0 ? (
                 <tr key="empty-verifikasi">
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold">Tidak ada pengajuan data.</td>
+                  <td colSpan={6} className="px-8 py-20 text-center">
+                    <div className="max-w-xs mx-auto">
+                      <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-white">
+                        <User className="w-8 h-8 text-slate-200" />
+                      </div>
+                      <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Tidak ada pengajuan data.</p>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 filteredData.map((item: any, idx: number) => (
-                  <tr key={`verif-row-${item.id || idx}-${idx}`} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
-                          {item.ktpUrl ? <img src={item.ktpUrl} alt="KTP" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-slate-400" />}
+                  <tr key={`verif-row-${item.id || idx}-${idx}`} className="hover:bg-blue-50/20 transition-all duration-300 group border-b border-slate-50/50 last:border-0">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/40 ring-4 ring-slate-50/30 group-hover:ring-blue-50 transition-all">
+                          {item.ktpUrl ? <img src={item.ktpUrl} alt="KTP" className="w-full h-full object-cover" /> : <User className="w-7 h-7 text-slate-200" />}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-800">{item.nama}</p>
-                          <p className="text-[10px] font-medium text-slate-400">NIK: {item.nik}</p>
+                          <p className="text-base font-black text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">{item.nama}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">NIK: {item.nik}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs font-bold text-slate-500">
-                      {item.agama || '-'}
+                    <td className="px-8 py-6">
+                       <span className="text-[11px] font-black text-slate-500 bg-slate-100/50 px-4 py-2 rounded-xl border border-slate-200/50 shadow-sm uppercase tracking-wide">
+                        {item.agama || '-'}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${statusColors[item.status]}`}>
+                    <td className="px-8 py-6">
+                      <span className={`px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg ${statusColors[item.status]}`}>
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-500 text-xs">
-                      {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                    <td className="px-8 py-6">
+                      <div className="text-xs font-bold text-slate-500 flex items-center gap-2.5 group-hover:text-slate-700 transition-colors">
+                        <div className="w-2 h-2 rounded-full bg-blue-400 group-hover:animate-pulse shadow-sm" />
+                        {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-500 text-xs">
-                      {item.approvedBy || '-'}
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center border border-blue-100 shadow-sm group-hover:from-blue-500 group-hover:to-indigo-600 transition-all duration-500">
+                          <User className="w-4 h-4 text-blue-500 group-hover:text-white transition-colors" />
+                        </div>
+                        <span className="text-xs font-black text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-tight">{item.approvedBy || '-'}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-3">
                         {(!item.isFinalized && (item.status === 'Menunggu Persetujuan' || item.status === 'Disetujui')) && (
                           <>
                             {item.status === 'Menunggu Persetujuan' && (
                               <button 
                                 onClick={() => handleApprove(item)}
                                 disabled={actionLoading}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-100 disabled:opacity-50"
+                                className="p-3 bg-white text-emerald-500 hover:bg-emerald-50 rounded-2xl transition-all border border-slate-100 hover:border-emerald-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
                                 title="Setujui"
                               >
-                                {actionLoading ? <div className="w-5 h-5 border-2 border-green-200 border-t-green-600 rounded-full animate-spin"></div> : <CheckCircle className="w-5 h-5" />}
+                                {actionLoading ? <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div> : <CheckCircle className="w-5 h-5" />}
                               </button>
                             )}
                             <button 
                               onClick={() => handleReject(item)}
                               disabled={actionLoading}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 disabled:opacity-50"
+                              className="p-3 bg-white text-rose-500 hover:bg-rose-50 rounded-2xl transition-all border border-slate-100 hover:border-rose-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
                               title={item.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
                             >
-                              {actionLoading ? <div className="w-5 h-5 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></div> : <XCircle className="w-5 h-5" />}
+                               {actionLoading ? <div className="w-5 h-5 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div> : <XCircle className="w-5 h-5" />}
                             </button>
                           </>
                         )}
-                          <button 
-                            onClick={() => {
-                              setCatatan('');
-                              setSelectedItem(item);
-                            }}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors"
-                            title="Detail"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(item.id)}
-                            disabled={actionLoading}
-                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent disabled:opacity-50"
-                            title="Hapus Permanen"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                        <button 
+                          onClick={() => {
+                            setCatatan('');
+                            setSelectedItem(item);
+                          }}
+                          className="p-3 bg-white text-blue-500 hover:bg-blue-50 rounded-2xl transition-all border border-slate-100 hover:border-blue-100 shadow-sm hover:scale-110 active:scale-90"
+                          title="Detail"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(item.id)}
+                          disabled={actionLoading}
+                          className="p-3 bg-white text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-slate-100 hover:border-red-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
+                          title="Hapus Permanen"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -524,30 +559,30 @@ export function VerifikasiAdminView({
                       />
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-4 pt-6">
                       <button 
                         onClick={() => handleApprove(selectedItem)}
                         disabled={actionLoading || selectedItem.status === 'Disetujui'}
-                        className="flex-1 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black uppercase tracking-widest text-[11px] py-5 rounded-[1.5rem] shadow-xl shadow-emerald-200 hover:scale-[1.02] hover:shadow-emerald-300 disabled:opacity-50 flex items-center justify-center gap-3 transition-all active:scale-95"
                       >
                         {actionLoading ? (
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
                           <CheckCircle className="w-5 h-5" />
                         )}
-                        {actionLoading ? 'Memproses...' : 'Setujui Data'}
+                        {actionLoading ? 'MEMPROSES...' : 'SETUJUI PERUBAHAN'}
                       </button>
                       <button 
                         onClick={() => handleReject(selectedItem)}
                         disabled={actionLoading || selectedItem.status === 'Ditolak' || selectedItem.isFinalized}
-                        className="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl border border-red-100 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        className="flex-1 bg-gradient-to-r from-rose-600 to-red-600 text-white font-black uppercase tracking-widest text-[11px] py-5 rounded-[1.5rem] shadow-xl shadow-red-200 hover:scale-[1.02] hover:shadow-red-300 disabled:opacity-50 flex items-center justify-center gap-3 transition-all active:scale-95"
                       >
                         {actionLoading ? (
-                          <div className="w-5 h-5 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></div>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
                           <XCircle className="w-5 h-5" />
                         )}
-                        {actionLoading ? 'Memproses...' : (selectedItem.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak')}
+                        {actionLoading ? 'MEMPROSES...' : (selectedItem.status === 'Disetujui' ? 'BATALKAN & TOLAK' : 'TOLAK PENGAJUAN')}
                       </button>
                     </div>
                   </div>

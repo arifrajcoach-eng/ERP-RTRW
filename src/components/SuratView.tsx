@@ -637,183 +637,252 @@ export function SuratView({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-fit">
-        <StyledButton 
-          label="Sedang Berjalan"
-          onClick={() => setActiveSubTab('berjalan')}
-          colorType={activeSubTab === 'berjalan' ? 'brightPink' : 'secondary'}
-          icon={<Clock className="w-4 h-4" />}
-          className="text-xs uppercase"
-        />
-        <StyledButton 
-          label="Riwayat / Arsip"
-          onClick={() => setActiveSubTab('arsip')}
-          colorType={activeSubTab === 'arsip' ? 'pastelRedActive' : 'secondary'}
-          icon={<History className="w-4 h-4" />}
-          className="text-xs uppercase"
-        />
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-4">
+        <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-2 rounded-3xl border border-slate-100 dark:border-slate-800 w-fit shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveSubTab('berjalan')}
+            className={`group flex items-center gap-4 px-10 py-4 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
+              activeSubTab === 'berjalan' 
+                ? 'bg-slate-900 dark:bg-brand-blue text-white shadow-2xl scale-100' 
+                : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            {activeSubTab === 'berjalan' && (
+               <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
+            )}
+            <Clock className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'berjalan' ? 'scale-110' : 'group-hover:scale-110'}`} />
+            Aktif
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveSubTab('arsip')}
+            className={`group flex items-center gap-4 px-10 py-4 ml-2 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
+              activeSubTab === 'arsip' 
+                ? 'bg-brand-blue dark:bg-slate-800 text-white shadow-2xl scale-100' 
+                : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+             {activeSubTab === 'arsip' && (
+               <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
+            )}
+            <History className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'arsip' ? 'scale-110' : 'group-hover:scale-110'}`} />
+            Arsip
+          </motion.button>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl px-8 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl flex items-center gap-4">
+            <div className="w-2.5 h-2.5 rounded-full bg-brand-blue animate-ping"></div>
+             <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Vault: {filteredSurat.length} File</p>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/50">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl rounded-3xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden transition-all">
+        <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 bg-slate-50/50 dark:bg-slate-800/30">
           <div>
-            <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-              <span className="p-2 bg-blue-100 text-blue-600 rounded-xl"><FileText className="w-5 h-5" /></span>
-              Manajemen Surat Pengantar
+            <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase font-elegant">
+              <div className="w-2.5 h-8 bg-brand-blue rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+              Layanan Administrasi
             </h3>
-            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">
-              Total: {filteredSurat.length} Dokumen
-            </p>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2 ml-7">Verifikasi & Penerbitan Dokumen</p>
           </div>
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:flex-none">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+
+          <div className="flex flex-wrap gap-4 w-full lg:w-auto">
+            <div className="relative flex-1 lg:flex-none group">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-brand-blue transition-colors" />
               <input 
                 type="text" 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Cari pemohon / jenis..." 
-                className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="Cari Dokumen..." 
+                className="pl-14 pr-8 py-5 bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[13px] font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/20 w-full lg:w-80 shadow-sm transition-all placeholder:text-slate-300 placeholder:italic"
               />
             </div>
-            <button onClick={() => { setSelectedWargaId(""); setWargaSearch(""); setKtpUrl(""); setKkUrl(""); setShowForm(true); }} className="flex items-center justify-center gap-2 bg-[#0cbb97] text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-emerald-200 hover:bg-[#0aa88a] transition-all active:scale-95">
-              <PlusCircle className="w-4 h-4" /> 
-              Buat Permohonan
-            </button>
+            <motion.button 
+              whileHover={{ scale: 1.03, shadow: '0 20px 25px -5px rgba(59, 130, 246, 0.4)' }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setSelectedWargaId(""); setWargaSearch(""); setKtpUrl(""); setKkUrl(""); setShowForm(true); }} 
+              className="w-full sm:w-auto flex items-center justify-center gap-4 bg-slate-900 dark:bg-brand-blue text-white px-10 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl relative overflow-hidden group"
+            >
+              <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-full blur-xl -mr-6 -mt-6"></div>
+              <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-700" /> 
+              <span>Pengajuan Baru</span>
+            </motion.button>
           </div>
         </div>
 
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="p-10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 bg-slate-50/30 dark:bg-transparent">
           {!isPengurus ? (
-            <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
-               <History className="w-12 h-12 mb-3 opacity-20" />
-               <p className="font-bold">Akses riwayat surat ditutup untuk menjaga kerahasiaan. Hubungi Admin jika butuh akses.</p>
+            <div className="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
+               <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800/50 rounded-2xl flex items-center justify-center mb-8 border border-white dark:border-slate-800">
+                  <ShieldCheck className="w-12 h-12 opacity-50" />
+               </div>
+               <p className="font-black text-xs uppercase tracking-widest max-w-sm text-center leading-relaxed">Akses Dokumen Terbatas. Silakan hubungi admin untuk informasi lebih lanjut.</p>
             </div>
           ) : filteredSurat.length === 0 ? (
-            <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
-               <History className="w-12 h-12 mb-3 opacity-20" />
-               <p className="font-bold">Tidak ada permohonan surat ditemukan.</p>
+            <div className="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
+               <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800/50 rounded-2xl flex items-center justify-center mb-8 border border-white dark:border-slate-800">
+                  <Files className="w-12 h-12 opacity-50" />
+               </div>
+               <p className="font-bold text-xs uppercase tracking-widest">Arsip Dokumen Kosong</p>
             </div>
           ) : (
-            filteredSurat.map((s, idx) => (
-            <motion.div 
-              layout key={`surat-${s.id || idx}`} 
-              className="group bg-white border border-slate-100 rounded-[2rem] p-5 shadow-sm hover:shadow-xl hover:border-blue-200 hover:ring-1 hover:ring-blue-100 transition-all cursor-pointer relative flex flex-col"
-              onClick={() => setViewingSurat(s)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-2xl ${s.status === 'Selesai' ? 'bg-green-50 text-green-600' : s.status === 'Ditolak' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                  <FileText className="w-6 h-6" />
-                </div>
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full">
-                  <Clock className="w-3 h-3 text-slate-400" />
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">
-                    {new Date(s.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md ${s.status === 'Selesai' ? 'bg-green-100 text-green-700' : s.status === 'Ditolak' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                  {s.status === 'Selesai' ? 'Selesai' : (s.status === 'Menunggu Persetujuan RT' ? 'PROSES RT' : (s.status === 'Menunggu Persetujuan RW' ? 'PROSES RW' : s.status))}
-                </span>
-                <h4 className="font-black text-slate-800 mt-2 mb-1 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">{s.jenis}</h4>
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-                  <User className="w-3.5 h-3.5" />
-                  <span>{s.pemohon}</span>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-                  <div className="flex -space-x-1">
-                    {isPengurus && (
-                      <>
-                        {/* Show printer only if finished */}
-                        {s.status === 'Selesai' ? (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); generateSuratPDF(s); }} 
-                            className="p-2 rounded-xl border border-slate-100 bg-slate-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all"
-                            title="Cetak Surat"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          /* Approval logic visibility */
-                          (((s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
-                           (s.status === 'Menunggu Persetujuan RW' && isRWUser)) && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleApproveSurat(s); }} 
-                              className="p-2 rounded-xl border border-slate-100 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all"
-                              title={`Setujui sebagai ${userRole}`}
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
-                          )
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              {filteredSurat.map((s, idx) => (
+                <motion.div 
+                  layout 
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  key={`surat-${s.id || idx}`} 
+                  className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-10 shadow-2xl shadow-slate-200/30 dark:shadow-none hover:shadow-brand-blue/20 hover:border-brand-blue/30 transition-all duration-500 cursor-pointer flex flex-col overflow-hidden"
+                  onClick={() => setViewingSurat(s)}
+                >
+                  <div className="absolute -right-12 -top-12 w-48 h-48 bg-slate-50 dark:bg-slate-800/50 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700"></div>
+                  
+                  <div className="flex justify-between items-start mb-10 relative z-10">
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-700 group-hover:rotate-6 ${
+                      s.status === 'Selesai' ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 
+                      s.status === 'Ditolak' ? 'bg-rose-500 text-white shadow-rose-500/20' : 
+                      'bg-brand-blue text-white shadow-brand-blue/20'
+                    }`}>
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                       <div className={`flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm ${
+                         s.status === 'Selesai' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                         s.status === 'Ditolak' ? 'bg-rose-50 border-rose-100 text-rose-700' :
+                         'bg-slate-50 border-slate-100 text-slate-500'
+                       }`}>
+                         <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'Selesai' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                         <span className="text-[9px] font-black uppercase tracking-widest">{s.status === 'Selesai' ? 'Verified' : s.status}</span>
+                       </div>
+                       <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest font-mono">
+                         #{s.id?.slice(-6)}
+                       </span>
+                    </div>
+                  </div>
+    
+                  <div className="flex-1 mb-10 relative z-10">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 leading-none italic">
+                      {new Date(s.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    
+                    <h4 className="font-black text-slate-800 dark:text-slate-100 text-[1.4rem] leading-tight mb-6 group-hover:text-brand-blue transition-colors font-elegant uppercase tracking-tight line-clamp-2">
+                      {s.jenis}
+                    </h4>
+                    
+                    <div className="flex items-center gap-4 p-6 bg-slate-50/50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 group-hover:bg-brand-blue group-hover:border-brand-blue/30 group-hover:shadow-2xl group-hover:shadow-brand-blue/20 transition-all duration-500">
+                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center shrink-0 shadow-xl group-hover:bg-white/20 group-hover:shadow-none transition-colors">
+                        <User className="w-6 h-6 text-slate-600 dark:text-slate-300 group-hover:text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-white/60 mb-0.5 transition-colors">Pemohon Aktif</p>
+                        <p className="text-sm font-black truncate uppercase tracking-tight group-hover:text-white transition-colors">{s.pemohon}</p>
+                      </div>
+                    </div>
+                  </div>
+    
+                  <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between relative z-10">
+                      <div className="flex items-center gap-3">
+                        {isPengurus && (
+                          <>
+                            {s.status === 'Selesai' ? (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); generateSuratPDF(s); }} 
+                                className="w-12 h-12 rounded-2xl bg-brand-blue text-white flex items-center justify-center shadow-2xl shadow-brand-blue/30 hover:shadow-brand-blue/50 transition-all active:scale-95"
+                              >
+                                <Printer className="w-6 h-6" />
+                              </button>
+                            ) : (
+                              (((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
+                               (s.status.includes('Persetujuan RW') && isRWUser)) && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleApproveSurat(s); }} 
+                                  className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all active:scale-95"
+                                >
+                                  <CheckCircle2 className="w-6 h-6" />
+                                </button>
+                              )
+                            )}
+                            
+                            {(s.status.includes('Menunggu') || s.status === 'Diajukan') && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleRejectSurat(s); }}
+                                className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-2xl shadow-rose-500/30 hover:shadow-rose-500/50 transition-all active:scale-95"
+                              >
+                                <X className="w-6 h-6" />
+                              </button>
+                            )}
+                          </>
                         )}
-                        
-                        {(s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan RW' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && 
-                         (((s.status.includes('RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
-                          (s.status.includes('RW') && isRWUser) || 
-                          isGlobalSuperAdmin) && (
+                      </div>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingSurat(s); setShowForm(true); }}
+                          className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-600 hover:text-brand-blue transition-all bg-slate-50 dark:bg-slate-800/50 active:scale-95"
+                        >
+                          <Edit className="w-6 h-6" />
+                        </button>
+                        {isGlobalSuperAdmin && (
                           <button 
-                            onClick={(e) => { e.stopPropagation(); handleRejectSurat(s); }}
-                            className="p-2 ml-2 rounded-xl border border-slate-100 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all"
-                            title={`Tolak sebagai ${userRole}`}
+                            onClick={(e) => { e.stopPropagation(); setSuratToDelete(s); }}
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-600 hover:text-rose-500 transition-all bg-slate-50 dark:bg-slate-800/50 active:scale-95"
                           >
-                            <X className="w-4 h-4" />
+                            <Trash2 className="w-6 h-6" />
                           </button>
                         )}
-                      </>
-                    )}
-                    {!isPengurus && s.status === 'Selesai' && (
-                       <button 
-                        onClick={(e) => { e.stopPropagation(); generateSuratPDF(s); }} 
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm"
-                        title="Cetak PDF"
-                      >
-                        <Printer className="w-4 h-4" />
-                        Cetak PDF
-                      </button>
-                    )}
-                 </div>
-                 <div className="flex gap-1">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setEditingSurat(s); setShowForm(true); }}
-                      className="p-2 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition-all"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setSuratToDelete(s); }}
-                      className="p-2 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                 </div>
-              </div>
-            </motion.div>
-          )))}
+                      </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       <AnimatePresence>
         {showForm && (
-          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[120] p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-black text-slate-800 flex items-center gap-2">
-                  <div className="p-2 bg-blue-600 text-white rounded-xl"><FileText className="w-4 h-4" /></div>
-                  {editingSurat ? 'Edit Permohonan Surat' : 'Buat Permohonan Surat Baru'}
-                </h3>
-                <button onClick={() => { setShowForm(false); setEditingSurat(null); }} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-[120] p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+              className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col max-h-[92vh] border border-white/20 dark:border-slate-800"
+            >
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 bg-gradient-to-tr from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
+                    <PlusCircle className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-800 dark:text-slate-100 text-xl font-elegant uppercase tracking-tight">
+                      {editingSurat ? 'Revisi Dokumen' : 'Permohonan Baru'}
+                    </h3>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Lengkapi data administrasi Anda</p>
+                  </div>
+                </div>
+                <motion.button 
+                  whileHover={{ rotate: 90, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                  onClick={() => { setShowForm(false); setEditingSurat(null); }} 
+                  className="p-3 text-slate-400 hover:text-rose-500 rounded-2xl transition-all"
+                >
+                  <X className="w-6 h-6" />
+                </motion.button>
               </div>
-              <form onSubmit={handleSaveSurat} ref={formRef} className="p-6 overflow-y-auto space-y-8">
-                {/* 1. Jenis Surat */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-blue-600">
-                    <FileText className="w-5 h-5" />
-                    <h4 className="text-sm font-black uppercase tracking-widest">Jenis Surat & Keperluan</h4>
+              
+              <form onSubmit={handleSaveSurat} ref={formRef} className="p-10 overflow-y-auto space-y-10 custom-scrollbar">
+                {/* 1. Pemohon Section */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4 text-brand-blue drop-shadow-sm">
+                    <User className="w-6 h-6" />
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em]">Identitas Pemohon</h4>
+                    <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
                   </div>
                   
                   {isPengurus && (
@@ -1096,20 +1165,42 @@ export function SuratView({
                    </p>
                 </div>
 
-                <div className="flex gap-3 pt-6 border-t border-slate-100">
-                  <button 
-                    type="button" 
-                    onClick={() => { setShowForm(false); setEditingSurat(null); setSelectedWargaId(""); setWargaSearch(""); }} 
-                    className="flex-1 py-4 px-6 text-xs font-black text-slate-400 uppercase tracking-widest bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
-                  >
-                    Batal
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="flex-[2] py-4 text-xs font-black bg-[#0cbb97] hover:bg-[#0aa88a] disabled:bg-slate-300 text-white rounded-2xl transition-all shadow-xl shadow-emerald-200 uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    {editingSurat ? 'Simpan Perubahan' : 'Kirim Permohonan'}
-                  </button>
+                <div className="pt-10 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                      <ShieldCheck className="w-5 h-5 text-brand-blue" />
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest max-w-[200px]">Data yang Anda masukkan dilindungi Enkripsi SSL</p>
+                  </div>
+                  <div className="flex gap-4 w-full md:w-auto">
+                    <motion.button 
+                      type="button" 
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => { setShowForm(false); setEditingSurat(null); setSelectedWargaId(""); setWargaSearch(""); }} 
+                      className="flex-1 md:flex-none px-8 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                    >
+                      Batal
+                    </motion.button>
+                    <motion.button 
+                      type="submit" 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      disabled={isLoadingDB}
+                      className="flex-1 md:flex-none px-12 py-4 rounded-2xl bg-slate-900 dark:bg-brand-blue text-white text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-slate-900/20 dark:shadow-brand-blue/20 transition-all flex items-center justify-center gap-3"
+                    >
+                      {isLoadingDB ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Memproses...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>{editingSurat ? 'Simpan' : 'Kirim'}</span>
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
                 </div>
               </form>
             </motion.div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer, ShieldCheck } from 'lucide-react';
 
 export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, bookingsData }: any) {
   const [namaFasilitas, setNamaFasilitas] = useState('Aula RW');
@@ -139,130 +140,183 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-[#52abcb]" />
-          Booking Fasilitas & Inventaris
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pilih Fasilitas / Inventaris</label>
-              <select 
-                value={namaFasilitas} 
-                onChange={(e) => setNamaFasilitas(e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-bold text-sm focus:bg-white focus:ring-2 focus:ring-[#52abcb] outline-none"
-              >
-                <option>Aula RW</option>
-                <option>Lapangan Olahraga</option>
-                <option>Tenda Acara</option>
-                <option>Kursi (Set)</option>
-                <option>Sound System</option>
-                <option>Proyektor</option>
-              </select>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 transition-all relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-[100px] group-hover:bg-emerald-500/10 transition-colors"></div>
+        
+        <div className="flex items-center gap-5 mb-10">
+           <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-2xl flex items-center justify-center shadow-xl transition-transform group-hover:rotate-6">
+              <Building2 className="w-8 h-8" />
+           </div>
+           <div>
+              <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant leading-none">Reservasi Fasilitas</h2>
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-2 opacity-80 italic">Peminjaman Gedung & Inventaris Lingkungan</p>
+           </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="block text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-2">Pilih Objek / Lokasi</label>
+              <div className="relative group/sel">
+                <select 
+                  value={namaFasilitas} 
+                  onChange={(e) => setNamaFasilitas(e.target.value)}
+                  className="w-full p-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-emerald-500/20 focus:bg-white dark:focus:bg-slate-900 rounded-2xl font-black text-sm text-slate-800 dark:text-slate-200 outline-none transition-all appearance-none cursor-pointer uppercase tracking-widest"
+                >
+                  <option>Aula Utama RW</option>
+                  <option>Lapangan Serbaguna</option>
+                  <option>Tenda & Panggung</option>
+                  <option>Kursi Tamu (PCS/Set)</option>
+                  <option>Sistem Suara (Audio)</option>
+                  <option>Proyektor & Layar</option>
+                  <option>Ambulans Warga</option>
+                </select>
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 w-3 h-3 border-r-3 border-b-3 border-slate-300 rotate-45 pointer-events-none transition-colors group-hover/sel:border-emerald-500"></div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Tanggal Pemakaian</label>
-              <input 
-                type="date"
-                value={tanggal}
-                onChange={(e) => setTanggal(e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-bold text-sm focus:bg-white focus:ring-2 focus:ring-[#52abcb] outline-none"
-                required
-              />
+            <div className="space-y-3">
+              <label className="block text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-2">Tanggal Pemakaian</label>
+              <div className="relative">
+                <input 
+                  type="date"
+                  value={tanggal}
+                  onChange={(e) => setTanggal(e.target.value)}
+                  className="w-full p-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-emerald-500/20 focus:bg-white dark:focus:bg-slate-900 rounded-2xl font-black text-sm text-slate-800 dark:text-slate-200 outline-none transition-all uppercase tracking-widest cursor-pointer"
+                  required
+                />
+                <Calendar className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+              </div>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Keperluan / Alasan Peminjaman</label>
-            <input 
-              type="text"
+          <div className="space-y-3">
+            <label className="block text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-2">Tujuan Peminjaman</label>
+            <textarea 
               value={keperluan}
               onChange={(e) => setKeperluan(e.target.value)}
-              placeholder="Contoh: Acara Silaturahmi Keluarga, Rapat Blok, dll."
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-medium text-sm focus:bg-white focus:ring-2 focus:ring-[#52abcb] outline-none"
+              placeholder="Jelaskan jenis acara dan estimasi durasi penggunaan..."
+              className="w-full p-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-emerald-500/20 focus:bg-white dark:focus:bg-slate-900 rounded-3xl font-medium text-sm text-slate-700 dark:text-slate-300 outline-none transition-all placeholder:text-slate-300 italic min-h-[120px]"
               required
             />
           </div>
-          <button type="submit" disabled={isSubmitting} className="w-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white p-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/30 transition-all duration-300">
-            {isSubmitting ? 'Memproses...' : 'Kirim Permohonan Booking'}
+          <button 
+            type="submit" 
+            disabled={isSubmitting} 
+            className="w-full bg-slate-900 dark:bg-emerald-600 text-white py-6 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl shadow-slate-900/10 dark:shadow-emerald-500/20 hover:shadow-2xl hover:shadow-emerald-500/30 hover:scale-[1.01] active:scale-95 transition-all duration-500 flex items-center justify-center gap-4 group/btn"
+          >
+            <CheckCircle2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span>AJUKAN RESERVASI SEKARANG</span>
           </button>
         </form>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">
-          {['ADMIN', 'SUPER_ADMIN', 'RW', 'RT'].includes(currentUser?.role) ? 'Daftar Peminjaman Wilayah' : 'Riwayat Peminjaman Saya'}
-        </h3>
+      <div className="space-y-8">
+        <div className="flex items-center gap-5 px-6 border-l-8 border-emerald-500">
+           <div>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter font-elegant">Status Peminjaman</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">{myBookings.length} Reservasi Terdaftar</p>
+           </div>
+        </div>
         
         {(!isAtLeastPengurus) ? (
-            <div className="py-20 text-center font-bold text-slate-400">
-              Akses riwayat peminjaman ditutup untuk menjaga kerahasiaan. Hubungi Admin jika butuh akses.
+            <div className="py-32 text-center bg-white/30 dark:bg-slate-900/30 rounded-[4rem] border-2 border-dashed border-slate-100 dark:border-slate-800 flex flex-col items-center">
+              <ShieldCheck className="w-16 h-16 text-slate-200 dark:text-slate-800 mb-6" />
+              <p className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.4em] max-w-sm leading-relaxed">Privasi Akses: Daftar peminjaman hanya dapat dilihat oleh pengurus wilayah.</p>
             </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
             {myBookings.length === 0 && (
-              <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                <Calendar className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Belum ada riwayat peminjaman</p>
+              <div className="py-24 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <Calendar className="w-16 h-16 text-slate-200 dark:text-slate-800 mx-auto mb-6 opacity-50" />
+                <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest font-elegant">Agenda Kosong</h4>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-2">Nampaknya belum ada yang mereservasi fasilitas pada periode ini.</p>
               </div>
             )}
-            {myBookings.map((b: any) => (
-              <div key={b.id} className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white transition-all hover:shadow-md border-l-4 border-l-[#52abcb]">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <span className="text-[10px] font-black text-[#0184bb] uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md">{b.namaFasilitas}</span>
-                    <p className="text-xs font-bold text-slate-800 mt-2 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(b.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </p>
-                  </div>
-                  <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    b.status === 'APPROVED' || b.status === 'Disetujui' ? 'bg-green-100 text-green-700' :
-                    b.status === 'REJECTED' || b.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
-                    'bg-orange-100 text-orange-700'
-                  }`}>
-                    {b.status === 'APPROVED' || b.status === 'Disetujui' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                    {b.status}
-                  </div>
-                  {(b.status === 'APPROVED' || b.status === 'Disetujui') && (
-                     <button 
-                       onClick={(e) => { e.stopPropagation(); handlePrintBooking(b); }}
-                       className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm"
-                       title="Cetak Izin Pemakaian"
-                     >
-                       <Printer className="w-3 h-3" />
-                       Cetak
-                     </button>
-                  )}
-                </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 italic">"{b.keperluan}"</p>
-                    <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">
-                      Oleh: {b.namaWarga} • Diajukan: {new Date(b.createdAt).toLocaleString('id-ID')}
-                    </p>
-                  </div>
-                  {isAtLeastPengurus && b.status === 'PENDING' && (
-                    <div className="flex gap-2 ml-4">
-                      <button 
-                        onClick={() => handleUpdateStatus(b.id, 'REJECTED')}
-                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                        title="Tolak"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleUpdateStatus(b.id, 'APPROVED')}
-                        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                        title="Setujui"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
+            
+            {myBookings.map((b: any, idx: number) => (
+              <motion.div 
+                key={b.id} 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="p-8 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 group/card relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-3 h-full bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.3)]"></div>
+                
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
+                  <div className="flex-1 space-y-6">
+                    <div className="flex flex-wrap items-center gap-4">
+                       <div className="px-6 py-2 bg-slate-900 dark:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                         {b.namaFasilitas}
+                       </div>
+                       <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-500/10 px-5 py-2 rounded-full border border-emerald-100 dark:border-emerald-500/20">
+                          <Calendar className="w-4 h-4 text-emerald-600" />
+                          <span className="text-[11px] font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-widest">
+                            {new Date(b.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </span>
+                       </div>
                     </div>
-                  )}
+
+                    <div className="space-y-2">
+                       <p className="text-xl font-bold text-slate-800 dark:text-slate-100 italic tracking-tight leading-relaxed">
+                         "{b.keperluan}"
+                       </p>
+                       <div className="flex items-center gap-3 pt-4 border-t border-slate-50 dark:border-slate-800">
+                          <div className="w-10 h-10 rounded-full bg-brand-blue text-white flex items-center justify-center font-black text-xs font-elegant shadow-lg">
+                             {b.namaWarga?.charAt(0) || 'W'}
+                          </div>
+                          <div>
+                            <p className="text-[12px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{b.namaWarga}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">{new Date(b.createdAt).toLocaleString('id-ID')}</p>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-5 items-end shrink-0">
+                    <div className={`flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                      b.status === 'APPROVED' || b.status === 'Disetujui' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                      b.status === 'REJECTED' || b.status === 'Ditolak' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                      'bg-orange-50 text-orange-600 border-orange-100'
+                    }`}>
+                      {b.status === 'APPROVED' || b.status === 'Disetujui' ? <CheckCircle2 className="w-4 h-4 fill-emerald-100" /> : <AlertCircle className="w-4 h-4" />}
+                      {b.status}
+                    </div>
+
+                    <div className="flex gap-3">
+                      {(b.status === 'APPROVED' || b.status === 'Disetujui') && (
+                         <button 
+                           onClick={(e) => { e.stopPropagation(); handlePrintBooking(b); }}
+                           className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-400 hover:text-emerald-600 hover:border-emerald-600/30 border border-slate-200 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 shadow-sm hover:shadow-xl active:scale-95"
+                           title="Cetak Surat Izin"
+                         >
+                           <Printer className="w-5 h-5" />
+                           Cetak Izin
+                         </button>
+                      )}
+
+                      {isAtLeastPengurus && b.status === 'PENDING' && (
+                        <div className="flex gap-3">
+                          <button 
+                            onClick={() => handleUpdateStatus(b.id, 'REJECTED')}
+                            className="p-4 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-100 rounded-2xl transition-all shadow-sm active:scale-90"
+                            title="Tolak Peminjaman"
+                          >
+                            <X className="w-6 h-6" />
+                          </button>
+                          <button 
+                            onClick={() => handleUpdateStatus(b.id, 'APPROVED')}
+                            className="p-4 bg-emerald-500 text-white hover:bg-emerald-600 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 active:scale-90"
+                            title="Setujui Peminjaman"
+                          >
+                            <Check className="w-6 h-6" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}

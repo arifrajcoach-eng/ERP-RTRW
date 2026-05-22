@@ -1,7 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   Users, Trash2, Edit2, Download, Printer, UserPlus, 
-  MapPin, Phone, Info, Search, X, CheckCircle, AlertCircle, Eye, EyeOff, ClipboardList, Trash, ShieldCheck, LogOut, Menu, Lock
+  MapPin, Phone, Info, Search, X, CheckCircle, AlertCircle, Eye, EyeOff, ClipboardList, Trash, ShieldCheck, LogOut, Menu, Lock,
+  ChevronDown
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import autoTable from 'jspdf-autotable';
@@ -666,159 +667,325 @@ function WargaView(props: WargaViewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 uppercase">
-            <Users className="w-8 h-8 text-brand-blue" />
-            Data {isApt ? "Penghuni" : "Warga"} {currentTenant?.name || ''}
-          </h2>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredWargaData.length} {isApt ? "Penghuni" : "Warga"} Terdaftar</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
+              <Users className="w-8 h-8 text-brand-blue" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">
+              Kelola {isApt ? "Penghuni" : "Warga"}
+            </h2>
+          </div>
+          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+            Platform {currentTenant?.name || ''} • {filteredWargaData.length} Terdaftar
+          </p>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex flex-wrap gap-3 items-center">
           {['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(userRole) && (
-            <>
-              <button onClick={cleanupWarga} className="bg-purple-50 hover:bg-purple-100 text-purple-600 border border-[#cf93ff] px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
-                  <Trash2 size={18} /> Bersihkan Data Ganda
-               </button>
-               {detectedRT ? (
-                 <button onClick={syncWargaFromRW} className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
-                    <ClipboardList size={18} /> Sinkron RW
-                 </button>
-               ) : (
-                 <button onClick={syncWargaFromRTsToRW} className="bg-teal-50 hover:bg-teal-100 text-teal-600 border border-teal-200 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
-                    <ClipboardList size={18} /> Sinkron Dari RT
-                 </button>
-               )}
-            </>
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-3xl border border-slate-200/50 dark:border-slate-700/50">
+              <button 
+                onClick={cleanupWarga} 
+                className="hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 p-2.5 rounded-2xl transition-all"
+                title="Bersihkan Data Ganda"
+              >
+                <Trash2 size={18} />
+              </button>
+              <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+              {detectedRT ? (
+                <button 
+                  onClick={syncWargaFromRW} 
+                  className="hover:bg-white dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 p-2.5 rounded-2xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                >
+                  <ClipboardList size={18} /> Sync RW
+                </button>
+              ) : (
+                <button 
+                  onClick={syncWargaFromRTsToRW} 
+                  className="hover:bg-white dark:hover:bg-slate-700 text-teal-600 dark:text-teal-400 p-2.5 rounded-2xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                >
+                  <ClipboardList size={18} /> Pull RT
+                </button>
+              )}
+            </div>
           )}
-          {selectedWargaIds.length > 0 && (
-            <button onClick={promptBulkDelete} className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all">
-              <Trash size={18} /> Hapus ({selectedWargaIds.length})
-            </button>
-          )}
+          
+          <AnimatePresence>
+            {selectedWargaIds.length > 0 && (
+              <motion.button 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={promptBulkDelete} 
+                className="bg-rose-50 text-rose-600 border border-rose-100 px-5 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all hover:bg-rose-100 shadow-sm"
+              >
+                <Trash size={18} /> Hapus ({selectedWargaIds.length})
+              </motion.button>
+            )}
+          </AnimatePresence>
+
           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={isUploading || limitReached} className="bg-gradient-to-tr from-amber-500 to-orange-600 text-white px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-md shadow-amber-500/20 disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed">
-            <Download size={18} className="rotate-180" /> {isUploading ? 'Loading...' : 'Import Data'}
+          
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={isUploading || limitReached} 
+            className="group relative bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-6 py-4 rounded-2xl flex items-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none shadow-sm disabled:opacity-50"
+          >
+            <Download size={18} className="translate-y-[1px] group-hover:-translate-y-1 transition-transform" />
+            {isUploading ? 'Syncing...' : 'Import Data'}
           </button>
-          <button onClick={() => {
-            if (limitReached) {
-              showNotification(`Batas maksimal ${maxWargaLimit} warga untuk paket saat ini telah tercapai. Upgrade paket untuk menambah warga.`, 'error');
-              return;
-            }
-            setShowAddForm(true);
-          }} className="bg-gradient-to-tr from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-600/20 disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed">
-            <UserPlus size={18} /> {limitReached ? `Limit (${maxWargaLimit}) Penuh` : `Tambah ${isApt ? "Penghuni" : "Warga"}`}
+
+          <button 
+            onClick={() => {
+              if (limitReached) {
+                showNotification(`Limit ${maxWargaLimit} tercapai. Mohon Upgrade.`, 'error');
+                return;
+              }
+              setShowAddForm(true);
+            }} 
+            className="bg-gradient-to-tr from-brand-blue via-blue-600 to-indigo-700 hover:shadow-[0_20px_50px_rgba(59,130,246,0.3)] text-white px-8 py-4.5 rounded-2xl flex items-center gap-4 text-[11px] font-black uppercase tracking-widest transition-all duration-500 hover:scale-[1.03] active:scale-95 shadow-xl shadow-brand-blue/20 group"
+          >
+            <div className="bg-white/20 p-1.5 rounded-lg group-hover:rotate-12 transition-transform">
+              <UserPlus size={18} /> 
+            </div>
+            {limitReached ? 'Limit Penuh' : `Tambah ${isApt ? "Penghuni" : "Warga"}`}
           </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
-         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div className="relative md:col-span-2">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
-              <input type="text" placeholder="Cari Nama / NIK..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors" />
+      <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl p-10 rounded-3xl border border-white/20 dark:border-slate-800 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] dark:shadow-none transition-all">
+         <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-10">
+            <div className="relative md:col-span-3 group">
+              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                <Search className="text-slate-300 group-focus-within:text-brand-blue transition-all duration-500 w-6 h-6" />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Cari Identitas, Nama atau NIK..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                className="w-full bg-white/80 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 focus:border-brand-blue/30 focus:bg-white dark:focus:bg-slate-900 rounded-2xl py-5 pl-16 pr-8 outline-none text-[15px] font-bold text-slate-800 dark:text-slate-200 transition-all shadow-sm focus:shadow-2xl focus:shadow-brand-blue/10 placeholder:text-slate-300 placeholder:font-black placeholder:uppercase placeholder:tracking-wider placeholder:text-[11px]" 
+              />
             </div>
-            <select 
-              value={filterRT} 
-              onChange={(e) => setFilterRT(e.target.value)} 
-              disabled={!!detectedRT || isRTAdmin}
-              className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
-            >
-              {detectedRT || isRTAdmin ? (
-                <option value={detectedRT || myRT} className="dark:bg-slate-800">{`RT ${detectedRT || myRT}`}</option>
-              ) : (
-                <>
-                  <option value="Semua" className="dark:bg-slate-800">RT: Semua</option>
-                  {Array.from({length: 10}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
-                    <option key={rt} value={rt} className="dark:bg-slate-800">{`RT ${rt}`}</option>
-                  ))}
-                </>
-              )}
-            </select>
-            <select value={filterRW} onChange={(e) => setFilterRW(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-4 outline-none text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors">
-              <option value="Semua" className="dark:bg-slate-800">RW: Semua</option>
-              {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => <option key={rw} value={rw} className="dark:bg-slate-800">{`RW ${rw}`}</option>)}
-            </select>
-            <div className="flex items-center gap-2">
-               <button onClick={handleExportExcel} className="flex-1 bg-gradient-to-tr from-emerald-500 to-teal-600 text-white h-full rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 py-4 shadow-md shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all duration-300"> <Download size={14} /> Ekspor </button>
+            
+            <div className="md:col-span-1 relative group/sel">
+              <select 
+                value={filterRT} 
+                onChange={(e) => setFilterRT(e.target.value)} 
+                disabled={!!detectedRT || isRTAdmin}
+                className="w-full bg-white/80 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-2xl py-5 px-8 outline-none text-[12px] font-black text-slate-600 dark:text-slate-300 transition-all appearance-none cursor-pointer focus:border-brand-blue/30 hover:border-slate-200 uppercase tracking-wider"
+              >
+                {detectedRT || isRTAdmin ? (
+                  <option value={detectedRT || myRT}>{`RT ${detectedRT || myRT}`}</option>
+                ) : (
+                  <>
+                    <option value="Semua">RT: SEMUA</option>
+                    {Array.from({length: 15}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
+                      <option key={rt} value={rt}>{`RT ${rt}`}</option>
+                    ))}
+                  </>
+                )}
+              </select>
+              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none group-hover/sel:text-brand-blue transition-colors" />
             </div>
+
+            <div className="md:col-span-1 relative group/sel">
+              <select 
+                value={filterRW} 
+                onChange={(e) => setFilterRW(e.target.value)} 
+                className="w-full bg-white/80 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-2xl py-5 px-8 outline-none text-[12px] font-black text-slate-600 dark:text-slate-300 transition-all appearance-none cursor-pointer focus:border-brand-blue/30 hover:border-slate-200 uppercase tracking-wider"
+              >
+                <option value="Semua">RW: SEMUA</option>
+                {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => <option key={rw} value={rw}>{`RW ${rw}`}</option>)}
+              </select>
+              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none group-hover/sel:text-brand-blue transition-colors" />
+            </div>
+
+            <button 
+              onClick={handleExportExcel} 
+              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-4 py-5 shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all duration-500"
+            > 
+              <Printer size={18} /> EXCEL 
+            </button>
          </div>
 
-         <div className="overflow-x-auto overflow-y-auto max-h-[65vh] scrollbar-hide">
-            <table className="w-full text-left relative">
-              <thead className="sticky top-0 bg-white dark:bg-slate-900 z-10 transition-colors">
-                <tr className="border-b border-slate-50 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-sm">
-                  <th className="py-4 px-4 w-12 text-center">
-                    <input type="checkbox" checked={selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded text-brand-blue border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-brand-blue" />
-                  </th>
-                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">Nama / NIK</th>
-                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">RT/RW</th>
-                  <th className="py-5 px-4 font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">Status</th>
-                  <th className="py-5 px-4 text-center font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em]">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+         <div className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800">
+                    <th className="py-8 px-8 w-20 text-center">
+                      <div className="flex justify-center">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedWargaIds.length === displayedWarga.length && displayedWarga.length > 0} 
+                          onChange={toggleSelectAll} 
+                          className="w-6 h-6 rounded-xl text-brand-blue border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-brand-blue transition-all cursor-pointer shadow-sm" 
+                        />
+                      </div>
+                    </th>
+                    <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Profil Identitas</th>
+                    <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Lokasi Rumah</th>
+                    <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Status & Profesi</th>
+                    <th className="py-8 px-8 text-center font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Opsi Kelola</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {displayedWarga.map((w: any, idx: number) => {
                   const idWarga = w.docId || w.id || w.nik || `w-idx-${idx}`;
                   const isSelected = selectedWargaIds.includes(idWarga);
                   return (
-                  <tr key={`wg-row-${idWarga}-${idx}`} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 group transition-all ${isSelected ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}`}>
-                    <td className="py-5 px-4 text-center">
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelectWarga(idWarga)} className="w-4 h-4 rounded text-brand-blue border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-brand-blue" />
+                  <motion.tr 
+                    key={`wg-row-${idWarga}-${idx}`}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(idx * 0.04, 1.2), duration: 0.5 }}
+                    className={`group transition-all hover:bg-slate-50/80 dark:hover:bg-brand-blue/5 ${isSelected ? 'bg-brand-blue/[0.05] dark:bg-brand-blue/10 border-l-4 border-l-brand-blue' : 'bg-white dark:bg-slate-900'}`}
+                  >
+                    <td className="py-8 px-8 text-center">
+                      <div className="flex justify-center">
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected} 
+                          onChange={() => toggleSelectWarga(idWarga)} 
+                          className="w-6 h-6 rounded-xl text-brand-blue border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:ring-brand-blue transition-all cursor-pointer shadow-sm" 
+                        />
+                      </div>
                     </td>
-                    <td className="py-5 px-4">
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black shadow-inner overflow-hidden transition-colors">
-                            {w.foto ? <img src={w.foto} className="w-full h-full object-cover" /> : w.nama.charAt(0)}
+                    <td className="py-8 px-6">
+                      <div className="flex items-center gap-6">
+                         <div className="relative group/photo">
+                            <div className="absolute inset-0 bg-brand-blue blur-xl opacity-0 group-hover/photo:opacity-30 transition-opacity rounded-full"></div>
+                            <div className="relative w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black shadow-inner border border-slate-100 dark:border-slate-700 overflow-hidden shrink-0 transition-transform group-hover/photo:scale-110">
+                               {w.foto ? (
+                                 <img src={w.foto} className="w-full h-full object-cover" />
+                               ) : (
+                                 <span className="text-2xl uppercase font-elegant">{w.nama.charAt(0)}</span>
+                               )}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
                          </div>
-                         <div>
-                            <p className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none mb-1 transition-colors">{w.nama}</p>
-                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-mono tracking-tighter uppercase">{w.nik}</p>
+                         <div className="space-y-1.5">
+                            <p className="text-[17px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-none group-hover:text-brand-blue transition-colors uppercase font-verdana">{w.nama}</p>
+                            <div className="flex items-center gap-2 px-3 py-1 bg-slate-100/50 dark:bg-white/5 rounded-full w-fit">
+                              <ShieldCheck className="w-3.5 h-3.5 text-brand-blue" />
+                              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 font-mono tracking-widest">{w.nik}</p>
+                            </div>
                          </div>
                       </div>
                     </td>
-                    <td className="py-5 px-4">
-                       <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-lg text-[10px] font-black font-mono transition-colors">{w.rt}/{w.rw}</span>
+                    <td className="py-8 px-6">
+                       <div className="flex flex-col gap-2">
+                         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-blue/5 dark:bg-brand-blue/10 text-brand-blue rounded-xl text-[11px] font-black tracking-widest w-fit border border-brand-blue/10">
+                           <MapPin className="w-4 h-4" />
+                           RT {w.rt || '00'} / RW {w.rw || '00'}
+                         </div>
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 max-w-[200px] truncate">{w.alamat || 'LOKASI TIDAK TERIDENTIFIKASI'}</p>
+                       </div>
                     </td>
-                    <td className="py-5 px-4">
-                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                         w.status === 'Warga Tetap' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
-                       }`}>
-                         {w.status}
-                       </span>
+                    <td className="py-8 px-6">
+                       <div className="flex flex-col gap-2.5">
+                         <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border w-fit shadow-lg ${
+                           w.status === 'Warga Tetap' ? 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20' : 'bg-slate-900 text-white border-slate-700 shadow-slate-900/20'
+                         }`}>
+                           {w.status}
+                         </span>
+                         {w.pekerjaan && (
+                           <div className="flex items-center gap-2 ml-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[150px]">{w.pekerjaan}</p>
+                           </div>
+                         )}
+                       </div>
                     </td>
-                    <td className="py-5 px-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => setViewWarga(w)} title="Lihat Profil" className="p-2 text-blue-500 hover:text-white bg-blue-50 hover:bg-blue-500 shadow-sm border border-blue-100 rounded-xl transition-all"> <Eye size={16} /> </button>
+                    <td className="py-8 px-8">
+                      <div className="flex items-center justify-center gap-4">
+                        <motion.button 
+                          whileHover={{ scale: 1.1, backgroundColor: 'rgba(59, 130, 246, 1)', color: 'white' }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setViewWarga(w)} 
+                          className="p-3.5 text-brand-blue bg-brand-blue/5 border border-brand-blue/10 rounded-2xl transition-all shadow-sm"
+                          title="Lihat Profil Lengkap"
+                        > 
+                          <Eye size={20} /> 
+                        </motion.button>
                         {(['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(currentUser?.role) || currentUser?.isSuperAdmin) && (
                           <>
-                            <button onClick={() => startEdit(w)} title="Edit Warga" className="p-2 text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-500 shadow-sm border border-emerald-100 rounded-xl transition-all"> <Edit2 size={16} /> </button>
-                            <button onClick={() => setWargaToDelete(w)} title="Hapus Warga" className="p-2 text-red-500 hover:text-white bg-red-50 hover:bg-red-500 shadow-sm border border-red-100 rounded-xl transition-all"> <Trash2 size={16} /> </button>
+                            <motion.button 
+                              whileHover={{ scale: 1.1, backgroundColor: 'rgba(16, 185, 129, 1)', color: 'white' }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => startEdit(w)} 
+                              className="p-3.5 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-2xl transition-all shadow-sm"
+                              title="Update Informasi"
+                            > 
+                              <Edit2 size={20} /> 
+                            </motion.button>
+                            <motion.button 
+                              whileHover={{ scale: 1.1, backgroundColor: 'rgba(244, 63, 94, 1)', color: 'white' }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => setWargaToDelete(w)} 
+                              className="p-3.5 text-rose-500 bg-rose-50 border border-rose-100 rounded-2xl transition-all shadow-sm"
+                              title="Hapus Data"
+                            > 
+                              <Trash2 size={20} /> 
+                            </motion.button>
                           </>
                         )}
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+          
+          {displayedWarga.length === 0 && (
+            <div className="py-20 text-center flex flex-col items-center">
+              <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 border-4 border-white dark:border-slate-800 shadow-xl">
+                 <Search className="w-10 h-10 text-slate-300" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Pencarian Tidak Ditemukan</h3>
+              <p className="text-slate-400 dark:text-slate-500 max-w-xs mx-auto text-sm">Coba sesuaikan kata kunci atau filter RT/RW untuk menemukan data yang dicari.</p>
+            </div>
+          )}
       </div>
+    </div>
 
       {/* ADD / EDIT WARGA MODAL */}
       <AnimatePresence>
         {(showAddForm || showEditForm) && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 text-left">
-                   <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight flex items-center gap-2">
-                     {showEditForm ? <><Edit2 size={20} className="text-brand-blue" /> Edit Data Warga</> : <><UserPlus size={20} className="text-brand-blue" /> Tambah Warga Baru</>}
-                   </h3>
-                   <button onClick={() => { setShowAddForm(false); setShowEditForm(false); setEditingWarga(null); }} className="p-2 hover:bg-slate-200 text-slate-400 rounded-xl transition-colors"><X size={20} /></button>
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[150] flex items-center justify-center p-4">
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+               animate={{ opacity: 1, scale: 1, y: 0 }} 
+               exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+               className="bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-4xl max-h-[92vh] flex flex-col shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20 dark:border-slate-800"
+             >
+                <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                   <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 bg-gradient-to-br from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
+                        {showEditForm ? <Edit2 className="w-7 h-7" /> : <UserPlus className="w-7 h-7" />}
+                      </div>
+                      <div>
+                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-xl font-elegant uppercase tracking-tight">
+                          {showEditForm ? 'Pembaruan Data' : 'Registrasi Penduduk'}
+                        </h3>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Entri Administrasi Kependudukan</p>
+                      </div>
+                   </div>
+                   <motion.button 
+                     whileHover={{ rotate: 90, scale: 1.1 }}
+                     onClick={() => { setShowAddForm(false); setShowEditForm(false); setEditingWarga(null); }} 
+                     className="p-3 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-2xl transition-all"
+                   >
+                     <X className="w-6 h-6" />
+                   </motion.button>
                 </div>
-                <div className="p-6 overflow-y-auto w-full text-left">
-                   <form id="wargaForm" onSubmit={async (e) => {
+                
+                <div className="p-10 overflow-y-auto custom-scrollbar">
+                   <form id="wargaForm" className="space-y-10" onSubmit={async (e) => {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget as HTMLFormElement);
                       setIsLoadingDB(true);
@@ -894,7 +1061,7 @@ function WargaView(props: WargaViewProps) {
                       } finally {
                         setIsLoadingDB(false);
                       }
-                   }} className="space-y-4">
+                   }}>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">NIK <span className="text-red-500">*</span></label>
@@ -1047,7 +1214,7 @@ function WargaView(props: WargaViewProps) {
                    <button form="wargaForm" type="submit" className="px-6 py-3 font-black text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-brand-blue/30 transition-all uppercase text-[10px] tracking-widest">Simpan Data</button>
                 </div>
              </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   CreditCard, 
   Wallet, 
@@ -35,34 +36,49 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
   const [activeFinTab, setActiveFinTab] = useState<'iuran' | 'kas' | 'ppob'>('iuran');
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-3 mb-6">
-        <StyledButton
-          label={isApt ? "IPL" : "Iuran Warga"}
-          icon={<CreditCard className="w-4 h-4" />}
-          onClick={() => setActiveFinTab('iuran')}
-          colorType={activeFinTab === 'iuran' ? 'primary' : 'secondary'}
-          className="uppercase tracking-widest text-xs"
-        />
-        <StyledButton
-          label="Buku Kas"
-          icon={<Wallet className="w-4 h-4" />}
-          onClick={() => setActiveFinTab('kas')}
-          colorType={activeFinTab === 'kas' ? 'primary' : 'secondary'}
-          className="uppercase tracking-widest text-xs"
-        />
-        <StyledButton
-          label="Digital & PPOB"
-          icon={<Smartphone className="w-4 h-4" />}
-          onClick={() => setActiveFinTab('ppob')}
-          colorType={activeFinTab === 'ppob' ? 'primary' : 'secondary'}
-          className="uppercase tracking-widest text-xs"
-        />
+    <div className="space-y-8">
+      {/* Premium Tab Navigation */}
+      <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-2 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 w-fit shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700">
+        {[
+          { id: 'iuran', label: isApt ? "Internal IPL" : "Iuran Kolektif", icon: CreditCard, gradient: 'from-brand-blue to-indigo-600' },
+          { id: 'kas', label: "Ledger Kas", icon: Wallet, gradient: 'from-emerald-500 to-teal-600' },
+          { id: 'ppob', label: "Digital Hub", icon: Smartphone, gradient: 'from-purple-600 to-pink-600' }
+        ].map((tab) => (
+          <motion.button
+            key={tab.id}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveFinTab(tab.id as any)}
+            className={`group flex items-center gap-4 px-10 py-5 rounded-[1.75rem] text-[11px] font-black transition-all duration-500 uppercase tracking-[0.25em] relative overflow-hidden ${
+              activeFinTab === tab.id 
+                ? `bg-gradient-to-r ${tab.gradient} text-white shadow-2xl` 
+                : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            {activeFinTab === tab.id && (
+               <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
+            )}
+            <tab.icon className={`w-5 h-5 transition-transform duration-500 ${activeFinTab === tab.id ? 'scale-110' : 'group-hover:scale-110'}`} />
+            {tab.label}
+          </motion.button>
+        ))}
       </div>
 
-      {activeFinTab === 'iuran' && <IuranView {...props} />}
-      {activeFinTab === 'kas' && <KasView {...props} />}
-      {activeFinTab === 'ppob' && <PPOBView {...props} />}
+      <div className="relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeFinTab}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            {activeFinTab === 'iuran' && <IuranView {...props} />}
+            {activeFinTab === 'kas' && <KasView {...props} />}
+            {activeFinTab === 'ppob' && <PPOBView {...props} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

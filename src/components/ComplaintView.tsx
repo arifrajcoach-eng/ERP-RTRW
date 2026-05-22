@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer } from 'lucide-react';
+import { motion } from 'motion/react';
+import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer, RefreshCw } from 'lucide-react';
 
 export function ComplaintView({ currentUser, showNotification, handleFirestoreError, settings, complaintsData }: any) {
   const [jenisKeluhan, setJenisKeluhan] = useState('Kebersihan');
@@ -145,136 +146,205 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-blue-600" />
-          Lapor Keluhan
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Kategori Keluhan</label>
-              <select 
-                value={jenisKeluhan} 
-                onChange={(e) => setJenisKeluhan(e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-bold text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option>Kebersihan</option>
-                <option>Keamanan</option>
-                <option>Fasilitas</option>
-                <option>Penerangan Jalan</option>
-                <option>Saluran Air</option>
-                <option>Lainnya</option>
-              </select>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 transition-all relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors"></div>
+        
+        <div className="flex items-center gap-4 mb-8">
+           <div className="w-14 h-14 bg-gradient-to-br from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">
+              <MessageSquare className="w-7 h-7" />
+           </div>
+           <div>
+              <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant leading-none">Lapor Keluhan</h2>
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5 opacity-70">Sampaikan aspirasi demi kenyamanan bersama</p>
+           </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-2">Kategori Laporan</label>
+              <div className="relative group/sel">
+                <select 
+                  value={jenisKeluhan} 
+                  onChange={(e) => setJenisKeluhan(e.target.value)}
+                  className="w-full p-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-brand-blue/20 focus:bg-white dark:focus:bg-slate-900 rounded-2xl font-bold text-sm text-slate-800 dark:text-slate-200 outline-none transition-all appearance-none cursor-pointer"
+                >
+                  <option>Kebersihan</option>
+                  <option>Keamanan</option>
+                  <option>Fasilitas umum</option>
+                  <option>Penerangan Jalan</option>
+                  <option>Saluran Air</option>
+                  <option>Ketertiban</option>
+                  <option>Lainnya</option>
+                </select>
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 w-2 h-2 border-r-2 border-b-2 border-slate-400 rotate-45 pointer-events-none transition-colors group-hover/sel:border-brand-blue"></div>
+              </div>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Detail Keluhan</label>
+          
+          <div className="space-y-2">
+            <label className="block text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-2">Detail Kejadian / Keluhan</label>
             <textarea 
               value={deskripsi}
               onChange={(e) => setDeskripsi(e.target.value)}
-              placeholder="Deskripsikan keluhan Anda secara detail agar dapat segera ditindaklanjuti..."
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-medium text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-              rows={4}
+              placeholder="Jelaskan secara detail lokasi dan masalah yang terjadi agar segera kami tinjau..."
+              className="w-full p-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-brand-blue/20 focus:bg-white dark:focus:bg-slate-900 rounded-3xl font-medium text-sm text-slate-700 dark:text-slate-300 outline-none transition-all placeholder:text-slate-400 placeholder:italic min-h-[160px]"
               required
             />
           </div>
-          <button type="submit" disabled={isSubmitting} className="w-full bg-gradient-to-tr from-sky-500 to-blue-600 text-white p-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/30 transition-all duration-300">
-            {isSubmitting ? 'Mengirim...' : 'Kirim Keluhan'}
+
+          <button 
+            type="submit" 
+            disabled={isSubmitting} 
+            className="w-full bg-slate-900 dark:bg-brand-blue text-white py-6 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:shadow-[0_20px_40px_-5px_rgba(30,41,59,0.3)] dark:hover:shadow-brand-blue/20 active:scale-[0.98] transition-all duration-500 flex items-center justify-center gap-4 group/btn overflow-hidden relative"
+          >
+            <div className="absolute inset-0 bg-white shadow-[inset_0_2px_10px_rgba(255,255,255,0.2)] opacity-0 group-hover/btn:opacity-10 transition-opacity"></div>
+            {isSubmitting ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <CheckCircle2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span>Kirim Laporan Resmi</span>
+              </>
+            )}
           </button>
         </form>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Riwayat Keluhan</h3>
-        <div className="space-y-4">
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 px-4 border-l-4 border-brand-blue">
+          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant">Arsip Laporan</h3>
+          <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{complaints.length} Laporan Terdata</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6">
           {complaints.length === 0 && (
-            <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-              <MessageSquare className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Belum ada riwayat keluhan</p>
+            <div className="text-center py-24 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+              <MessageSquare className="w-16 h-16 text-slate-200 dark:text-slate-800 mx-auto mb-6 opacity-50" />
+              <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest font-elegant">Kotak Aspirasi Kosong</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">Belum ada keluhan yang tercatat untuk saat ini.</p>
             </div>
           )}
-          {complaints.map((c) => (
-            <div key={c.id} className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white transition-all hover:shadow-md border-l-4 border-l-blue-500">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md">{c.jenisKeluhan}</span>
-                  <p className="text-xs font-bold text-slate-400 mt-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {new Date(c.createdAt).toLocaleString('id-ID')}
+          
+          {complaints.map((c: any, i: number) => (
+            <div 
+              key={c.id} 
+              className="p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:border-brand-blue/30 group/card relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-4 h-full bg-brand-blue/5 group-hover:bg-brand-blue/10 transition-colors"></div>
+              
+              <div className="flex flex-col xl:flex-row justify-between items-start gap-8">
+                <div className="flex-1 space-y-6">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <span className="px-5 py-2 bg-slate-900 dark:bg-brand-blue text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg">
+                      {c.jenisKeluhan}
+                    </span>
+                    <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                      <Clock className="w-4 h-4 opacity-50" />
+                      {new Date(c.createdAt).toLocaleDateString('id-ID', {day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+                    </div>
+                  </div>
+
+                  <p className="text-lg font-medium text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                    "{c.deskripsi}"
                   </p>
-                </div>
-                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                  c.status === 'DONE' || c.status === 'Selesai' ? 'bg-green-100 text-green-700' :
-                  c.status === 'PROCESS' || c.status === 'Diproses' ? 'bg-orange-100 text-orange-700' :
-                  c.status === 'REJECTED' || c.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
-                  'bg-slate-100 text-slate-600'
-                }`}>
-                  {c.status === 'DONE' || c.status === 'Selesai' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                  {c.status}
-                </div>
-                {(c.status === 'DONE' || c.status === 'Selesai') && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handlePrintComplaint(c); }}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all active:scale-95 border border-blue-100 shadow-sm"
-                    title="Cetak Bukti Tindak Lanjut"
-                  >
-                    <Printer className="w-3 h-3" />
-                    Cetak
-                  </button>
-                )}
-              </div>
-              <div className="flex justify-between items-end">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-700 leading-relaxed">{c.deskripsi}</p>
+
+                  <div className="pt-4 border-t border-slate-50 dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black text-xs uppercase font-elegant">
+                          {c.namaWarga?.charAt(0) || 'W'}
+                       </div>
+                       <div>
+                          <p className="text-[12px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">{c.namaWarga}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">ID PELAPOR: {c.userId?.substring(0,8)}...</p>
+                       </div>
+                    </div>
+                  </div>
+
                   {c.resolutionNote && (
-                    <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                       <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest flex items-center gap-1 mb-1">
-                         <CheckCircle2 className="w-3 h-3" />
-                         Tindak Lanjut Pengurus:
+                    <div className="bg-emerald-50 dark:bg-emerald-500/5 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 relative overflow-hidden">
+                       <div className="absolute top-0 right-0 bg-emerald-500 text-white p-2 rounded-bl-2xl">
+                          <Check className="w-4 h-4" />
+                       </div>
+                       <p className="text-[11px] font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-3 mb-3">
+                         <CheckCircle2 className="w-4 h-4" />
+                         Tindak Lanjut Administrasi:
                        </p>
-                       <p className="text-xs text-emerald-800 italic font-medium">"{c.resolutionNote}"</p>
+                       <p className="text-sm text-emerald-900 dark:text-emerald-300 font-medium leading-relaxed italic">
+                         "{c.resolutionNote}"
+                       </p>
                     </div>
                   )}
-                  <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">
-                    Laporan: {c.namaWarga} • {new Date(c.createdAt).toLocaleString('id-ID')}
-                  </p>
                 </div>
-                {isAtLeastPengurus && (
-                  <div className="flex gap-2 ml-4">
-                    {c.status === 'PENDING' && (
-                      <>
-                        <button 
-                          onClick={() => handleUpdateStatus(c.id, 'REJECTED')}
-                          className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border border-red-100"
-                          title="Tolak"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                          Tolak
-                        </button>
-                        <button 
-                          onClick={() => handleUpdateStatus(c.id, 'PROCESS')}
-                          className="px-3 py-2 bg-[#0cbb97] text-white rounded-lg hover:opacity-90 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm"
-                          title="Setujui"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          Setujui
-                        </button>
-                      </>
-                    )}
-                    {(c.status === 'PROCESS' || c.status === 'Diproses') && (
-                      <button 
-                        onClick={() => handleUpdateStatus(c.id, 'DONE')}
-                        className="px-4 py-2 bg-[#008bb5] text-white rounded-lg hover:opacity-90 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow-md shadow-blue-100"
-                        title="Selesaikan"
+
+                <div className="flex flex-col gap-4 min-w-[200px] items-end">
+                  <div className={`flex items-center gap-3 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg border-2 ${
+                    c.status === 'DONE' || c.status === 'Selesai' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-white/20 shadow-emerald-500/20' :
+                    c.status === 'PROCESS' || c.status === 'Diproses' ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-white/20 shadow-amber-500/20' :
+                    c.status === 'REJECTED' || c.status === 'Ditolak' ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white border-white/20 shadow-rose-500/20' :
+                    'bg-slate-900 text-white border-slate-700 shadow-slate-900/20'
+                  }`}>
+                    {c.status === 'DONE' || c.status === 'Selesai' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    <span>{c.status}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {(c.status === 'DONE' || c.status === 'Selesai') && (
+                      <motion.button 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => { e.stopPropagation(); handlePrintComplaint(c); }}
+                        className="px-8 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-brand-blue hover:border-brand-blue/30 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl flex items-center gap-3"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Selesaikan
-                      </button>
+                        <Printer size={18} />
+                        Cetak Payload
+                      </motion.button>
+                    )}
+
+                    {isAtLeastPengurus && (
+                      <div className="flex gap-3">
+                        {c.status === 'PENDING' && (
+                          <>
+                            <motion.button 
+                              whileHover={{ scale: 1.1, rotate: -5 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleUpdateStatus(c.id, 'REJECTED')}
+                              className="w-14 h-14 bg-rose-50 text-rose-600 rounded-[1.5rem] flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all border border-rose-100 shadow-xl shadow-rose-500/10"
+                              title="Tolak Laporan"
+                            >
+                              <X className="w-6 h-6" />
+                            </motion.button>
+                            <motion.button 
+                              whileHover={{ scale: 1.1, rotate: 5 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleUpdateStatus(c.id, 'PROCESS')}
+                              className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-[1.5rem] flex items-center justify-center hover:shadow-2xl hover:shadow-emerald-500/30 transition-all border border-white/20 shadow-xl"
+                              title="Terima & Proses"
+                            >
+                              <Check className="w-6 h-6" />
+                            </motion.button>
+                          </>
+                        )}
+                        {(c.status === 'PROCESS' || c.status === 'Diproses') && (
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleUpdateStatus(c.id, 'DONE')}
+                            className="px-10 py-5 bg-gradient-to-r from-slate-800 to-slate-900 border-2 border-white/10 text-white rounded-[2rem] hover:from-black hover:to-slate-800 transition-all text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-4 shadow-2xl shadow-slate-900/40"
+                            title="Selesaikan Laporan"
+                          >
+                            <div className="p-2 bg-emerald-500 rounded-xl shadow-lg">
+                               <CheckCircle2 className="w-5 h-5 text-white" />
+                            </div>
+                            Selesaikan Laporan
+                          </motion.button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           ))}
