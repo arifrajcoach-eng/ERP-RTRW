@@ -2,8 +2,8 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 async function removeDuplicates() {
-    const tenantId = 'trihprw26';
-    const q = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId));
+    const tenantIds = ['RW_BERJUANG', 'rw26_berjuang'];
+    const q = query(collection(db, 'data_warga'), where('tenantId', 'in', tenantIds));
     const querySnapshot = await getDocs(q);
 
     const wargaMap = new Map<string, any[]>();

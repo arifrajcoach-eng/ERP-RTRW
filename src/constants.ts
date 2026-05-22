@@ -177,6 +177,7 @@ export const PLAN_ALIASES: Record<string, string> = {
   RW: "PRO",
   GOLD: "PREMIUM",
   DIAMOND: "ENTERPRISE",
+  PRIME: "ENTERPRISE",
   GOV: "ENTERPRISE",
   EXPIRED: "EXPIRED",
 };

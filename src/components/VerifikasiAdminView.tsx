@@ -121,7 +121,7 @@ export function VerifikasiAdminView({
         foto: item.ktpUrl || targetSnap.data()?.foto || legacyData?.foto || "",
         ktpUrl: item.ktpUrl || targetSnap.data()?.ktpUrl || legacyData?.ktpUrl || "",
         rt: item.rt || targetSnap.data()?.rt || legacyData?.rt || "01",
-        rw: item.rw || targetSnap.data()?.rw || legacyData?.rw || "05",
+        rw: item.rw || targetSnap.data()?.rw || legacyData?.rw || "26",
         tempatLahir: item.tempatLahir || targetSnap.data()?.tempatLahir || legacyData?.tempatLahir || "",
         tglLahir: item.tglLahir || targetSnap.data()?.tglLahir || legacyData?.tglLahir || "",
         jk: item.jk || targetSnap.data()?.jk || legacyData?.jk || "",
@@ -246,7 +246,7 @@ export function VerifikasiAdminView({
           hp: item.hp || "",
           blok: item.blok || item.alamat || "",
           rt: item.rt || "01",
-          rw: item.rw || "05",
+          rw: item.rw || "26",
           terverifikasi: true,
           tenantId: tenantId,
           lastSyncedAt: new Date().toISOString()

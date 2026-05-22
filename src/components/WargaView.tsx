@@ -186,19 +186,64 @@ function WargaView(props: WargaViewProps) {
   const cleanupWarga = async () => {
     setIsLoadingDB(true);
     try {
-        // Query ALL data_warga for the target tenant
-        const q = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId));
+        // Use exact same tenant list logic as the frontend query
+        const tIdsToClean = [tenantId];
+        const tId = tenantId;
+        if (
+          tId === "RW_BERJUANG" ||
+          tId === "rw26_berjuang" ||
+          tId === "rt01_rw26" ||
+          tId === "trihprw26" ||
+          tId === "RW26_SMART" ||
+          tId.toLowerCase().includes("berjuang") ||
+          tId.toLowerCase().includes("trih") ||
+          tId.toLowerCase().includes("rw26")
+        ) {
+          if (!tId.toLowerCase().includes("rt")) {
+             tIdsToClean.push(
+               "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
+               "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
+               "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang", "rt05_rw_berjuang",
+               "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang",
+               "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04", "RW26_RT05",
+               "MASTER"
+             );
+          } else {
+             tIdsToClean.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26");
+          }
+        } else if (tId.toLowerCase().includes("rt")) {
+          tIdsToClean.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26");
+        }
+        
+        if (currentTenant?.parentId) {
+          tIdsToClean.push(currentTenant.parentId);
+          if (
+            currentTenant.parentId === "RW_BERJUANG" ||
+            currentTenant.parentId === "rw26_berjuang" ||
+            currentTenant.parentId === "trihprw26"
+          ) {
+            tIdsToClean.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART");
+          }
+        }
+        const uniqueTids = Array.from(new Set(tIdsToClean));
+
+        const q = query(collection(db, 'data_warga'), where('tenantId', 'in', uniqueTids));
         const snapshot = await getDocs(q);
         const docs = snapshot.docs.map(d => ({id: d.id, ...(d.data() as any)}));
         
-        console.log(`Analyzing ${docs.length} documents for duplicates in tenant: ${tenantId}...`);
+        console.log(`Analyzing ${docs.length} documents for duplicates across tenants: ${uniqueTids.join(', ')}...`);
         
         const map = new Map<string, any[]>();
         
         for (const doc of docs) {
-            // Ensure nik exists and is normalized
-            const nik = (doc.nik || '').toString().trim();
-            if (!nik || nik === 'Belum Ada') continue;
+            // Group by strict NIK first, fallback to Name
+            let nik = (doc.nik || '').toString().trim();
+            const nama = (doc.nama || '').toString().trim().toLowerCase();
+            
+            if (!nik || nik === 'Belum Ada' || nik === '-' || nik === '0') {
+               if (!nama || nama === '-') continue;
+               nik = `NAMA:${nama}`; // Group by name if NIK is invalid/missing
+            }
             
             if (!map.has(nik)) map.set(nik, []);
             map.get(nik)!.push(doc);
@@ -211,8 +256,15 @@ function WargaView(props: WargaViewProps) {
             if (items.length > 1) {
                 console.log(`Found ${items.length} docs for NIK: '${nik}'`);
                 // Sort to keep the "best" one. 
-                // Currently sorting by total fields count (proxy for completeness)
-                items.sort((a,b) => Object.keys(b).length - Object.keys(a).length);                
+                // Priorities:
+                // 1. the one that matches current tenantId directly
+                // 2. the one with the most fields
+                items.sort((a,b) => {
+                    const aMatches = a.tenantId === tenantId ? 1 : 0;
+                    const bMatches = b.tenantId === tenantId ? 1 : 0;
+                    if (aMatches !== bMatches) return bMatches - aMatches;
+                    return Object.keys(b).length - Object.keys(a).length;
+                });                
                 toDelete.push(...items.slice(1));
             }
         }
@@ -398,6 +450,7 @@ function WargaView(props: WargaViewProps) {
         let CHILD_TENANT_IDS = [
             "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
             "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang", "rt05_rw_berjuang",
+            "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang",
             "rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26", "rt05_trihprw26",
             "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04", "RW26_RT05"
         ];
@@ -637,7 +690,7 @@ function WargaView(props: WargaViewProps) {
     if (!wargaToDelete) return;
     setIsDeletingWarga(true);
     try {
-      await deleteDoc(doc(db, 'data_warga', wargaToDelete.docId || wargaToDelete.nik));
+      await deleteDoc(doc(db, 'data_warga', wargaToDelete.docId || wargaToDelete.id || wargaToDelete.nik));
       setWargaToDelete(null);
       showNotification("Data warga berhasil dihapus");
     } catch (error: any) {

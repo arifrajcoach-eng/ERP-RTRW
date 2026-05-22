@@ -42,7 +42,7 @@ service cloud.firestore {
     }
     
     function isTenantMemberStatic(tenantId) {
-      let isCommon = tenantId in ['RW26_SMART', 'RW_BERJUANG', 'trihprw26', 'MASTER', 'rw26_smart', 'rw_berjuang', 'master', 'rt01_rw26', 'rt02_rw26', 'rt03_rw26', 'rt04_rw26', 'rt05_rw26', 'RW26_RT01', 'RW26_RT02', 'RW26_RT03', 'RW26_RT04', 'RW26_RT05'];
+      let isCommon = tenantId in ['RW26_SMART', 'RW_BERJUANG', 'trihprw26', 'MASTER', 'rw26_smart', 'rw_berjuang', 'master', 'rt01_rw26', 'rt02_rw26', 'rt03_rw26', 'rt04_rw26', 'rt05_rw26', 'rt01_rw26_berjuang', 'rt02_rw26_berjuang', 'rt03_rw26_berjuang', 'rt04_rw26_berjuang', 'rt05_rw26_berjuang', 'RW26_RT01', 'RW26_RT02', 'RW26_RT03', 'RW26_RT04', 'RW26_RT05'];
       return isSignedIn() && (
         isAdminStatic() ||
         ('email' in request.auth.token && request.auth.token.email != null && request.auth.token.email.lower() == 'arifrajcoach@gmail.com') || 
@@ -58,6 +58,7 @@ service cloud.firestore {
               request.auth.token.tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26', 'master'] ||
               request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26$') ||
               request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') ||
+              request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') ||
               request.auth.token.tenantId.lower().matches('^rt[0-9]+_trih.*') ||
               request.auth.token.tenantId.lower().matches('^rw26_.*') ||
               request.auth.token.tenantId.lower().matches('^rw_berjuang.*') ||
@@ -67,6 +68,7 @@ service cloud.firestore {
             ('email' in request.auth.token && request.auth.token.email != null && (
               request.auth.token.email.lower().matches('^rt[0-9]+@rw26\\.com$') ||
               request.auth.token.email.lower().matches('^rt[0-9]+@rw_berjuang\\.com$') ||
+              request.auth.token.email.lower().matches('^rt[0-9]+@rw26_berjuang\\.com$') ||
               request.auth.token.email.lower().matches('^rt[0-9]+@trih.*') ||
               request.auth.token.email.lower().matches('.*rw26.*|.*berjuang.*|.*trih.*')
             ))
@@ -75,6 +77,7 @@ service cloud.firestore {
             tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26', 'master'] ||
             tenantId.lower().matches('^rt[0-9]+_rw26$') ||
             tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') ||
+            tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') ||
             tenantId.lower().matches('^rt[0-9]+_trih.*') ||
             tenantId.lower().matches('^rw26_.*') ||
             tenantId.lower().matches('^rw_berjuang.*') ||
@@ -129,13 +132,13 @@ service cloud.firestore {
             getUserData().tenantId.lower() == tenantId.lower() || 
             
             // Allow sub-tenant to read parent (flexible across ecosystem)
-            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26$') && (tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26'])) ||
+            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26(_berjuang)?$') && (tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26', 'rw26_berjuang'])) ||
             (getUserData().tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
             (getUserData().tenantId.lower().matches('^rt[0-9]+_trih.*') && (tenantId.lower() in ['rw_berjuang', 'trihprw26', 'rw26_smart'])) ||
 
             // Allow parent to access sub-tenants (bidirectional)
-            ((getUserData().tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26']) && (
-              tenantId.lower().matches('^rt[0-9]+_rw26$') ||
+            ((getUserData().tenantId.lower() in ['rw26_smart', 'rw_berjuang', 'trihprw26', 'rw26_berjuang']) && (
+              tenantId.lower().matches('^rt[0-9]+_rw26(_berjuang)?$') ||
               tenantId.lower().matches('^rt[0-9]+_rw_berjuang$') ||
               tenantId.lower().matches('^rt[0-9]+_trih.*')
             )) ||

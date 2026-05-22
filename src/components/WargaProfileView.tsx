@@ -106,7 +106,7 @@ export function WargaProfileView({
         blok: formData.blok || wargaData.blok || "",
         alamat: formData.alamat || wargaData.alamat || "",
         rt: formData.rt || wargaData.rt || "01",
-        rw: formData.rw || wargaData.rw || "05",
+        rw: formData.rw || wargaData.rw || "26",
         agama: formData.agama || wargaData.agama || "Islam",
         jk: formData.jk || wargaData.jk || "",
         tempatLahir: formData.tempatLahir || wargaData.tempatLahir || "",
@@ -154,7 +154,7 @@ export function WargaProfileView({
         status: 'Menunggu Persetujuan RT',
         keterangan: `Permohonan mandiri via aplikasi warga`,
         userId: wargaData.uid || wargaData.id_user || null,
-        nomorSurat: getAutoNomorSurat(wargaData.rt || '01', wargaData.rw || '05')
+        nomorSurat: getAutoNomorSurat(wargaData.rt || '01', wargaData.rw || '26')
       };
       await setDoc(doc(db, 'surat', id), payload);
       setSuratData((prev: any) => [payload, ...prev]);

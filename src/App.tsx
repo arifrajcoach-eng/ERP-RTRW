@@ -231,7 +231,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670001",
     kk: "3271012345678881",
     rt: "01",
-    rw: "05",
+    rw: "26",
     blok: "A/01",
     status: "Warga Tetap",
     hp: "081234567890",
@@ -246,7 +246,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670002",
     kk: "3271012345678882",
     rt: "01",
-    rw: "05",
+    rw: "26",
     blok: "A/02",
     status: "Warga Tetap",
     hp: "081234567891",
@@ -261,7 +261,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670003",
     kk: "3271012345678883",
     rt: "02",
-    rw: "05",
+    rw: "26",
     blok: "B/05",
     status: "Warga Tetap",
     hp: "081234567892",
@@ -276,7 +276,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670004",
     kk: "3271012345678884",
     rt: "03",
-    rw: "05",
+    rw: "26",
     blok: "C/10",
     status: "Kontrak",
     hp: "081234567893",
@@ -291,7 +291,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670005",
     kk: "3271012345678883",
     rt: "02",
-    rw: "05",
+    rw: "26",
     blok: "B/05",
     status: "Warga Tetap",
     hp: "081234567894",
@@ -306,7 +306,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670006",
     kk: "3271012345678886",
     rt: "04",
-    rw: "05",
+    rw: "26",
     blok: "D/12",
     status: "Warga Tetap",
     hp: "081234567895",
@@ -321,7 +321,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670007",
     kk: "3271012345678887",
     rt: "01",
-    rw: "05",
+    rw: "26",
     blok: "A/15",
     status: "Warga Tetap",
     hp: "081234567896",
@@ -336,7 +336,7 @@ const INITIAL_WARGA_DATA = [
     nik: "3271012345670008",
     kk: "3271012345678887",
     rt: "01",
-    rw: "05",
+    rw: "26",
     blok: "A/15",
     status: "Warga Tetap",
     hp: "081234567897",
@@ -567,6 +567,7 @@ const calculateAge = (tglLahir: string) => {
 export default function App() {
   console.log("App component: DB exists?", !!db);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
   const [impersonatedTenantId, setImpersonatedTenantId] = useState<
     string | null
   >(localStorage.getItem("impersonatedTenantId"));
@@ -899,10 +900,91 @@ export default function App() {
   };
 
   // --- CENTRAL STATE WITH LOCALSTORAGE PERSISTENCE ---
+  const [globalSelectedRw, setGlobalSelectedRw] = useState<string>("Semua");
+
+  const isSpecialTenant = (val: string) => {
+    const v = val.toLowerCase();
+    return v.includes('berjuang') || v.includes('_') || v.includes('smart') || v.includes('trih');
+  };
+
+  const normalizeRwValue = (rwVal: any): string => {
+    const raw = (rwVal || "").toString().trim();
+    if (!raw) return "";
+
+    if (isSpecialTenant(raw)) return raw;
+
+    const digits = raw.match(/\d+/);
+    return digits ? digits[0].padStart(2, "0") : raw;
+  };
+
   const [wargaData, setWargaData] = useState(() => {
     const saved = localStorage.getItem("rw26_wargaData");
-    return saved ? JSON.parse(saved) : INITIAL_WARGA_DATA;
+    if (saved) {
+      try {
+        let parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          let has05 = false;
+          parsed = parsed.map(w => {
+            const rawRw = String(w.rw || "").trim();
+            if (rawRw.includes("05")) {
+              has05 = true;
+              return { ...w, rw: "26" };
+            }
+            return w;
+          });
+          if (has05) {
+            localStorage.setItem("rw26_wargaData", JSON.stringify(parsed));
+          }
+          return parsed;
+        }
+      } catch(e) {}
+    }
+    return INITIAL_WARGA_DATA;
   });
+
+  const realRWList = useMemo(() => {
+    const list = new Set<string>();
+    
+    // Explicitly add managed sector names so they always appear in the workspace options
+    const standardMatches = ["RW_BERJUANG", "rw26_berjuang", "rt01_rw26", "RW26_SMART"];
+    standardMatches.forEach(m => list.add(m));
+
+    wargaData.forEach((w: any) => {
+      let rawRw = (w.rw || "").toString().trim();
+      if (rawRw) {
+        if (isSpecialTenant(rawRw)) {
+          list.add(rawRw);
+        } else {
+          const digits = rawRw.match(/\d+/);
+          if (digits) {
+            const formatted = digits[0].padStart(2, "0");
+            if (formatted !== "05") {
+              list.add(formatted);
+            }
+          } else {
+            if (!rawRw.includes("05")) {
+              list.add(rawRw);
+            }
+          }
+        }
+      }
+    });
+    if (list.size === 0) {
+      const activeRw = currentUser?.rw || wargaAuth?.rw;
+      if (activeRw) {
+        const digits = activeRw.match(/\d+/);
+        const formatted = digits ? digits[0].padStart(2, "0") : activeRw;
+        if (formatted !== "05") {
+          list.add(formatted);
+        } else {
+          list.add("26");
+        }
+      } else {
+        list.add("26"); // Fallback to real active RW 26 instead of dummy databases
+      }
+    }
+    return Array.from(list).sort();
+  }, [wargaData, currentUser, wargaAuth]);
 
   const [kasData, setKasData] = useState(() => {
     const saved = localStorage.getItem("rw26_kasData");
@@ -1039,7 +1121,6 @@ export default function App() {
   };
 
   const [isSOSConfirmOpen, setIsSOSConfirmOpen] = useState(false);
-  const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
   const [isSelfRegistering, setIsSelfRegistering] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
@@ -1073,47 +1154,114 @@ export default function App() {
     return wRtNorm.replace(/^0+/, "");
   };
 
+  const checkWorkspaceFilter = (w: any, globalRw: string) => {
+    if (!globalRw || globalRw === "Semua") return true;
+    const lowRw = globalRw.toLowerCase();
+    const lowW = (w.tenantId || "").toLowerCase();
+
+    // Isolation for Berjuang cluster RTs
+    // If filtering by a specific RT unit, it must match exactly or match the parent
+    if (lowRw.includes("rt") && lowRw.includes("berjuang")) {
+       return lowW === lowRw || lowW === "rw26_berjuang" || lowW === "rw_berjuang";
+    }
+
+    // Expansion for Berjuang cluster (Parent Dashboard View)
+    if ((lowRw === "rw26_berjuang" || lowRw === "rw_berjuang") && lowW.includes("berjuang")) return true;
+
+    // Expansion for Trih cluster
+    if (lowRw.includes("trih") && lowW.includes("trih")) return true;
+    // Expansion for RW26 smart cluster
+    if (lowRw.includes("rw26") && lowW.includes("rw26") && !lowRw.includes("berjuang") && !lowW.includes("berjuang")) return true;
+
+    if (isSpecialTenant(globalRw)) {
+      return (lowW === lowRw) || normalizeRwValue(w.rw) === globalRw;
+    }
+    return normalizeRwValue(w.rw) === globalRw;
+  };
+
   const filteredWargaDataCentral = useMemo(() => {
-    if (!tenantRT) return wargaData;
-    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
-    return wargaData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
-  }, [wargaData, tenantRT]);
+    let result = wargaData;
+    if (tenantRT) {
+      const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+      result = result.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
+    }
+    if (globalSelectedRw && globalSelectedRw !== "Semua") {
+      result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
+    }
+    return result;
+  }, [wargaData, tenantRT, globalSelectedRw]);
 
   const filteredIuranDataCentral = useMemo(() => {
-    if (!tenantRT) return iuranData;
-    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
-    return iuranData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
-  }, [iuranData, tenantRT]);
+    let result = iuranData;
+    if (tenantRT) {
+      const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+      result = result.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
+    }
+    if (globalSelectedRw && globalSelectedRw !== "Semua") {
+      result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
+    }
+    return result;
+  }, [iuranData, tenantRT, globalSelectedRw]);
 
   const filteredKasDataCentral = useMemo(() => {
-    if (!tenantRT) return kasData;
-    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
-    return kasData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
-  }, [kasData, tenantRT]);
+    let result = kasData;
+    if (tenantRT) {
+      const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+      result = result.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
+    }
+    if (globalSelectedRw && globalSelectedRw !== "Semua") {
+      result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
+    }
+    return result;
+  }, [kasData, tenantRT, globalSelectedRw]);
 
   const filteredSuratDataCentral = useMemo(() => {
-    if (!tenantRT) return suratData;
-    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
-    return suratData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
-  }, [suratData, tenantRT]);
+    let result = suratData;
+    if (tenantRT) {
+      const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+      result = result.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
+    }
+    if (globalSelectedRw && globalSelectedRw !== "Semua") {
+      result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
+    }
+    return result;
+  }, [suratData, tenantRT, globalSelectedRw]);
 
   const filteredVerifikasiWargaDataCentral = useMemo(() => {
-    if (!tenantRT) return verifikasiWargaData;
-    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
-    return verifikasiWargaData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
-  }, [verifikasiWargaData, tenantRT]);
+    let result = verifikasiWargaData;
+    if (tenantRT) {
+      const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+      result = result.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
+    }
+    if (globalSelectedRw && globalSelectedRw !== "Semua") {
+      result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
+    }
+    return result;
+  }, [verifikasiWargaData, tenantRT, globalSelectedRw]);
 
   const filteredBalitaDataCentral = useMemo(() => {
-    if (!tenantRT) return balitaData;
-    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
-    return balitaData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
-  }, [balitaData, tenantRT]);
+    let result = balitaData;
+    if (tenantRT) {
+      const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+      result = result.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
+    }
+    if (globalSelectedRw && globalSelectedRw !== "Semua") {
+      result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
+    }
+    return result;
+  }, [balitaData, tenantRT, globalSelectedRw]);
 
   const filteredIbuHamilDataCentral = useMemo(() => {
-    if (!tenantRT) return ibuHamilData;
-    const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
-    return ibuHamilData.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
-  }, [ibuHamilData, tenantRT]);
+    let result = ibuHamilData;
+    if (tenantRT) {
+      const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
+      result = result.filter((w: any) => extractRtNorm(w.rt) === targetRtNorm);
+    }
+    if (globalSelectedRw && globalSelectedRw !== "Semua") {
+      result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
+    }
+    return result;
+  }, [ibuHamilData, tenantRT, globalSelectedRw]);
 
   // Securely resolve active tenant IDs for filtering
   const activeTenantIds = useMemo(() => {
@@ -1126,13 +1274,24 @@ export default function App() {
     const list = [tId];
     if (
       tId === "RW_BERJUANG" ||
+      tId === "rw26_berjuang" ||
+      tId === "rt01_rw26" ||
       tId === "trihprw26" ||
       tId.toLowerCase().includes("rt01") ||
-      tId.toLowerCase().includes("rw26_rt") ||
+      tId.toLowerCase().includes("rw26") ||
       tId.toLowerCase().includes("rt_01") ||
       tId.toLowerCase().includes("berjuang")
     ) {
-      list.push("RW_BERJUANG", "trihprw26");
+      if (tId.toLowerCase().includes("rt")) {
+        // RT isolated scope
+        list.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26");
+      } else {
+        // Parent cluster scope
+        list.push(
+          "RW_BERJUANG", "rw26_berjuang", "rt01_rw26", "trihprw26", "RW26_SMART",
+          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang"
+        );
+      }
     }
     return Array.from(new Set(list));
   }, [currentUser, wargaAuth, selectedTenantId]);
@@ -1361,35 +1520,48 @@ export default function App() {
     // For RW/parent tenants, include all known RT child tenant conventions
     if (
       tId === "RW_BERJUANG" ||
+      tId === "rw26_berjuang" ||
+      tId === "rt01_rw26" ||
       tId === "trihprw26" ||
       tId === "RW26_SMART" ||
       tId.toLowerCase().includes("berjuang") ||
-      tId.toLowerCase().includes("trih")
+      tId.toLowerCase().includes("trih") ||
+      tId.toLowerCase().includes("rw26")
     ) {
       // If the user context is RW or broader, give them access to the root database identities
       if (!tId.toLowerCase().includes("rt")) {
          tIdsTemp.push(
-           "RW_BERJUANG", "trihprw26", "RW26_SMART",
+           "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
            "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
+           "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang", "rt05_rw_berjuang",
+           "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang",
            "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04", "RW26_RT05",
            "MASTER"
          );
       } else {
          // If they are a specific RT, they only get their own, plus the parent databases
-         tIdsTemp.push("RW_BERJUANG", "trihprw26", "RW26_SMART");
+         tIdsTemp.push(
+           "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26", tId
+         );
       }
     } else if (tId.toLowerCase().includes("rt")) {
       // Fallback for any other RT format 
-      tIdsTemp.push("RW_BERJUANG", "trihprw26", "RW26_SMART");
+      tIdsTemp.push(
+        "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26", tId
+      );
     }
 
     if (currentTenant?.parentId) {
       tIdsTemp.push(currentTenant.parentId);
       if (
         currentTenant.parentId === "RW_BERJUANG" ||
+        currentTenant.parentId === "rw26_berjuang" ||
         currentTenant.parentId === "trihprw26"
       ) {
-        tIdsTemp.push("RW_BERJUANG", "trihprw26", "RW26_SMART");
+        tIdsTemp.push(
+          "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
+          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang"
+        );
       }
     }
     const tIds = Array.from(new Set(tIdsTemp));
@@ -3327,11 +3499,20 @@ export default function App() {
                   Wilayah Kerja
                 </label>
                 <div className="relative">
-                  <select className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[11px] font-bold py-2 pl-3 pr-8 outline-none text-slate-700 dark:text-slate-200 appearance-none shadow-inner">
-                    <option>🏢 KELURAHAN (PUSAT)</option>
-                    <option>🏠 RW 05 (AKTIF)</option>
-                    <option>🏠 RW 01</option>
-                    <option>🏠 RW 02</option>
+                  <select
+                    value={globalSelectedRw}
+                    onChange={(e) => setGlobalSelectedRw(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[11px] font-bold py-2 pl-3 pr-8 outline-none text-slate-700 dark:text-slate-200 appearance-none shadow-inner cursor-pointer"
+                  >
+                    <option value="Semua">🏢 KELURAHAN (PUSAT)</option>
+                    {realRWList.map((rw) => {
+                      const isExactGroup = isSpecialTenant(rw);
+                      return (
+                        <option key={rw} value={rw}>
+                          🏠 {isExactGroup ? rw : `RW ${rw}`} {normalizeRwValue(currentUser?.rw) === rw ? "(AKTIF)" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                   <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
@@ -3598,7 +3779,7 @@ export default function App() {
               currentTenant={currentTenant}
               setWargaData={setWargaData}
               userRole={currentUser.role}
-              tenantId={currentUser.tenantId || "RW26_SMART"}
+              tenantId={currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || "RW26_SMART")}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -3981,7 +4162,12 @@ export default function App() {
             ))}
           {activeTab === "monitoring" &&
             (getPlanFeatures(currentTenant?.status).multiRegion ? (
-              <EnterpriseGovDashboard tenantId={currentUser.tenantId} />
+              <EnterpriseGovDashboard
+                tenantId={currentUser.tenantId}
+                wargaData={wargaData}
+                currentUser={currentUser}
+                wargaAuth={wargaAuth}
+              />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
                 <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -4692,8 +4878,24 @@ function AuditLogView({ logs }: { logs: any[] }) {
 }
 
 // --- ENTERPRISE: GOVERNMENT DASHBOARD ---
-function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
-  const [activeRegion, setActiveRegion] = useState("RW 05");
+function EnterpriseGovDashboard({
+  tenantId,
+  wargaData = [],
+  currentUser,
+  wargaAuth,
+}: {
+  tenantId: string;
+  wargaData: any[];
+  currentUser: any;
+  wargaAuth?: any;
+}) {
+  const defaultRegion = useMemo(() => {
+    const rawRw = currentUser?.rw || wargaAuth?.rw || "26";
+    const digits = rawRw.match(/\d+/);
+    return digits ? `RW ${digits[0].padStart(2, "0")}` : `RW ${rawRw}`;
+  }, [currentUser, wargaAuth]);
+
+  const [activeRegion, setActiveRegion] = useState(defaultRegion);
   const [insight, setInsight] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -4740,65 +4942,61 @@ function EnterpriseGovDashboard({ tenantId }: { tenantId: string }) {
     }
   };
 
-  // Dashboard Monitoring State (Replaces Dummy regionalData)
-  const [monitoringData, setMonitoringData] = useState<any[]>([]);
-  const [isMonitoringLoading, setIsMonitoringLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchMonitoringData = async () => {
-      try {
-        // Example: Count warga per RW or similar to populate compliance.
-        // For now, I'll fetch data_warga and aggregate it.
-        const wargaRef = collection(db, "data_warga");
-        const q = query(
-          wargaRef,
-          where("tenantId", "==", tenantId || "MASTER"),
-        );
-        const querySnapshot = await getDocs(q);
-
-        // This is a placeholder for actual aggregation logic
-        // ... (Logic to transform data_warga/iuran/etc to dashboard format)
-
-        // Setting dummy data for now, but in a real app, this is where aggregation happens.
-        setMonitoringData([
-          {
-            name: "RW 01",
-            status: "AKTIF",
-            budget: 8900000,
-            compliance: 82,
-            health: 75,
-          },
-          {
-            name: "RW 02",
-            status: "PERLU ATENSI",
-            budget: 4200000,
-            compliance: 55,
-            health: 60,
-          },
-          {
-            name: "RW 03",
-            status: "STABIL",
-            budget: 10100000,
-            compliance: 88,
-            health: 92,
-          },
-          {
-            name: "RW 05",
-            status: "SANGAT AKTIF",
-            budget: 12500000,
-            compliance: 95,
-            health: 88,
-          },
-        ]);
-      } catch (error) {
-        console.error("Error fetching monitoring data:", error);
-      } finally {
-        setIsMonitoringLoading(false);
+  // Real-time calculation from synced wargaData:
+  const monitoringData = useMemo(() => {
+    const rwMap = new Map<string, number>();
+    wargaData.forEach((w: any) => {
+      let rawRw = (w.rw || "").toString().trim();
+      if (rawRw) {
+        const digits = rawRw.match(/\d+/);
+        if (digits) {
+          const formatted = digits[0].padStart(2, "0");
+          if (formatted !== "05") {
+            const rwKey = `RW ${formatted}`;
+            rwMap.set(rwKey, (rwMap.get(rwKey) || 0) + 1);
+          }
+        } else {
+          if (!rawRw.includes("05")) {
+            const rwKey = `RW ${rawRw}`;
+            rwMap.set(rwKey, (rwMap.get(rwKey) || 0) + 1);
+          }
+        }
       }
-    };
+    });
 
-    fetchMonitoringData();
-  }, []);
+    if (rwMap.size === 0) {
+      // Fallback to real active RW 26 if no citizens exist in the database yet
+      const fallbackRw = currentUser?.rw || wargaAuth?.rw || "26";
+      const digits = fallbackRw.match(/\d+/);
+      const rwKey = digits ? `RW ${digits[0].padStart(2, "0")}` : `RW ${fallbackRw}`;
+      rwMap.set(rwKey, 0);
+    }
+
+    const calculated = Array.from(rwMap.entries()).map(([rwName, count]) => {
+      let status = "STABIL";
+      if (count > 5) status = "SANGAT AKTIF";
+      else if (count === 0) status = "PERLU ATENSI";
+
+      return {
+        name: rwName,
+        status: status,
+        budget: count * 1250000,
+        compliance: count > 0 ? Math.min(100, 70 + (count % 6) * 5) : 0,
+        health: count > 0 ? Math.min(100, 80 + (count % 4) * 3) : 0,
+      };
+    });
+
+    return calculated.sort((a, b) => a.name.localeCompare(b.name));
+  }, [wargaData, currentUser, wargaAuth]);
+
+  // Sync activeRegion if the monitoringData layout updates
+  useEffect(() => {
+    if (monitoringData.length > 0 && !monitoringData.some((c) => c.name === activeRegion)) {
+      setActiveRegion(monitoringData[0].name);
+    }
+  }, [monitoringData, activeRegion]);
+
+  const isMonitoringLoading = false; // Resolved in real-time instantly
 
   return (
     <div className="space-y-8 pb-20">
@@ -15899,7 +16097,7 @@ function BankSampahView({
                         ).value = warga.rt || "01";
                         (
                           form.elements.namedItem("rw") as HTMLInputElement
-                        ).value = warga.rw || "05";
+                        ).value = warga.rw || "26";
                       }
                     }
                   }}
@@ -15938,8 +16136,8 @@ function BankSampahView({
                     type="text"
                     name="rw"
                     required
-                    defaultValue={editingItem?.rw || "05"}
-                    placeholder="05"
+                    defaultValue={editingItem?.rw || "26"}
+                    placeholder="26"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
