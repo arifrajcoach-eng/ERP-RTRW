@@ -732,8 +732,8 @@ export function SuratView({
                <p className="font-bold text-xs uppercase tracking-widest">Arsip Dokumen Kosong</p>
             </div>
           ) : (
-            <div className="w-full min-w-[1350px] overflow-x-auto">
-              <table className="w-full text-left border-collapse text-[13px] text-slate-700 dark:text-slate-300">
+            <div className="col-span-full w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+              <table className="w-full min-w-[1000px] text-left border-collapse text-[13px] text-slate-700 dark:text-slate-300">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 uppercase text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-widest">
                   <tr>
                     <th className="px-6 py-4 rounded-tl-2xl">Tanggal</th>
@@ -785,6 +785,12 @@ export function SuratView({
                   ))}
                 </tbody>
               </table>
+
+              {/* Swipe/Scroll Reminder for Smartphone users */}
+              <div className="md:hidden flex items-center justify-center gap-1.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-50/50 dark:bg-slate-800/20 py-2.5 rounded-xl mt-4">
+                <span>GESER KANAN UNTUK LAINNYA</span>
+                <ChevronRight className="w-4 h-4 text-brand-blue animate-bounceHorizontal" />
+              </div>
             </div>
           )}
         </div>

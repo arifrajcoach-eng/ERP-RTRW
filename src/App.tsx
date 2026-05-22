@@ -3556,7 +3556,7 @@ export default function App() {
         )}
 
         {/* Content Area */}
-        <div className="p-3 md:p-6 h-full overflow-auto print:overflow-visible print:h-auto print:p-0 relative z-10">
+        <div className="p-3 md:p-6 flex-1 overflow-y-auto overflow-x-hidden print:overflow-visible print:h-auto print:p-0 relative z-10">
           {activeTab === "dashboard" && (
             <DashboardView
               allowedMenuItems={renderableNavItems}
