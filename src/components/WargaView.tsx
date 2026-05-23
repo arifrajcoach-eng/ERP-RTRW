@@ -189,7 +189,9 @@ function WargaView(props: WargaViewProps) {
         // Use exact same tenant list logic as the frontend query
         const tIdsToClean = [tenantId];
         const tId = tenantId;
-        if (
+        if (tId === "rw26_berjuang" || tId.endsWith("_rw26_berjuang")) {
+          // Strictly isolate developer master tenant and its sub-tenants to prevent cross-tenant leakage
+        } else if (
           tId === "RW_BERJUANG" ||
           tId === "rw26_berjuang" ||
           tId === "rt01_rw26" ||
@@ -215,7 +217,7 @@ function WargaView(props: WargaViewProps) {
           tIdsToClean.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26");
         }
         
-        if (currentTenant?.parentId) {
+        if (currentTenant?.parentId && (tId !== "rw26_berjuang" && !tId.endsWith("_rw26_berjuang"))) {
           tIdsToClean.push(currentTenant.parentId);
           if (
             currentTenant.parentId === "RW_BERJUANG" ||
@@ -307,14 +309,16 @@ function WargaView(props: WargaViewProps) {
     setIsLoadingDB(true);
     console.log(`Starting bidirectional sync for RT "${detectedRT}" to/from parent RW...`);
     try {
-        const potentialParentIDs = Array.from(new Set([
-            currentTenant?.parentId,
-            'RW_BERJUANG',
-            'rw_berjuang',
-            'trihprw26',
-            'RW26_SMART',
-            'rw26_smart'
-        ].filter(Boolean) as string[]));
+        const potentialParentIDs = (tenantId === "rw26_berjuang" || tenantId.endsWith("_rw26_berjuang")) 
+            ? ([currentTenant?.parentId].filter(Boolean) as string[])
+            : Array.from(new Set([
+                currentTenant?.parentId,
+                'RW_BERJUANG',
+                'rw_berjuang',
+                'trihprw26',
+                'RW26_SMART',
+                'rw26_smart'
+            ].filter(Boolean) as string[]));
 
         console.log("Querying potential parent tenants:", potentialParentIDs);
 
@@ -447,13 +451,14 @@ function WargaView(props: WargaViewProps) {
     setIsLoadingDB(true);
     console.log(`Starting reverse sync from RTs to RW tenant "${tenantId}"...`);
     try {
-        let CHILD_TENANT_IDS = [
-            "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
-            "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang",
-            "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang",
-            "rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26",
-            "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04"
-        ];
+        let CHILD_TENANT_IDS = (tenantId === "rw26_berjuang" || tenantId.endsWith("_rw26_berjuang"))
+            ? []
+            : [
+                "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
+                "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang",
+                "rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26",
+                "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04"
+            ];
 
         try {
             const childTenantsSnapshot = await getDocs(

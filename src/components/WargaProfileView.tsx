@@ -22,7 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { jsPDF } from 'jspdf';
 
 interface WargaProfileViewProps {
@@ -238,8 +238,8 @@ export function WargaProfileView({
         posisiKeluarga: wargaData.posisi || "",
         status: 'Menunggu Persetujuan RT',
         keterangan: finalKeterangan,
-        userId: wargaData.uid || wargaData.id_user || null,
-        authUid: wargaData.uid || wargaData.id_user || null,
+        userId: wargaData.authUid || auth.currentUser?.uid || wargaData.uid || wargaData.id_user || null,
+        authUid: wargaData.authUid || auth.currentUser?.uid || wargaData.uid || wargaData.id_user || null,
         nomorSurat: getAutoNomorSurat(wargaData.rt || '01', wargaData.rw || '26')
       };
 

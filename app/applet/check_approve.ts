@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, getDocs, getDoc, writeBatch } from 'firebase/firestore';
-import firebaseConfig from './firebase-applet-config.json';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 const app = initializeApp(firebaseConfig);

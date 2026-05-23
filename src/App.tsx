@@ -1159,6 +1159,11 @@ export default function App() {
     const lowRw = globalRw.toLowerCase();
     const lowW = (w.tenantId || "").toLowerCase();
 
+    // Isolate developer master tenant and its sub-tenants from wildcard/keyword matching
+    if (lowRw === "rw26_berjuang" || lowW === "rw26_berjuang" || lowRw.endsWith("_rw26_berjuang") || lowW.endsWith("_rw26_berjuang")) {
+       return lowW === lowRw;
+    }
+
     // Isolation for Berjuang cluster RTs
     // If filtering by a specific RT unit, it must match exactly or match the parent
     if (lowRw.includes("rt") && lowRw.includes("berjuang")) {
@@ -1271,6 +1276,9 @@ export default function App() {
       currentUser?.isSuperAdmin && selectedTenantId
         ? selectedTenantId
         : baseTenantId;
+    if (tId === "rw26_berjuang" || tId.endsWith("_rw26_berjuang")) {
+      return [tId];
+    }
     const list = [tId];
     if (
       tId === "RW_BERJUANG" ||
@@ -1518,7 +1526,9 @@ export default function App() {
     const tIdsTemp = [tId];
     
     // For RW/parent tenants, include all known RT child tenant conventions
-    if (
+    if (tId === "rw26_berjuang" || tId.endsWith("_rw26_berjuang")) {
+      // Strictly isolate developer master tenant and its sub-tenants to prevent cross-tenant leakage
+    } else if (
       tId === "RW_BERJUANG" ||
       tId === "rw26_berjuang" ||
       tId === "rt01_rw26" ||
@@ -1551,7 +1561,7 @@ export default function App() {
       );
     }
 
-    if (currentTenant?.parentId) {
+    if (currentTenant?.parentId && tId !== "rw26_berjuang" && !tId.endsWith("_rw26_berjuang")) {
       tIdsTemp.push(currentTenant.parentId);
       if (
         currentTenant.parentId === "RW_BERJUANG" ||
