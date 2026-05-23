@@ -1289,7 +1289,7 @@ export default function App() {
         // Parent cluster scope
         list.push(
           "RW_BERJUANG", "rw26_berjuang", "rt01_rw26", "trihprw26", "RW26_SMART",
-          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang"
+          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang"
         );
       }
     }
@@ -1532,10 +1532,10 @@ export default function App() {
       if (!tId.toLowerCase().includes("rt")) {
          tIdsTemp.push(
            "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
-           "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
-           "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang", "rt05_rw_berjuang",
-           "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang",
-           "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04", "RW26_RT05",
+           "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
+           "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang",
+           "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang",
+           "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04",
            "MASTER"
          );
       } else {
@@ -1560,7 +1560,7 @@ export default function App() {
       ) {
         tIdsTemp.push(
           "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
-          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang"
+          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang"
         );
       }
     }

@@ -41,6 +41,29 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  app.get("/api/diagnostic/counts", async (req, res) => {
+    try {
+      const db = getDb();
+      const tenants = [
+        "rw26_berjuang",
+        "rt01_rw26_berjuang",
+        "rt02_rw26_berjuang",
+        "rt03_rw26_berjuang",
+        "rt04_rw26_berjuang"
+      ];
+      const results: Record<string, number> = {};
+      for (const tId of tenants) {
+        const snapshot = await db.collection("data_warga")
+          .where("tenantId", "==", tId)
+          .get();
+        results[tId] = snapshot.size;
+      }
+      res.json(results);
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
   // Webhook: Payment received
   app.post("/api/payments/webhook", async (req, res) => {
     const { tenantId, status, plan, paymentProviderRef } = req.body;
