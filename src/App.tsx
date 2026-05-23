@@ -3195,9 +3195,9 @@ export default function App() {
           />
         </div>
         <h2 className="text-xl font-black text-slate-800 tracking-tight font-['Georgia'] mb-2">
-          <span className="bg-gradient-to-r from-sky-500 via-blue-700 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+          <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
           {' '}
-          <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)]">AI</span>
+          <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
         </h2>
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
           Menyiapkan Sesi Keamanan...
@@ -3367,10 +3367,9 @@ export default function App() {
             </div>
           </div>
           <h2 className="font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors" style={{ fontSize: "29px" }}>
-            <span className="font-bold">
-              <span className="text-[#04a8f4]">Smart</span>
-              <span className="text-[#00aefc]">RW</span>{" "}
-              <span className="text-brand-pink">AI</span>
+            <span className="font-bold flex items-center justify-center gap-1">
+              <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+              <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
             </span>
           </h2>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">
@@ -3452,9 +3451,8 @@ export default function App() {
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 justify-center">
-                    <span className="text-[#89CFF0]">Smart</span>
-                    <span className="text-brand-blue">RW</span>
-                    <span className="text-brand-pink italic">AI</span>
+                    <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent font-black">SmartRW</span>
+                    <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent font-black drop-shadow-[0_1px_1px_rgba(251,113,133,0.3)] ml-0.5">AI</span>
                   </span>
                 )}
               </h1>
@@ -4339,7 +4337,8 @@ export default function App() {
               <Sparkles className="w-10 h-10 text-brand-pink" />
             </div>
             <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-3">
-              SmartRW AI <br />
+              <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>{" "}
+              <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span> <br />
               <span className="text-brand-pink">Telah Hadir!</span>
             </h3>
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
@@ -10070,11 +10069,10 @@ function LoginView({
             />
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 leading-none mb-2 font-elegant">
-            <span className="font-bold">
-              <span className="text-[#04a8f4]">Smart</span>
-              <span className="text-brand-blue" style={{ color: "#0baade" }}>RW</span>{" "}
-              <span className="text-brand-pink">AI</span>
-            </span>
+            <span className="font-bold flex items-center justify-center gap-1">
+            <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+            <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
+          </span>
           </h1>
           <p className="text-brand-blue font-bold tracking-[0.2em] text-sm uppercase">
             BERDAMPAK &amp; MEMBERDAYAKAN
@@ -10391,9 +10389,9 @@ function LoginView({
                     </div>
                     <h3 className="text-xl font-black text-slate-800 leading-tight tracking-tight">
                       Gunakan{" "}
-                    <span className="font-['Georgia'] bg-gradient-to-r from-sky-500 via-blue-700 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+                    <span className="font-['Georgia'] bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
                     {' '}
-                    <span className="font-['Georgia'] bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)]">AI</span>
+                    <span className="font-['Georgia'] bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
                     </h3>
                     <p className="text-sm font-bold text-slate-500 mb-4 whitespace-nowrap overflow-hidden text-ellipsis">
                       Dapatkan{" "}
