@@ -306,8 +306,8 @@ service cloud.firestore {
     }
 
     match /surat/{docId} {
-      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || request.auth.uid == resource.data.authUid);
-      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || request.auth.uid == resource.data.authUid);
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin() || isAdminStatic() || (
         isSignedIn() && getUserData() != null && (

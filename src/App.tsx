@@ -154,6 +154,7 @@ import { PricingSection } from "./components/PricingSection";
 import ChatWargaView from "./components/ChatWargaView";
 import AIChatBot from "./components/AIChatBot";
 import UpgradeModal from "./components/UpgradeModal";
+import LeadManagementView from "./components/LeadManagementView";
 import { GuestBookFormPublic } from "./components/GuestBookFormPublic";
 import { GuestBookQRCode } from "./components/GuestBookQRCode";
 import DashboardView from "./components/DashboardView";
@@ -2977,7 +2978,7 @@ export default function App() {
         minPlan: "BASIC",
       },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
-      { id: "daftar-trial", label: "Tenant Trial", icon: Users },
+      { id: "leads", label: "CRM & Leads", icon: Users },
       { id: "users", label: "Manage User", icon: User },
       { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
       { id: "pengaturan", label: "Pengaturan", icon: Settings },
@@ -3789,6 +3790,7 @@ export default function App() {
               iuranData={filteredIuranDataCentral}
               emergenciesData={emergenciesData}
               handleTriggerSOS={handleTriggerSOS}
+              onResolveSOS={handleResolveSOS}
               userRole={currentUser.role}
               setActiveTab={setActiveTab}
               posyanduKegiatanData={posyanduKegiatanData}
@@ -4088,6 +4090,10 @@ export default function App() {
               currentUser={currentUser}
             />
           )}
+          {activeTab === "leads" && (
+            <LeadManagementView handleFirestoreError={handleFirestoreError} />
+          )}
+
           {activeTab === "super-admin" && (
             <TenantsView
               tenantsData={tenantsData}
@@ -4288,13 +4294,34 @@ export default function App() {
           drag
           dragMomentum={false}
           whileDrag={{ scale: 1.1, cursor: "grabbing" }}
-          onTap={handleTriggerSOS}
+          onTap={() => {
+            if (activeEmergency) {
+              const role = (currentUser?.role || "").toUpperCase();
+              const canResolve =
+                role === "ADMIN" ||
+                role === "PENGURUS" ||
+                role === "SATPAM" ||
+                currentUser?.isSuperAdmin ||
+                (currentUser?.linkedResidentId &&
+                  activeEmergency?.userId === auth.currentUser?.uid);
+
+              if (canResolve) {
+                if (window.confirm("Hentikan sinyal darurat aktif?")) {
+                  handleResolveSOS(activeEmergency.id);
+                }
+                return;
+              }
+            }
+            handleTriggerSOS();
+          }}
           disabled={isSOSTriggering}
-          className="fixed bottom-6 right-6 z-[60] w-16 h-16 bg-red-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-red-300 hover:bg-red-700 transition-colors active:scale-90 group ring-4 ring-white cursor-grab touch-none"
-          title="TOMBOL DARURAT (SOS)"
+          className={`fixed bottom-6 right-6 z-[60] w-16 h-16 ${activeEmergency ? 'bg-emerald-600 shadow-emerald-300 hover:bg-emerald-700' : 'bg-red-600 shadow-red-300 hover:bg-red-700'} text-white rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90 group ring-4 ring-white cursor-grab touch-none`}
+          title={activeEmergency ? "STOP SOS" : "TOMBOL DARURAT (SOS)"}
         >
           {isSOSTriggering ? (
             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : activeEmergency ? (
+            <CheckCircle className="w-8 h-8" />
           ) : (
             <Siren className="w-8 h-8 group-hover:" />
           )}
@@ -9562,48 +9589,70 @@ function LoginView({
       try {
         // A. Try direct Document ID lookup (NIK is standard docId, sometimes prefixed)
         const potentialIds = [cleanId, cleanPass].filter((k) => k.length >= 6);
+        const knownTenants = [
+          "RW26_SMART",
+          "RW_BERJUANG",
+          "trihprw26",
+          "rt01_rw26",
+          "rt02_rw26",
+          "rt01_rw26_berjuang",
+          "MASTER",
+        ];
+
         for (const idCandidate of potentialIds) {
           if (found) break;
 
-          // Try common docId patterns (raw, and with default tenant prefix)
+          // Try common docId patterns
           const candidateRefs = [
             doc(db, "data_warga", idCandidate),
-            doc(db, "data_warga", `RW26_SMART_${idCandidate}`),
             doc(db, "verifikasi_warga", idCandidate),
           ];
 
-          for (const dRef of candidateRefs) {
-            const dSnap = await getDoc(dRef);
-            if (dSnap.exists()) {
-              const candidate = { docId: dSnap.id, ...dSnap.data() } as any;
-              const cNik = String(candidate.nik || "")
-                .trim()
-                .toLowerCase();
-              const cNama = String(candidate.nama || "")
-                .trim()
-                .toLowerCase();
-              const cHp = String(candidate.hp || "")
-                .trim()
-                .toLowerCase();
-              const cKK = String(candidate.kk || candidate.kodeKeluarga || "")
-                .trim()
-                .toLowerCase();
+          // Try with tenant prefixes
+          knownTenants.forEach((t) => {
+            candidateRefs.push(doc(db, "data_warga", `${t}_${idCandidate}`));
+            candidateRefs.push(doc(db, "verifikasi_warga", `${t}_${idCandidate}`));
+          });
 
-              const otherInp =
-                idCandidate === cleanId ? cleanPassLower : cleanIdLower;
-              const matches =
-                cNik === otherInp ||
-                (otherInp.replace(/\D/g, "") &&
-                  cNik.replace(/\D/g, "") === otherInp.replace(/\D/g, "")) ||
-                cNama === otherInp ||
-                cHp === otherInp ||
-                cKK === otherInp ||
-                (otherInp.replace(/\D/g, "") &&
-                  cKK.replace(/\D/g, "") === otherInp.replace(/\D/g, ""));
-              if (matches) {
-                found = candidate;
-                break;
+          for (const dRef of candidateRefs) {
+            if (found) break;
+            try {
+              const dSnap = await getDoc(dRef);
+              if (dSnap.exists()) {
+                const candidate = { docId: dSnap.id, ...dSnap.data() } as any;
+                const cNik = String(candidate.nik || "")
+                  .trim()
+                  .toLowerCase();
+                const cNama = String(candidate.nama || "")
+                  .trim()
+                  .toLowerCase();
+                const cHp = String(candidate.hp || "")
+                  .trim()
+                  .toLowerCase();
+                const cKK = String(candidate.kk || candidate.kodeKeluarga || "")
+                  .trim()
+                  .toLowerCase();
+
+                const otherInp =
+                  idCandidate === cleanId ? cleanPassLower : cleanIdLower;
+                const matches =
+                  cNik === otherInp ||
+                  (otherInp.replace(/\D/g, "") &&
+                    cNik.replace(/\D/g, "") === otherInp.replace(/\D/g, "")) ||
+                  cNama === otherInp ||
+                  cHp === otherInp ||
+                  cKK === otherInp ||
+                  (otherInp.replace(/\D/g, "") &&
+                    cKK.replace(/\D/g, "") === otherInp.replace(/\D/g, ""));
+
+                if (matches) {
+                  found = candidate;
+                  console.log("Found citizen via direct ID lookup:", dRef.path);
+                  break;
+                }
               }
+            } catch (refErr) {
+              // Silently ignore permission errors for specific paths
             }
           }
         }
@@ -9615,7 +9664,7 @@ function LoginView({
           for (const token of tokens) {
             if (found) break;
             const isNumeric = /^\d+$/.test(token);
-            const searchFields = ["nik", "hp", "nama"];
+            const searchFields = ["nik", "hp", "nama", "kk", "no_kk"];
 
             for (const field of searchFields) {
               if (found) break;
@@ -9642,127 +9691,73 @@ function LoginView({
 
               for (const value of variants) {
                 if (found) break;
-                const q = query(
+
+                // 1. Check in data_warga
+                const qWarga = query(
                   collection(db, "data_warga"),
                   where(field, "==", value),
                   limit(10),
                 );
-                const snap = await getDocs(q);
+                const sWarga = await getDocs(qWarga);
 
-                if (!snap.empty) {
-                  for (const d of snap.docs) {
-                    const cand = { docId: d.id, ...d.data() } as any;
-                    const otherVal =
-                      token === cleanId ? cleanPassLower : cleanIdLower;
-
-                    const cNik = String(cand.nik || "")
-                      .trim()
-                      .toLowerCase();
-                    const cNama = String(cand.nama || "")
-                      .trim()
-                      .toLowerCase();
-                    const cHp = String(cand.hp || "")
-                      .trim()
-                      .toLowerCase();
-                    const cKK = String(cand.kk || cand.kodeKeluarga || "")
-                      .trim()
-                      .toLowerCase();
-
-                    const matches =
-                      cNik === otherVal ||
-                      (otherVal.replace(/\D/g, "") &&
-                        cNik.replace(/\D/g, "") ===
-                          otherVal.replace(/\D/g, "")) ||
-                      cNama === otherVal ||
-                      cHp === otherVal ||
-                      (otherVal.replace(/\D/g, "") &&
-                        cHp.replace(/\D/g, "") ===
-                          otherVal.replace(/\D/g, "")) ||
-                      cKK === otherVal ||
-                      (otherVal.replace(/\D/g, "") &&
-                        cKK.replace(/\D/g, "") === otherVal.replace(/\D/g, ""));
-
-                    if (matches) {
-                      found = cand;
-                      break;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // C. Try Verifikasi Warga (Discovery)
-        if (!found) {
-          const tokens = [cleanId, cleanPass].filter((k) => k.length >= 3);
-          for (const token of tokens) {
-            if (found) break;
-            const isNumeric = /^\d+$/.test(token);
-            const searchFields = ["nik", "hp", "nama"];
-            for (const field of searchFields) {
-              if (found) break;
-              const variants: any[] = [];
-              if (field === "nama") {
-                const titleCase = token
-                  .split(" ")
-                  .map(
-                    (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
-                  )
-                  .join(" ");
-                variants.push(
-                  token,
-                  token.toUpperCase(),
-                  token.toLowerCase(),
-                  titleCase,
-                );
-              } else if (isNumeric) {
-                variants.push(token, Number(token));
-              } else {
-                variants.push(token);
-              }
-
-              for (const value of variants) {
-                if (found) break;
-                const q = query(
+                // 2. Check in verifikasi_warga
+                const qVerif = query(
                   collection(db, "verifikasi_warga"),
                   where(field, "==", value),
                   limit(10),
                 );
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                  for (const d of snap.docs) {
-                    const cand = { docId: d.id, ...d.data() } as any;
-                    const otherVal =
-                      token === cleanId ? cleanPassLower : cleanIdLower;
-                    const cNik = String(cand.nik || "")
-                      .trim()
-                      .toLowerCase();
-                    const cNama = String(cand.nama || "")
-                      .trim()
-                      .toLowerCase();
-                    const cHp = String(cand.hp || "")
-                      .trim()
-                      .toLowerCase();
-                    const cKK = String(cand.kk || cand.kodeKeluarga || "")
-                      .trim()
-                      .toLowerCase();
-                    if (
-                      cNik === otherVal ||
-                      (otherVal.replace(/\D/g, "") &&
-                        cNik.replace(/\D/g, "") ===
-                          otherVal.replace(/\D/g, "")) ||
-                      cNama === otherVal ||
-                      cHp === otherVal ||
-                      (otherVal.replace(/\D/g, "") &&
-                        cHp.replace(/\D/g, "") ===
-                          otherVal.replace(/\D/g, "")) ||
-                      cKK === otherVal ||
-                      (otherVal.replace(/\D/g, "") &&
-                        cKK.replace(/\D/g, "") === otherVal.replace(/\D/g, ""))
-                    ) {
-                      found = cand;
-                      break;
+                const sVerif = await getDocs(qVerif);
+
+                // 3. Fallback: Check in surat (since user mentioned making a letter)
+                const qSurat = query(
+                  collection(db, "surat"),
+                  where(field === "nama" ? "pemohon" : field, "==", value),
+                  limit(5),
+                );
+                const sSurat = await getDocs(qSurat);
+
+                const allSnaps = [sWarga, sVerif, sSurat];
+
+                for (const snap of allSnaps) {
+                  if (found) break;
+                  if (!snap.empty) {
+                    for (const d of snap.docs) {
+                      const cand = { docId: d.id, ...d.data() } as any;
+                      const otherVal =
+                        token === cleanId ? cleanPassLower : cleanIdLower;
+
+                      const cNik = String(cand.nik || "")
+                        .trim()
+                        .toLowerCase();
+                      const cNama = String(cand.nama || cand.pemohon || "")
+                        .trim()
+                        .toLowerCase();
+                      const cHp = String(cand.hp || cand.phone || "")
+                        .trim()
+                        .toLowerCase();
+                      const cKK = String(cand.kk || cand.kodeKeluarga || "")
+                        .trim()
+                        .toLowerCase();
+
+                      const matches =
+                        cNik === otherVal ||
+                        (otherVal.replace(/\D/g, "") &&
+                          cNik.replace(/\D/g, "") ===
+                            otherVal.replace(/\D/g, "")) ||
+                        cNama === otherVal ||
+                        cHp === otherVal ||
+                        (otherVal.replace(/\D/g, "") &&
+                          cHp.replace(/\D/g, "") ===
+                            otherVal.replace(/\D/g, "")) ||
+                        cKK === otherVal ||
+                        (otherVal.replace(/\D/g, "") &&
+                          cKK.replace(/\D/g, "") === otherVal.replace(/\D/g, ""));
+
+                      if (matches) {
+                        found = cand;
+                        console.log("Found citizen via query lookup:", d.ref.path);
+                        break;
+                      }
                     }
                   }
                 }
@@ -9770,6 +9765,7 @@ function LoginView({
             }
           }
         }
+
       } catch (err) {
         console.warn("Direct discovery failed:", err);
       }

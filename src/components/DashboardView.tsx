@@ -18,6 +18,7 @@ interface DashboardViewProps {
   iuranData: any[];
   emergenciesData: any[];
   handleTriggerSOS: () => void;
+  onResolveSOS?: (id: string) => void;
   userRole: string;
   setActiveTab: (tab: string) => void;
   posyanduKegiatanData: any[];
@@ -52,6 +53,7 @@ export default function DashboardView({
   iuranData, 
   emergenciesData, 
   handleTriggerSOS, 
+  onResolveSOS,
   userRole, 
   setActiveTab, 
   posyanduKegiatanData, 
@@ -124,6 +126,10 @@ export default function DashboardView({
   }, [isWarga, currentUser, sampahSetoranData, sampahTarikSaldoData, iuranData, tokoOrders]);
 
   const activeSOS = useMemo(() => emergenciesData?.find(e => e.status === 'ACTIVE'), [emergenciesData]);
+  const canResolve = useMemo(() => {
+    const role = (currentUser?.role || '').toUpperCase();
+    return role === 'ADMIN' || role === 'PENGURUS' || role === 'SATPAM' || currentUser?.isSuperAdmin || (currentUser?.linkedResidentId && activeSOS?.userId === currentUser?.authUid);
+  }, [currentUser, activeSOS]);
 
   const months = useMemo(() => [
     { id: 'Jan', label: 'Jan' }, { id: 'Feb', label: 'Feb' }, { id: 'Mar', label: 'Mar' },
@@ -437,20 +443,36 @@ export default function DashboardView({
       <div className="flex flex-col md:flex-row gap-6 mb-2">
         {activeSOS ? (
           <div 
-            onClick={() => setActiveTab('dashboard')}
-            className="flex-1 bg-gradient-to-tr from-rose-600 via-red-600 to-rose-700 p-8 rounded-3xl shadow-2xl shadow-rose-500/40 border-4 border-white/20 overflow-hidden relative group cursor-pointer"
+            className="flex-1 bg-gradient-to-tr from-rose-600 via-red-600 to-rose-700 p-8 rounded-3xl shadow-2xl shadow-rose-500/40 border-4 border-white/20 overflow-hidden relative group"
           >
             <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-125 transition-transform duration-700">
               <Siren size={120} />
             </div>
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center animate-pulse border border-white/30 shadow-inner">
-                <Siren className="w-10 h-10 text-white" />
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+              <div className="flex items-center gap-6">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center animate-pulse border border-white/30 shadow-inner">
+                  <Siren className="w-10 h-10 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black uppercase tracking-tight leading-none mb-2 text-white font-elegant">DARURAT: {activeSOS.lokasi?.toUpperCase() || 'LINGKUNGAN'}</h3>
+                  <p className="font-bold text-white/90 text-sm uppercase tracking-wider leading-relaxed">{activeSOS.keterangan || `Bantuan segera dibutuhkan oleh ${activeSOS.userName || 'Warga'}.`}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-3xl font-black uppercase tracking-tight leading-none mb-2 text-white font-elegant">DARURAT: {activeSOS.lokasi?.toUpperCase() || 'LINGKUNGAN'}</h3>
-                <p className="font-bold text-white/90 text-sm uppercase tracking-wider leading-relaxed">{activeSOS.keterangan || 'Bantuan segera dibutuhkan oleh warga.'}</p>
-              </div>
+              
+              {canResolve && onResolveSOS && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if(window.confirm('Hentikan sinyal darurat ini?')) {
+                      onResolveSOS(activeSOS.id);
+                    }
+                  }}
+                  className="px-8 py-4 bg-white text-red-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-rose-50 transition-all active:scale-95 shadow-xl flex items-center gap-2 whitespace-nowrap"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  STOP SOS
+                </button>
+              )}
             </div>
           </div>
         ) : isWarga ? (
