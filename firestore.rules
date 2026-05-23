@@ -274,7 +274,7 @@ service cloud.firestore {
 
     match /data_warga/{docId} {
       allow list: if isTenantMember(resource.data.tenantId) || isTenantMemberStatic(resource.data.tenantId);
-      allow get: if isTenantMember(resource.data.tenantId);
+      allow get: if resource == null || isTenantMember(resource.data.tenantId) || isTenantMemberStatic(resource.data.tenantId);
       allow create: if isTenantMember(request.resource.data.tenantId);
       allow update: if isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId);
       allow delete: if isTenantMember(resource.data.tenantId);

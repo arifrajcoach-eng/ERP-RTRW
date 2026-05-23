@@ -164,22 +164,14 @@ export function VerifikasiAdminView({
     let reason = isModalOpen ? catatan.trim() : "";
     
     if (!reason) {
-      if (isModalOpen) {
+      if (!isModalOpen) {
+        setSelectedItem(item);
+        showNotification("Harap isi Catatan Verifikasi sebelum menolak data.", "info");
+        return;
+      } else {
         showNotification("Harap isi Catatan Verifikasi di atas untuk alasan penolakan.", "error");
         return;
       }
-      
-      const promptTitle = isAlreadyApproved 
-        ? `ALASAN BATALKAN PERSETUJUAN (${item.nama}):` 
-        : `ALASAN PENOLAKAN (${item.nama}):`;
-      
-      const promptReason = prompt(promptTitle, "");
-      if (promptReason === null) return;
-      if (promptReason.trim().length === 0) {
-        showNotification("Alasan penolakan wajib diisi.", "error");
-        return;
-      }
-      reason = promptReason.trim();
     }
 
     setActionLoading(true);
