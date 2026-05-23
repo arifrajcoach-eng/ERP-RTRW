@@ -78,8 +78,9 @@ export function WargaProfileView({
   const [formJenisUsaha, setFormJenisUsaha] = useState<string>("");
   const [formAlamatUsaha, setFormAlamatUsaha] = useState<string>("");
 
-  const activeSubmission = verifikasiData.find(v => v.nik === wargaData.nik);
-  const mySurat = suratData.filter(s => s.nik === wargaData.nik);
+  const activeSubmission = verifikasiData.find(v => v.nik === wargaData.nik) || verifikasiData.find(v => v.authUid === wargaData.authUid);
+  const familyNiks = wargaData.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
+  const mySurat = suratData.filter(s => s.nik === wargaData.nik || (s.nik && familyNiks.includes(s.nik)));
 
   const getAutoNomorSurat = (rt: string, rw: string) => {
     const year = new Date().getFullYear();
@@ -209,11 +210,27 @@ export function WargaProfileView({
         finalKeterangan = `Nama Usaha: ${formNamaUsaha}, Jenis Sektor: ${formJenisUsaha}, Alamat Usaha: ${formAlamatUsaha}. Keperluan: ${formKeperluan}`;
       }
 
+      const normalizeRtVal = (rtVal: any): string => {
+        const rtStr = (rtVal || "").toString();
+        const match = rtStr.match(/rt\s*(\d+)/i) || rtStr.match(/\d+/);
+        const num = match ? match[1] || match[0] : rtStr;
+        return num ? num.replace(/^0+/, "").padStart(2, "0") : "01";
+      };
+      const normalizeRwVal = (rwVal: any): string => {
+        const rwStr = (rwVal || "").toString();
+        const match = rwStr.match(/rw\s*(\d+)/i) || rwStr.match(/\d+/);
+        const num = match ? match[1] || match[0] : rwStr;
+        return num ? num.replace(/^0+/, "").padStart(2, "0") : "26";
+      };
+
+      const rtNorm = normalizeRtVal(wargaData.rt);
+      const rwNorm = normalizeRwVal(wargaData.rw);
+
       const payload = {
         id,
         tenantId,
-        rt: wargaData.rt || '01',
-        rw: wargaData.rw || '26',
+        rt: rtNorm,
+        rw: rwNorm,
         tanggal: nowStr,
         createdAt: nowStr,
         jenis: selectedJenisSurat,
@@ -240,7 +257,7 @@ export function WargaProfileView({
         keterangan: finalKeterangan,
         userId: wargaData.authUid || auth.currentUser?.uid || wargaData.uid || wargaData.id_user || null,
         authUid: wargaData.authUid || auth.currentUser?.uid || wargaData.uid || wargaData.id_user || null,
-        nomorSurat: getAutoNomorSurat(wargaData.rt || '01', wargaData.rw || '26')
+        nomorSurat: getAutoNomorSurat(rtNorm, rwNorm)
       };
 
       await setDoc(doc(db, 'surat', id), payload);

@@ -1160,8 +1160,13 @@ export default function App() {
     const lowW = (w.tenantId || "").toLowerCase();
 
     // Isolate developer master tenant and its sub-tenants from wildcard/keyword matching
-    if (lowRw === "rw26_berjuang" || lowW === "rw26_berjuang" || lowRw.endsWith("_rw26_berjuang") || lowW.endsWith("_rw26_berjuang")) {
-       return lowW === lowRw;
+    const isRw26BerjuangSystem = (tIdId: string) => tIdId === "rw26_berjuang" || tIdId.endsWith("_rw26_berjuang");
+    if (isRw26BerjuangSystem(lowRw) || isRw26BerjuangSystem(lowW)) {
+       if (isRw26BerjuangSystem(lowRw) && isRw26BerjuangSystem(lowW)) {
+          if (lowRw === "rw26_berjuang") return true;
+          return lowW === lowRw || lowW === "rw26_berjuang";
+       }
+       return false;
     }
 
     // Isolation for Berjuang cluster RTs
@@ -1276,8 +1281,10 @@ export default function App() {
       currentUser?.isSuperAdmin && selectedTenantId
         ? selectedTenantId
         : baseTenantId;
-    if (tId === "rw26_berjuang" || tId.endsWith("_rw26_berjuang")) {
-      return [tId];
+    if (tId === "rw26_berjuang") {
+      return ["rw26_berjuang", "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang"];
+    } else if (tId.endsWith("_rw26_berjuang")) {
+      return [tId, "rw26_berjuang"];
     }
     const list = [tId];
     if (
@@ -1324,11 +1331,25 @@ export default function App() {
     return filtered;
   }, [usersData, activeTenantIds, currentUser]);
 
-  const linkedWarga = currentUser?.nikMapping
-    ? filteredWargaDataCentral.find(
-        (w: any) => w.nik === currentUser.nikMapping,
-      )
-    : null;
+  const linkedWarga = useMemo(() => {
+    const targetNik = currentUser?.nikMapping || currentUser?.nik;
+    if (!targetNik) return null;
+    return filteredWargaDataCentral.find((w: any) => w.nik === targetNik) || null;
+  }, [currentUser, filteredWargaDataCentral]);
+
+  const mergedWargaProfile = useMemo(() => {
+    return {
+      ...(linkedWarga || {}),
+      ...(wargaAuth || {}),
+      nik: linkedWarga?.nik || wargaAuth?.nik || currentUser?.nik || currentUser?.nikMapping || "",
+      nama: linkedWarga?.nama || wargaAuth?.nama || currentUser?.name || currentUser?.displayName || "Warga",
+      email: linkedWarga?.email || wargaAuth?.email || currentUser?.email || "",
+      rt: linkedWarga?.rt || wargaAuth?.rt || currentUser?.rt || "01",
+      rw: linkedWarga?.rw || wargaAuth?.rw || currentUser?.rw || "26",
+      tenantId: linkedWarga?.tenantId || wargaAuth?.tenantId || currentUser?.tenantId || "RW26_SMART",
+      terverifikasi: linkedWarga?.terverifikasi === true || wargaAuth?.terverifikasi === true || currentUser?.status === "Disetujui" || false
+    };
+  }, [linkedWarga, wargaAuth, currentUser]);
 
   // Enforce Max Warga limit locally for UI based on Plan
   const cappedWargaData = useMemo(() => {
@@ -1526,8 +1547,10 @@ export default function App() {
     const tIdsTemp = [tId];
     
     // For RW/parent tenants, include all known RT child tenant conventions
-    if (tId === "rw26_berjuang" || tId.endsWith("_rw26_berjuang")) {
-      // Strictly isolate developer master tenant and its sub-tenants to prevent cross-tenant leakage
+    if (tId === "rw26_berjuang") {
+      tIdsTemp.push("rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang");
+    } else if (tId.endsWith("_rw26_berjuang")) {
+      tIdsTemp.push("rw26_berjuang");
     } else if (
       tId === "RW_BERJUANG" ||
       tId === "rw26_berjuang" ||
@@ -1782,21 +1805,32 @@ export default function App() {
           onDataLoaded();
         },
       );
-    } else if (isCitizen && (wargaAuth || currentUser?.role === "Warga")) {
-      // Citizen listener: only their own letters
-      const uid = auth.currentUser?.uid;
+    } else if (isCitizen && (wargaAuth || (currentUser?.role && currentUser.role.toUpperCase() === "WARGA") || currentUser?.role === "Warga")) {
+      // Citizen listener: loads letters under active tenants and performs robust matching locally
+      const uid = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || (wargaAuth?.nik ? `WARGA_NIK_${wargaAuth.nik}` : null) || currentUser?.uid;
       if (uid) {
         unsubSurat = onSnapshot(
           query(
             collection(db, "surat"),
             where("tenantId", "in", tIds),
-            where("authUid", "==", uid),
           ),
           (snap) => {
-            const data = snap.docs.map((doc) => ({
+            const allLetters = snap.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
             }));
+
+            // Identify citizen and family NIKs to filter letters they have rights to see
+            const citizenNik = wargaAuth?.nik || currentUser?.nik || currentUser?.nikMapping || linkedWarga?.nik || "";
+            const familyNiks = wargaAuth?.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
+
+            const data = allLetters.filter((s: any) => {
+              const matchesOwnNik = citizenNik && s.nik === citizenNik;
+              const matchesFamilyNik = s.nik && familyNiks.includes(s.nik);
+              const matchesUid = uid && (s.authUid === uid || s.userId === uid);
+              return matchesOwnNik || matchesFamilyNik || matchesUid;
+            });
+
             setSuratData(data);
             onDataLoaded();
           },
@@ -1834,8 +1868,8 @@ export default function App() {
           onDataLoaded();
         },
       );
-    } else if (isCitizen && (wargaAuth || currentUser?.role === "Warga")) {
-      const uid = auth.currentUser?.uid;
+    } else if (isCitizen && (wargaAuth || (currentUser?.role && currentUser.role.toUpperCase() === "WARGA") || currentUser?.role === "Warga")) {
+      const uid = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || (wargaAuth?.nik ? `WARGA_NIK_${wargaAuth.nik}` : null) || currentUser?.uid;
       if (uid) {
         unsubIuran = onSnapshot(
           query(
@@ -1887,8 +1921,8 @@ export default function App() {
           onDataLoaded();
         },
       );
-    } else if (isCitizen && (wargaAuth || currentUser?.role === "Warga")) {
-      const uid = auth.currentUser?.uid;
+    } else if (isCitizen && (wargaAuth || (currentUser?.role && currentUser.role.toUpperCase() === "WARGA") || currentUser?.role === "Warga")) {
+      const uid = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || (wargaAuth?.nik ? `WARGA_NIK_${wargaAuth.nik}` : null) || currentUser?.uid;
       if (uid) {
         unsubPpob = onSnapshot(
           query(
@@ -3298,12 +3332,12 @@ export default function App() {
   if (wargaAuth && !currentUser?.isSuperAdmin) {
     return (
       <WargaProfileView
-        wargaData={wargaAuth}
+        wargaData={mergedWargaProfile}
         verifikasiData={verifikasiWargaData}
         suratData={suratData}
         setSuratData={setSuratData}
         setWargaAuth={setWargaAuth}
-        tenantId={wargaAuth.tenantId || "RW26_SMART"}
+        tenantId={mergedWargaProfile.tenantId || "RW26_SMART"}
         isLoadingDB={isLoadingDB}
         setIsLoadingDB={setIsLoadingDB}
         handleFileUpload={handleFileUpload}
@@ -3815,20 +3849,12 @@ export default function App() {
           {activeTab === "verifikasi" && (
             currentUser?.role === "WARGA" ? (
               <WargaProfileView
-                wargaData={linkedWarga || {
-                  nik: currentUser.nik || "",
-                  nama: currentUser.name || currentUser.displayName || "Warga",
-                  email: currentUser.email || "",
-                  rt: currentUser.rt || "01",
-                  rw: currentUser.rw || "26",
-                  tenantId: currentUser.tenantId || "RW26_SMART",
-                  terverifikasi: false
-                }}
+                wargaData={mergedWargaProfile}
                 verifikasiData={verifikasiWargaData}
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={currentUser.tenantId || "RW26_SMART"}
+                tenantId={mergedWargaProfile.tenantId || "RW26_SMART"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -3982,23 +4008,44 @@ export default function App() {
             />
           )}
           {activeTab === "surat" && (
-            <SuratView
-              suratData={filteredSuratDataCentral}
-              setSuratData={setSuratData}
-              wargaData={filteredWargaDataCentral}
-              usersData={filteredUsersDataCentral}
-              userRole={currentUser.role}
-              currentUser={currentUser}
-              getSetting={getSetting}
-              kopSettings={kopSettings}
-              tenantId={currentUser.tenantId || "RW26_SMART"}
-              isLoadingDB={isLoadingDB}
-              setIsLoadingDB={setIsLoadingDB}
-              handleFirestoreError={handleFirestoreError}
-              showNotification={showNotification}
-              settings={settings}
-              handleFileUpload={handleFileUpload}
-            />
+            (currentUser?.role === "WARGA" || currentUser?.role === "Warga" || isCitizen) ? (
+              <WargaProfileView
+                wargaData={mergedWargaProfile}
+                verifikasiData={verifikasiWargaData}
+                suratData={suratData}
+                setSuratData={setSuratData}
+                setWargaAuth={handleLogout}
+                tenantId={mergedWargaProfile.tenantId || "RW26_SMART"}
+                isLoadingDB={isLoadingDB}
+                setIsLoadingDB={setIsLoadingDB}
+                handleFileUpload={handleFileUpload}
+                showNotification={showNotification}
+                handleFirestoreError={handleFirestoreError}
+                kopSettings={kopSettings}
+                getSetting={getSetting}
+                usersData={filteredUsersDataCentral}
+                generateSuratHTML={generateSuratHTML}
+                settings={settings}
+              />
+            ) : (
+              <SuratView
+                suratData={filteredSuratDataCentral}
+                setSuratData={setSuratData}
+                wargaData={filteredWargaDataCentral}
+                usersData={filteredUsersDataCentral}
+                userRole={currentUser.role}
+                currentUser={currentUser}
+                getSetting={getSetting}
+                kopSettings={kopSettings}
+                tenantId={currentUser.tenantId || "RW26_SMART"}
+                isLoadingDB={isLoadingDB}
+                setIsLoadingDB={setIsLoadingDB}
+                handleFirestoreError={handleFirestoreError}
+                showNotification={showNotification}
+                settings={settings}
+                handleFileUpload={handleFileUpload}
+              />
+            )
           )}
           {activeTab === "complaint" && (
             <ComplaintView
