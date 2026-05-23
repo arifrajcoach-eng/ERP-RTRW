@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import cron from "node-cron";
 import firebaseConfig from "./firebase-applet-config.json";
 import dotenv from "dotenv";
@@ -19,8 +20,8 @@ function getDb(): admin.firestore.Firestore {
           projectId: firebaseConfig.projectId
         });
       }
-      dbInstance = admin.firestore();
-      console.log("Firebase Admin initialized for project:", firebaseConfig.projectId);
+      dbInstance = getFirestore(firebaseConfig.firestoreDatabaseId);
+      console.log("Firebase Admin initialized for project:", firebaseConfig.projectId, "Database:", firebaseConfig.firestoreDatabaseId);
     } catch (e) {
       console.error("Firebase Admin init failed:", e.message);
       throw new Error("Firebase Admin initialization failed");
