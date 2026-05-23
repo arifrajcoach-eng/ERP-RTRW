@@ -43,7 +43,7 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
           { id: 'iuran', label: isApt ? "Internal IPL" : "Iuran Kolektif", icon: CreditCard, gradient: 'from-brand-blue to-indigo-600' },
           { id: 'kas', label: "Ledger Kas", icon: Wallet, gradient: 'from-emerald-500 to-teal-600' },
           { id: 'ppob', label: "Digital Hub", icon: Smartphone, gradient: 'from-purple-600 to-pink-600' }
-        ].map((tab) => (
+        ].filter(tab => tab.id !== 'kas' || props.isPengurus).map((tab) => (
           <motion.button
             key={tab.id}
             whileHover={{ scale: 1.02 }}

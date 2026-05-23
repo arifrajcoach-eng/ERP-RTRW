@@ -223,18 +223,7 @@ export function PPOBView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 font-medium text-slate-600">
-              {!isPengurus ? (
-                <tr>
-                  <td colSpan={6} className="px-8 py-24 text-center">
-                    <div className="max-w-md mx-auto">
-                       <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 border border-white shadow-inner">
-                        <ShieldCheck className="w-10 h-10 text-slate-200" />
-                      </div>
-                      <p className="text-slate-400 italic font-bold text-sm leading-relaxed px-4">Akses riwayat ditutup untuk keamanan. Anda hanya dapat menggunakan fitur Transaksi.<br/>Riwayat lengkap dikelola sepenuhnya oleh Administrator Sistem.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : myPPOB.length === 0 ? (
+              {myPPOB.length === 0 ? (
                 <tr><td colSpan={isPengurus ? 8 : 6} className="px-8 py-24 text-center text-slate-300 italic font-black uppercase text-[10px] tracking-widest">Belum ada jejak transaksi digital</td></tr>
               ) : (
                 myPPOB.map((trx: any) => (

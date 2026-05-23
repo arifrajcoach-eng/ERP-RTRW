@@ -218,22 +218,16 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
            </div>
         </div>
         
-        {(!isAtLeastPengurus) ? (
-            <div className="py-32 text-center bg-white/30 dark:bg-slate-900/30 rounded-[4rem] border-2 border-dashed border-slate-100 dark:border-slate-800 flex flex-col items-center">
-              <ShieldCheck className="w-16 h-16 text-slate-200 dark:text-slate-800 mb-6" />
-              <p className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.4em] max-w-sm leading-relaxed">Privasi Akses: Daftar peminjaman hanya dapat dilihat oleh pengurus wilayah.</p>
-            </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {myBookings.length === 0 && (
-              <div className="py-24 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
-                <Calendar className="w-16 h-16 text-slate-200 dark:text-slate-800 mx-auto mb-6 opacity-50" />
-                <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest font-elegant">Agenda Kosong</h4>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-2">Nampaknya belum ada yang mereservasi fasilitas pada periode ini.</p>
-              </div>
-            )}
-            
-            {myBookings.map((b: any, idx: number) => (
+        {myBookings.length === 0 && (
+          <div className="py-24 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+            <Calendar className="w-16 h-16 text-slate-200 dark:text-slate-800 mx-auto mb-6 opacity-50" />
+            <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest font-elegant">Agenda Kosong</h4>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-2">Nampaknya belum ada yang mereservasi fasilitas pada periode ini.</p>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 gap-6">
+          {myBookings.map((b: any, idx: number) => (
               <motion.div 
                 key={b.id} 
                 initial={{ opacity: 0, x: -20 }}
@@ -319,7 +313,6 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
               </motion.div>
             ))}
           </div>
-        )}
       </div>
     </div>
   );
