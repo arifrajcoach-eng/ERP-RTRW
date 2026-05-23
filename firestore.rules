@@ -273,18 +273,18 @@ service cloud.firestore {
     // --- Warga & Kependudukan ---
 
     match /data_warga/{docId} {
-      allow list: if isTenantMember(resource.data.tenantId) || isTenantMemberStatic(resource.data.tenantId);
-      allow get: if resource == null || isTenantMember(resource.data.tenantId) || isTenantMemberStatic(resource.data.tenantId);
+      allow list: if isSignedIn() || isTenantMember(resource.data.tenantId) || isTenantMemberStatic(resource.data.tenantId);
+      allow get: if isSignedIn() || resource == null || isTenantMember(resource.data.tenantId) || isTenantMemberStatic(resource.data.tenantId);
       allow create: if isTenantMember(request.resource.data.tenantId);
       allow update: if isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId);
       allow delete: if isTenantMember(resource.data.tenantId);
     }
 
     match /verifikasi_warga/{docId} {
-      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || resource.data.authUid == request.auth.uid || isAdminStatic());
-      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || resource.data.authUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isTenantMember(resource.data.tenantId) || resource.data.authUid == request.auth.uid || isAdmin());
+      allow update: if isSignedIn();
       allow delete: if isAdmin() || (isPengurus() && isTenantMember(resource.data.tenantId));
     }
 

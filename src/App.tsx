@@ -9644,9 +9644,8 @@ function LoginView({
                 if (found) break;
                 const q = query(
                   collection(db, "data_warga"),
-                  where("tenantId", "==", tenantId),
                   where(field, "==", value),
-                  limit(5),
+                  limit(10),
                 );
                 const snap = await getDocs(q);
 
@@ -9654,7 +9653,7 @@ function LoginView({
                   for (const d of snap.docs) {
                     const cand = { docId: d.id, ...d.data() } as any;
                     const otherVal =
-                      token === cleanId ? cleanPass : cleanIdLower;
+                      token === cleanId ? cleanPassLower : cleanIdLower;
 
                     const cNik = String(cand.nik || "")
                       .trim()
@@ -9671,9 +9670,18 @@ function LoginView({
 
                     const matches =
                       cNik === otherVal ||
+                      (otherVal.replace(/\D/g, "") &&
+                        cNik.replace(/\D/g, "") ===
+                          otherVal.replace(/\D/g, "")) ||
                       cNama === otherVal ||
                       cHp === otherVal ||
-                      cKK === otherVal;
+                      (otherVal.replace(/\D/g, "") &&
+                        cHp.replace(/\D/g, "") ===
+                          otherVal.replace(/\D/g, "")) ||
+                      cKK === otherVal ||
+                      (otherVal.replace(/\D/g, "") &&
+                        cKK.replace(/\D/g, "") === otherVal.replace(/\D/g, ""));
+
                     if (matches) {
                       found = cand;
                       break;
@@ -9719,8 +9727,7 @@ function LoginView({
                 const q = query(
                   collection(db, "verifikasi_warga"),
                   where(field, "==", value),
-                  where("tenantId", "==", tenantId),
-                  limit(5),
+                  limit(10),
                 );
                 const snap = await getDocs(q);
                 if (!snap.empty) {
@@ -9742,9 +9749,17 @@ function LoginView({
                       .toLowerCase();
                     if (
                       cNik === otherVal ||
+                      (otherVal.replace(/\D/g, "") &&
+                        cNik.replace(/\D/g, "") ===
+                          otherVal.replace(/\D/g, "")) ||
                       cNama === otherVal ||
                       cHp === otherVal ||
-                      cKK === otherVal
+                      (otherVal.replace(/\D/g, "") &&
+                        cHp.replace(/\D/g, "") ===
+                          otherVal.replace(/\D/g, "")) ||
+                      cKK === otherVal ||
+                      (otherVal.replace(/\D/g, "") &&
+                        cKK.replace(/\D/g, "") === otherVal.replace(/\D/g, ""))
                     ) {
                       found = cand;
                       break;
