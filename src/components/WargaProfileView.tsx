@@ -69,6 +69,15 @@ export function WargaProfileView({
   const [files, setFiles] = useState<{ktp?: File, kk?: File}>({});
   const [uploading, setUploading] = useState(false);
 
+  // States for E-Administrasi
+  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [selectedLetterName, setSelectedLetterName] = useState<string | null>(null);
+  const [formKeperluan, setFormKeperluan] = useState<string>("");
+  const [formJenisKtpKk, setFormJenisKtpKk] = useState<string>("Surat pengantar pembuatan KTP");
+  const [formNamaUsaha, setFormNamaUsaha] = useState<string>("");
+  const [formJenisUsaha, setFormJenisUsaha] = useState<string>("");
+  const [formAlamatUsaha, setFormAlamatUsaha] = useState<string>("");
+
   const activeSubmission = verifikasiData.find(v => v.nik === wargaData.nik);
   const mySurat = suratData.filter(s => s.nik === wargaData.nik);
 
@@ -137,28 +146,107 @@ export function WargaProfileView({
     }
   };
 
-  const handleRequestSurat = async (jenis: string) => {
+  const generateMySuratPDF = (item: any) => {
+    if (!wargaData?.terverifikasi) {
+        showNotification('Surat tidak dapat dicetak: Identitas belum terverifikasi oleh Admin.', 'error');
+        return;
+    }
+    
+    const kop = kopSettings || getSetting("KOP_SURAT") || {};
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showNotification("Gagal membuka jendela cetak. Pastikan popup tidak diblokir.", "error");
+      return;
+    }
+
+    const mappedSurat = {
+      ...item,
+      jenisSurat: item.jenis,
+      nomor_surat: item.nomorSurat || item.nomor_surat,
+      jk: item.jenisKelamin || item.jk || wargaData.jk || wargaData.jenisKelamin || "-",
+      pekerjaan: item.pekerjaan || wargaData.profesi || "-",
+      statusKawin: item.statusKawin || wargaData.kawin || wargaData.statusKawin || "-",
+      keperluan: item.keterangan || item.keperluan || "-",
+    };
+
+    const content = generateSuratHTML(mappedSurat, kop, settings);
+    printWindow.document.write(content);
+    printWindow.document.close();
+    showNotification("Pratinjau cetak terbuka di tab baru", "info");
+  };
+
+  const handleRequestSurat = (jenisId: string, name: string) => {
+    setSelectedLetter(jenisId);
+    setSelectedLetterName(name);
+    setFormKeperluan("");
+    setFormJenisKtpKk("Surat pengantar pembuatan KTP");
+    setFormNamaUsaha("");
+    setFormJenisUsaha("");
+    setFormAlamatUsaha(wargaData.blok || wargaData.alamat || "");
+  };
+
+  const handleFormSubmitSurat = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoadingDB(true);
     try {
-      const id = `SRT-${Date.now()}`;
+      const id = `SRT-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      const nowStr = new Date().toISOString();
+      
+      let selectedJenisSurat = "Surat Pengantar";
+      let finalKeterangan = formKeperluan;
+
+      if (selectedLetter === 'ktp') {
+        selectedJenisSurat = formJenisKtpKk;
+      } else if (selectedLetter === 'domisili') {
+        selectedJenisSurat = "Surat pengantar domisili";
+      } else if (selectedLetter === 'skck') {
+        selectedJenisSurat = "Surat pengantar SKCK";
+      } else if (selectedLetter === 'sktm') {
+        selectedJenisSurat = "Surat keterangan tidak mampu (SKTM)";
+      } else if (selectedLetter === 'usaha') {
+        selectedJenisSurat = "Surat keterangan usaha (SKU)";
+        finalKeterangan = `Nama Usaha: ${formNamaUsaha}, Jenis Sektor: ${formJenisUsaha}, Alamat Usaha: ${formAlamatUsaha}. Keperluan: ${formKeperluan}`;
+      }
+
       const payload = {
         id,
         tenantId,
         rt: wargaData.rt || '01',
-        tanggal: new Date().toISOString(),
-        jenis,
+        rw: wargaData.rw || '26',
+        tanggal: nowStr,
+        createdAt: nowStr,
+        jenis: selectedJenisSurat,
         pemohon: wargaData.nama,
         nik: wargaData.nik,
+        kk: wargaData.kk || "",
         alamat: wargaData.blok || wargaData.alamat || "-",
+        kelurahan: wargaData.kelurahan || "",
+        kecamatan: wargaData.kecamatan || "",
+        kota: wargaData.kabupaten || "",
+        phone: wargaData.hp || "",
+        email: wargaData.email || "",
+        tempatLahir: wargaData.tempatLahir || "",
+        tglLahir: wargaData.tglLahir || "",
         ttl: `${wargaData.tempatLahir}, ${wargaData.tglLahir}`,
+        agama: wargaData.agama || "",
+        jenisKelamin: wargaData.jk || wargaData.jenisKelamin || "",
+        kewarganegaraan: wargaData.kewarganegaraan || "WNI",
+        pendidikan: wargaData.pendidikanTerakhir || "",
+        pekerjaan: wargaData.profesi || "",
+        statusKawin: wargaData.kawin || wargaData.statusKawin || "",
+        posisiKeluarga: wargaData.posisi || "",
         status: 'Menunggu Persetujuan RT',
-        keterangan: `Permohonan mandiri via aplikasi warga`,
+        keterangan: finalKeterangan,
         userId: wargaData.uid || wargaData.id_user || null,
+        authUid: wargaData.uid || wargaData.id_user || null,
         nomorSurat: getAutoNomorSurat(wargaData.rt || '01', wargaData.rw || '26')
       };
+
       await setDoc(doc(db, 'surat', id), payload);
       setSuratData((prev: any) => [payload, ...prev]);
       showNotification("Permohonan surat berhasil dikirim.", "success");
+      setSelectedLetter(null);
     } catch (err) {
       handleFirestoreError(err, 'create', 'surat');
     } finally {
@@ -376,7 +464,7 @@ export function WargaProfileView({
                            key={item.id} 
                            whileHover={{ y: -8, scale: 1.02, shadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }}
                            whileTap={{ scale: 0.98 }}
-                           onClick={() => handleRequestSurat(item.name)} 
+                           onClick={() => handleRequestSurat(item.id, item.name)} 
                            className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-xl hover:border-brand-blue/30 transition-all text-left flex flex-col gap-10 group relative overflow-hidden"
                          >
                             <div className="absolute -right-8 -top-8 w-24 h-24 bg-slate-50 dark:bg-slate-800/50 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
@@ -391,7 +479,7 @@ export function WargaProfileView({
                             </div>
                             <div className="relative z-10">
                                <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight group-hover:text-brand-blue transition-colors text-lg leading-tight">{item.name}</h4>
-                               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 uppercase font-black tracking-[0.2em] italic">Deploy Request</p>
+                               <p className="text-[10px] text-brand-blue mt-2 uppercase font-black tracking-[0.2em]">Ajukan Surat</p>
                             </div>
                             <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
                                <ChevronRight className="w-6 h-6 text-brand-blue" />
@@ -399,10 +487,272 @@ export function WargaProfileView({
                          </motion.button>
                       ))}
                    </div>
+
+                   {/* Riwayat Pengajuan Surat */}
+                   <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
+                      <div>
+                         <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant">Riwayat Pengajuan Surat Anda</h2>
+                         <p className="text-slate-400 text-xs font-bold uppercase mt-1 tracking-wider">Lacak status persetujuan surat pengantar mandiri secara live</p>
+                      </div>
+
+                      {mySurat.length === 0 ? (
+                         <div className="p-12 bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-[3rem] text-center flex flex-col items-center gap-4">
+                            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-300 dark:text-slate-600">
+                               <FileText className="w-8 h-8" />
+                            </div>
+                            <div>
+                               <p className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-tight text-sm">Belum ada permohonan surat</p>
+                               <p className="text-xs text-slate-400 mt-1 dark:text-slate-500 font-medium">Surat yang Anda ajukan di atas akan muncul di sini.</p>
+                            </div>
+                         </div>
+                      ) : (
+                         <div className="grid grid-cols-1 gap-6">
+                            {mySurat.map((item: any) => {
+                               let statusColor = "bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
+                               if (item.status === 'Selesai') {
+                                  statusColor = "bg-emerald-50 text-emerald-500 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
+                               } else if (item.status === 'Ditolak') {
+                                  statusColor = "bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20";
+                               } else if (item.status === 'Menunggu Persetujuan RW' || item.status === 'Menunggu Persetujuan') {
+                                  statusColor = "bg-orange-50 text-orange-500 border-orange-100 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20";
+                               }
+                               
+                               return (
+                                  <div 
+                                     key={item.id}
+                                     className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6"
+                                  >
+                                     <div className="space-y-3 flex-1">
+                                        <div className="flex flex-wrap items-center gap-3">
+                                           <span className={`px-4 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${statusColor}`}>
+                                              {item.status}
+                                           </span>
+                                           <span className="text-[10px] font-black text-slate-450 dark:text-slate-500 uppercase tracking-widest font-mono">
+                                              No: {item.nomorSurat || item.nomor_surat || "Belum ada nomor"}
+                                           </span>
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-tight">{item.jenis}</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                                           <div>
+                                              <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Tanggal:</span>{" "}
+                                              <span className="font-extrabold text-slate-650 dark:text-slate-300">{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                           </div>
+                                           {item.keterangan && (
+                                              <div className="col-span-1 md:col-span-2 mt-2">
+                                                 <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Keperluan/Keterangan:</span>
+                                                 <p className="text-slate-600 dark:text-slate-300 font-bold text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-2xl italic">
+                                                    "{item.keterangan}"
+                                                 </p>
+                                              </div>
+                                           )}
+                                           {item.catatan && (
+                                              <div className="col-span-1 md:col-span-2 mt-2">
+                                                 <span className="text-rose-450 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Catatan Penolakan/Otoritas:</span>
+                                                 <p className="text-rose-600 dark:text-rose-400 font-bold text-sm bg-rose-50/40 dark:bg-rose-500/5 p-4 rounded-2xl italic border border-rose-100/50 dark:border-rose-500/10">
+                                                    "{item.catatan}"
+                                                 </p>
+                                              </div>
+                                           )}
+                                        </div>
+                                     </div>
+                                     
+                                     <div className="flex items-center gap-3 shrink-0">
+                                        {item.status === 'Selesai' && (
+                                           <button
+                                              onClick={() => generateMySuratPDF(item)}
+                                              className="flex items-center justify-center gap-2.5 px-6 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/10 active:scale-95 transition-all"
+                                              title="Cetak Surat"
+                                           >
+                                              <Printer className="w-4 h-4" /> Cetak Surat
+                                           </button>
+                                        )}
+                                     </div>
+                                  </div>
+                               );
+                            })}
+                         </div>
+                      )}
+                   </div>
                 </motion.div>
              )}
           </AnimatePresence>
        </div>
+
+        {/* Modal Request Surat Baru */}
+        <AnimatePresence>
+           {selectedLetter && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedLetter(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+                 <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 flex flex-col max-h-[90vh]">
+                    <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                       <div>
+                          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant">Formulir Layanan Mandiri</h2>
+                          <p className="text-xs text-brand-blue font-bold tracking-widest uppercase mt-1">Layanan: {selectedLetterName}</p>
+                       </div>
+                       <button onClick={() => setSelectedLetter(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400 dark:text-slate-500"><X className="w-6 h-6" /></button>
+                    </div>
+                    <form onSubmit={handleFormSubmitSurat} className="p-8 overflow-y-auto space-y-6">
+                       
+                       {/* Section: Validasi Data Otomatis */}
+                       <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-slate-150 dark:border-slate-800 space-y-4">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Sertifikasi & Otentikasi Pemohon</label>
+                          <div className="grid grid-cols-2 gap-4 text-xs font-bold text-slate-700 dark:text-slate-300">
+                             <div>
+                                <span className="text-[10px] text-slate-400 block mb-0.5 uppercase">Nama Pemohon</span>
+                                <span className="uppercase">{wargaData.nama}</span>
+                             </div>
+                             <div>
+                                <span className="text-[10px] text-slate-400 block mb-0.5 uppercase">NIK</span>
+                                <span className="font-mono">{wargaData.nik}</span>
+                             </div>
+                             <div>
+                                <span className="text-[10px] text-slate-400 block mb-0.5 uppercase">Alamat Sesuai KTP</span>
+                                <span>{wargaData.blok || wargaData.alamat || "-"}</span>
+                             </div>
+                             <div>
+                                <span className="text-[10px] text-slate-400 block mb-0.5 uppercase">RT / RW</span>
+                                <span>RT {wargaData.rt || '01'} / RW {wargaData.rw || '26'}</span>
+                             </div>
+                          </div>
+                          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                             <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Identifikasi warga sinkron dengan sistem rtrw secara live.</p>
+                          </div>
+                       </div>
+
+                       {/* Section: Dynamic Input Fields */}
+                       
+                       {selectedLetter === 'ktp' && (
+                          <div className="space-y-4">
+                             <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Jenis Surat Pengantar</label>
+                                <select 
+                                   value={formJenisKtpKk} 
+                                   onChange={e => setFormJenisKtpKk(e.target.value)} 
+                                   className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none text-slate-800 dark:text-slate-200"
+                                >
+                                   <option value="Surat pengantar pembuatan KTP">Surat pengantar pembuatan KTP</option>
+                                   <option value="Surat pengantar pembuatan KK">Surat pengantar pembuatan KK</option>
+                                </select>
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Tujuan / Alasan Pembuatan (Keperluan)</label>
+                                <textarea 
+                                   required
+                                   value={formKeperluan}
+                                   onChange={e => setFormKeperluan(e.target.value)}
+                                   placeholder="Contoh: Keperluan cetak KTP baru karena hilang / baru menginjak usia 17 tahun" 
+                                   className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none min-h-[100px] text-slate-800 dark:text-slate-200"
+                                />
+                             </div>
+                          </div>
+                       )}
+
+                       {selectedLetter === 'domisili' && (
+                          <div>
+                             <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Maksud / Keperluan Surat Keterangan Domisili</label>
+                             <textarea 
+                                required
+                                value={formKeperluan}
+                                onChange={e => setFormKeperluan(e.target.value)}
+                                placeholder="Contoh: Persyaratan pembukaan rekening Bank Mandiri / Melamar pekerjaan di PT Astra" 
+                                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none min-h-[100px] text-slate-800 dark:text-slate-200"
+                             />
+                          </div>
+                       )}
+
+                       {selectedLetter === 'skck' && (
+                          <div>
+                             <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Keperluan Pembuatan SKCK</label>
+                             <textarea 
+                                required
+                                value={formKeperluan}
+                                onChange={e => setFormKeperluan(e.target.value)}
+                                placeholder="Contoh: Keperluan melamar pekerjaan sebagai PNS / Melamar kerja swasta" 
+                                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none min-h-[100px] text-slate-800 dark:text-slate-200"
+                             />
+                          </div>
+                       )}
+
+                       {selectedLetter === 'sktm' && (
+                          <div>
+                             <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Keperluan Surat Keterangan Tidak Mampu (SKTM)</label>
+                             <textarea 
+                                required
+                                value={formKeperluan}
+                                onChange={e => setFormKeperluan(e.target.value)}
+                                placeholder="Contoh: Keperluan beasiswa studi anak sekolah / Keringanan biaya rumah sakit" 
+                                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none min-h-[100px] text-slate-800 dark:text-slate-200"
+                             />
+                          </div>
+                       )}
+
+                       {selectedLetter === 'usaha' && (
+                          <div className="space-y-4">
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                   <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Nama Usaha / Toko</label>
+                                   <input 
+                                      type="text" 
+                                      required
+                                      value={formNamaUsaha}
+                                      onChange={e => setFormNamaUsaha(e.target.value)}
+                                      placeholder="Contoh: Toko Kelontong Suka Maju" 
+                                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none text-slate-800 dark:text-slate-200" 
+                                   />
+                                </div>
+                                <div>
+                                   <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Sektor / Jenis Usaha</label>
+                                   <input 
+                                      type="text" 
+                                      required
+                                      value={formJenisUsaha}
+                                      onChange={e => setFormJenisUsaha(e.target.value)}
+                                      placeholder="Contoh: Perdagangan Kelontong / Kedai Makanan" 
+                                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none text-slate-800 dark:text-slate-200" 
+                                   />
+                                </div>
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Alamat Lokasi Tempat Usaha</label>
+                                <input 
+                                   type="text" 
+                                   required
+                                   value={formAlamatUsaha}
+                                   onChange={e => setFormAlamatUsaha(e.target.value)}
+                                   placeholder="Contoh: Ruko Katala Baru Blok K12 No 2" 
+                                   className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none text-slate-800 dark:text-slate-200" 
+                                />
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Keperluan Pembuatan SKU</label>
+                                <textarea 
+                                   required
+                                   value={formKeperluan}
+                                   onChange={e => setFormKeperluan(e.target.value)}
+                                   placeholder="Contoh: Persyaratan pengajuan kredit usaha mikro (KUR) di Bank Mandiri" 
+                                   className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none min-h-[100px] text-slate-800 dark:text-slate-200"
+                                />
+                             </div>
+                          </div>
+                       )}
+
+                       <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex gap-4 shrink-0 font-bold">
+                          <button type="button" onClick={() => setSelectedLetter(null)} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-450 hover:text-slate-700 dark:hover:text-slate-200 transition-all">Batal</button>
+                          <button type="submit" disabled={isLoadingDB} className="flex-[2] py-4 bg-brand-blue text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-brand-blue/20 hover:bg-brand-blue-dark transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 font-black">
+                             {isLoadingDB ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                             ) : (
+                                <CheckCircle className="w-4 h-4" />
+                             )}
+                             Kirim Pengajuan Surat
+                          </button>
+                       </div>
+                    </form>
+                 </motion.div>
+              </div>
+           )}
+        </AnimatePresence>
 
        {/* Modal Update Data Mandiri */}
        <AnimatePresence>
