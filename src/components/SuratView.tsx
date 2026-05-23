@@ -179,7 +179,20 @@ export function SuratView({
 
   const filteredSurat = suratData.filter(s => {
     // Role based access
-    if (!isPengurus && s.userId !== (currentUser.uid || currentUser.id_user)) return false;
+    if (!isPengurus) {
+      const citizenNik = currentUser?.nik || currentUser?.nikMapping || "";
+      const uid = currentUser?.uid || currentUser?.id_user || "";
+      
+      // Look for my warga record to find family NIKs
+      const myWargaRecord = wargaData.find((w: any) => w.nik === citizenNik);
+      const familyNiks = myWargaRecord?.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
+      
+      const matchesOwnNik = citizenNik && s.nik === citizenNik;
+      const matchesFamilyNik = s.nik && familyNiks.includes(s.nik);
+      const matchesUid = uid && (s.authUid === uid || s.userId === uid);
+      
+      if (!matchesOwnNik && !matchesFamilyNik && !matchesUid) return false;
+    }
     
     const matchesSearch = s.pemohon?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.jenis?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -194,8 +207,9 @@ export function SuratView({
 
   const generateSuratPDF = (surat: any) => {
     // Identity verification check
-    const warga = wargaData.find(w => w.nik === surat.nik);
-    if (!warga?.terverifikasi) {
+    const warga = wargaData.find(w => w.nik === surat.nik) || (currentUser?.nik === surat.nik ? currentUser : null);
+    const isWargaVerified = warga?.terverifikasi === true || warga?.status === "Disetujui" || (currentUser?.role?.toUpperCase() === "WARGA" && currentUser?.status === "Disetujui");
+    if (!isWargaVerified) {
         showNotification('Surat tidak dapat dicetak: Identitas belum terverifikasi oleh Admin.', 'error');
         return;
     }
@@ -717,14 +731,7 @@ export function SuratView({
         </div>
 
         <div className="p-2 sm:p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 bg-slate-50/30 dark:bg-transparent">
-          {!isPengurus ? (
-            <div className="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
-               <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800/50 rounded-2xl flex items-center justify-center mb-8 border border-white dark:border-slate-800">
-                  <ShieldCheck className="w-12 h-12 opacity-50" />
-               </div>
-               <p className="font-black text-xs uppercase tracking-widest max-w-sm text-center leading-relaxed">Akses Dokumen Terbatas. Silakan hubungi admin untuk informasi lebih lanjut.</p>
-            </div>
-          ) : filteredSurat.length === 0 ? (
+          {filteredSurat.length === 0 ? (
             <div className="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
                <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800/50 rounded-2xl flex items-center justify-center mb-8 border border-white dark:border-slate-800">
                   <Files className="w-12 h-12 opacity-50" />
@@ -761,11 +768,18 @@ export function SuratView({
                         </span>
                       </td>
                       <td className="px-6 py-4 flex items-center justify-center gap-2">
-                        {isPengurus && (
+                        {s.status === 'Selesai' ? (
+                          <button 
+                            onClick={() => generateSuratPDF(s)} 
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/30"
+                            title="Cetak Surat PDF"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>Cetak</span>
+                          </button>
+                        ) : isPengurus && (
                           <>
-                            {s.status === 'Selesai' ? (
-                              <button onClick={() => generateSuratPDF(s)} className="p-2 text-brand-blue hover:text-brand-blue/80"><Printer className="w-4 h-4" /></button>
-                            ) : (
+                            {false ? null : (
                                (((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
                                (s.status.includes('Persetujuan RW') && isRWUser)) && (
                                 <button onClick={() => handleApproveSurat(s)} className="p-2 text-emerald-600 hover:text-emerald-700"><CheckCircle2 className="w-4 h-4" /></button>
@@ -776,7 +790,9 @@ export function SuratView({
                             )}
                           </>
                         )}
-                        <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 text-slate-400 hover:text-slate-600"><Edit className="w-4 h-4" /></button>
+                        {(isPengurus || s.userId === (currentUser?.uid || currentUser?.id_user) || s.authUid === (currentUser?.uid || currentUser?.id_user)) && (
+                          <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 text-slate-400 hover:text-slate-600" title="Edit"><Edit className="w-4 h-4" /></button>
+                        )}
                          {isGlobalSuperAdmin && (
                           <button onClick={() => setSuratToDelete(s)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>
                         )}
