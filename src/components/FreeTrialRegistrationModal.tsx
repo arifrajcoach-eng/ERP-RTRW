@@ -132,7 +132,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
         rt: formData.rt || '01',
         status: 'AKTIF',
         createdAt: new Date().toISOString(),
-        isSuperAdmin: false,
+        isSuperAdmin: true,
         setupAssistantCompleted: false,
         lastOnline: new Date().toISOString()
       };
@@ -150,6 +150,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       batchOp.set(doc(db, 'users', uid), newUser); // Save with real UID
       batchOp.set(doc(db, 'settings', tenantId), newSettings);
       await batchOp.commit();
+      sessionStorage.removeItem(`user_profile_${auth.currentUser?.uid}`);
       
       try {
         await fetch('/api/messages/welcome', {

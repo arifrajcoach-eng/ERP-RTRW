@@ -38,7 +38,6 @@ interface IuranViewProps {
   handleFirestoreError: (error: any, operation: string, path: string) => void;
   handleFileUpload: (file: File, path: string) => Promise<string>;
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
-  plan?: string;
 }
 
 export function IuranView({ 
@@ -54,8 +53,7 @@ export function IuranView({
   setIsLoadingDB, 
   handleFirestoreError, 
   handleFileUpload, 
-  showNotification,
-  plan
+  showNotification 
 }: IuranViewProps) {
   const isApt = getSetting("themeMode") === "apartemen";
   const [activeSubTab, setActiveSubTab] = useState<'pembayaran' | 'rekap'>('pembayaran');
@@ -67,8 +65,6 @@ export function IuranView({
   const [jenisPembayaran, setJenisPembayaran] = useState('Iuran Warga');
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWargaId, setSelectedWargaId] = useState<string>("");
-
-  const isStarter = !plan || plan.toUpperCase().includes('STARTER') || plan.toUpperCase().includes('TRIAL');
 
   React.useEffect(() => {
     if (wargaData && wargaData.length > 0 && currentUser) {
@@ -1023,17 +1019,11 @@ export function IuranView({
                 {!editingTrx && (
                   <button 
                     type="button" 
-                    onClick={(e) => {
-                      if (isStarter) {
-                        showNotification("Fitur Pembayaran Online (QRIS/VA) tersedia mulai Paket FLASH. Silakan Upgrade!", "info");
-                        return;
-                      }
-                      handleStartPg(e);
-                    }} 
-                    className={`flex-1 ${isStarter ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95'} px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] transition-all flex items-center justify-center gap-3`}
+                    onClick={handleStartPg} 
+                    className="flex-1 bg-gradient-to-r from-indigo-600 to-violet-700 text-white px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                   >
                     <QrCode className="w-5 h-5" />
-                    {isStarter ? 'BAYAR ONLINE (LOCK)' : 'BAYAR ONLINE (QRIS/VA)'}
+                    BAYAR ONLINE (QRIS/VA)
                   </button>
                 )}
               </div>

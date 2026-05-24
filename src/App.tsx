@@ -695,17 +695,12 @@ export default function App() {
             if (isMasterEmail) {
               const isAdminStatusWrong =
                 userData.role !== "SUPER_ADMIN" ||
-                !userData.isSuperAdmin;
+                !userData.isSuperAdmin ||
+                userData.tenantId !== "MASTER";
 
               userData.isSuperAdmin = true;
               userData.role = "SUPER_ADMIN";
-              
-              // Only force MASTER if no tenantId is set
-              if (!userData.tenantId) {
-                userData.tenantId = "MASTER";
-                needsUpdate = true;
-              }
-              
+              userData.tenantId = "MASTER";
               if (!userData.name || userData.name === "User") {
                 userData.name = "Bpk. Arif (Super Admin)";
               }
@@ -2119,14 +2114,14 @@ export default function App() {
         label: "VERIFIKASI",
         icon: ShieldCheck,
         plan: "verifikasi",
-        minPlan: "PRO",
+        minPlan: "BASIC",
       },
       {
         id: "keuangan",
         label: isApt ? "Keuangan / IPL" : "Keuangan",
         icon: CreditCard,
         plan: "keuangan",
-        minPlan: "STARTER",
+        minPlan: "BASIC",
       },
       {
         id: "posyandu",
@@ -2167,7 +2162,7 @@ export default function App() {
         label: "Surat",
         icon: FileText,
         plan: "surat",
-        minPlan: "STARTER",
+        minPlan: "BASIC",
       },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
       { id: "leads", label: "CRM & Leads", icon: Users },
@@ -8991,24 +8986,14 @@ function LoginView({
 
           for (const token of tokens) {
             if (found) break;
-            const digits = token.replace(/\D/g, "");
             const isNumeric = /^\d+$/.test(token);
-            const searchFields = [
-              "nik",
-              "hp",
-              "nama",
-              "name",
-              "kk",
-              "no_kk",
-              "kodeKeluarga",
-              "nomor_kk",
-            ];
+            const searchFields = ["nik", "hp", "nama", "kk", "no_kk"];
 
             for (const field of searchFields) {
               if (found) break;
 
               const variants: any[] = [];
-              if (field === "nama" || field === "name" || field === "pemohon") {
+              if (field === "nama") {
                 const titleCase = token
                   .split(" ")
                   .map(
@@ -9021,13 +9006,10 @@ function LoginView({
                   token.toLowerCase(),
                   titleCase,
                 );
+              } else if (isNumeric) {
+                variants.push(token, Number(token));
               } else {
                 variants.push(token);
-                if (isNumeric) variants.push(Number(token));
-                if (digits && digits !== token) {
-                  variants.push(digits);
-                  variants.push(Number(digits));
-                }
               }
 
               for (const value of variants) {
@@ -9052,24 +9034,12 @@ function LoginView({
                 // 3. Fallback: Check in surat (since user mentioned making a letter)
                 const qSurat = query(
                   collection(db, "surat"),
-                  where(
-                    field === "nama" || field === "name" ? "pemohon" : field,
-                    "==",
-                    value,
-                  ),
+                  where(field === "nama" ? "pemohon" : field, "==", value),
                   limit(5),
                 );
                 const sSurat = await getDocs(qSurat);
 
-                // 4. Check in users (for previously verified users)
-                const qUsers = query(
-                  collection(db, "users"),
-                  where(field === "nama" ? "name" : field, "==", value),
-                  limit(5),
-                );
-                const sUsers = await getDocs(qUsers);
-
-                const allSnaps = [sWarga, sVerif, sSurat, sUsers];
+                const allSnaps = [sWarga, sVerif, sSurat];
 
                 for (const snap of allSnaps) {
                   if (found) break;
@@ -9082,21 +9052,13 @@ function LoginView({
                       const cNik = String(cand.nik || "")
                         .trim()
                         .toLowerCase();
-                      const cNama = String(
-                        cand.nama || cand.name || cand.pemohon || "",
-                      )
+                      const cNama = String(cand.nama || cand.pemohon || "")
                         .trim()
                         .toLowerCase();
                       const cHp = String(cand.hp || cand.phone || "")
                         .trim()
                         .toLowerCase();
-                      const cKK = String(
-                        cand.kk ||
-                          cand.no_kk ||
-                          cand.nomor_kk ||
-                          cand.kodeKeluarga ||
-                          "",
-                      )
+                      const cKK = String(cand.kk || cand.kodeKeluarga || "")
                         .trim()
                         .toLowerCase();
 

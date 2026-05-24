@@ -313,7 +313,7 @@ service cloud.firestore {
     }
 
     match /emergencies/{docId} {
-      allow list: if isTenantMemberStatic(resource.data.tenantId);
+      allow list: if isSignedIn();
       allow get: if isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn();
       allow update: if isTenantMember(resource.data.tenantId) || 
