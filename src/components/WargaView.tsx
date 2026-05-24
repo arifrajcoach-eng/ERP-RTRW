@@ -562,16 +562,24 @@ function WargaView(props: WargaViewProps) {
       try {
         let successCount = 0;
         let duplicateCount = 0;
-        const CHUNK_SIZE = 450; // Firestore limit is 500, use 450 to be safe
+        let skippedCount = 0;
+        const currentCount = wargaData.length;
+
+        const CHUNK_SIZE = 450; 
         const uniqueIds = new Set();
         
-        // Split data into chunks of 450
         for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
           const chunk = parsedData.slice(i, i + CHUNK_SIZE);
           const batch = writeBatch(db);
           let opsInBatch = 0;
 
-          chunk.forEach((row: any) => {
+          chunk.forEach((row: any, idx: number) => {
+            // Check limit
+            if (currentCount + successCount >= maxWargaLimit) {
+              skippedCount++;
+              return;
+            }
+
             const rawNik = (row.nik || row.NIK || row['No. KTP'] || row['NIK/No. KTP'] || row['NOMOR KTP'] || row['Nomor KTP'] || row['No KTP'] || row['NIK '] || row['nik '] || row['N.I.K'] || '')?.toString()?.trim();
             const nama = row.nama || row.Nama || row['Nama Lengkap'] || row['NAMA'] || row['Nama Warga'] || row['NAMA LENGKAP'];
             
@@ -1321,6 +1329,12 @@ function WargaView(props: WargaViewProps) {
                           setWargaData(wargaData.map((w: any) => (w.docId || w.id || `${tenantId}_${w.nik}`) === targetId ? { ...w, ...finalData } : w));
                           showNotification('Data warga berhasil diubah', 'success');
                         } else {
+                          // Strict Plan Enforcement
+                          if (limitReached) {
+                            showNotification(`Gagal Tambah: Limit ${maxWargaLimit} Warga untuk paket Anda sudah tercapai. Silakan Upgrade!`, 'error');
+                            setIsLoadingDB(false);
+                            return;
+                          }
                           await setDoc(doc(db, 'data_warga', docId), finalData);
                           setWargaData([...wargaData, finalData]);
                           showNotification('Warga baru berhasil ditambahkan', 'success');
