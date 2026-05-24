@@ -2200,7 +2200,7 @@ export default function App() {
         const role = currentUser?.role || "TAMU";
         const isSuperAdmin = !!currentUser?.isSuperAdmin;
         const isVerified = linkedWarga?.terverifikasi === true;
-        const planConfig = getPlanFeatures(currentTenant?.status);
+        const planConfig = getPlanFeatures(currentTenant);
         const isFreePlan =
           (currentTenant?.status || "TRIAL") === "TRIAL" ||
           (currentTenant?.status || "TRIAL") === "FREE";
@@ -2353,10 +2353,10 @@ export default function App() {
         return allowed.includes(item.id);
       })
       .map((item) => {
-        const planConfig = getPlanFeatures(currentTenant?.status);
+        const planConfig = getPlanFeatures(currentTenant);
         const isLocked =
           item.plan &&
-          (!currentTenant || (planConfig as any)[item.plan] === false);
+          (!currentTenant || (planConfig as any)[item.plan] === false || (planConfig as any)[item.plan] === "NONE");
 
         let label = item.label;
         let icon = item.icon;
@@ -2726,7 +2726,7 @@ export default function App() {
             </p>
           </div>
           <div className="p-3 bg-white/80 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-brand-blue/20">
-            {getPlanFeatures(currentTenant?.status).multiRegion ? (
+            {getPlanFeatures(currentTenant).multiRegion ? (
               <div className="space-y-1.5">
                 <label className="text-[9px] text-brand-blue font-black uppercase tracking-widest pl-1">
                   Wilayah Kerja
@@ -3107,7 +3107,7 @@ export default function App() {
             />
           )}
           {activeTab === "posyandu" &&
-            (getPlanFeatures(currentTenant?.status).posyandu ? (
+            (getPlanFeatures(currentTenant).posyandu ? (
               <PosyanduView
                 balitaData={filteredBalitaDataCentral}
                 setBalitaData={setBalitaData}
@@ -3151,7 +3151,7 @@ export default function App() {
               </div>
             ))}
           {activeTab === "bank-sampah" &&
-            (getPlanFeatures(currentTenant?.status).bankSampah ? (
+            (getPlanFeatures(currentTenant).bankSampah ? (
               <BankSampahView
                 sampahKategoriData={sampahKategoriData}
                 sampahSetoranData={sampahSetoranData}
@@ -3311,7 +3311,7 @@ export default function App() {
             />
           )}
           {activeTab === "voting" &&
-            (getPlanFeatures(currentTenant?.status).ePemilu ? (
+            (getPlanFeatures(currentTenant).ePemilu ? (
               <EVotingView
                 userRole={currentUser.role}
                 tenantId={currentUser.tenantId || "rw26_berjuang"}
@@ -3356,11 +3356,11 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
-              accessMode={getPlanFeatures(currentTenant?.status).eLapak}
+              accessMode={getPlanFeatures(currentTenant).eLapak}
             />
           )}
           {activeTab === "analitik" &&
-            (getPlanFeatures(currentTenant?.status).analytics ? (
+            (getPlanFeatures(currentTenant).analytics ? (
               <AnalyticsPremiumView
                 tenantId={currentUser.tenantId}
                 kasData={filteredKasDataCentral}
@@ -3388,7 +3388,7 @@ export default function App() {
               </div>
             ))}
           {activeTab === "cctv" &&
-            (getPlanFeatures(currentTenant?.status).cctv ? (
+            (getPlanFeatures(currentTenant).cctv ? (
               <CCTVView
                 tenantId={currentUser.tenantId}
                 settings={settings}
@@ -3413,7 +3413,7 @@ export default function App() {
               </div>
             ))}
           {activeTab === "monitoring" &&
-            (getPlanFeatures(currentTenant?.status).multiRegion ? (
+            (getPlanFeatures(currentTenant).multiRegion ? (
               <EnterpriseGovDashboard
                 tenantId={currentUser.tenantId}
                 wargaData={wargaData}
@@ -3433,7 +3433,7 @@ export default function App() {
               </div>
             ))}
           {activeTab === "audit" &&
-            (getPlanFeatures(currentTenant?.status).governance === "HIGH" ? (
+            (getPlanFeatures(currentTenant).governance === "HIGH" ? (
               <AuditLogView logs={auditLogs} />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
