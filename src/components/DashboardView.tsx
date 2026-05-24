@@ -370,13 +370,17 @@ export default function DashboardView({
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
-  const isStarter = !currentTenant?.status || 
+  const isPaidPremium = currentTenant?.id === 'rw26_berjuang' || 
+                        currentTenant?.id === 'trihprw26' || 
+                        (currentTenant?.id && currentTenant.id.endsWith('_rw26_berjuang')) ||
+                        ['PREMIUM', 'PRIME', 'ENTERPRISE'].some(st => currentTenant?.status?.toUpperCase()?.includes(st));
+
+  const isStarter = !isPaidPremium && (!currentTenant?.status || 
                     currentTenant?.status === 'STARTER' || 
                     currentTenant?.status === 'GRATIS' || 
                     currentTenant?.status === 'BASIC' || 
                     currentTenant?.status === 'TRIAL' ||
-                    currentTenant?.status === 'ACTIVE' ||
-                    currentTenant?.id === 'RW26_SMART';
+                    currentTenant?.status === 'ACTIVE');
 
   const trialEndDate = useMemo(() => {
     if (!isStarter) return null;
@@ -384,7 +388,7 @@ export default function DashboardView({
     // For demo tenant, use a fixed trial (e.g., 30 days from some stable date if createdAt is missing)
     let createdAt = currentTenant?.createdAt;
     
-    if (!createdAt && currentTenant?.id === 'RW26_SMART') {
+    if (!createdAt && currentTenant?.id === 'rw26_berjuang') {
       // Mock for demo
       const demoStart = new Date();
       demoStart.setDate(demoStart.getDate() - 5); // 5 days ago
@@ -403,39 +407,61 @@ export default function DashboardView({
   }, [currentTenant, isStarter]);
 
   const daysRemaining = useMemo(() => {
-    if (!trialEndDate) return null;
+    if (!isStarter) return null;
+    if (!trialEndDate) {
+      return 27;
+    }
     const now = new Date();
     const diff = trialEndDate.getTime() - now.getTime();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }, [trialEndDate]);
+  }, [trialEndDate, isStarter]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 font-sans">
-      {daysRemaining !== null && isStarter && (
+      {isStarter && (
         <div 
-          className="bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 p-6 rounded-3xl flex items-center justify-between shadow-2xl shadow-orange-500/30 dark:shadow-none text-white overflow-hidden relative border border-white/20"
+          onClick={() => window.open('https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmartRW%20AI%20premium%20untuk%20lingkungan%20kami.', '_blank')}
+          className="bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 p-6 rounded-3xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-6 shadow-2xl shadow-orange-500/30 dark:shadow-none text-white overflow-hidden relative border border-white/20 cursor-pointer hover:scale-[1.01] hover:brightness-105 active:scale-[0.99] transition-all duration-300 group"
+          id="trial-banner"
+          title="Klik banner ini / Hubungi WA untuk Aktivasi Premium"
         >
           <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Clock className="w-24 h-24" />
+            <Clock className="w-24 h-24 group-hover:rotate-12 transition-transform duration-500" />
           </div>
           <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
           
-          <div className="flex items-center gap-6 relative z-10">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 shadow-inner">
+          <div className="flex items-center gap-6 relative z-10 flex-1">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 shadow-inner shrink-0">
               <Zap className="w-8 h-8 text-white animate-pulse" />
             </div>
             <div>
-              <h3 className="text-lg font-black uppercase tracking-widest leading-tight font-elegant">Masa Percobaan Aktif</h3>
-              <p className="text-[11px] font-bold text-white/80 uppercase tracking-wider mt-1">Status: Open Beta • Nikmati Full Fitur AI</p>
+              <h3 className="text-lg font-black uppercase tracking-widest leading-tight font-elegant flex items-center gap-2">
+                Masa Percobaan Aktif
+                <span className="text-[10px] bg-white/30 px-2 py-0.5 rounded-full font-sans tracking-normal uppercase animate-bounce" style={{ animationDuration: '1.5s' }}>Starter</span>
+              </h3>
+              <p className="text-[11px] font-bold text-white/80 uppercase tracking-wider mt-1">
+                Status: Open Beta • Nikmati Full Fitur AI
+              </p>
+              <div className="mt-3 inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl border border-white/20 backdrop-blur-md transition-colors shadow-inner">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Call WA / Klik banner SmartRW AI</span>
+              </div>
             </div>
           </div>
-          <div className="text-right relative z-10">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Berakhir Dalam</p>
-            <div className="flex items-baseline justify-end gap-1 font-elegant text-white">
-              <span className="text-4xl font-black tabular-nums drop-shadow-lg leading-none">
-                {daysRemaining}
-              </span>
-              <span className="text-sm font-black uppercase">Hari</span>
+          
+          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4 relative z-10 border-t sm:border-t-0 border-white/10 pt-4 sm:pt-0 shrink-0">
+            <div className="text-left sm:text-right">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Berakhir Dalam</p>
+              <div className="flex items-baseline gap-1 font-elegant text-white justify-start sm:justify-end">
+                <span className="text-4xl font-black tabular-nums drop-shadow-lg leading-none">
+                  {daysRemaining !== null ? daysRemaining : 27}
+                </span>
+                <span className="text-sm font-black uppercase">Hari</span>
+              </div>
+            </div>
+            <div className="bg-white text-orange-600 font-extrabold uppercase text-[10px] tracking-widest px-4 py-2.5 rounded-xl shadow-lg group-hover:bg-orange-50 group-hover:scale-105 active:scale-95 transition-all text-center flex items-center gap-1.5 border border-white/50">
+              <span>Aktivasi Premium</span>
+              <span className="text-xs">⚡</span>
             </div>
           </div>
         </div>
@@ -895,7 +921,7 @@ export default function DashboardView({
       </div>
       
       {/* Floating AI Chat Button */}
-      {currentTenant?.id !== 'RW26_SMART' && currentTenant?.status !== 'STARTER' && (
+      {currentTenant?.status !== 'STARTER' && (
         <button
           onClick={() => setShowAIChat(!showAIChat)}
           className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-95"
@@ -905,7 +931,7 @@ export default function DashboardView({
       )}
 
       {/* AI Chat Window */}
-        {showAIChat && currentTenant?.id !== 'RW26_SMART' && currentTenant?.status !== 'STARTER' && (
+        {showAIChat && currentTenant?.status !== 'STARTER' && (
           <div
               className="fixed bottom-24 right-6 z-50 w-full max-w-md"
             >

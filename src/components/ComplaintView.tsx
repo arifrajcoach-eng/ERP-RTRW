@@ -128,7 +128,7 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'complaints'), {
-        tenantId: currentUser.tenantId || 'RW26_SMART',
+        tenantId: currentUser.tenantId || 'rw26_berjuang',
         userId: currentUser.uid || 'anonymous',
         namaWarga: currentUser.name || currentUser.nama || 'Warga',
         jenisKeluhan,

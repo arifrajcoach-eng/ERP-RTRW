@@ -120,7 +120,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
       }
 
       await addDoc(collection(db, 'bookings'), {
-        tenantId: currentUser.tenantId || 'RW26_SMART',
+        tenantId: currentUser.tenantId || 'rw26_berjuang',
         userId: currentUser.uid || currentUser.id_user || 'anonymous',
         namaWarga: currentUser.name || currentUser.nama || 'Warga',
         namaFasilitas,

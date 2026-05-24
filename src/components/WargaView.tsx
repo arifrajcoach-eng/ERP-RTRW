@@ -192,39 +192,32 @@ function WargaView(props: WargaViewProps) {
         if (tId === "rw26_berjuang" || tId.endsWith("_rw26_berjuang")) {
           // Strictly isolate developer master tenant and its sub-tenants to prevent cross-tenant leakage
         } else if (
-          tId === "RW_BERJUANG" ||
           tId === "rw26_berjuang" ||
-          tId === "rt01_rw26" ||
           tId === "trihprw26" ||
-          tId === "RW26_SMART" ||
           tId.toLowerCase().includes("berjuang") ||
           tId.toLowerCase().includes("trih") ||
           tId.toLowerCase().includes("rw26")
         ) {
           if (!tId.toLowerCase().includes("rt")) {
              tIdsToClean.push(
-               "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
-               "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26", "rt05_rw26",
-               "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang", "rt05_rw_berjuang",
+               "rw26_berjuang", "trihprw26",
                "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang",
-               "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04",
                "MASTER"
              );
           } else {
-             tIdsToClean.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26");
+             tIdsToClean.push("rw26_berjuang", "trihprw26");
           }
         } else if (tId.toLowerCase().includes("rt")) {
-          tIdsToClean.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26");
+          tIdsToClean.push("rw26_berjuang", "trihprw26");
         }
         
         if (currentTenant?.parentId && (tId !== "rw26_berjuang" && !tId.endsWith("_rw26_berjuang"))) {
           tIdsToClean.push(currentTenant.parentId);
           if (
-            currentTenant.parentId === "RW_BERJUANG" ||
             currentTenant.parentId === "rw26_berjuang" ||
             currentTenant.parentId === "trihprw26"
           ) {
-            tIdsToClean.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART");
+            tIdsToClean.push("rw26_berjuang", "trihprw26");
           }
         }
         const uniqueTids = Array.from(new Set(tIdsToClean));
@@ -313,11 +306,8 @@ function WargaView(props: WargaViewProps) {
             ? ([currentTenant?.parentId].filter(Boolean) as string[])
             : Array.from(new Set([
                 currentTenant?.parentId,
-                'RW_BERJUANG',
-                'rw_berjuang',
-                'trihprw26',
-                'RW26_SMART',
-                'rw26_smart'
+                'rw26_berjuang',
+                'trihprw26'
             ].filter(Boolean) as string[]));
 
         console.log("Querying potential parent tenants:", potentialParentIDs);
@@ -406,7 +396,7 @@ function WargaView(props: WargaViewProps) {
         }
 
         // Perform Push (Write local citizens from this RT child tenant up to the parent RW)
-        const primaryParentID = currentTenant?.parentId || potentialParentIDs[0] || 'RW_BERJUANG';
+        const primaryParentID = currentTenant?.parentId || potentialParentIDs[0] || 'rw26_berjuang';
         if (localDocs.length > 0 && primaryParentID) {
             const parentNIKs = new Set(allParentDocs.map(item => (item.data.nik || '').toString().trim()).filter(Boolean));
             const docsToPush = localDocs.filter(d => {

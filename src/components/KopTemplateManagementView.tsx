@@ -136,7 +136,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const tenantId = currentUser.tenantId || 'RW26_SMART';
+  const tenantId = currentUser.tenantId || 'rw26_berjuang';
   const previewRef = useRef<HTMLDivElement>(null);
 
   const handleCetak = () => {
@@ -647,7 +647,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
 function TemplateList({ currentUser, showNotification, handleFirestoreError }: { currentUser: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
   const [selectedCategory, setSelectedCategory] = useState('surat');
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-  const tenantId = currentUser.tenantId || 'RW26_SMART';
+  const tenantId = currentUser.tenantId || 'rw26_berjuang';
   
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'tenant_settings', tenantId), (snap) => {

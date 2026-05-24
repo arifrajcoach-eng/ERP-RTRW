@@ -683,8 +683,8 @@ export default function App() {
               user.email?.toLowerCase().includes("handoko");
             let needsUpdate = false;
 
-            if (isTrihUser && userData.tenantId !== "RW_BERJUANG") {
-              userData.tenantId = "RW_BERJUANG";
+            if (isTrihUser && userData.tenantId !== "trihprw26") {
+              userData.tenantId = "trihprw26";
               userData.role = "ADMIN";
               needsUpdate = true;
             }
@@ -731,7 +731,7 @@ export default function App() {
                 : "Warga (Anonymous)",
               role: overrideAdmin ? "SUPER_ADMIN" : "Warga",
               uid: user.uid,
-              tenantId: overrideAdmin ? "MASTER" : "RW26_SMART",
+              tenantId: overrideAdmin ? "MASTER" : "rw26_berjuang",
               isSuperAdmin: overrideAdmin,
             });
           } else {
@@ -796,7 +796,7 @@ export default function App() {
                   username: user.email?.split("@")[0] || "user",
                   role: isMasterEmail ? "SUPER_ADMIN" : "ADMIN",
                   email: user.email,
-                  tenantId: isMasterEmail ? "MASTER" : "RW_BERJUANG",
+                  tenantId: isMasterEmail ? "MASTER" : "trihprw26",
                   isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
@@ -901,50 +901,6 @@ export default function App() {
     }
     return INITIAL_WARGA_DATA;
   });
-
-  const realRWList = useMemo(() => {
-    const list = new Set<string>();
-    
-    // Explicitly add managed sector names so they always appear in the workspace options
-    const standardMatches = ["RW_BERJUANG", "rw26_berjuang", "rt01_rw26", "RW26_SMART"];
-    standardMatches.forEach(m => list.add(m));
-
-    wargaData.forEach((w: any) => {
-      let rawRw = (w.rw || "").toString().trim();
-      if (rawRw) {
-        if (isSpecialTenant(rawRw)) {
-          list.add(rawRw);
-        } else {
-          const digits = rawRw.match(/\d+/);
-          if (digits) {
-            const formatted = digits[0].padStart(2, "0");
-            if (formatted !== "05") {
-              list.add(formatted);
-            }
-          } else {
-            if (!rawRw.includes("05")) {
-              list.add(rawRw);
-            }
-          }
-        }
-      }
-    });
-    if (list.size === 0) {
-      const activeRw = currentUser?.rw || wargaAuth?.rw;
-      if (activeRw) {
-        const digits = activeRw.match(/\d+/);
-        const formatted = digits ? digits[0].padStart(2, "0") : activeRw;
-        if (formatted !== "05") {
-          list.add(formatted);
-        } else {
-          list.add("26");
-        }
-      } else {
-        list.add("26"); // Fallback to real active RW 26 instead of dummy databases
-      }
-    }
-    return Array.from(list).sort();
-  }, [wargaData, currentUser, wargaAuth]);
 
   const [kasData, setKasData] = useState(() => {
     const saved = localStorage.getItem("rw26_kasData");
@@ -1239,7 +1195,7 @@ export default function App() {
   // Securely resolve active tenant IDs for filtering
   const activeTenantIds = useMemo(() => {
     const baseTenantId =
-      currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
+      currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang";
     const tId =
       currentUser?.isSuperAdmin && selectedTenantId
         ? selectedTenantId
@@ -1251,9 +1207,7 @@ export default function App() {
     }
     const list = [tId];
     if (
-      tId === "RW_BERJUANG" ||
       tId === "rw26_berjuang" ||
-      tId === "rt01_rw26" ||
       tId === "trihprw26" ||
       tId.toLowerCase().includes("rt01") ||
       tId.toLowerCase().includes("rw26") ||
@@ -1262,11 +1216,11 @@ export default function App() {
     ) {
       if (tId.toLowerCase().includes("rt")) {
         // RT isolated scope
-        list.push("RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26");
+        list.push("rw26_berjuang", "trihprw26");
       } else {
         // Parent cluster scope
         list.push(
-          "RW_BERJUANG", "rw26_berjuang", "rt01_rw26", "trihprw26", "RW26_SMART",
+          "rw26_berjuang", "trihprw26",
           "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang"
         );
       }
@@ -1274,13 +1228,87 @@ export default function App() {
     return Array.from(new Set(list));
   }, [currentUser, wargaAuth, selectedTenantId]);
 
+  // Tenant friendly name display format mapper
+  const getTenantFriendlyName = (tId: string) => {
+    const tenantObj = tenantsData.find(t => t.id === tId);
+    if (tenantObj && tenantObj.name) {
+      return tenantObj.name;
+    }
+
+    const fallbackNames: Record<string, string> = {
+      "rw26_berjuang": "RW 26 Berjuang",
+      "trihprw26": "RW 26 Trih",
+      "rt01_rw26_berjuang": "RT 01 Berjuang",
+      "rt02_rw26_berjuang": "RT 02 Berjuang",
+      "rt03_rw26_berjuang": "RT 03 Berjuang",
+      "rt04_rw26_berjuang": "RT 04 Berjuang",
+    };
+
+    if (fallbackNames[tId]) return fallbackNames[tId];
+
+    let clean = tId;
+    if (clean.includes("_")) {
+      const parts = clean.split("_");
+      clean = parts.map(p => p.toUpperCase()).join(" ");
+    }
+    return clean;
+  };
+
+  // Synchronized active workspace list (Only actual active tenant IDs)
+  const realRWList = useMemo(() => {
+    const validTenantIdsSet = new Set<string>([
+      "rw26_berjuang",
+      "trihprw26",
+      "rt01_rw26_berjuang",
+      "rt02_rw26_berjuang",
+      "rt03_rw26_berjuang",
+      "rt04_rw26_berjuang"
+    ]);
+
+    tenantsData.forEach(t => {
+      if (t.id) {
+        validTenantIdsSet.add(t.id);
+      }
+    });
+
+    const list = new Set<string>();
+    activeTenantIds.forEach((tId) => {
+      if (validTenantIdsSet.has(tId)) {
+        list.add(tId);
+      }
+    });
+
+    const orderedList: string[] = [];
+    const orderRef = [
+      "rw26_berjuang",
+      "trihprw26",
+      "rt01_rw26_berjuang",
+      "rt02_rw26_berjuang",
+      "rt03_rw26_berjuang",
+      "rt04_rw26_berjuang",
+    ];
+
+    orderRef.forEach(key => {
+      if (list.has(key)) {
+        orderedList.push(key);
+        list.delete(key);
+      }
+    });
+
+    list.forEach(item => {
+      orderedList.push(item);
+    });
+
+    return orderedList;
+  }, [activeTenantIds, tenantsData]);
+
   // Centrally filtered user accounts matching the active tenant and security privileges
   const filteredUsersDataCentral = useMemo(() => {
     let filtered = usersData;
 
     // 1. A Tenant Admin must only see users that belong to their active tenant/sub-tenant group
     filtered = filtered.filter((u: any) => {
-      const userTenantId = u.tenantId || "RW26_SMART";
+      const userTenantId = u.tenantId || "rw26_berjuang";
       return activeTenantIds.includes(userTenantId);
     });
 
@@ -1309,7 +1337,7 @@ export default function App() {
       email: linkedWarga?.email || wargaAuth?.email || currentUser?.email || "",
       rt: linkedWarga?.rt || wargaAuth?.rt || currentUser?.rt || "01",
       rw: linkedWarga?.rw || wargaAuth?.rw || currentUser?.rw || "26",
-      tenantId: linkedWarga?.tenantId || wargaAuth?.tenantId || currentUser?.tenantId || "RW26_SMART",
+      tenantId: linkedWarga?.tenantId || wargaAuth?.tenantId || currentUser?.tenantId || "rw26_berjuang",
       terverifikasi: linkedWarga?.terverifikasi === true || wargaAuth?.terverifikasi === true || currentUser?.status === "Disetujui" || false
     };
   }, [linkedWarga, wargaAuth, currentUser]);
@@ -1451,7 +1479,7 @@ export default function App() {
       }
 
       const sosData = {
-        tenantId: currentUser.tenantId || "RW26_SMART",
+        tenantId: currentUser.tenantId || "rw26_berjuang",
         id,
         userId: auth.currentUser?.uid || "anonymous",
         userName: currentUser.name,
@@ -1498,7 +1526,7 @@ export default function App() {
       return;
     }
     const tIds = activeTenantIds;
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART");
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
 
     setIsLoadingDB(true);
     let loadedSections = 0;
@@ -1694,7 +1722,7 @@ export default function App() {
     // Voting
     if (activeTab === "voting") {
        unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", tIds)), snap => setVotingCandidates(snap.docs.map(d => ({ ...d.data() })))));
-       unsubs.push(onSnapshot(doc(db, "voting_config", currentUser?.tenantId || "RW26_SMART"), snap => snap.exists() && setVotingConfig(snap.data())));
+       unsubs.push(onSnapshot(doc(db, "voting_config", currentUser?.tenantId || "rw26_berjuang"), snap => snap.exists() && setVotingConfig(snap.data())));
     }
 
     // Booking
@@ -1714,6 +1742,20 @@ export default function App() {
 
     return () => unsubs.forEach(u => u());
   }, [activeTab, activeTenantIds, currentUser?.uid]);
+
+  // Real-time synchronization of all tenants for Super Admin
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const q = query(collection(db, "tenants"), orderBy("createdAt", "desc"));
+    const unsubTenants = onSnapshot(q, (snap) => {
+      setTenantsData(snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() })));
+    }, (err) => {
+      console.warn("Failed to subscribe to tenants:", err);
+    });
+
+    return () => unsubTenants();
+  }, [currentUser, activeTab]);
 
   // 6. Automation: Tenant Subscription Follow-up (2 months after expiration)
   useEffect(() => {
@@ -1950,7 +1992,7 @@ export default function App() {
         currentTenant.status !== "PREMIUM" &&
         currentTenant.status !== "ENTERPRISE"
       ) {
-        const tId = currentUser.tenantId || "RW26_SMART";
+        const tId = currentUser.tenantId || "rw26_berjuang";
         if (tId === "MASTER") return; // Skip virtual tenant update
         console.log("Auto-activating PREMIUM for dev account...");
         try {
@@ -2016,7 +2058,7 @@ export default function App() {
             role: "Warga",
             nik: warga.nik || "",
             name: nameToUse,
-            tenantId: warga.tenantId || currentTenant?.id || "RW26_SMART",
+            tenantId: warga.tenantId || currentTenant?.id || "rw26_berjuang",
             linkedResidentId: warga.id || warga.id_warga || warga.nik || "",
             updatedAt: new Date().toISOString(),
           },
@@ -2155,11 +2197,6 @@ export default function App() {
       },
     ]
       .filter((item) => {
-        if (item.id === "users" && currentTenant?.id === "RW26_SMART")
-          return false;
-        if (item.id === "ai-bot" && currentTenant?.id === "RW26_SMART")
-          return false;
-
         const role = currentUser?.role || "TAMU";
         const isSuperAdmin = !!currentUser?.isSuperAdmin;
         const isVerified = linkedWarga?.terverifikasi === true;
@@ -2409,7 +2446,7 @@ export default function App() {
   if (isSelfRegistering) {
     return (
       <SelfRegistrationView
-        tenantId={currentUser?.tenantId || "RW26_SMART"}
+        tenantId={currentUser?.tenantId || "rw26_berjuang"}
         onClose={() => setIsSelfRegistering(false)}
         handleFileUpload={handleFileUpload}
         showNotification={showNotification}
@@ -2435,7 +2472,7 @@ export default function App() {
           onShowFreeTrial={() => setShowFreeTrialModal(true)}
           onShowPricing={() => setShowPricingModal(true)}
           settings={settings}
-          tenantId={currentUser?.tenantId || "RW26_SMART"}
+          tenantId={currentUser?.tenantId || "rw26_berjuang"}
           initialEmail={prefilledEmail}
           initialMode={prefilledEmail ? "admin" : "admin"}
         />
@@ -2481,7 +2518,7 @@ export default function App() {
         suratData={suratData}
         setSuratData={setSuratData}
         setWargaAuth={setWargaAuth}
-        tenantId={mergedWargaProfile.tenantId || "RW26_SMART"}
+        tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
         isLoadingDB={isLoadingDB}
         setIsLoadingDB={setIsLoadingDB}
         handleFileUpload={handleFileUpload}
@@ -2702,10 +2739,11 @@ export default function App() {
                   >
                     <option value="Semua">🏢 KELURAHAN (PUSAT)</option>
                     {realRWList.map((rw) => {
-                      const isExactGroup = isSpecialTenant(rw);
+                      const friendlyLabel = getTenantFriendlyName(rw);
+                      const isCurrentActive = currentUser?.tenantId === rw || wargaAuth?.tenantId === rw;
                       return (
                         <option key={rw} value={rw}>
-                          🏠 {isExactGroup ? rw : `RW ${rw}`} {normalizeRwValue(currentUser?.rw) === rw ? "(AKTIF)" : ""}
+                          🏠 {friendlyLabel} {isCurrentActive ? "(AKTIF)" : ""}
                         </option>
                       );
                     })}
@@ -2720,7 +2758,7 @@ export default function App() {
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-800 dark:text-slate-200 font-mono font-black truncate bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50 flex-1">
-                    {currentUser.tenantId || "RW26_SMART"}
+                    {currentUser.tenantId || "rw26_berjuang"}
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-brand-green"></div>
                 </div>
@@ -2976,7 +3014,7 @@ export default function App() {
               currentTenant={currentTenant}
               setWargaData={setWargaData}
               userRole={currentUser.role}
-              tenantId={currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || "RW26_SMART")}
+              tenantId={currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || "rw26_berjuang")}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -2994,7 +3032,7 @@ export default function App() {
               tenantId={
                 currentUser?.tenantId && currentUser.tenantId !== "unknown"
                   ? currentUser.tenantId
-                  : "RW26_SMART"
+                  : "rw26_berjuang"
               }
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
@@ -3009,7 +3047,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile.tenantId || "RW26_SMART"}
+                tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -3025,7 +3063,7 @@ export default function App() {
               <VerifikasiAdminView
                 verifikasiData={filteredVerifikasiWargaDataCentral}
                 wargaData={filteredWargaDataCentral}
-                tenantId={currentUser.tenantId || "RW26_SMART"}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 showNotification={showNotification}
@@ -3036,7 +3074,7 @@ export default function App() {
           )}
           {activeTab === "chat" && (
             <ChatWargaView
-              tenantId={currentUser.tenantId || "RW26_SMART"}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               currentUser={currentUser}
               handleFirestoreError={handleFirestoreError}
               currentTenant={currentTenant}
@@ -3057,7 +3095,7 @@ export default function App() {
               userRole={currentUser.role}
               currentUser={currentUser}
               getSetting={getSetting}
-              tenantId={currentUser.tenantId || "RW26_SMART"}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -3087,7 +3125,7 @@ export default function App() {
                 setImunisasiData={setImunisasiData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || "RW26_SMART"}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -3120,7 +3158,7 @@ export default function App() {
                 sampahTarikSaldoData={sampahTarikSaldoData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || "RW26_SMART"}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
               />
@@ -3155,7 +3193,7 @@ export default function App() {
               inventarisSupplier={inventarisSupplier}
               userRole={currentUser.role}
               currentUser={currentUser}
-              tenantId={currentUser.tenantId || "RW26_SMART"}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               showNotification={showNotification}
@@ -3170,7 +3208,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile.tenantId || "RW26_SMART"}
+                tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -3192,7 +3230,7 @@ export default function App() {
                 currentUser={currentUser}
                 getSetting={getSetting}
                 kopSettings={kopSettings}
-                tenantId={currentUser.tenantId || "RW26_SMART"}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -3237,7 +3275,7 @@ export default function App() {
               usersData={filteredUsersDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
-              tenantId={currentUser.tenantId || "RW26_SMART"}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser}
@@ -3260,7 +3298,7 @@ export default function App() {
           )}
           {activeTab === "pengaturan" && (
             <PengaturanView
-              tenantId={currentUser.tenantId || "RW26_SMART"}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               currentTenant={currentTenant}
               wargaData={filteredWargaDataCentral}
               settings={settings}
@@ -3276,7 +3314,7 @@ export default function App() {
             (getPlanFeatures(currentTenant?.status).ePemilu ? (
               <EVotingView
                 userRole={currentUser.role}
-                tenantId={currentUser.tenantId || "RW26_SMART"}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 candidates={votingCandidates}
                 config={votingConfig}
                 userVotes={userVotes}
@@ -3309,7 +3347,7 @@ export default function App() {
           {activeTab === "etoko" && (
             <ETokoView
               userRole={currentUser.role}
-              tenantId={currentUser.tenantId || "RW26_SMART"}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               products={tokoProducts}
               orders={tokoOrders}
               reviews={tokoReviews}
@@ -3526,7 +3564,7 @@ export default function App() {
       <RegistrationQRModal
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
-        tenantId={currentTenant?.id || currentUser?.tenantId || "RW26_SMART"}
+        tenantId={currentTenant?.id || currentUser?.tenantId || "rw26_berjuang"}
         tenantName={currentTenant?.nama || "RT/RW Digital"}
       />
       {showFreeTrialModal && (
@@ -3715,7 +3753,7 @@ function AnalyticsPremiumView({
 
     try {
       setIsSpeaking(true);
-      const response = await textToSpeech(report);
+      const response = await textToSpeech(report, true);
       if (!response) return;
       const base64Audio = response.data;
 
@@ -4150,7 +4188,7 @@ function EnterpriseGovDashboard({
 
     try {
       setIsSpeaking(true);
-      const response = await textToSpeech(insight);
+      const response = await textToSpeech(insight, true);
       if (!response) return;
       const base64Audio = response.data;
       const audioContext = new (
@@ -8055,7 +8093,7 @@ function SelfRegistrationView({
       await setDoc(doc(db, "verifikasi_warga", id), {
         ...formData,
         id,
-        tenantId: tenantId || "RW26_SMART",
+        tenantId: tenantId || "rw26_berjuang",
         ktpUrl,
         kkUrl,
         status: "Menunggu Persetujuan",
@@ -8830,11 +8868,8 @@ function LoginView({
         // A. Try direct Document ID lookup (NIK is standard docId, sometimes prefixed)
         const potentialIds = [cleanId, cleanPass].filter((k) => k.length >= 6);
         const knownTenants = [
-          "RW26_SMART",
-          "RW_BERJUANG",
+          "rw26_berjuang",
           "trihprw26",
-          "rt01_rw26",
-          "rt02_rw26",
           "rt01_rw26_berjuang",
           "MASTER",
         ];
@@ -9033,7 +9068,7 @@ function LoginView({
             role: "Warga",
             nik: found.nik || "",
             name: found.nama || "Warga",
-            tenantId: found.tenantId || "RW26_SMART",
+            tenantId: found.tenantId || "rw26_berjuang",
             linkedResidentId: docId,
             updatedAt: new Date().toISOString(),
           },
@@ -9053,7 +9088,7 @@ function LoginView({
               found.status === "Disetujui" || found.terverifikasi
                 ? "Disetujui"
                 : "Menunggu Persetujuan",
-            tenantId: found.tenantId || "RW26_SMART",
+            tenantId: found.tenantId || "rw26_berjuang",
             lastLogin: new Date().toISOString(),
           },
           { merge: true },
@@ -9271,9 +9306,9 @@ function LoginView({
       const user = result.user;
 
       const isArif = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
-      let tenantId = "RW26_SMART";
+      let tenantId = "rw26_berjuang";
       if (user.email?.toLowerCase().includes("trihprw26")) {
-        tenantId = "RW_BERJUANG";
+        tenantId = "trihprw26";
       } else if (isArif) {
         tenantId = "MASTER";
       }
@@ -10277,6 +10312,125 @@ function TenantsView({
   const [tenantToDelete, setTenantToDelete] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  const handleRestoreDefaultTenants = async () => {
+    setIsLoadingDB(true);
+    try {
+      const batch = writeBatch(db);
+      
+      const defaultTenants = [
+        {
+          id: "rw26_berjuang",
+          name: "RW 26 Berjuang",
+          parentId: "",
+          adminEmail: "rw26@berjuang.com",
+          adminPhone: "081234567890",
+          status: "PREMIUM",
+          isActive: true,
+          maxWarga: 1000,
+          addons: ["chat", "ai_bot", "financial_analytics", "surat_digital", "voting_online"],
+          rwTarget: "26"
+        },
+        {
+          id: "rt01_rw26_berjuang",
+          name: "RT 01 / RW 26 Berjuang",
+          parentId: "rw26_berjuang",
+          adminEmail: "rt01@rw26_berjuang.com",
+          adminPhone: "081234567891",
+          status: "BASIC",
+          isActive: true,
+          maxWarga: 200,
+          addons: ["chat"],
+          rtTarget: "1",
+          rwTarget: "26"
+        },
+        {
+          id: "rt02_rw26_berjuang",
+          name: "RT 02 / RW 26 Berjuang",
+          parentId: "rw26_berjuang",
+          adminEmail: "rt02@rw26_berjuang.com",
+          adminPhone: "081234567892",
+          status: "BASIC",
+          isActive: true,
+          maxWarga: 200,
+          addons: ["chat"],
+          rtTarget: "2",
+          rwTarget: "26"
+        },
+        {
+          id: "rt03_rw26_berjuang",
+          name: "RT 03 / RW 26 Berjuang",
+          parentId: "rw26_berjuang",
+          adminEmail: "rt03@rw26_berjuang.com",
+          adminPhone: "081234567893",
+          status: "BASIC",
+          isActive: true,
+          maxWarga: 200,
+          addons: ["chat"],
+          rtTarget: "3",
+          rwTarget: "26"
+        },
+        {
+          id: "rt04_rw26_berjuang",
+          name: "RT 04 / RW 26 Berjuang",
+          parentId: "rw26_berjuang",
+          adminEmail: "rt04@rw26_berjuang.com",
+          adminPhone: "081234567894",
+          status: "BASIC",
+          isActive: true,
+          maxWarga: 200,
+          addons: ["chat"],
+          rtTarget: "4",
+          rwTarget: "26"
+        }
+      ];
+
+      for (const t of defaultTenants) {
+        const payload = {
+          ...t,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        batch.set(doc(db, "tenants", t.id), payload, { merge: true });
+        
+        batch.set(doc(db, "settings", t.id), {
+          NAMA_RT: t.name,
+          RT: (t.rtTarget || "").toString().padStart(2, "0"),
+          RW: t.rwTarget || "26"
+        }, { merge: true });
+      }
+
+      await batch.commit();
+      showNotification("Berhasil memulihkan default tenants (rw26_berjuang & sub-tenant RT01-04)!", "success");
+    } catch (error: any) {
+      console.error("Failed to restore default tenants:", error);
+      showNotification("Gagal memulihkan default tenants.", "error");
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handlePermanentDeleteLegacyTenants = async () => {
+    setIsLoadingDB(true);
+    try {
+      const batch = writeBatch(db);
+      const targetIds = ["RW26", "RW_BERJUANG", "RW26_SMART", "rt01_rw26"];
+      
+      for (const tId of targetIds) {
+        batch.delete(doc(db, "tenants", tId));
+        batch.delete(doc(db, "settings", tId));
+        batch.delete(doc(db, "tenant_settings", tId));
+        batch.delete(doc(db, "voting_config", tId));
+      }
+      
+      await batch.commit();
+      showNotification("Selesai! Tenant RW26, RW_BERJUANG, RW26_SMART, rt01_rw26 telah berhasil dihapus permanen dari Backend.", "success");
+    } catch (e: any) {
+      showNotification(`Gagal menghapus tenant dari backend: ${e.message}`, "error");
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
   const runMigration = async () => {
     setIsLoadingDB(true);
     try {
@@ -10295,7 +10449,7 @@ function TenantsView({
         if (
           docId === "test" ||
           docId === "TRIAL_ARIFRAJ_MCI_4348" ||
-          docId === "RW26_SMART"
+          docId === "rw26_berjuang"
         ) {
           maxWarga = 50;
         } else if (paketStatus.includes("STARTER")) {
@@ -10541,6 +10695,18 @@ function TenantsView({
           </div>
         </div>
         <div className="flex gap-2">
+          <StyledButton
+            label="Pulihkan Default Tenants"
+            onClick={handleRestoreDefaultTenants}
+            colorType="secondary"
+            icon={<RefreshCw className="w-4 h-4 text-emerald-600" />}
+          />
+          <StyledButton
+            label="Hapus Permanen Tenants Lama"
+            onClick={handlePermanentDeleteLegacyTenants}
+            colorType="danger"
+            icon={<RefreshCw className="w-4 h-4 text-white" />}
+          />
           <StyledButton
             label="Standardisasi maxWarga"
             onClick={runMigration}

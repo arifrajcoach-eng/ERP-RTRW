@@ -44,7 +44,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
       try {
         const id = `SOS-${Date.now()}`;
         await addDoc(collection(db, 'emergencies'), {
-          tenantId: currentUser.tenantId || 'RW26_SMART',
+          tenantId: currentUser.tenantId || 'rw26_berjuang',
           id,
           userId: currentUser.uid,
           userName: currentUser.name,

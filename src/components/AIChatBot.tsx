@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Volume2, VolumeX, Mic, MicOff, MessageSquare, User, Loader2 } from 'lucide-react';
+import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   getFinancialSummary, 
@@ -21,12 +21,12 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
                        ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
-  const agentName = isPrivileged ? "Arya" : "Aisyah";
-  const agentTitle = isPrivileged ? "AI Asisten Pengurus" : "AI Asisten Lingkungan";
+  const agentName = "Chaty";
+  const agentTitle = isPrivileged ? "Chaty - AI Asisten Ketua" : "Chaty - AI Asisten Warga";
 
   const welcomeMessage = isPrivileged 
-    ? `Assalamu’alaikum Pak/Bu! 🫡 Saya Arya, asisten operasional Anda. Ada laporan keuangan atau agenda lingkungan yang perlu saya siapkan?`
-    : `Assalamu’alaikum! Halo tetangga! 😊 Perkenalkan, saya Aisyah, AI asisten lingkungan kita. Ada yang bisa Aisyah bantu hari ini?`;
+    ? `Assalamu’alaikum Pak/Bu Ketua! 🫡 Aku Chaty, asisten pribadi Ketua yang super ceria, lincah, and literally ready to help! Boleh banget nih Chaty bisikin data keuangan, laporan warga, atau apa aja yang Kakak pimpinan butuhkan! Just let me know ya! 😉✨`
+    : `Assalamu’alaikum! Halo tetangga! 😊 Perkenalkan, aku Chaty, AI asisten warga kamu yang super ceria! Ada yang bisa Chaty bantu hari ini, literally apa aja, let me know ya! 😉`;
 
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
     { role: 'bot', text: welcomeMessage }
@@ -77,7 +77,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     return new Blob([buffer], { type: 'audio/wav' });
   };
   
-  const tenantId = currentUser?.tenantId || 'RW26_SMART';
+  const tenantId = currentUser?.tenantId || 'rw26_berjuang';
   const roleUpper = currentUser?.role?.toUpperCase();
   
   // Calculate maxUsage based on plan
@@ -97,50 +97,16 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (audioRef.current instanceof HTMLAudioElement) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    const resumeAudio = () => {
-      if (!audioContextRef.current) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          audioContextRef.current = new AudioContextClass();
-        }
+      if (sourceRef.current) {
+        try {
+          sourceRef.current.stop();
+        } catch (e) {}
       }
-      if (audioContextRef.current?.state === 'suspended') {
-        audioContextRef.current.resume().catch(() => {});
-      }
-
-      // Unlock HTMLAudioElement to bypass iOS Silent Switch reliably
-      if (!audioRef.current) {
-        audioRef.current = new Audio();
-      }
-      if (audioRef.current.paused && !audioRef.current.src.startsWith('blob:')) {
-        audioRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-        audioRef.current.play().catch(() => {});
-      }
-
-      // Keep channel open with a tiny silent buffer on first physical click
-      try {
-        if (audioContextRef.current && audioContextRef.current.state === 'running') {
-          const silence = audioContextRef.current.createBuffer(1, 1, 22050);
-          const source = audioContextRef.current.createBufferSource();
-          source.buffer = silence;
-          source.connect(audioContextRef.current.destination);
-          source.start(0);
-        }
-      } catch (e) {}
-    };
-    window.addEventListener('click', resumeAudio, { once: false });
-    window.addEventListener('touchstart', resumeAudio, { once: false });
-    return () => {
-      window.removeEventListener('click', resumeAudio);
-      window.removeEventListener('touchstart', resumeAudio);
     };
   }, []);
 
@@ -183,250 +149,130 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSpeak = async (text: string) => {
+   const handleSpeak = async (text: string) => {
     if (isMuted) return;
-    
-    if (isSpeaking) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      if (sourceRef.current) {
-        try { sourceRef.current.stop(); } catch (e) {}
-        sourceRef.current = null;
-      }
-      setIsSpeaking(false);
-      return;
+
+    if (sourceRef.current) {
+      try {
+        sourceRef.current.stop();
+      } catch (e) {}
+      sourceRef.current = null;
     }
+
+    if (!text) return;
 
     try {
       setIsSpeaking(true);
-      lastSpokenTextRef.current = text;
-      
-      // Bersihkan teks dari markdown symbol
-      const cleanText = text.replace(/[*#_`]/g, '');
-      const response = await textToSpeech(cleanText, isPrivileged);
+      const response = await textToSpeech(text, isPrivileged);
       if (!response || !mountedRef.current) {
-        console.warn("TTS Service returned no response. Check Gemini Key/Quota. Falling back to Browser TTS.");
-        // Fallback to browser TTS if Gemini fails
-        if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(cleanText);
-          utterance.lang = 'id-ID';
-          utterance.onend = () => { if (mountedRef.current) setIsSpeaking(false); };
-          utterance.onerror = () => { if (mountedRef.current) setIsSpeaking(false); };
-          window.speechSynthesis.speak(utterance);
-        } else {
-          setIsSpeaking(false);
-        }
+        setIsSpeaking(false);
         return;
       }
-      
-      const { data: base64Audio, mimeType } = response;
-      console.log(`TTS Response: ${mimeType}, Size: ${base64Audio?.length}`);
-      
-      if (!base64Audio) throw new Error("No audio data received");
 
-      // Robust base64 to binary
-      const binaryString = atob(base64Audio.replace(/\s/g, ""));
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      const base64Audio = response.data;
+      const audioContext = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )({ sampleRate: 24000 });
+      audioContextRef.current = audioContext;
+
+      const binary = atob(base64Audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
       }
 
-      // Ensure AudioContext is ready for any path we take
-      if (!audioContextRef.current) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) audioContextRef.current = new AudioContextClass();
-      }
-      const ctx = audioContextRef.current;
-      if (ctx && ctx.state === 'suspended') {
-        await ctx.resume().catch(() => {});
+      const buffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
+      const data = buffer.getChannelData(0);
+      const view = new DataView(bytes.buffer);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = view.getInt16(i * 2, true) / 32768;
       }
 
-      // Handle PCM specifically (Most direct path for Gemini's raw output)
-      if (mimeType?.includes('pcm') || !mimeType) {
-        const sampleRate = parseInt(mimeType?.match(/rate=(\d+)/)?.[1] || '24000', 10);
-        console.log(`Playing PCM via unlocked HTMLAudioElement: ${sampleRate}Hz`);
-        
-        try {
-          const wavBlob = pcmToWavBlob(bytes, sampleRate);
-          const url = URL.createObjectURL(wavBlob);
-          
-          if (!audioRef.current) audioRef.current = new Audio();
-          const audio = audioRef.current;
-          
-          // Cleanup previous blob URL
-          if (audio.src && audio.src.startsWith('blob:')) {
-            URL.revokeObjectURL(audio.src);
-          }
-          
-          audio.src = url;
-          audio.onended = () => {
-            if (mountedRef.current) setIsSpeaking(false);
-          };
-          audio.onerror = (e) => {
-            console.warn("Audio element error", e);
-            if (mountedRef.current) setIsSpeaking(false);
-          };
-          
-          // Play on the unlocked audio element (Bypasses iOS Silent switch)
-          await audio.play();
-        } catch (playError) {
-          console.warn("HTMLAudioElement play failed, falling back to AudioContext:", playError);
-          if (!ctx) throw new Error("AudioContext not supported");
-
-          // Decode PCM 16-bit to Float32
-          const alignedLength = Math.floor(bytes.length / 2);
-          const int16Array = new Int16Array(bytes.buffer, 0, alignedLength);
-          const float32Array = new Float32Array(int16Array.length);
-          for (let i = 0; i < int16Array.length; i++) {
-            float32Array[i] = int16Array[i] / 32768;
-          }
-          
-          // Play directly via AudioContext
-          const audioBuffer = ctx.createBuffer(1, float32Array.length, sampleRate);
-          audioBuffer.getChannelData(0).set(float32Array);
-          
-          const source = ctx.createBufferSource();
-          source.buffer = audioBuffer;
-          
-          const gainNode = ctx.createGain();
-          gainNode.gain.value = 1.0;
-          source.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          
-          sourceRef.current = source;
-          source.onended = () => {
-            if (mountedRef.current) setIsSpeaking(false);
-            sourceRef.current = null;
-          };
-          source.start(0);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.onended = () => {
+        if (mountedRef.current) {
+          setIsSpeaking(false);
         }
-      } else {
-        // Fallback for encoded formats (MP3/WAV/etc)
-        const blob = new Blob([bytes], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        
-        if (!audioRef.current) audioRef.current = new Audio();
-        const audio = audioRef.current;
-        
-        if (audio.src && audio.src.startsWith('blob:')) {
-          URL.revokeObjectURL(audio.src);
-        }
-        
-        audio.src = url;
-        audio.onended = () => {
-          if (mountedRef.current) setIsSpeaking(false);
-        };
-        try {
-          await audio.play();
-        } catch (e) {
-          console.warn("Audio element playback failed, trying AudioContext decode:", e);
-          if (ctx) {
-            const decoded = await ctx.decodeAudioData(bytes.buffer.slice(0));
-            const source = ctx.createBufferSource();
-            source.buffer = decoded;
-            source.connect(ctx.destination);
-            source.onended = () => { if (mountedRef.current) setIsSpeaking(false); };
-            source.start(0);
-            sourceRef.current = source;
-          } else {
-            if (mountedRef.current) setIsSpeaking(false);
-          }
-          URL.revokeObjectURL(url);
-        }
+      };
+      source.start();
+      sourceRef.current = source;
+    } catch (error) {
+      console.error("Speech Error:", error);
+      if (mountedRef.current) {
+        setIsSpeaking(false);
       }
-    } catch (error: any) {
-      console.warn('AI Voice Error:', error);
-      if (mountedRef.current) setIsSpeaking(false);
     }
   };
 
-  const startListening = () => {
+  const stopSpeaking = () => {
+    if (sourceRef.current) {
+      try {
+        sourceRef.current.stop();
+      } catch (e) {}
+      sourceRef.current = null;
+    }
+    setIsSpeaking(false);
+  };
+
+  const toggleListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      alert("Browser Anda tidak mendukung pengenalan suara (Speech Recognition). Silakan gunakan Google Chrome atau Microsoft Edge.");
+      return;
+    }
 
     if (isListening) {
-      recognitionRef.current?.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsListening(false);
       return;
     }
 
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.lang = 'id-ID';
+    stopSpeaking();
+    setIsMuted(false);
 
-    // Pre-warm AudioContext on start listening gesture
-    if (isMuted) setIsMuted(false);
-    
-    if (!audioContextRef.current) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          audioContextRef.current = new AudioContextClass();
-        }
-      }
-      if (audioContextRef.current) {
-        if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(e => console.warn("Failed to resume audio on listening gesture:", e));
-        }
-        // Silence trick to keep channel open
-        try {
-          const silence = audioContextRef.current.createBuffer(1, 1, 22050);
-          const source = audioContextRef.current.createBufferSource();
-          source.buffer = silence;
-          source.connect(audioContextRef.current.destination);
-          source.start(0);
-        } catch (e) {}
-      }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'id-ID';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-    recognitionRef.current.onstart = () => setIsListening(true);
-    recognitionRef.current.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript);
-      if (event.results[0].isFinal) {
-        setIsListening(false);
-        handleSend(transcript);
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event: any) => {
+      const results = event.results;
+      if (results.length > 0) {
+        const transcript = results[results.length - 1][0].transcript;
+        setInput(transcript);
+
+        if (transcript.trim()) {
+          setTimeout(() => {
+            handleSend(transcript);
+          }, 300);
+        }
       }
     };
-    recognitionRef.current.onerror = () => setIsListening(false);
-    recognitionRef.current.onend = () => setIsListening(false);
-    recognitionRef.current.start();
+
+    recognitionRef.current = recognition;
+    recognition.start();
   };
 
   const handleSend = async (manualInput?: string, retries = 1) => {
     const textToSend = manualInput || input;
     if (!textToSend.trim() || isLoading) return;
-    
-    // Pre-warm AudioContext and Audio on user gesture
-    if (isMuted && manualInput === undefined) setIsMuted(false);
-    
-    if (!audioContextRef.current) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          audioContextRef.current = new AudioContextClass();
-        }
-      }
-      if (audioContextRef.current) {
-        if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(e => console.warn("Failed to resume audio on gesture:", e));
-        }
-        // Silence trick to keep channel open
-        try {
-          const silence = audioContextRef.current.createBuffer(1, 1, 22050);
-          const source = audioContextRef.current.createBufferSource();
-          source.buffer = silence;
-          source.connect(audioContextRef.current.destination);
-          source.start(0);
-        } catch (e) {}
-      }
-
-    // Unlock HTMLAudioElement to bypass iOS Silent Switch reliably
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-    }
-    if (audioRef.current.paused && !audioRef.current.src.startsWith('blob:')) {
-      audioRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-      audioRef.current.play().catch(() => {});
-    }
 
     if (usageCount >= maxUsage) {
       setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, kuota AI harian Anda telah habis.' }]);
@@ -552,8 +398,16 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
         
         if (error.message?.includes('GEMINI_API_KEY') || error.message?.includes('VITE_GEMINI')) {
           errorMsg = 'Aduh maaf, kunci AI belum terdeteksi. Jika di Vercel, pastikan kamu menggunakan nama VITE_GEMINI_API_KEY, dan kamu WAJIB melakukan Redeploy setelah memasukkan kunci tersebut ya!';
-        } else if (error.message?.includes('429') || error.message?.includes('Quota exceeded') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-          errorMsg = 'Maaf, kuota penggunaan AI (Gemini API) kamu saat ini sudah habis limitnya. Silakan coba beberapa saat lagi, atau coba besok saat kuota harian di-reset. Kamu juga bisa mengatur tagihan di Google AI Studio untuk menambah kuota.';
+        } else if (
+          error.message?.includes('429') || 
+          error.message?.includes('Quota exceeded') || 
+          error.message?.includes('RESOURCE_EXHAUSTED') ||
+          JSON.stringify(error).includes('429') ||
+          JSON.stringify(error).includes('RESOURCE_EXHAUSTED')
+        ) {
+          errorMsg = isPrivileged
+            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmartRW AI" di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
+            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmartRW AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
         }
 
         setMessages(prev => [...prev, { role: 'bot', text: errorMsg }]);
@@ -580,22 +434,27 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
             </p>
           </div>
         </div>
-        <button 
-          onClick={async () => {
-            // Resume AudioContext on user gesture
-            if (audioContextRef.current?.state === 'suspended') {
-              try { await audioContextRef.current.resume(); } catch(e) {}
-            }
-            // Test audio if double clicked or just help diagnosing
-            if (!isMuted) {
-              handleSpeak("Tes suara AI Agen. Jika terdengar, maka sistem audio Anda sudah aktif.");
+        <button
+          onClick={() => {
+            const newMuted = !isMuted;
+            setIsMuted(newMuted);
+            if (newMuted) {
+              stopSpeaking();
             } else {
-              setIsMuted(false);
+              const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot');
+              if (lastBotMsg && lastBotMsg.text) {
+                handleSpeak(lastBotMsg.text);
+              }
             }
           }}
-          className={`p-2 rounded-xl transition-all ${isMuted ? 'bg-slate-200 text-slate-400' : 'bg-brand-blue/10 text-brand-blue'}`}
+          className={`p-2 rounded-xl border transition-all ${
+            isMuted 
+              ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500' 
+              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 shadow-sm'
+          }`}
+          title={isMuted ? "Suara Chaty: Nonaktif" : "Suara Chaty: Aktif"}
         >
-          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5 animate-bounce" style={{ animationDuration: '2s' }} />}
         </button>
       </div>
 
@@ -612,21 +471,25 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
             >
               <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-brand-blue' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700'}`}>
-                  {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-brand-blue" />}
+                   {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-brand-blue" />}
                 </div>
                 <div className={`group relative p-4 rounded-2xl text-sm font-medium leading-relaxed ${
                   msg.role === 'user' 
                     ? 'bg-brand-blue text-white rounded-tr-none shadow-md' 
-                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm pb-8'
                 }`}>
                   {msg.text || (isLoading && idx === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : '...')}
                   
                   {msg.role === 'bot' && msg.text && (
                     <button
-                      onClick={() => handleSpeak(msg.text)}
-                      className="absolute -right-2 -bottom-2 p-1.5 bg-white dark:bg-slate-700 rounded-lg shadow-md border border-slate-100 dark:border-slate-600 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                      onClick={() => {
+                        setIsMuted(false);
+                        handleSpeak(msg.text);
+                      }}
+                      className="absolute right-2 bottom-2 text-slate-400 hover:text-brand-blue dark:text-slate-500 dark:hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100/50 dark:hover:bg-slate-700/50"
+                      title="Bacakan ulang pesan ini"
                     >
-                      <Volume2 className="w-3 h-3 text-brand-blue" />
+                      <Volume2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -640,32 +503,49 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       {/* Input */}
       <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 transition-colors">
         <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-brand-blue/10 focus-within:border-brand-blue transition-all">
-          <button 
+          <button
             type="button"
-            onClick={startListening}
-            className={`p-3 rounded-xl transition-all ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'hover:bg-slate-200 text-slate-400'}`}
+            onClick={toggleListening}
+            className={`p-2.5 rounded-xl transition-all ${
+              isListening
+                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+            }`}
+            title={isListening ? "Mendengarkan... klik untuk berhenti" : "Klik & sapa Chaty melalui Mic"}
+            disabled={isLoading}
           >
-            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            <Mic className={`w-4 h-4 ${isListening ? 'scale-110' : ''}`} />
           </button>
+
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Tanya apa saja..."
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-2"
-            disabled={isLoading}
+            placeholder={isListening ? "Mendengarkan Kakak bicara..." : "Tanya apa saja..."}
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-2 pl-2"
+            disabled={isLoading || isListening}
           />
+
+          {isSpeaking && (
+            <button
+              onClick={stopSpeaking}
+              className="p-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 dark:bg-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 transition-all"
+              title="Hentikan suara Chaty"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+            </button>
+          )}
+
           <button
             onClick={() => handleSend()}
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || isListening || !input.trim()}
             className="p-3 bg-brand-blue text-white rounded-xl shadow-lg shadow-brand-blue/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
           >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </div>
         <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest text-center mt-3">
-          AI Agent • Didukung oleh Nexapps<br/>
-          <span className="text-[8px] text-slate-400 font-normal lowercase tracking-normal">(Pastikan volume HP tidak di-mute / silent switch off agar suara AI terdengar)</span>
+          AI Agent • Didukung oleh Nexapps
         </p>
       </div>
     </div>
