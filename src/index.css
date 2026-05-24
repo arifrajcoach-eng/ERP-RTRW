@@ -35,6 +35,7 @@
   --color-slate-900: #0f172a;
   
   --animate-bounce-slow: bounce-slow 3s infinite;
+  --animate-bounce-subtle: bounce-subtle 2s infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-scan: scan 4s ease-in-out infinite;
   --animate-spin-slow: spin-slow 12s linear infinite;
@@ -56,6 +57,17 @@
     }
     50% {
       transform: translate3d(0, 0, 0);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% {
+      transform: translateY(-10%);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateY(0);
       animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
     }
   }

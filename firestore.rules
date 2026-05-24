@@ -169,7 +169,8 @@ service cloud.firestore {
 
     match /settings/{tenantId} {
       allow read: if isTenantMember(tenantId);
-      allow write: if isPengurus() && isTenantMember(tenantId);
+      allow create: if true; // Allow anyone to initiate registration
+      allow update: if isPengurus() && isTenantMember(tenantId);
     }
 
     match /tenant_settings/{tenantId} {
@@ -179,18 +180,14 @@ service cloud.firestore {
 
     match /tenants/{tenantId} {
       allow read: if true;
-      allow create: if isSignedIn();
+      allow create: if true; // Allow anyone to initiate registration
       allow update: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
       allow delete: if isAdmin();
     }
 
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && (
-        request.auth.uid == userId || 
-        isAdmin() ||
-        (isPengurus() && 'tenantId' in request.resource.data && request.resource.data.tenantId != null && isTenantMember(request.resource.data.tenantId))
-      );
+      allow create: if true; // Allow new user creation during registration
       allow update: if isSignedIn() && (
         request.auth.uid == userId || 
         isAdmin() ||

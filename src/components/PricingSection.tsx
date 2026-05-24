@@ -13,16 +13,17 @@ const icons: Record<string, any> = {
 };
 
 interface PricingSectionProps {
-  onSelectFreeTrial?: () => void;
+  onSelectPlan?: (planId: string) => void;
 }
 
-export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTrial }) => {
+export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan }) => {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
     <section className="py-12 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-12">
+          {/* ... existing header ... */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-pink/10 text-brand-pink text-[10px] font-black uppercase tracking-widest mb-4">
             <Sparkles className="w-3 h-3" />
             Promo Terbatas
@@ -56,7 +57,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
             const isBestSeller = (plan as any).isBestSeller;
             const price = isYearly ? plan.priceYearly : plan.priceMonthly;
             const oldPrice = isYearly ? (plan as any).priceOldYearly || (plan as any).priceOldMonthly * 12 : (plan as any).priceOldMonthly;
-
+            
             const formatPrice = (num: number) => {
               const pricePerMonth = Math.round((num / (isYearly ? 12 : 1)) / 100) * 100;
               if (pricePerMonth >= 1000000) {
@@ -80,6 +81,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
                     : 'border-slate-100 bg-slate-50/50 hover:bg-white hover:border-brand-blue/20 hover:shadow-xl'
                 }`}
               >
+                {/* ... card content ... */}
                 {isBestSeller && (
                   <div className="absolute top-0 right-0">
                     <div className="bg-brand-pink text-white text-[8px] font-black py-1 px-8 rotate-45 translate-x-6 translate-y-3 uppercase tracking-tighter">
@@ -128,8 +130,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
 
                 <button 
                   onClick={() => {
-                    if (plan.priceMonthly === 0 && onSelectFreeTrial) {
-                      onSelectFreeTrial();
+                    if (onSelectPlan) {
+                      onSelectPlan(plan.id);
                     } else {
                       window.open(`https://wa.me/087726741143?text=Halo%20Admin,%20saya%20tertarik%20dengan%20Paket%20${plan.name}%20SmartRW%20AI`, '_blank');
                     }
@@ -148,6 +150,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectFreeTria
             )
           })}
         </div>
+
 
         <div className="mt-12 p-6 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">

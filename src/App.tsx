@@ -577,6 +577,7 @@ export default function App() {
   >(localStorage.getItem("impersonatedTenantId"));
   const [showQRModal, setShowQRModal] = useState(false);
   const [showFreeTrialModal, setShowFreeTrialModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>("TRIAL");
   const [prefilledEmail, setPrefilledEmail] = useState("");
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showInfoPopup, setShowInfoPopup] = useState(true); // Default show for announcement
@@ -2165,7 +2166,18 @@ export default function App() {
       },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
       { id: "leads", label: "CRM & Leads", icon: Users },
-      { id: "daftar-trial", label: "Pendaftar Trial", icon: UserPlus },
+      {
+        id: "daftar-trial",
+        label: "Pendaftar Trial",
+        icon: UserPlus,
+        badge: tenantsData.filter(
+          (t) =>
+            (t.id.startsWith("TRIAL_") ||
+              t.status === "TRIAL" ||
+              t.plan === "TRIAL") &&
+            t.followUpStatus === "NEW",
+        ).length,
+      },
       { id: "users", label: "Manage User", icon: User },
       { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
       { id: "pengaturan", label: "Pengaturan", icon: Settings },
@@ -2499,6 +2511,7 @@ export default function App() {
           <FreeTrialRegistrationModal
             onClose={() => setShowFreeTrialModal(false)}
             showNotification={showNotification}
+            initialPlan={selectedPlan}
             onSuccess={(email: string) => {
               setPrefilledEmail(email);
               setShowFreeTrialModal(false);
@@ -2516,7 +2529,8 @@ export default function App() {
                   <X className="w-6 h-6" />
                 </button>
                 <PricingSection
-                  onSelectFreeTrial={() => {
+                  onSelectPlan={(planId) => {
+                    setSelectedPlan(planId);
                     setShowPricingModal(false);
                     setShowFreeTrialModal(true);
                   }}
@@ -2837,6 +2851,11 @@ export default function App() {
                   >
                     {item.label}
                   </span>
+                  {item.badge > 0 && (
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg border-2 border-white dark:border-slate-900 shadow-lg animate-bounce-subtle">
+                      {item.badge}
+                    </span>
+                  )}
                   {isLocked ? (
                     <span className="text-[8px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-100 dark:border-amber-500/20 self-start mt-1 uppercase tracking-widest">
                       {item.minPlan || "PREMIUM"}
@@ -3595,6 +3614,7 @@ export default function App() {
         <FreeTrialRegistrationModal
           onClose={() => setShowFreeTrialModal(false)}
           showNotification={showNotification}
+          initialPlan={selectedPlan}
         />
       )}
 
@@ -3609,7 +3629,8 @@ export default function App() {
                 <X className="w-6 h-6" />
               </button>
               <PricingSection
-                onSelectFreeTrial={() => {
+                onSelectPlan={(planId) => {
+                  setSelectedPlan(planId);
                   setShowPricingModal(false);
                   setShowFreeTrialModal(true);
                 }}

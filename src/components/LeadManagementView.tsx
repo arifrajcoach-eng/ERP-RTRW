@@ -26,7 +26,8 @@ import {
   ChevronRight,
   Filter,
   Upload,
-  Download
+  Download,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';

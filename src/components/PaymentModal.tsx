@@ -37,6 +37,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
               </p>
               
               <div className="w-full space-y-3 text-left">
+                <div className="mb-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Pilih Paket Untuk Diupgrade:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'flash', name: 'Paket Flash', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+                      { id: 'pro', name: 'Paket Pro', color: 'bg-blue-50 text-blue-700 border-blue-100' },
+                      { id: 'premium', name: 'Paket Premium', color: 'bg-rose-50 text-rose-700 border-rose-100' },
+                      { id: 'enterprise', name: 'Paket Enterprise', color: 'bg-slate-900 text-white border-slate-800' }
+                    ].map((p) => (
+                      <button 
+                        key={p.id}
+                        onClick={() => {
+                          const waText = encodeURIComponent(`Halo Tim Nexapps, saya ingin upgrade ke ${p.name}. Mohon panduannya.`);
+                          window.open(`https://wa.me/6285155455667?text=${waText}`, '_blank');
+                        }}
+                        className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 hover:scale-[1.02] active:scale-95 transition-all shadow-sm ${p.color}`}
+                      >
+                        <Zap className="w-3 h-3" />
+                        <span className="text-[10px] font-black uppercase tracking-tight">{p.id}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-slate-100 my-4" />
+                
                 <button
                   onClick={() => {
                     alert('Fitur Pembayaran Otomatis segera hadir. Silakan gunakan metode manual via WA untuk saat ini.');
@@ -56,18 +82,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
                   <Zap className="w-4 h-4" />
                   Upgrade via Customer Service (WA)
                 </button>
-                <div 
-                  onClick={() => {
-                    const waText = encodeURIComponent(`Halo Tim Nexapps, saya mewakili instansi pemerintah dan tertarik untuk integrasi Paket Enterprise. Mohon info proses selanjutnya.`);
-                    window.open(`https://wa.me/6285155455667?text=${waText}`, '_blank');
-                  }}
-                  className="p-4 bg-slate-900 rounded-2xl text-white flex justify-between items-center group cursor-pointer hover:bg-black transition-all">
-                   <div>
-                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pilihan Pemerintah</p>
-                     <p className="text-xs font-bold">🏛️ PAKET ENTERPRISE</p>
-                   </div>
-                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
-                </div>
                 <button
                   onClick={onClose}
                   className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all"
