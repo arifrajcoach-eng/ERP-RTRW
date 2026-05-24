@@ -88,6 +88,8 @@ import {
   Moon,
   Sparkles,
   Tag,
+  Ticket,
+  Gift,
 } from "lucide-react";
 import BelanjaView from "./components/toko/BelanjaView";
 import jsPDF from "jspdf";
@@ -5030,6 +5032,37 @@ function SOSOverlay({
   );
 }
 
+const AVAILABLE_VOUCHERS = [
+  {
+    code: "PASTIDISKON",
+    title: "Hemat di Setiap Transaksi (11%)",
+    description: "Nikmati potongan harga langsung 11% dari subtotal belanja Anda dengan maksimum diskon mencapai Rp55.000.",
+    discountType: "PERCENTAGE",
+    discountValue: 11,
+    maxDiscount: 55000,
+    badge: "11x Diskon s.d. Rp55rb",
+    color: "emerald"
+  },
+  {
+    code: "FLASHSALE50",
+    title: "Flash Sale Eksklusif Diskon 50%",
+    description: "Diskon istimewa sebesar 50% tanpa batas potongan harga, berlaku untuk semua jenis produk hari ini.",
+    discountType: "PERCENTAGE",
+    discountValue: 50,
+    badge: "Diskon 50% Tanpa Limit",
+    color: "rose"
+  },
+  {
+    code: "ONGKIR0",
+    title: "Gratis Ongkos Kirim RT 26",
+    description: "Bebas ongkos kirim standar ke seluruh wilayah RT 26 tanpa minimum nominal transaksi.",
+    discountType: "FREE_SHIPPING",
+    discountValue: 12000,
+    badge: "Potongan Ongkir Rp12.000",
+    color: "blue"
+  }
+];
+
 function ETokoView({
   userRole,
   tenantId,
@@ -5074,6 +5107,9 @@ function ETokoView({
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [activeDetailTab, setActiveDetailTab] = useState<"detail" | "reviews">("detail");
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<any | null>(null);
+  const [showVoucherList, setShowVoucherList] = useState(false);
 
   // Admin states
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
@@ -5158,6 +5194,35 @@ function ETokoView({
 
   const cartTotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
 
+  // Perhitungan Ongkir dan Promo Fungsional
+  const standardShippingFee = cart.length > 0 ? 12000 : 0;
+  const isFreeShipping = appliedPromo?.code === "ONGKIR0";
+  const shippingFee = isFreeShipping ? 0 : standardShippingFee;
+
+  let discountAmount = 0;
+  if (appliedPromo) {
+    if (appliedPromo.code === "PASTIDISKON") {
+      const elevenPercent = Math.round(cartTotal * 0.11);
+      discountAmount = Math.min(elevenPercent, 55000);
+    } else if (appliedPromo.code === "FLASHSALE50") {
+      discountAmount = Math.round(cartTotal * 0.5);
+    }
+  }
+
+  const handleApplyPromoCode = (codeToApply: string) => {
+    const formattedCode = codeToApply.trim().toUpperCase();
+    const found = AVAILABLE_VOUCHERS.find((v) => v.code === formattedCode);
+    if (found) {
+      setAppliedPromo(found);
+      setPromoCodeInput("");
+      showNotification(`Voucher ${found.code} berhasil diterapkan!`, "success");
+    } else {
+      showNotification("Kode promo tidak valid atau kadaluarsa. Silakan cek syarat penggunaan.", "error");
+    }
+  };
+
+  const finalTotal = Math.max(0, cartTotal + shippingFee - discountAmount);
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     const voterId = wargaAuth?.nik || currentUser?.uid;
@@ -5173,7 +5238,11 @@ function ETokoView({
         id: orderId,
         tenantId,
         items: cart,
-        total: cartTotal,
+        subtotal: cartTotal,
+        shippingFee: shippingFee,
+        discount: discountAmount,
+        total: finalTotal,
+        promoApplied: appliedPromo?.code || null,
         customerName: wargaAuth?.nama || currentUser?.name || "Warga",
         customerId: voterId,
         phone: wargaAuth?.telepon || "-",
@@ -5749,46 +5818,164 @@ function ETokoView({
                 )}
               </div>
 
-              <div className="p-8 border-t border-slate-100 bg-slate-50 space-y-6">
-                <div className="space-y-2">
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
+              <div className="p-8 border-t border-slate-100 bg-slate-50 space-y-5 overflow-y-auto max-h-[60%]">
+                {/* Metode Pembayaran */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     Metode Pembayaran
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setPaymentMethod("COD")}
-                      className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === "COD" ? "border-brand-blue bg-blue-50 text-brand-blue" : "border-slate-200 bg-white"}`}
+                      className={`p-3 text-xs font-black uppercase rounded-xl border transition-all ${paymentMethod === "COD" ? "border-brand-blue bg-blue-50 text-brand-blue shadow-sm" : "border-slate-200 bg-white hover:bg-slate-100"}`}
                     >
-                      COD
+                      COD (Bayar di Tempat)
                     </button>
                     <button
                       onClick={() => setPaymentMethod("TRANSFER")}
-                      className={`p-3 text-xs font-black uppercase rounded-xl border ${paymentMethod === "TRANSFER" ? "border-brand-blue bg-blue-50 text-brand-blue" : "border-slate-200 bg-white"}`}
+                      className={`p-3 text-xs font-black uppercase rounded-xl border transition-all ${paymentMethod === "TRANSFER" ? "border-brand-blue bg-blue-50 text-brand-blue shadow-sm" : "border-slate-200 bg-white hover:bg-slate-100"}`}
                     >
-                      Transfer
+                      Transfer Bank
                     </button>
                   </div>
                 </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                      Total Pembayaran
-                    </p>
-                    <p className="text-3xl font-black text-slate-800">
-                      Rp {cartTotal.toLocaleString()}
-                    </p>
+
+                {/* Kode Promo / Voucher */}
+                <div className="border-t border-slate-200/60 pt-4 space-y-3">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Tag size={12} className="text-emerald-500" /> Kode Promo / Voucher
+                  </p>
+                  
+                  {appliedPromo ? (
+                    <div className={`p-4 rounded-xl border border-dashed flex items-center justify-between transition-all ${appliedPromo.code === 'PASTIDISKON' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : appliedPromo.code === 'FLASHSALE50' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+                      <div className="flex items-center gap-2">
+                        <Gift size={16} className={`animate-bounce ${appliedPromo.code === 'PASTIDISKON' ? 'text-emerald-600' : appliedPromo.code === 'FLASHSALE50' ? 'text-rose-600' : 'text-blue-600'}`} />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-sm font-black tracking-wide uppercase">{appliedPromo.code}</span>
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-white/80 rounded-md border border-slate-200">Aktif</span>
+                          </div>
+                          <p className="text-[10px] opacity-80 font-bold mt-0.5">{appliedPromo.badge}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setAppliedPromo(null);
+                          showNotification("Voucher berhasil dilepas", "info");
+                        }}
+                        className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 rounded-lg transition-all text-[10px] font-black uppercase"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        value={promoCodeInput}
+                        onChange={(e) => setPromoCodeInput(e.target.value)}
+                        placeholder="Masukkan Kode Voucher..."
+                        className="flex-1 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-emerald-500 placeholder-slate-400"
+                      />
+                      <button 
+                        onClick={() => handleApplyPromoCode(promoCodeInput)}
+                        className="px-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-xs uppercase rounded-xl transition-all shadow-md shadow-emerald-500/10"
+                      >
+                        Pakai
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Voucher List Selector Toggle */}
+                  {!appliedPromo && (
+                    <div>
+                      <button 
+                        onClick={() => setShowVoucherList(!showVoucherList)}
+                        className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1.5 transition-all text-left"
+                      >
+                        <Ticket size={12} className="shrink-0" /> 
+                        {showVoucherList ? "Sembunyikan Daftar Voucher" : "Pilih Kupon / Voucher Toko yang Tersedia"}
+                      </button>
+
+                      {showVoucherList && (
+                        <div className="mt-2.5 max-h-44 overflow-y-auto space-y-2 p-1.5 bg-white rounded-xl border border-slate-100 shadow-inner">
+                          {AVAILABLE_VOUCHERS.map((v) => (
+                            <div 
+                              key={v.code} 
+                              className={`p-3 rounded-xl border flex flex-col gap-1 transition-all ${v.code === 'PASTIDISKON' ? 'border-emerald-100 hover:border-emerald-200 bg-emerald-50/20' : v.code === 'FLASHSALE50' ? 'border-rose-100 hover:border-rose-200 bg-rose-50/20' : 'border-blue-100 hover:border-blue-200 bg-blue-50/20'}`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase text-white ${v.color === 'emerald' ? 'bg-emerald-500' : v.color === 'rose' ? 'bg-rose-500' : 'bg-blue-500'}`}>
+                                  {v.code}
+                                </span>
+                                <button 
+                                  onClick={() => handleApplyPromoCode(v.code)}
+                                  className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase transition-all text-white active:scale-95 ${v.color === 'emerald' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/10' : v.color === 'rose' ? 'bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/10' : 'bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/10'}`}
+                                >
+                                  Gunakan
+                                </button>
+                              </div>
+                              <h5 className="text-[11px] font-black text-slate-800 leading-tight uppercase tracking-tight">{v.title}</h5>
+                              <p className="text-[9px] font-bold text-slate-400 leading-relaxed">{v.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pemecahan Rincian Bayar */}
+                <div className="border-t border-slate-200/60 pt-4 space-y-2">
+                  <div className="flex justify-between text-xs font-bold text-slate-450">
+                    <span>Subtotal Produk</span>
+                    <span>Rp {cartTotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold text-slate-450">
+                    <span>Ongkos Kirim (RT 26)</span>
+                    <span>
+                      {shippingFee === 0 ? (
+                        <span className="text-emerald-600 font-extrabold uppercase text-[10px] bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded tracking-wide">Gratis Ongkir</span>
+                      ) : (
+                        `Rp ${shippingFee.toLocaleString()}`
+                      )}
+                    </span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-xs font-black text-rose-600">
+                      <span>Potongan Voucher Promo</span>
+                      <span>-Rp {discountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-end pt-3 border-t border-dashed border-slate-200">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Total Akhir Pembayaran
+                      </p>
+                      <p className="text-3xl font-black text-slate-800 tracking-tighter">
+                        Rp {finalTotal.toLocaleString()}
+                      </p>
+                    </div>
+                    {appliedPromo && (
+                      <span className="text-[10px] font-black text-emerald-750 uppercase bg-emerald-100/70 px-2 leading-none py-1.5 rounded-lg border border-emerald-200/60 flex items-center gap-1">
+                        <CheckCircle size={10} className="text-emerald-600 shrink-0" />
+                        Hemat Rp {discountAmount.toLocaleString()}
+                      </span>
+                    )}
                   </div>
                 </div>
+
                 <button
                   disabled={cart.length === 0 || isLoading}
                   onClick={handleCheckout}
-                  className="w-full py-5 bg-brand-blue text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-600 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                  className="w-full py-5 bg-brand-blue hover:bg-blue-600 disabled:bg-slate-300 disabled:shadow-none text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 active:scale-[0.98] cursor-pointer"
                 >
                   {isLoading ? (
-                    "Memproses..."
+                    "Membuat Pesanan..."
                   ) : (
                     <>
-                      <CreditCard className="w-5 h-5" /> Checkout Sekarang
+                      <CreditCard className="w-5 h-5" /> Buat Pesanan Sekarang
                     </>
                   )}
                 </button>
