@@ -9782,7 +9782,7 @@ function LoginView({
                         Promo Launching
                       </p>
                     </div>
-                    <h3 className="text-xl font-black text-slate-800 leading-tight tracking-tight">
+                    <h3 className="text-[19px] font-black text-slate-800 leading-tight tracking-tight">
                       Gunakan{" "}
                     <span className="font-['Georgia'] bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
                     {' '}
