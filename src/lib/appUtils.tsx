@@ -1,5 +1,22 @@
 import { PLAN_FEATURES, PLAN_ALIASES } from "../constants";
 
+export type AppRole = 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'RW' | 'RT' | 'WARGA' | 'USER';
+
+export const canView = (role?: string) => true; // All roles can view basic data
+export const canCreate = (role?: string) => {
+  if (!role) return false;
+  return ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'OPERATOR'].includes(role.toUpperCase());
+};
+export const canUpdate = (role?: string) => {
+  if (!role) return false;
+  return ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'OPERATOR'].includes(role.toUpperCase());
+};
+export const canDelete = (role?: string) => {
+  if (!role) return false;
+  // Operator cannot delete
+  return ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT'].includes(role.toUpperCase());
+};
+
 export const getPlanFeatures = (tenantOrStatus: any) => {
   const status =
     typeof tenantOrStatus === "string"
@@ -37,6 +54,7 @@ export const getPlanFeatures = (tenantOrStatus: any) => {
   if (addons.includes("inventaris")) features.inventaris = true;
   if (addons.includes("aiAgent")) features.ai = true;
   if (addons.includes("grupChat")) features.chatMode = true;
+  if (addons.includes("complaint")) features.complaint = true;
 
   return features;
 };

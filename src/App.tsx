@@ -188,7 +188,7 @@ import {
 //   INITIAL_SURAT_DATA,
 //   INITIAL_INVENTARIS_DATA,
 // } from "./data/initialData";
-import { getPlanFeatures, generateSuratHTML } from "./lib/appUtils";
+import { getPlanFeatures, generateSuratHTML, canCreate, canUpdate, canDelete, canView } from "./lib/appUtils";
 import { PLAN_FEATURES, PLAN_ALIASES, ADDON_CONFIG } from "./constants";
 
 const APP_LOGO = "/logo_rw.png";
@@ -2099,6 +2099,7 @@ export default function App() {
         id: "complaint",
         label: isApt ? "Keluhan/Defect" : "Keluhan",
         icon: AlertTriangle,
+        plan: "complaint",
       },
       {
         id: "booking",
@@ -2197,7 +2198,7 @@ export default function App() {
       },
     ]
       .filter((item) => {
-        const role = currentUser?.role || "TAMU";
+        const role = (currentUser?.role || "TAMU").toUpperCase();
         const isSuperAdmin = !!currentUser?.isSuperAdmin;
         const isVerified = linkedWarga?.terverifikasi === true;
         const planConfig = getPlanFeatures(currentTenant);
@@ -2314,6 +2315,20 @@ export default function App() {
             "complaint",
             "booking",
           ],
+          OPERATOR: [
+            "dashboard",
+            "warga",
+            "buku-tamu",
+            "keuangan",
+            "posyandu",
+            "bank-sampah",
+            "etoko",
+            "voting",
+            "inventaris",
+            "surat",
+            "chat",
+            "ai-bot",
+          ],
           SEKRETARIS: [
             "dashboard",
             "warga",
@@ -2346,13 +2361,14 @@ export default function App() {
             "inventaris",
           ],
           TAMU: ["dashboard", "etoko"],
-          Viewer: ["dashboard", "etoko"],
+          VIEWER: ["dashboard", "warga", "etoko"],
         };
 
         const allowed = rolePermissions[role] || ["dashboard"];
         return allowed.includes(item.id);
       })
       .map((item) => {
+        const role = (currentUser?.role || "TAMU").toUpperCase();
         const planConfig = getPlanFeatures(currentTenant);
         const isLocked =
           item.plan &&
@@ -2360,7 +2376,7 @@ export default function App() {
 
         let label = item.label;
         let icon = item.icon;
-        if (item.id === "verifikasi" && currentUser?.role === "WARGA") {
+        if (item.id === "verifikasi" && role === "WARGA") {
           label = "Profil & Layanan";
           icon = User;
         }
@@ -9912,21 +9928,25 @@ function UsersView({
             Manajemen Pengguna & Pemetaan Unit
           </h3>
           <div className="flex gap-2">
-            <StyledButton
-              label="Tambah User"
-              onClick={() => {
-                setEditingUser(null);
-                setShowForm(true);
-              }}
-              colorType="primary"
-              icon={<PlusCircle className="w-4 h-4" />}
-            />
-            <StyledButton
-              label="Daftar RT"
-              onClick={() => setShowRTForm(true)}
-              colorType="success"
-              icon={<UserPlus className="w-4 h-4" />}
-            />
+            {canCreate(currentUser?.role) && (
+              <StyledButton
+                label="Tambah User"
+                onClick={() => {
+                  setEditingUser(null);
+                  setShowForm(true);
+                }}
+                colorType="primary"
+                icon={<PlusCircle className="w-4 h-4" />}
+              />
+            )}
+            {canCreate(currentUser?.role) && (
+              <StyledButton
+                label="Daftar RT"
+                onClick={() => setShowRTForm(true)}
+                colorType="success"
+                icon={<UserPlus className="w-4 h-4" />}
+              />
+            )}
           </div>
         </div>
 
@@ -10026,23 +10046,27 @@ function UsersView({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingUser(user);
-                          setShowForm(true);
-                        }}
-                        className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
-                        title="Edit"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setUserToDelete(user)}
-                        className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
-                        title="Hapus"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {canUpdate(currentUser?.role) && (
+                        <button
+                          onClick={() => {
+                            setEditingUser(user);
+                            setShowForm(true);
+                          }}
+                          className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
+                          title="Edit"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {canDelete(currentUser?.role) && (
+                        <button
+                          onClick={() => setUserToDelete(user)}
+                          className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
+                          title="Hapus"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -10187,7 +10211,9 @@ function UsersView({
                     {currentUser?.isSuperAdmin && (
                       <option value="SUPER_ADMIN">SUPER ADMIN</option>
                     )}
-                    <option value="ADMIN">ADMIN (RT/RW)</option>
+                    <option value="ADMIN">ADMIN (Full CRUD)</option>
+                    <option value="OPERATOR">OPERATOR (Create, Update)</option>
+                    <option value="VIEWER">VIEWER (Read Only)</option>
                     <option value="RW">RW</option>
                     <option value="RT">RT</option>
                     <option value="BENDAHARA">BENDAHARA</option>

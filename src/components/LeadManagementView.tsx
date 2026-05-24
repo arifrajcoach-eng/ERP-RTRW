@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   collection, 
   query, 
@@ -7,7 +7,8 @@ import {
   updateDoc, 
   doc, 
   Timestamp,
-  orderBy
+  orderBy,
+  addDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
@@ -23,9 +24,12 @@ import {
   Sparkles,
   ExternalLink,
   ChevronRight,
-  Filter
+  Filter,
+  Upload,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Papa from 'papaparse';
 
 interface Lead {
   id: string;
@@ -50,6 +54,8 @@ export default function LeadManagementView({ handleFirestoreError }: any) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const q = query(
@@ -79,6 +85,91 @@ export default function LeadManagementView({ handleFirestoreError }: any) {
       });
     } catch (err) {
       handleFirestoreError(err, 'update', 'lead_status');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const rows = results.data as any[];
+          for (const row of rows) {
+            // Attempt to get name, phone, email, pic from various column variants
+            const name = row['Nama Area'] || row['Area'] || row['Perumahan'] || row['Name'] || row['name'] || '';
+            const namaPIC = row['Nama PIC'] || row['PIC'] || row['Nama'] || row['namaPIC'] || '';
+            const phone = row['No Telepon'] || row['Telepon'] || row['No WhatsApp'] || row['Phone'] || row['phone'] || '';
+            const adminEmail = row['Email'] || row['Email PIC'] || row['email'] || '';
+            const city = row['Kota'] || row['City'] || row['city'] || '';
+            const province = row['Provinsi'] || row['Province'] || row['province'] || '';
+
+            if (name || namaPIC || phone) {
+              await addDoc(collection(db, 'tenants'), {
+                name,
+                namaPIC,
+                phone,
+                adminEmail,
+                city,
+                province,
+                status: 'TRIAL',
+                plan: 'TRIAL',
+                followUpStatus: 'NEW',
+                createdAt: new Date().toISOString(),
+                trialStartDate: new Date().toISOString()
+              });
+            }
+          }
+          alert('Berhasil import leads dari CSV');
+        } catch (err) {
+          handleFirestoreError(err, 'import', 'leads_csv');
+        } finally {
+          setIsUploading(false);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+      },
+      error: (error) => {
+        console.error("Error parsing CSV:", error);
+        alert('Gagal membaca file CSV');
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    });
+  };
+
+  const handleDownloadCSV = () => {
+    try {
+      const csvData = leads.map(lead => ({
+        'Nama Area': lead.name,
+        'PIC': lead.namaPIC,
+        'No Telepon': lead.phone,
+        'Email': lead.adminEmail,
+        'Kota': lead.city || '',
+        'Provinsi': lead.province || '',
+        'Status Follow Up': lead.followUpStatus || 'NEW',
+        'Tanggal Buat': lead.createdAt
+      }));
+      
+      const csv = Papa.unparse(csvData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'leads_export.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error exporting CSV:', err);
+      alert('Gagal mengunduh file CSV');
     }
   };
 
@@ -126,6 +217,32 @@ export default function LeadManagementView({ handleFirestoreError }: any) {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            accept=".csv"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+          />
+          <button 
+             onClick={() => fileInputRef.current?.click()}
+             disabled={isUploading}
+             className="px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md hover:border-slate-300 disabled:opacity-50 flex items-center gap-2 transition-all"
+          >
+             {isUploading ? (
+               <div className="w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+             ) : (
+               <Upload size={16} />
+             )}
+             Import CSV
+          </button>
+          <button 
+             onClick={handleDownloadCSV}
+             className="px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md hover:border-slate-300 flex items-center gap-2 transition-all"
+          >
+             <Download size={16} />
+             Export CSV
+          </button>
           <button 
              onClick={() => {
                 alert("Sistem sedang memindai tenant yang perlu di-followup (2 bulan kedepan). Sila cek log konsol.");

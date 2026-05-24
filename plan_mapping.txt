@@ -1,0 +1,141 @@
+    id: "TRX-001",
+    id: "TRX-002",
+    id: "TRX-003",
+    id: "TRX-004",
+    id: "TRX-005",
+    id: "TRX-006",
+    id: "TRX-007",
+    id: "TRX-008",
+    id: "TRX-009",
+    id: "TRX-010",
+    id: "TRX-011",
+    id: "TRX-012",
+    id: "SRT-1004",
+    id: "SRT-1003",
+    id: "SRT-1002",
+    id: "SRT-1001",
+    id: "INV-BRG-001",
+    id: "INV-BRG-002",
+    id: "INV-BRG-003",
+              setCurrentUser({ uid: user.uid, ...parsed });
+                  setCurrentUser({ uid: user.uid, name: user.email || "User", role: "Viewer", tenantId: "GUEST" });
+            sessionStorage.setItem(`user_profile_${user.uid}`, JSON.stringify(userData));
+            setCurrentUser({ uid: user.uid, ...userData });
+              role: overrideAdmin ? "SUPER_ADMIN" : "Warga",
+              uid: user.uid,
+              tenantId: overrideAdmin ? "MASTER" : "rw26_berjuang",
+              isSuperAdmin: overrideAdmin,
+                id_user: user.uid,
+                uid: user.uid,
+              setCurrentUser({ uid: user.uid, ...newUser } as any);
+  const handleResolveSOS = async (id: string) => {
+      setCurrentTenant({ id: "MASTER", name: "SUPER ADMIN", status: "ENTERPRISE" });
+        setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
+      unsubKas = onSnapshot(kq, (snap) => setKasData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+      query(collection(db, "iuran"), where("tenantId", "in", tIds), where("userId", "==", auth.currentUser?.uid || ""));
+    const unsubIuran = onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", tIds)), (snap) => setInventarisData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+      unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", tIds)), (snap) => setInventarisLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+       unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", tIds)), snap => setTokoProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+       unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", tIds)), snap => setTokoOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+          setSuratData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+       unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", tIds)), snap => setBookingsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+       unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", tIds)), snap => setComplaintsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+       unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", tIds)), snap => setVerifikasiWargaData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      setTenantsData(snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() })));
+      { id: "dashboard", label: "DASHBOARD", icon: LayoutDashboard },
+        id: "warga",
+        id: "complaint",
+        id: "booking",
+        plan: "booking",
+      { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy, plan: "bukuTamu" },
+        id: "verifikasi",
+        plan: "verifikasi",
+        id: "keuangan",
+        plan: "keuangan",
+        id: "posyandu",
+        plan: "posyandu",
+        id: "bank-sampah",
+        plan: "bankSampah",
+        id: "etoko",
+        plan: "eLapak",
+        id: "voting",
+        plan: "ePemilu",
+        id: "inventaris",
+        plan: "inventaris",
+        id: "surat",
+        plan: "surat",
+      { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
+      { id: "leads", label: "CRM & Leads", icon: Users },
+      { id: "users", label: "Manage User", icon: User },
+      { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
+      { id: "pengaturan", label: "Pengaturan", icon: Settings },
+        id: "chat",
+        plan: "chatMode",
+        id: "ai-bot",
+        plan: "ai",
+        id: "monitoring",
+        icon: LayoutGrid,
+        plan: "multiRegion",
+        id: "audit",
+        plan: "governance",
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter((item) => item.id !== id));
+  const updateCartQty = (id: string, delta: number) => {
+        id: orderId,
+  const deleteProduct = async (id: string) => {
+        id: reviewId,
+        orderId: targetOrderForReview.id,
+        productId: firstItem.id,
+        id: voteId,
+        candidateId,
+  const deleteCandidate = async (id: string) => {
+  const saveEditCandidate = async (id: string) => {
+      await updateDoc(doc(db, "voting_candidates", id), {
+  const getCandidateVotes = (id: string) => {
+    return filteredVotes.filter((v) => v.candidateId === id).length;
+            id: wId,
+            id: kasId,
+            id: kasId,
+            id: iuranId,
+          id: suratId,
+        authUid: auth.currentUser?.uid || null,
+        ipAddress: "client-side", // Placeholder
+            authUid: uid,
+          authUid: uid,
+          id: "rw26_berjuang",
+          id: "rt01_rw26_berjuang",
+          id: "rt02_rw26_berjuang",
+          id: "rt03_rw26_berjuang",
+          id: "rt04_rw26_berjuang",
+      id: tenantId,
+  const deleteItem = async (col: string, id: string) => {
+            { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { id: "balita", label: "Balita", icon: Users },
+            { id: "ibuhamil", label: "Ibu Hamil", icon: HeartPulse },
+            { id: "posbindu", label: "Posbindu", icon: Activity },
+            { id: "kegiatan", label: "Kegiatan", icon: Calendar },
+                      id: newId,
+      id: editingItem?.id || `KAT-${Date.now()}`,
+      id: editingItem?.id || `STR-${Date.now()}`,
+      id: editingItem?.id || `TRK-${Date.now()}`,
+  const deleteItem = async (collectionName: string, id: string) => {
+            { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { id: "setoran", label: "Setoran", icon: PlusCircle },
+            { id: "tarik", label: "Tarik Saldo", icon: HandCoins },
+            { id: "nasabah", label: "Nasabah", icon: Users },
+              id: "kategori",
+        id: itemId,
+            id: kId,
+            id: lId,
+            id: sId,
+      id: logId,
+      itemId: selectedItem.id,
+            id: sId,
+            id: lId,
+  const handleDeleteItem = async (id: string, nama: string) => {
+    if (!id || id === "undefined") {
+      console.error("Critical: Attempted to delete item with invalid ID");
