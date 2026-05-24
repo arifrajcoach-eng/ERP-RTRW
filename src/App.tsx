@@ -695,12 +695,17 @@ export default function App() {
             if (isMasterEmail) {
               const isAdminStatusWrong =
                 userData.role !== "SUPER_ADMIN" ||
-                !userData.isSuperAdmin ||
-                userData.tenantId !== "MASTER";
+                !userData.isSuperAdmin;
 
               userData.isSuperAdmin = true;
               userData.role = "SUPER_ADMIN";
-              userData.tenantId = "MASTER";
+              
+              // Only force MASTER if no tenantId is set
+              if (!userData.tenantId) {
+                userData.tenantId = "MASTER";
+                needsUpdate = true;
+              }
+              
               if (!userData.name || userData.name === "User") {
                 userData.name = "Bpk. Arif (Super Admin)";
               }

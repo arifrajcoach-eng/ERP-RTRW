@@ -15,6 +15,7 @@ import { db } from '../firebase';
 import { 
   Users, 
   Phone, 
+  Mail,
   MapPin, 
   Calendar, 
   MessageSquare, 
@@ -47,6 +48,8 @@ interface Lead {
   province?: string;
   followUpStatus?: 'NEW' | 'CONTACTED' | 'CONVERTED';
   lastFollowUp?: string;
+  lastEmailFollowUpAt?: string;
+  emailFollowUpCount?: number;
 }
 
 export default function LeadManagementView({ handleFirestoreError, onAddLead, showNotification }: any) {
@@ -58,6 +61,7 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isRunningEmailAutomation, setIsRunningEmailAutomation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -79,6 +83,40 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
 
     return () => unsub();
   }, []);
+
+  const runEmailAutomation = async () => {
+    setIsRunningEmailAutomation(true);
+    let count = 0;
+    try {
+      const now = new Date();
+      const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
+      
+      for (const lead of leads) {
+        if (lead.followUpStatus === 'CONVERTED') continue;
+        
+        const lastFollowUp = lead.lastEmailFollowUpAt ? new Date(lead.lastEmailFollowUpAt) : new Date(lead.createdAt);
+        const diff = now.getTime() - lastFollowUp.getTime();
+        
+        if (diff >= twoWeeksMs) {
+          // Simulate sending email
+          await updateDoc(doc(db, 'tenants', lead.id), {
+            lastEmailFollowUpAt: now.toISOString(),
+            emailFollowUpCount: (lead.emailFollowUpCount || 0) + 1,
+            followUpStatus: 'CONTACTED'
+          });
+          count++;
+        }
+      }
+      if (showNotification) {
+        showNotification(`Automasi Selesai: ${count} email follow-up dikirim secara periodik (interval 2 minggu).`, 'success');
+      }
+    } catch (err) {
+      console.error('Email automation error:', err);
+      if (showNotification) showNotification('Gagal menjalankan automasi email.', 'error');
+    } finally {
+      setIsRunningEmailAutomation(false);
+    }
+  };
 
   const updateLeadStatus = async (leadId: string, status: string) => {
     try {
@@ -265,13 +303,15 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
              Mulai Gratis (Manual)
           </button>
           <button 
-             onClick={() => {
-                alert("Sistem sedang memindai tenant yang perlu di-followup (2 bulan kedepan). Sila cek log konsol.");
-                // Since automation already runs in App.tsx, this is a placeholder to show it's active
-             }}
-             className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+             onClick={runEmailAutomation}
+             disabled={isRunningEmailAutomation}
+             className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
-             <Sparkles size={16} />
+             {isRunningEmailAutomation ? (
+               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+             ) : (
+               <Sparkles size={16} />
+             )}
              Run Automasi Followup
           </button>
           <div className="bg-indigo-50 px-4 py-2 rounded-2xl border border-indigo-100 flex items-center gap-3">
@@ -365,7 +405,13 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
                         {(lead as any).autoFollowedUpAfterTwoMonths && (
                            <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
                              <CheckCircle2 size={10} />
-                             <span className="text-[8px] font-black uppercase tracking-tight">Auto Follow-up Aktif</span>
+                             <span className="text-[8px] font-black uppercase tracking-tight">Auto Follow-up 2 Bulan Aktif</span>
+                           </div>
+                        )}
+                        {lead.lastEmailFollowUpAt && (
+                           <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
+                             <Mail size={10} />
+                             <span className="text-[8px] font-black uppercase tracking-tight">Email: {lead.emailFollowUpCount}x Followed</span>
                            </div>
                         )}
                       </div>

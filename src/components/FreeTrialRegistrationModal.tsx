@@ -132,7 +132,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
         rt: formData.rt || '01',
         status: 'AKTIF',
         createdAt: new Date().toISOString(),
-        isSuperAdmin: true,
+        isSuperAdmin: false,
         setupAssistantCompleted: false,
         lastOnline: new Date().toISOString()
       };
