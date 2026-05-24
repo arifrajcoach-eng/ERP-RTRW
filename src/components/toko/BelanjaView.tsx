@@ -62,20 +62,120 @@ const RECENT_CHECKS = [
   { id: 'rc4', name: 'RC Monster Truck', label: 'Mobil & Truk RC', image: 'https://images.unsplash.com/photo-1594731802114-035622550d5a?auto=format&fit=crop&q=80&w=200', category: 'Mainan' },
 ];
 
-export default function BelanjaView() {
-  const [activeCategory, setActiveCategory] = useState("Semua");
-  const [viewType, setViewType] = useState<'pembeli' | 'penjual'>('pembeli');
-  const [searchQuery, setSearchQuery] = useState("");
+const BANNERS = [
+  {
+    id: 1,
+    title: "Hemat di Tiap Transaksi",
+    subtitle: "11x Diskon",
+    benefit: "s.d. Rp55rb",
+    promoCode: "PASTIDISKON",
+    image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=1200",
+    color: "from-emerald-500/20"
+  },
+  {
+    id: 2,
+    title: "Flash Sale Spesial",
+    subtitle: "Diskon 50%",
+    benefit: "Hanya Hari Ini",
+    promoCode: "FLASHSALE50",
+    image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&q=80&w=1200",
+    color: "from-rose-500/20"
+  },
+  {
+    id: 3,
+    title: "Gratis Ongkir RT 26",
+    subtitle: "Belanja Puas",
+    benefit: "Tanpa Minimal",
+    promoCode: "ONGKIR0",
+    image: "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=1200",
+    color: "from-blue-500/20"
+  }
+];
 
-  const filteredProducts = PRODUCTS.filter(p => {
+export default function BelanjaView({ 
+  products = [], 
+  onAddToCart,
+  showNotification,
+  onProductSelect
+}: { 
+  products?: any[], 
+  onAddToCart?: (p: any) => void,
+  showNotification?: (msg: string, type?: "success" | "error" | "info" | "warning") => void,
+  onProductSelect?: (p: any) => void
+}) {
+  const [activeCategory, setActiveCategory] = useState("Semua");
+  const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentBanner, setCurrentBanner] = useState(0);
+
+  const filteredProducts = (products.length > 0 ? products : PRODUCTS).filter(p => {
     const matchesCategory = activeCategory === "Semua" || p.category === activeCategory;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesSearch = (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         (p.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Additional feed filtering logic
+    let matchesFeed = true;
+    if (activeFeedTab === "Elektronik") {
+      matchesFeed = p.category === "Elektronik";
+    } else if (activeFeedTab === "Belanja Mall") {
+      matchesFeed = p.discount !== undefined; // Assume mall products have discounts for demo
+    }
+
+    return matchesCategory && matchesSearch && matchesFeed;
   });
 
+  const handleQuickLink = (label: string) => {
+    const messages: Record<string, string> = {
+      'Bonus': 'Bonus Anda sedang dikalkulasi. Cek kembali dalam 24 jam!',
+      'GoPay & Coins': 'Saldo GoPay & 2.450 Coins tersedia untuk transaksi ini.',
+      'Cek Kupon': '3 Kupon Potongan Ongkir & Diskon Hemat tersedia!',
+      'Pesan Chat': 'Membuka pesan chat dengan Penjual...',
+      'Notifikasi': 'Memuat 5 notifikasi transaksi terbaru Anda.',
+      'Modul Utama': 'Mengalihkan ke Dashboard Modul Utama Lapak 26...',
+      'Home': 'Kembali ke Beranda Utama Lapak 26.',
+      'Inbox': 'Memeriksa pesan masuk dan penawaran khusus.',
+      'Transaksi': 'Menampilkan riwayat transaksi belanja Anda.',
+      'Toko Saya': 'Masuk ke dashboard pengelolaan toko Anda.',
+      'Akun': 'Membuka pengaturan profil dan alamat pengiriman.'
+    };
+
+    if (showNotification) {
+      showNotification(messages[label] || `Fitur ${label} akan segera hadir!`, "info");
+    }
+  };
+
+  const handlePromoCode = (code: string) => {
+    if (showNotification) {
+      showNotification(`Kode Promo ${code} berhasil disalin! Gunakan saat pembayaran.`, "success");
+    }
+    navigator.clipboard.writeText(code);
+  };
+
+  const handleRecentClick = (item: any) => {
+    if (onProductSelect) {
+      // Find matching product in list or simulate a detailed view
+      const realProduct = (products.length > 0 ? products : PRODUCTS).find(p => p.id === item.id);
+      if (realProduct) {
+        onProductSelect(realProduct);
+      } else {
+        showNotification?.(`Membuka detail eksklusif: ${item.name}`, "info");
+      }
+    } else {
+      showNotification?.(`Menampilkan detail: ${item.name}. Produk tersedia di RT 26.`, "info");
+    }
+  };
+
+  const handleFilterClick = () => {
+    if (showNotification) {
+      showNotification("Membuka filter kategori, harga, dan lokasi RT...", "info");
+    }
+  };
+
+  const nextBanner = () => setCurrentBanner((prev) => (prev + 1) % BANNERS.length);
+  const prevBanner = () => setCurrentBanner((prev) => (prev - 1 + BANNERS.length) % BANNERS.length);
+
   return (
-    <div className="bg-[#f8fafc] min-h-screen pb-24 animate-in fade-in duration-700">
+    <div className="bg-[#f8fafc] min-h-screen pb-24 animate-in fade-in duration-700 overflow-x-hidden">
       {/* Lapak 26 Premium Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-8 pb-14 rounded-b-[3rem] shadow-lg shadow-emerald-900/10 mb-[-2rem] relative z-20">
          <div className="flex justify-between items-start mb-6">
@@ -84,12 +184,18 @@ export default function BelanjaView() {
                <p className="text-xs font-bold text-emerald-100/80 uppercase tracking-[0.2em]">Pusat Niaga & UMKM Warga</p>
             </div>
             <div className="flex gap-4">
-              <div className="relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors">
+              <div 
+                onClick={() => handleQuickLink("Pesan Chat")}
+                className="relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors cursor-pointer"
+              >
                 <MessageCircle size={20} />
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-emerald-600">8</div>
               </div>
-              <div className="relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors">
-                <ShoppingCart size={20} />
+              <div 
+                onClick={() => handleQuickLink("Notifikasi")}
+                className="relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors cursor-pointer"
+              >
+                <Bell size={20} />
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-emerald-600">3</div>
               </div>
             </div>
@@ -102,9 +208,13 @@ export default function BelanjaView() {
               placeholder="Cari kebutuhan Anda di RT 26..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && showNotification?.("Mencari: " + searchQuery, "info")}
               className="w-full pl-12 pr-4 py-4 bg-white/95 backdrop-blur border-none rounded-2xl text-slate-800 text-sm font-bold shadow-xl shadow-black/10 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all placeholder:text-slate-400"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+            <div 
+              onClick={handleFilterClick}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-emerald-100 text-emerald-600 rounded-xl cursor-pointer hover:bg-emerald-200"
+            >
                <Filter size={16} />
             </div>
          </div>
@@ -112,44 +222,111 @@ export default function BelanjaView() {
 
       <div className="max-w-screen-xl mx-auto space-y-8 p-4 pt-10">
         
-        {/* Banner Section */}
-        <div className="w-full aspect-[21/9] rounded-2xl overflow-hidden shadow-sm relative group">
-          <img 
-            src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=1200" 
-            alt="Promotion Banner"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent flex flex-col justify-center p-8 text-white">
-            <h2 className="text-2xl font-black italic tracking-tighter mb-2">Hemat di Tiap Transaksi</h2>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black">11x Diskon</span>
-              <span className="text-sm font-bold opacity-80 pl-2 border-l border-white/30">s.d. Rp55rb</span>
-            </div>
-            <div className="mt-4 flex items-center gap-3">
-               <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Kode Promo:</span>
-               <div className="px-4 py-1.5 bg-white text-slate-900 rounded-md text-xs font-black tracking-wider">PASTIDISKON</div>
-            </div>
+        {/* Banner Section - Swipeable */}
+        <div className="relative group overflow-hidden rounded-3xl shadow-xl shadow-emerald-900/5">
+          <div className="absolute inset-y-0 left-4 z-10 flex items-center">
+            <button 
+              onClick={prevBanner}
+              className="p-2 bg-white/10 hover:bg-white/30 backdrop-blur-md rounded-full text-white transition-all opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0"
+            >
+              <Menu size={16} className="rotate-90" />
+            </button>
           </div>
+          <div className="absolute inset-y-0 right-4 z-10 flex items-center">
+            <button 
+              onClick={nextBanner}
+              className="p-2 bg-white/10 hover:bg-white/30 backdrop-blur-md rounded-full text-white transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <motion.div 
+            key={currentBanner}
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="w-full aspect-[21/9] relative cursor-grab active:cursor-grabbing"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -50) nextBanner();
+              if (info.offset.x > 50) prevBanner();
+            }}
+          >
+            <img 
+              src={BANNERS[currentBanner].image} 
+              alt="Banner"
+              className="w-full h-full object-cover"
+            />
+            <div className={`absolute inset-0 bg-gradient-to-r ${BANNERS[currentBanner].color} to-transparent flex flex-col justify-center p-8 text-white`}>
+              <motion.h2 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-2xl font-black italic tracking-tighter mb-2"
+              >
+                {BANNERS[currentBanner].title}
+              </motion.h2>
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="flex items-baseline gap-2"
+              >
+                <span className="text-4xl font-black">{BANNERS[currentBanner].subtitle}</span>
+                <span className="text-sm font-bold opacity-80 pl-2 border-l border-white/30">{BANNERS[currentBanner].benefit}</span>
+              </motion.div>
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mt-4 flex items-center gap-3"
+              >
+                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Kode Promo:</span>
+                 <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     handlePromoCode(BANNERS[currentBanner].promoCode);
+                   }}
+                   className="px-4 py-1.5 bg-white text-slate-900 rounded-md text-xs font-black tracking-wider hover:bg-emerald-50 transition-colors active:scale-95"
+                 >
+                   {BANNERS[currentBanner].promoCode}
+                 </button>
+              </motion.div>
+            </div>
+          </motion.div>
+
           {/* Carousel Indicators */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-            <div className="w-6 h-1.5 bg-white rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {BANNERS.map((_, i) => (
+              <button 
+                key={i}
+                onClick={() => setCurrentBanner(i)}
+                className={`transition-all duration-300 ${currentBanner === i ? 'w-6 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/80'} rounded-full`}
+              />
+            ))}
           </div>
         </div>
 
         {/* Quick Links Row */}
         <div className="bg-white rounded-2xl p-2 flex items-center gap-2 border border-slate-100 overflow-x-auto no-scrollbar">
           {QUICK_LINKS.map((link) => (
-            <button key={link.label} className="flex-1 min-w-[140px] flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors whitespace-nowrap border-r border-slate-50 last:border-none">
-              <div className={`${link.bg} p-2 rounded-lg`}>
+            <button 
+              key={link.label} 
+              onClick={() => handleQuickLink(link.label)}
+              className="flex-1 min-w-[140px] flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors whitespace-nowrap border-r border-slate-50 last:border-none group"
+            >
+              <div className={`${link.bg} p-2 rounded-lg group-hover:scale-110 transition-transform`}>
                 <link.icon className={`w-5 h-5 ${link.color}`} />
               </div>
               <span className="text-xs font-black text-slate-700 uppercase tracking-tight">{link.label}</span>
             </button>
           ))}
-          <div className="px-4 flex items-center gap-2 text-emerald-600">
+          <div 
+            onClick={() => handleQuickLink("Modul Utama")}
+            className="px-4 flex items-center gap-2 text-emerald-600 cursor-pointer hover:scale-110 transition-transform"
+          >
              <div className="bg-emerald-50 p-2 rounded-lg">
                 <LayoutGrid size={20} />
              </div>
@@ -176,17 +353,26 @@ export default function BelanjaView() {
         <div className="space-y-4 pt-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-black text-slate-800 tracking-tight uppercase font-elegant">Lanjut cek ini, yuk</h3>
-            <ChevronRight className="w-5 h-5 text-slate-400" />
+            <button 
+              onClick={() => showNotification?.("Melihat semua riwayat", "info")}
+              className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+            >
+              <ChevronRight className="w-5 h-5 text-slate-400" />
+            </button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
             {RECENT_CHECKS.map((item) => (
-              <div key={item.id} className="min-w-[140px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+              <div 
+                key={item.id} 
+                onClick={() => handleRecentClick(item)}
+                className="min-w-[140px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all hover:scale-105 cursor-pointer group"
+              >
                 <div className="h-28 bg-slate-100 overflow-hidden relative">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                  <div className="absolute top-2 left-2 bg-rose-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">Baru</div>
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <div className="absolute top-2 left-2 bg-rose-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">Baru</div>
                 </div>
                 <div className="p-3">
-                  <h4 className="text-[11px] font-black text-slate-800 truncate mb-1">{item.name}</h4>
+                  <h4 className="text-[11px] font-black text-slate-800 truncate mb-1 uppercase tracking-tight group-hover:text-emerald-600 transition-colors">{item.name}</h4>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{item.label}</p>
                 </div>
               </div>
@@ -195,10 +381,10 @@ export default function BelanjaView() {
         </div>
 
         {/* Feed Headers & Tabs */}
-        <div className="sticky top-[68px] z-40 bg-slate-50 pt-4 pb-2">
+        <div className="sticky top-[68px] z-40 bg-slate-50/95 backdrop-blur-sm pt-4 pb-2">
             <div className="flex items-center gap-3 mb-4 px-2">
-               <h2 className="text-xl font-black text-slate-800 font-elegant">For User897949</h2>
-               <div className="bg-indigo-600 text-white px-2 py-1 rounded flex items-center gap-1.5 shadow-sm">
+               <h2 className="text-xl font-black text-slate-800 font-elegant tracking-tight">For You</h2>
+               <div className="bg-indigo-600 text-white px-2 py-1 rounded flex items-center gap-1.5 shadow-md shadow-indigo-500/20">
                   <div className="bg-white rounded-full p-0.5">
                     <CheckCircle2 size={10} className="text-indigo-600" />
                   </div>
@@ -206,11 +392,21 @@ export default function BelanjaView() {
                </div>
             </div>
             <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-slate-100 pb-2">
-              <button className="text-emerald-600 font-black border-b-2 border-emerald-600 pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant">Untuk Kamu</button>
-              <button className="text-slate-400 font-bold pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant">Belanja Mall</button>
-              <button className="text-slate-400 font-bold pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant">Elektronik</button>
-              <button className="text-slate-400 font-bold pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant">Hiburan</button>
-              <button className="text-slate-400 font-bold pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant">Top Up</button>
+              {["Untuk Kamu", "Belanja Mall", "Elektronik", "Hiburan", "Top Up"].map((tab) => (
+                <button 
+                  key={tab}
+                  onClick={() => setActiveFeedTab(tab)}
+                  className={`pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant transition-all relative ${activeFeedTab === tab ? "text-emerald-600 font-black" : "text-slate-400 font-bold hover:text-slate-600"}`}
+                >
+                  {tab}
+                  {activeFeedTab === tab && (
+                    <motion.div 
+                      layoutId="feedTab"
+                      className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full"
+                    />
+                  )}
+                </button>
+              ))}
             </div>
         </div>
 
@@ -225,41 +421,46 @@ export default function BelanjaView() {
                 transition={{ delay: idx * 0.05 }}
               >
                 <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full">
-                  <div className="h-44 bg-slate-100 relative overflow-hidden">
-                    <img 
-                      src={product.image || 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&q=80&w=400'} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                    />
-                    {product.discount && (
-                      <div className="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg shadow-lg">
-                        {product.discount}
+                  <div 
+                    className="cursor-pointer"
+                    onClick={() => onProductSelect && onProductSelect(product)}
+                  >
+                    <div className="h-44 bg-slate-100 relative overflow-hidden">
+                      <img 
+                        src={product.image || 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&q=80&w=400'} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                      />
+                      {product.discount && (
+                        <div className="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg shadow-lg">
+                          {product.discount}
+                        </div>
+                      )}
+                      <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/90 backdrop-blur px-2 py-1 rounded-md shadow-sm">
+                         <Zap size={10} className="text-rose-500" />
+                         <span className="text-[9px] font-black text-rose-600 uppercase">Flash Sale</span>
                       </div>
-                    )}
-                    <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/90 backdrop-blur px-2 py-1 rounded-md shadow-sm">
-                       <Zap size={10} className="text-rose-500" />
-                       <span className="text-[9px] font-black text-rose-600 uppercase">Flash Sale</span>
                     </div>
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col gap-2">
-                    <h3 className="text-sm font-black text-slate-800 line-clamp-2 leading-tight uppercase font-elegant">
-                      {product.name}
-                    </h3>
-                    <div className="mt-auto">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[10px] font-black text-rose-600">Rp</span>
-                        <span className="text-lg font-black text-slate-900 tracking-tighter">
-                          {new Intl.NumberFormat('id-ID').format(product.price)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[8px] font-black rounded uppercase tracking-tighter">Gratis Ongkir</div>
-                        <span className="text-[10px] font-bold text-slate-400">Jawa Barat</span>
+                    <div className="p-4 flex-1 flex flex-col gap-2">
+                      <h3 className="text-sm font-black text-slate-800 line-clamp-2 leading-tight uppercase font-elegant group-hover:text-emerald-600 transition-colors">
+                        {product.name}
+                      </h3>
+                      <div className="mt-auto">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-[10px] font-black text-rose-600">Rp</span>
+                          <span className="text-lg font-black text-slate-900 tracking-tighter">
+                            {new Intl.NumberFormat('id-ID').format(product.price)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[8px] font-black rounded uppercase tracking-tighter">Gratis Ongkir</div>
+                          <span className="text-[10px] font-bold text-slate-400">Jawa Barat</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   <button 
-                    onClick={() => console.log('Buy', product.id)}
+                    onClick={() => onAddToCart && onAddToCart(product)}
                     className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
                   >
                     <ShoppingCart size={14} />
@@ -276,35 +477,52 @@ export default function BelanjaView() {
           <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
              <Package size={48} className="text-slate-200 mx-auto mb-4" />
              <h4 className="text-lg font-black text-slate-400 uppercase tracking-widest">Produk Tidak Ditemukan</h4>
-             <button 
-               onClick={() => setActiveCategory("Semua")}
-               className="mt-6 text-emerald-600 font-black text-sm uppercase tracking-widest hover:underline"
-             >
-               Lihat Semua Produk
-             </button>
+             {searchQuery && (
+               <button 
+                 onClick={() => setSearchQuery("")}
+                 className="mt-6 text-emerald-600 font-black text-sm uppercase tracking-widest hover:underline"
+               >
+                 Hapus Pencarian
+               </button>
+             )}
           </div>
         )}
       </div>
 
       {/* Simplified Mobile Bottom Nav (Visual Reference) */}
       <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-100 flex items-center justify-around py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:hidden">
-         <div className="flex flex-col items-center gap-1 group text-emerald-600">
+         <div 
+           onClick={() => handleQuickLink("Home")}
+           className="flex flex-col items-center gap-1 group text-emerald-600 cursor-pointer"
+         >
             <LayoutGrid size={22} className="group-active:scale-95 transition-transform" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Home</span>
          </div>
-         <div className="flex flex-col items-center gap-1 group text-slate-400">
+         <div 
+           onClick={() => handleQuickLink("Inbox")}
+           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+         >
             <Bell size={22} className="group-active:scale-95 transition-transform" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Inbox</span>
          </div>
-         <div className="flex flex-col items-center gap-1 group text-slate-400">
+         <div 
+           onClick={() => handleQuickLink("Transaksi")}
+           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+         >
             <Package size={22} className="group-active:scale-95 transition-transform" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Transaksi</span>
          </div>
-         <div className="flex flex-col items-center gap-1 group text-slate-400">
+         <div 
+           onClick={() => handleQuickLink("Toko Saya")}
+           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+         >
             <Store size={22} className="group-active:scale-95 transition-transform" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Toko Saya</span>
          </div>
-         <div className="flex flex-col items-center gap-1 group text-slate-400">
+         <div 
+           onClick={() => handleQuickLink("Akun")}
+           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+         >
             <Users className="w-5.5 h-5.5" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Akun</span>
          </div>

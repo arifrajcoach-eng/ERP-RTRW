@@ -89,6 +89,7 @@ import {
   Sparkles,
   Tag,
 } from "lucide-react";
+import BelanjaView from "./components/toko/BelanjaView";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
@@ -1060,12 +1061,12 @@ export default function App() {
     if (e.status !== "ACTIVE" || e.id === hiddenEmergencyId) return false;
     const emTime = e.timestamp ? new Date(e.timestamp).getTime() : (e.createdAt?.toMillis?.() || Date.now());
     
-    // Auto-show if it's very recent (e.g. less than 5 minutes old) 
-    // OR if it's the user's own SOS
-    const isVeryRecent = Date.now() - emTime < 300000;
     const isMine = e.userId === auth.currentUser?.uid;
+    const isNewSinceAppStart = emTime > appStartTime.current - 20000; // 20s buffer for clock drift
     
-    return isMine || isVeryRecent;
+    // ONLY show if it's the user's own SOS OR if it's a new SOS that occurred while app is open
+    // This prevents stale/old SOS from screaming on every login or refresh.
+    return isMine || isNewSinceAppStart;
   });
 
   useEffect(() => {
@@ -1534,15 +1535,15 @@ export default function App() {
       (snap) => {
         setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         snap.docChanges().forEach(change => {
-           if ((change.type === "added" || change.type === "modified") && change.doc.data().status === "ACTIVE") {
+           if (change.type === "added" && change.doc.data().status === "ACTIVE") {
               const data = change.doc.data();
               const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
               
               const isMine = data.userId === auth.currentUser?.uid;
-              const isNewSinceAppStart = sosTime > appStartTime.current - 5000; // 5s buffer
+              const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
               
               if (isMine || isNewSinceAppStart) {
-                 // Reveal if it was hidden by mistake
+                 // Reveal ONLY new SOS, don't force-reveal on modifications
                  setHiddenEmergencyId(null);
               }
            }
@@ -1668,7 +1669,7 @@ export default function App() {
 
     // Shop/Store
     if (activeTab === "etoko") {
-       unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", tIds)), snap => setTokoProducts(snap.docs.map(doc => ({ ...doc.data() })))));
+       unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", tIds)), snap => setTokoProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
        unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", tIds)), snap => setTokoOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
     }
 
@@ -4715,34 +4716,55 @@ function SOSOverlay({
 
       const ctx = audioCtxRef.current;
       
-      const playSirenCycle = () => {
+      const playSirenPattern = () => {
         if (!emergency || isMuted) return;
         const now = ctx.currentTime;
 
-        // Main Siren Burst
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        osc.type = "sawtooth";
-        
-        // Frequency sweep for urgency
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.6);
-        osc.frequency.exponentialRampToValueAtTime(400, now + 1.2);
+        // "12x" Urgency Pattern: 12 rapid piercing pulses per cycle
+        // Kentongan style: rhythmic, intense, and unmistakable
+        for (let i = 0; i < 12; i++) {
+          const hitTime = now + (i * 0.15); // Faster 0.15s rhythm for "12x" intensity
+          
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          
+          osc1.type = "sawtooth";
+          osc2.type = "square";
+          
+          const freq = 800 + (i * 15); // Faster rising pitch for high urgency
+          osc1.frequency.setValueAtTime(freq, hitTime);
+          osc1.frequency.exponentialRampToValueAtTime(freq * 1.8, hitTime + 0.08);
+          
+          osc2.frequency.setValueAtTime(freq + 10, hitTime);
+          osc2.frequency.exponentialRampToValueAtTime((freq + 10) * 1.8, hitTime + 0.08);
 
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.8, now + 0.1);
-        gainNode.gain.setValueAtTime(0.8, now + 1.0);
-        gainNode.gain.linearRampToValueAtTime(0, now + 1.2);
+          gainNode.gain.setValueAtTime(0, hitTime);
+          gainNode.gain.linearRampToValueAtTime(0.9, hitTime + 0.015);
+          gainNode.gain.linearRampToValueAtTime(0, hitTime + 0.1);
 
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 1.2);
+          osc1.connect(gainNode);
+          osc2.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          
+          osc1.start(hitTime);
+          osc2.start(hitTime);
+          osc1.stop(hitTime + 0.12);
+          osc2.stop(hitTime + 0.12);
+        }
+
+        // Synchronized Vibration: 12 pulses
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          const pattern = [];
+          for(let j=0; j<12; j++) pattern.push(80, 80);
+          navigator.vibrate(pattern);
+        }
       };
 
       // Loop rhythmic siren for continuous attention
-      playSirenCycle();
-      sirenIntervalRef.current = setInterval(playSirenCycle, 1400);
+      playSirenPattern();
+      // Cycle: 12 hits * 0.15s = 1.8s. We repeat every 2.5s for rapid loop.
+      sirenIntervalRef.current = setInterval(playSirenPattern, 2500); 
     };
 
     startAudioContext();
@@ -5367,143 +5389,15 @@ function ETokoView({
           </div>
 
           {activeTab === "shop" && (
-            <>
-              {/* Filter & Search */}
-              <div className="flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative flex-1 w-full">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari produk..."
-                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-100 rounded-[1.5rem] outline-none focus:border-brand-blue/30 transition-all font-bold"
-                  />
-                </div>
-                <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                  <select
-                    value={selectedRT}
-                    onChange={(e) => setSelectedRT(e.target.value)}
-                    className="px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-white text-slate-700 border border-slate-200 outline-none focus:border-brand-blue"
-                  >
-                    {rtOptions.map((rt, i) => (
-                      <option key={`toko-rt-${rt}-${i}`} value={rt}>
-                        {rt === "Semua" ? "Semua RT" : `RT ${rt}`}
-                      </option>
-                    ))}
-                  </select>
-                  {categories.map((c, i) => (
-                    <StyledButton
-                      key={`toko-cat-${c}-${i}`}
-                      onClick={() => setSelectedCategory(c)}
-                      label={c}
-                      colorType={
-                        selectedCategory === c ? "primary" : "secondary"
-                      }
-                      className="text-xs px-4 py-2 whitespace-nowrap"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Product Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredProducts.map((p) => (
-                  <motion.div
-                    layout
-                    key={p.id}
-                    className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-xl transition-all flex flex-col"
-                  >
-                    <div
-                      className="relative h-48 bg-slate-50 cursor-pointer"
-                      onClick={() => {
-                        setSelectedProduct(p);
-                        setShowProductModal(true);
-                      }}
-                    >
-                      <img
-                        src={
-                          p.image ||
-                          "https://via.placeholder.com/300?text=Produk"
-                        }
-                        alt={p.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute top-4 left-4 bg-white/90  px-3 py-1 rounded-full border border-slate-100 flex items-center gap-1">
-                        <span className="text-[10px] font-black text-brand-blue uppercase">
-                          {p.category}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          |
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-700">
-                          {p.rtId || "RT?"}
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className="p-6 flex-1 flex flex-col"
-                      onClick={() => {
-                        setSelectedProduct(p);
-                        setShowProductModal(true);
-                      }}
-                    >
-                      <h3 className="text-lg font-black text-slate-800 mb-1 cursor-pointer">
-                        {p.name}
-                      </h3>
-                      <p className="text-xs text-slate-400 font-medium mb-4 line-clamp-2">
-                        {p.description ||
-                          "Kualitas terjamin untuk warga RW 26."}
-                      </p>
-
-                      <div className="mt-auto space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                              Harga
-                            </p>
-                            <p className="text-xl font-black text-slate-800">
-                              Rp {p.price?.toLocaleString("id-ID")}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                              Stok
-                            </p>
-                            <p
-                              className={`text-sm font-black ${p.stock <= 5 ? "text-red-500" : "text-slate-800"}`}
-                            >
-                              {p.stock}
-                            </p>
-                          </div>
-                        </div>
-
-                        <StyledButton
-                          disabled={p.stock <= 0}
-                          onClick={() => addToCart(p)}
-                          label={
-                            p.stock <= 0 ? "Stok Habis" : "Tambah Keranjang"
-                          }
-                          colorType={p.stock <= 0 ? "danger" : "success"}
-                          icon={
-                            p.stock > 0 && <ShoppingBag className="w-4 h-4" />
-                          }
-                          className="w-full py-3 text-[10px]"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {filteredProducts.length === 0 && (
-                <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
-                  <Package className="w-16 h-16 opacity-20 mb-4" />
-                  <p className="text-sm font-black uppercase tracking-widest">
-                    Produk tidak ditemukan
-                  </p>
-                </div>
-              )}
-            </>
+            <BelanjaView 
+              products={products} 
+              onAddToCart={addToCart}
+              showNotification={showNotification}
+              onProductSelect={(p) => {
+                setSelectedProduct(p);
+                setShowProductModal(true);
+              }}
+            />
           )}
 
           {activeTab === "orders" && (
