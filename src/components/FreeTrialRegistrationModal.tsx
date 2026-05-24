@@ -66,7 +66,8 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       const newTenant = {
         id: tenantId,
         name: formData.orgName,
-        status: 'BASIC',
+        status: 'TRIAL',
+        plan: 'TRIAL',
         isActive: true,
         createdAt: new Date().toISOString(),
         adminEmail: formData.email.toLowerCase(),
@@ -78,7 +79,9 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
         platformSource: 'SmartRW_WebApp',
         onboardingCompleted: false,
         lastAutoFollowUpAt: null,
-        autoFollowedUpAfterTwoMonths: false
+        autoFollowedUpAfterTwoMonths: false,
+        namaPIC: formData.nama,
+        followUpStatus: 'NEW'
       };
 
       const finalUserId = `PRE_${formData.email.toLowerCase()}`;

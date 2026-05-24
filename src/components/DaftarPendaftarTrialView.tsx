@@ -1,23 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { Mail, Phone, Users } from 'lucide-react';
+import { Mail, Phone, Users, UserPlus } from 'lucide-react';
 
-export function DaftarPendaftarTrialView() {
+export function DaftarPendaftarTrialView({ onAdd }: any) {
   const [registrants, setRegistrants] = useState<any[]>([]);
 
   useEffect(() => {
     const q = query(collection(db, 'tenants'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRegistrants(data.filter(t => t.id.startsWith('TRIAL_')));
+      setRegistrants(data.filter(t => t.id.startsWith('TRIAL_') || t.status === 'TRIAL' || t.plan === 'TRIAL'));
     });
     return () => unsubscribe();
   }, []);
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">Tenant Trial</h2>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-xl font-bold">Tenant Trial</h2>
+          <p className="text-sm text-slate-500">Pendaftar yang menggunakan mode 'Mulai Gratis'</p>
+        </div>
+        <button 
+          onClick={onAdd}
+          className="px-6 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+        >
+          <UserPlus size={16} />
+          Tambah Trial Baru
+        </button>
+      </div>
       <div className="bg-white rounded-xl shadow overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-100 text-slate-600 uppercase text-xs font-bold">

@@ -46,7 +46,7 @@ interface Lead {
   lastFollowUp?: string;
 }
 
-export default function LeadManagementView({ handleFirestoreError }: any) {
+export default function LeadManagementView({ handleFirestoreError, onAddLead }: any) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
@@ -242,6 +242,13 @@ export default function LeadManagementView({ handleFirestoreError }: any) {
           >
              <Download size={16} />
              Export CSV
+          </button>
+          <button 
+             onClick={() => onAddLead && onAddLead()}
+             className="px-6 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+             <UserPlus size={16} />
+             Mulai Gratis (Manual)
           </button>
           <button 
              onClick={() => {

@@ -2165,6 +2165,7 @@ export default function App() {
       },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
       { id: "leads", label: "CRM & Leads", icon: Users },
+      { id: "daftar-trial", label: "Pendaftar Trial", icon: UserPlus },
       { id: "users", label: "Manage User", icon: User },
       { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
       { id: "pengaturan", label: "Pengaturan", icon: Settings },
@@ -2233,6 +2234,8 @@ export default function App() {
             "inventaris",
             "surat",
             "kop-template",
+            "leads",
+            "daftar-trial",
             "users",
             "super-admin",
             "pengaturan",
@@ -3284,7 +3287,9 @@ export default function App() {
           )}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
 
-          {activeTab === "daftar-trial" && <DaftarPendaftarTrialView />}
+          {activeTab === "daftar-trial" && (
+            <DaftarPendaftarTrialView onAdd={() => setShowFreeTrialModal(true)} />
+          )}
 
           {activeTab === "users" && (
             <UsersView
@@ -3298,7 +3303,10 @@ export default function App() {
             />
           )}
           {activeTab === "leads" && (
-            <LeadManagementView handleFirestoreError={handleFirestoreError} />
+            <LeadManagementView 
+              handleFirestoreError={handleFirestoreError} 
+              onAddLead={() => setShowFreeTrialModal(true)}
+            />
           )}
 
           {activeTab === "super-admin" && (
