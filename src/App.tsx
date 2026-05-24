@@ -3325,7 +3325,8 @@ export default function App() {
           )}
           {activeTab === "leads" && (
             <LeadManagementView 
-              handleFirestoreError={handleFirestoreError} 
+              handleFirestoreError={handleFirestoreError}
+              showNotification={showNotification}
               onAddLead={() => setShowFreeTrialModal(true)}
             />
           )}

@@ -106,8 +106,11 @@ export function DaftarPendaftarTrialView({ onAdd }: any) {
                       </button>
                     )}
                     <button 
-                      onClick={() => handleDelete(reg.id, reg.name)}
-                      className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(reg.id, reg.name);
+                      }}
+                      className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 hover:text-rose-700 transition-colors shadow-sm border border-rose-100"
                       title="Delete"
                     >
                       <Trash2 size={16} />

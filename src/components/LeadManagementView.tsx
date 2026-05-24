@@ -49,7 +49,7 @@ interface Lead {
   lastFollowUp?: string;
 }
 
-export default function LeadManagementView({ handleFirestoreError, onAddLead }: any) {
+export default function LeadManagementView({ handleFirestoreError, onAddLead, showNotification }: any) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
@@ -203,10 +203,11 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead }: 
   };
 
   const handleDeleteLead = async (leadId: string, leadName: string) => {
-    if (!window.confirm(`Hapus lead "${leadName}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!window.confirm(`Hapus lead "${leadName}"?`)) return;
     
     try {
       await deleteDoc(doc(db, 'tenants', leadId));
+      if (showNotification) showNotification(`Lead ${leadName} berhasil dihapus`, 'success');
     } catch (err) {
       handleFirestoreError(err, 'delete', 'lead');
     }
@@ -374,11 +375,14 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead }: 
                           {new Date(lead.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                         </div>
                         <button 
-                           onClick={() => handleDeleteLead(lead.id, lead.name)}
-                           className="p-2 bg-slate-50 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             handleDeleteLead(lead.id, lead.name);
+                           }}
+                           className="p-2 bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-700 rounded-xl transition-all shadow-sm border border-rose-100"
                            title="Hapus Lead"
                         >
-                           <Trash2 size={14} />
+                           <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
