@@ -2515,6 +2515,8 @@ export default function App() {
             onSuccess={(email: string) => {
               setPrefilledEmail(email);
               setShowFreeTrialModal(false);
+              showNotification('Selamat datang di lingkungan Smart RW AI - Enjoy Yahh', 'success');
+              // Automatically try to login with prefilled email if possible or just let them click login
             }}
           />
         )}

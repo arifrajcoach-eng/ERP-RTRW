@@ -8,7 +8,8 @@ import {
   doc, 
   Timestamp,
   orderBy,
-  addDoc
+  addDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
@@ -27,7 +28,8 @@ import {
   Filter,
   Upload,
   Download,
-  UserPlus
+  UserPlus,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -200,6 +202,16 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead }: 
     }
   };
 
+  const handleDeleteLead = async (leadId: string, leadName: string) => {
+    if (!window.confirm(`Hapus lead "${leadName}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    
+    try {
+      await deleteDoc(doc(db, 'tenants', leadId));
+    } catch (err) {
+      handleFirestoreError(err, 'delete', 'lead');
+    }
+  };
+
   const filteredLeads = leads.filter(l => {
     const matchesSearch = (l.name?.toLowerCase().includes(filter.toLowerCase()) || 
                           l.namaPIC?.toLowerCase().includes(filter.toLowerCase()) ||
@@ -356,9 +368,18 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead }: 
                            </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.6 text-slate-300 text-[10px] font-black uppercase tracking-tight">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(lead.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-slate-300 text-[10px] font-black uppercase tracking-tight">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(lead.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        </div>
+                        <button 
+                           onClick={() => handleDeleteLead(lead.id, lead.name)}
+                           className="p-2 bg-slate-50 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                           title="Hapus Lead"
+                        >
+                           <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
 

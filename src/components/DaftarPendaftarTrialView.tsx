@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { Mail, Phone, Users, UserPlus, CheckCircle2 } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { Mail, Phone, Users, UserPlus, CheckCircle2, Trash2 } from 'lucide-react';
 
 export function DaftarPendaftarTrialView({ onAdd }: any) {
   const [registrants, setRegistrants] = useState<any[]>([]);
@@ -27,6 +27,15 @@ export function DaftarPendaftarTrialView({ onAdd }: any) {
       });
     } catch (err) {
       console.error('Error updating status:', err);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Hapus pendaftar "${name}"?`)) return;
+    try {
+      await deleteDoc(doc(db, 'tenants', id));
+    } catch (err) {
+      console.error('Error deleting tenant:', err);
     }
   };
 
@@ -96,6 +105,13 @@ export function DaftarPendaftarTrialView({ onAdd }: any) {
                         <CheckCircle2 size={16} />
                       </button>
                     )}
+                    <button 
+                      onClick={() => handleDelete(reg.id, reg.name)}
+                      className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </td>
               </tr>

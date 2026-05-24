@@ -170,6 +170,15 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       setIsSuccess(true);
       setStep(3);
       showNotification('Pendaftaran & Aktivasi Berhasil!', 'success');
+      
+      // Auto-jump to dashboard after 1.5 seconds or immediately
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess(email);
+        } else {
+          onClose();
+        }
+      }, 1500);
     } catch (err: any) {
       console.error('Registration Error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
