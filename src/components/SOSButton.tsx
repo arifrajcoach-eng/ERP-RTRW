@@ -42,17 +42,19 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
 
     navigator.geolocation.getCurrentPosition(async (position) => {
       try {
-        await addDoc(collection(db, 'emergency_logs'), {
+        const id = `SOS-${Date.now()}`;
+        await addDoc(collection(db, 'emergencies'), {
+          tenantId: currentUser.tenantId || 'RW26_SMART',
+          id,
           userId: currentUser.uid,
           userName: currentUser.name,
           userPhone: currentUser.hp || '-',
-          location: {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          },
-          status: 'pending',
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          userLocation: `Koordinat: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`,
+          status: 'ACTIVE',
+          timestamp: new Date().toISOString(),
           createdAt: serverTimestamp(),
-          tenantId: currentUser.tenantId,
         });
         alert("SOS Terkirim!");
       } catch (e) {

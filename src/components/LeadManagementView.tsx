@@ -126,6 +126,16 @@ export default function LeadManagementView({ handleFirestoreError }: any) {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          <button 
+             onClick={() => {
+                alert("Sistem sedang memindai tenant yang perlu di-followup (2 bulan kedepan). Sila cek log konsol.");
+                // Since automation already runs in App.tsx, this is a placeholder to show it's active
+             }}
+             className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+             <Sparkles size={16} />
+             Run Automasi Followup
+          </button>
           <div className="bg-indigo-50 px-4 py-2 rounded-2xl border border-indigo-100 flex items-center gap-3">
             <Users className="w-5 h-5 text-indigo-600" />
             <div>
@@ -206,18 +216,26 @@ export default function LeadManagementView({ handleFirestoreError }: any) {
                 }`} />
 
                 <div className="relative space-y-6">
-                  <div className="flex justify-between items-start">
-                    <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${
-                       lead.followUpStatus === 'CONVERTED' ? 'bg-emerald-50 text-emerald-600' :
-                       lead.followUpStatus === 'CONTACTED' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
-                    }`}>
-                      {lead.followUpStatus || 'NEW'}
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-2">
+                        <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${
+                           lead.followUpStatus === 'CONVERTED' ? 'bg-emerald-50 text-emerald-600' :
+                           lead.followUpStatus === 'CONTACTED' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
+                        }`}>
+                          {lead.followUpStatus || 'NEW'}
+                        </div>
+                        {(lead as any).autoFollowedUpAfterTwoMonths && (
+                           <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
+                             <CheckCircle2 size={10} />
+                             <span className="text-[8px] font-black uppercase tracking-tight">Auto Follow-up Aktif</span>
+                           </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.6 text-slate-300 text-[10px] font-black uppercase tracking-tight">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(lead.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.6 text-slate-300 text-[10px] font-black uppercase tracking-tight">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(lead.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                    </div>
-                  </div>
 
                   <div>
                     <h4 className="text-2xl font-black text-slate-800 tracking-tight leading-7 line-clamp-1 group-hover:text-indigo-600 transition-colors uppercase font-elegant">

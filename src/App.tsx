@@ -580,71 +580,8 @@ export default function App() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const alertedSOSRef = useRef<Set<string>>(new Set());
+  const appStartTime = useRef(Date.now());
 
-
-  const triggerLocalSOSAlert = (sosId: string) => {
-    if (alertedSOSRef.current.has(sosId)) return;
-    alertedSOSRef.current.add(sosId);
-
-    // Continuous Alert System (Audio + Vibration)
-    const runAlertLoop = () => {
-      try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
-        
-        const audioCtx = new AudioContextClass();
-        
-        const playSirenBurst = () => {
-          if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
-          
-          const now = audioCtx.currentTime;
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          
-          osc.type = "sawtooth";
-          oscillatorFrequencySweep(osc, now, 1.4);
-          
-          gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.7, now + 0.1);
-          gain.gain.setValueAtTime(0.7, now + 1.2);
-          gain.gain.linearRampToValueAtTime(0, now + 1.4);
-          
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 1.4);
-
-          // Rhythmic Vibration
-          if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-            try { navigator.vibrate([800, 400]); } catch (e) {}
-          }
-        };
-
-        const oscillatorFrequencySweep = (osc: OscillatorNode, start: number, duration: number) => {
-          osc.frequency.setValueAtTime(450, start);
-          osc.frequency.exponentialRampToValueAtTime(900, start + duration * 0.5);
-          osc.frequency.exponentialRampToValueAtTime(450, start + duration);
-        };
-
-        // Start cycling every 1.6 seconds
-        playSirenBurst();
-        const intervalId = setInterval(playSirenBurst, 1600);
-
-        // Auto-stop after 15 minutes of inactivity to prevent endless battery drain if ignored
-        // User requested "terus menerus", 15m is a practical "forever" for web apps.
-        setTimeout(() => {
-          clearInterval(intervalId);
-          audioCtx.close().catch(() => {});
-        }, 900000); 
-
-      } catch (e) {
-        console.error("SOS Alert System Error:", e);
-      }
-    };
-
-    runAlertLoop();
-  };
   const [currentUser, setCurrentUser] = useState<{
     name: string;
     role: string;
@@ -687,6 +624,21 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          // Check session cache first to prevent redundant quota usage
+          const cachedProfile = sessionStorage.getItem(`user_profile_${user.uid}`);
+          if (cachedProfile) {
+            try {
+              const parsed = JSON.parse(cachedProfile);
+              setCurrentUser({ uid: user.uid, ...parsed });
+              setIsAuthInitializing(false);
+              // We still want to verify if the profile exists in background or just proceed
+              // To be safe and save quota, we'll return here if we have a cache
+              return;
+            } catch (e) {
+              sessionStorage.removeItem(`user_profile_${user.uid}`);
+            }
+          }
+
           // Fetch additional user info/role from Firestore
           const userDocRef = doc(db, "users", user.uid);
           let userDoc;
@@ -703,9 +655,13 @@ export default function App() {
                   "Permission denied reading users collection for UID (Auth sync delay), retrying...",
                   user.uid,
                 );
-                // Retry after a short delay to allow Auth state to propagate to Firestore SDK
                 await new Promise((resolve) => setTimeout(resolve, 1500));
                 userDoc = await getDoc(userDocRef);
+              } else if (err.message?.includes("quota") || err.code === "resource-exhausted") {
+                  // If quota hit, we might have a dead lock. Try to use minimal info if possible
+                  setCurrentUser({ uid: user.uid, name: user.email || "User", role: "Viewer", tenantId: "GUEST" });
+                  setIsAuthInitializing(false);
+                  return;
               } else {
                 throw err;
               }
@@ -724,14 +680,12 @@ export default function App() {
               user.email?.toLowerCase().includes("handoko");
             let needsUpdate = false;
 
-            // Fix missing or wrong tenantId for known client
             if (isTrihUser && userData.tenantId !== "RW_BERJUANG") {
               userData.tenantId = "RW_BERJUANG";
               userData.role = "ADMIN";
               needsUpdate = true;
             }
 
-            // Force Super Admin status for the specific master email
             const isMasterEmail =
               user.email?.toLowerCase() === "arifrajcoach@gmail.com";
             if (isMasterEmail) {
@@ -749,7 +703,6 @@ export default function App() {
               if (isAdminStatusWrong) needsUpdate = true;
             }
 
-            // Persistent update to database if repair was needed
             if (needsUpdate) {
               try {
                 await updateDoc(userDocRef, {
@@ -762,6 +715,9 @@ export default function App() {
                 console.warn("Could not sync profile repairs to DB.", e);
               }
             }
+            
+            // Cache the final profile
+            sessionStorage.setItem(`user_profile_${user.uid}`, JSON.stringify(userData));
             setCurrentUser({ uid: user.uid, ...userData });
           } else if (user.isAnonymous) {
             // Anonymous Citizen Bypass for Super Admin
@@ -1038,9 +994,7 @@ export default function App() {
   const [complaintsData, setComplaintsData] = useState<any[]>([]);
   const [bookingsData, setBookingsData] = useState<any[]>([]);
   const [isSOSTriggering, setIsSOSTriggering] = useState(false);
-  const [hiddenEmergencyId, setHiddenEmergencyId] = useState<string | null>(
-    null,
-  );
+  const [hiddenEmergencyId, setHiddenEmergencyId] = useState<string | null>(null);
 
   const [usersData, setUsersData] = useState<any[]>([]);
   const [tenantsData, setTenantsData] = useState<any[]>([]);
@@ -1104,9 +1058,14 @@ export default function App() {
 
   const activeEmergency = emergenciesData.find((e) => {
     if (e.status !== "ACTIVE" || e.id === hiddenEmergencyId) return false;
-    const emTime = e.timestamp ? new Date(e.timestamp).getTime() : Date.now();
-    const ageHours = (Date.now() - emTime) / (1000 * 60 * 60);
-    return ageHours < 24;
+    const emTime = e.timestamp ? new Date(e.timestamp).getTime() : (e.createdAt?.toMillis?.() || Date.now());
+    
+    // Auto-show if it's very recent (e.g. less than 5 minutes old) 
+    // OR if it's the user's own SOS
+    const isVeryRecent = Date.now() - emTime < 300000;
+    const isMine = e.userId === auth.currentUser?.uid;
+    
+    return isMine || isVeryRecent;
   });
 
   useEffect(() => {
@@ -1529,1078 +1488,259 @@ export default function App() {
     }
   };
 
-  // --- FIREBASE SYNC (REAL-TIME) ---
+  // --- FIREBASE SYNC (REAL-TIME CORE DATA) ---
   useEffect(() => {
-    // We allow fetching for authenticated users OR anonymous citizens
     if (!currentUser && !wargaAuth) {
       setIsLoadingDB(false);
       return;
     }
-
-    const baseTenantId =
-      currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART";
-    const tId =
-      currentUser?.isSuperAdmin && selectedTenantId
-        ? selectedTenantId
-        : baseTenantId;
-
-    // Build array of supported database tenant IDs by resolving child and virtual relationships
-    const tIdsTemp = [tId];
-    
-    // For RW/parent tenants, include all known RT child tenant conventions
-    if (tId === "rw26_berjuang") {
-      tIdsTemp.push("rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang");
-    } else if (tId.endsWith("_rw26_berjuang")) {
-      tIdsTemp.push("rw26_berjuang");
-    } else if (
-      tId === "RW_BERJUANG" ||
-      tId === "rw26_berjuang" ||
-      tId === "rt01_rw26" ||
-      tId === "trihprw26" ||
-      tId === "RW26_SMART" ||
-      tId.toLowerCase().includes("berjuang") ||
-      tId.toLowerCase().includes("trih") ||
-      tId.toLowerCase().includes("rw26")
-    ) {
-      // If the user context is RW or broader, give them access to the root database identities
-      if (!tId.toLowerCase().includes("rt")) {
-         tIdsTemp.push(
-           "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
-           "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
-           "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang",
-           "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang",
-           "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04",
-           "MASTER"
-         );
-      } else {
-         // If they are a specific RT, they only get their own, plus the parent databases
-         tIdsTemp.push(
-           "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26", tId
-         );
-      }
-    } else if (tId.toLowerCase().includes("rt")) {
-      // Fallback for any other RT format 
-      tIdsTemp.push(
-        "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART", "rt01_rw26", tId
-      );
-    }
-
-    if (currentTenant?.parentId && tId !== "rw26_berjuang" && !tId.endsWith("_rw26_berjuang")) {
-      tIdsTemp.push(currentTenant.parentId);
-      if (
-        currentTenant.parentId === "RW_BERJUANG" ||
-        currentTenant.parentId === "rw26_berjuang" ||
-        currentTenant.parentId === "trihprw26"
-      ) {
-        tIdsTemp.push(
-          "RW_BERJUANG", "rw26_berjuang", "trihprw26", "RW26_SMART",
-          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang"
-        );
-      }
-    }
-    const tIds = Array.from(new Set(tIdsTemp));
+    const tIds = activeTenantIds;
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "RW26_SMART");
 
     setIsLoadingDB(true);
     let loadedSections = 0;
-    const requiredSections = hasFullAccess ? 4 : 2; // Hanya tunggu data utama: Warga, Kas, Surat, Iuran
-
-    // Safety fallback agar aplikasi tidak freeze selamanya
-    const fallbackTimer = setTimeout(() => {
-      setIsLoadingDB(false);
-    }, 4500);
+    const requiredSections = 1; // Base settings
 
     const onDataLoaded = () => {
       loadedSections++;
       if (loadedSections >= requiredSections) {
         setIsLoadingDB(false);
-        clearTimeout(fallbackTimer);
       }
     };
 
-    // 0. Settings Listener
-    const unsubSettings = onSnapshot(
-      doc(db, "settings", tId),
-      (snap) => {
-        if (snap.exists()) {
-          setSettings(snap.data());
-        }
-      },
-      (err) => {
-        handleFirestoreError(err, "get", `settings/${tId}`);
-        onDataLoaded();
-      },
-    );
+    // 1. Settings (Global)
+    const unsubSettings = onSnapshot(doc(db, "settings", tId), (snap) => {
+      if (snap.exists()) setSettings(snap.data());
+      onDataLoaded();
+    }, (err) => {
+      handleFirestoreError(err, "get", `settings/${tId}`);
+      onDataLoaded();
+    });
 
-    const unsubCurrentTenant =
-      tId === "MASTER"
-        ? (() => {
-            setCurrentTenant({
-              id: "MASTER",
-              name: "SUPER ADMIN SmartRW AI",
-              status: "ENTERPRISE",
-              maxWarga: 999999,
-            });
-            onDataLoaded();
-            return () => {};
-          })()
-        : onSnapshot(
-            doc(db, "tenants", tId),
-            (snap) => {
-              if (snap.exists()) {
-                const tenantData = snap.data();
-                if (tenantData) {
-                  // Auto-repair missing createdAt for trials
-                  const rawStatus = (tenantData.status || "STARTER")
-                    .toUpperCase()
-                    .replace("PLAN", "")
-                    .replace("V4.0 ", "")
-                    .trim();
-                  const isTrial = [
-                    "STARTER",
-                    "GRATIS",
-                    "BASIC",
-                    "TRIAL",
-                    "ACTIVE",
-                  ].includes(PLAN_ALIASES[rawStatus] || rawStatus);
+    // 2. Tenant (Global)
+    const unsubCurrentTenant = tId === "MASTER" ? (() => {
+      setCurrentTenant({ id: "MASTER", name: "SUPER ADMIN", status: "ENTERPRISE" });
+      onDataLoaded();
+      return () => {};
+    })() : onSnapshot(doc(db, "tenants", tId), (snap) => {
+      if (snap.exists()) setCurrentTenant(snap.data());
+      onDataLoaded();
+    });
 
-                  if (
-                    isTrial &&
-                    !tenantData.createdAt &&
-                    tenantData.id !== "RW26_SMART"
-                  ) {
-                    const newCreatedAt = new Date().toISOString();
-                    tenantData.createdAt = newCreatedAt;
-                    updateDoc(doc(db, "tenants", tId), {
-                      createdAt: newCreatedAt,
-                    }).catch(console.error);
-                  }
-
-                  // Expiration check (30 days)
-                  if (isTrial && tenantData.createdAt) {
-                    const startDate = new Date(tenantData.createdAt);
-                    const now = new Date();
-                    const diffDays =
-                      (now.getTime() - startDate.getTime()) /
-                      (1000 * 60 * 60 * 24);
-                    if (diffDays > 30 && tenantData.id !== "RW26_SMART") {
-                      tenantData.isExpired = true;
-                      tenantData.status = "EXPIRED"; // Force expired status
-                    }
-                  }
-                }
-                setCurrentTenant(tenantData);
-              } else {
-                setCurrentTenant(null);
-              }
-              onDataLoaded();
-            },
-            (err) => {
-              handleFirestoreError(err, "get", `tenants/${tId}`);
-              setCurrentTenant(null);
-              onDataLoaded();
-            },
-          );
-
-    // 0.5 Kop Settings Listener
-    const unsubKopSettings = onSnapshot(
-      doc(db, "tenant_settings", tId),
-      (snap) => {
-        if (snap.exists()) {
-          setKopSettings(snap.data());
-        }
-      },
-      (err) => {
-        handleFirestoreError(err, "get", `tenant_settings/${tId}`);
-        onDataLoaded();
-      },
-    );
-
-    const getQueryRtNormalized = (rtVal: any): string => {
-      const rtStr = (rtVal || "").toString();
-      const match = rtStr.match(/rt\s*(\d+)/i) || rtStr.match(/\d+/);
-      const num = match ? match[1] || match[0] : rtStr;
-      return num ? num.replace(/^0+/, "").padStart(2, "0") : "01";
-    };
-
-    // 1. Warga Listener
-    const getWargaQuery = () => {
-      const base = collection(db, "data_warga");
-
-      const constraints = [where("tenantId", "in", tIds), limit(5000)];
-
-      if (currentUser?.role === "RT") {
-        constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-      }
-
-      return query(base, ...constraints);
-    };
-
-    const unsubWarga = onSnapshot(
-      getWargaQuery(),
-      (snap) => {
-        const data = snap.docs.map((doc) => ({ docId: doc.id, ...doc.data() }));
-        setWargaData(data);
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "data_warga");
-        onDataLoaded();
-      },
-    );
-
-    // 2. Kas Listener
-    let unsubKas = () => {};
-    if (hasFullAccess) {
-      const getKasQuery = () => {
-        const base = collection(db, "kas");
-        const constraints = [
-          where("tenantId", "in", tIds),
-          orderBy("tanggal", "desc"),
-          limit(100),
-        ];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubKas = onSnapshot(
-        getKasQuery(),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          setKasData(data);
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "kas");
-          onDataLoaded();
-        },
-      );
-    }
-
-    // 3. Surat Listener
-    let unsubSurat = () => {};
-    if (hasFullAccess) {
-      const getSuratQuery = () => {
-        const base = collection(db, "surat");
-        const constraints = [
-          where("tenantId", "in", tIds),
-          orderBy("tanggal", "desc"),
-          limit(100),
-        ];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubSurat = onSnapshot(
-        getSuratQuery(),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          setSuratData(data);
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "surat");
-          onDataLoaded();
-        },
-      );
-    } else if (isCitizen && (wargaAuth || (currentUser?.role && currentUser.role.toUpperCase() === "WARGA") || currentUser?.role === "Warga")) {
-      // Citizen listener: loads letters under active tenants and performs robust matching locally
-      const uid = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || (wargaAuth?.nik ? `WARGA_NIK_${wargaAuth.nik}` : null) || currentUser?.uid;
-      if (uid) {
-        unsubSurat = onSnapshot(
-          query(
-            collection(db, "surat"),
-            where("tenantId", "in", tIds),
-          ),
-          (snap) => {
-            const allLetters = snap.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-
-            // Identify citizen and family NIKs to filter letters they have rights to see
-            const citizenNik = wargaAuth?.nik || currentUser?.nik || currentUser?.nikMapping || linkedWarga?.nik || "";
-            const familyNiks = wargaAuth?.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
-
-            const data = allLetters.filter((s: any) => {
-              const matchesOwnNik = citizenNik && s.nik === citizenNik;
-              const matchesFamilyNik = s.nik && familyNiks.includes(s.nik);
-              const matchesUid = uid && (s.authUid === uid || s.userId === uid);
-              return matchesOwnNik || matchesFamilyNik || matchesUid;
-            });
-
-            setSuratData(data);
-            onDataLoaded();
-          },
-          (err) => {
-            handleFirestoreError(err, "list", "surat");
-            onDataLoaded();
-          },
-        );
-      } else {
-        onDataLoaded();
-      }
-    }
-
-    // 4. Iuran Listener
-    let unsubIuran = () => {};
-    if (hasFullAccess) {
-      const getIuranQuery = () => {
-        const base = collection(db, "iuran");
-        const constraints = [where("tenantId", "in", tIds)];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubIuran = onSnapshot(
-        getIuranQuery(),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          setIuranData(data);
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "iuran");
-          onDataLoaded();
-        },
-      );
-    } else if (isCitizen && (wargaAuth || (currentUser?.role && currentUser.role.toUpperCase() === "WARGA") || currentUser?.role === "Warga")) {
-      const uid = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || (wargaAuth?.nik ? `WARGA_NIK_${wargaAuth.nik}` : null) || currentUser?.uid;
-      if (uid) {
-        unsubIuran = onSnapshot(
-          query(
-            collection(db, "iuran"),
-            where("tenantId", "in", tIds),
-            where("userId", "==", uid),
-          ),
-          (snap) => {
-            const data = snap.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            setIuranData(data);
-            onDataLoaded();
-          },
-          (err) => {
-            handleFirestoreError(err, "list", "iuran");
-            onDataLoaded();
-          },
-        );
-      }
-    }
-
-    // 4.6 PPOB Listener
-    let unsubPpob = () => {};
-    if (hasFullAccess) {
-      const getPpobQuery = () => {
-        const base = collection(db, "ppob_trx");
-        const constraints = [
-          where("tenantId", "in", tIds),
-          orderBy("createdAt", "desc"),
-          limit(50),
-        ];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubPpob = onSnapshot(
-        getPpobQuery(),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          setPpobData(data);
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "ppob_trx");
-          onDataLoaded();
-        },
-      );
-    } else if (isCitizen && (wargaAuth || (currentUser?.role && currentUser.role.toUpperCase() === "WARGA") || currentUser?.role === "Warga")) {
-      const uid = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || (wargaAuth?.nik ? `WARGA_NIK_${wargaAuth.nik}` : null) || currentUser?.uid;
-      if (uid) {
-        unsubPpob = onSnapshot(
-          query(
-            collection(db, "ppob_trx"),
-            where("tenantId", "in", tIds),
-            where("userId", "==", uid),
-          ),
-          (snap) => {
-            const data = snap.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            setPpobData(data);
-            onDataLoaded();
-          },
-          (err) => {
-            handleFirestoreError(err, "list", "ppob_trx");
-            onDataLoaded();
-          },
-        );
-      }
-    }
-
-    // 4.5 Inventaris Listener
-    let unsubInventaris = () => {};
-    let unsubInventarisLogs = () => {};
-    let unsubInventarisKategori = () => {};
-    let unsubInventarisLokasi = () => {};
-    let unsubInventarisSupplier = () => {};
-
-    if (hasFullAccess) {
-      const getInventarisQuery = () => {
-        const base = collection(db, "inventaris");
-        const constraints = [where("tenantId", "in", tIds)];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubInventaris = onSnapshot(
-        getInventarisQuery(),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          setInventarisData(data);
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "inventaris");
-          onDataLoaded();
-        },
-      );
-
-      // 4.6 Inventaris Logs Listener
-      const getInventarisLogsQuery = () => {
-        const base = collection(db, "inventaris_logs");
-        const constraints = [where("tenantId", "in", tIds)];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubInventarisLogs = onSnapshot(
-        getInventarisLogsQuery(),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          setInventarisLogs(data);
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "inventaris_logs");
-        },
-      );
-
-      // 4.7 Inventaris Kategori/Lokasi/Supplier
-      unsubInventarisKategori = onSnapshot(
-        query(
-          collection(db, "inventaris_kategori"),
-          where("tenantId", "in", tIds),
-        ),
-        (snap) =>
-          setInventarisKategori(snap.docs.map((doc) => ({ ...doc.data() }))),
-        (err) => {
-          handleFirestoreError(err, "list", "inventaris_kategori");
-        },
-      );
-      unsubInventarisLokasi = onSnapshot(
-        query(
-          collection(db, "inventaris_lokasi"),
-          where("tenantId", "in", tIds),
-        ),
-        (snap) =>
-          setInventarisLokasi(snap.docs.map((doc) => ({ ...doc.data() }))),
-        (err) => {
-          handleFirestoreError(err, "list", "inventaris_lokasi");
-        },
-      );
-      unsubInventarisSupplier = onSnapshot(
-        query(
-          collection(db, "inventaris_supplier"),
-          where("tenantId", "in", tIds),
-        ),
-        (snap) =>
-          setInventarisSupplier(snap.docs.map((doc) => ({ ...doc.data() }))),
-        (err) => {
-          handleFirestoreError(err, "list", "inventaris_supplier");
-        },
-      );
-    }
-
-    // 4.8 Posyandu Listeners
-    let unsubBalita = () => {};
-    let unsubIbuHamil = () => {};
-    let unsubPosyanduKegiatan = () => {};
-    let unsubPosbinduKegiatan = () => {};
-    let unsubPemeriksaanBalita = () => {};
-    let unsubPemeriksaanPosbindu = () => {};
-    let unsubImunisasi = () => {};
-
-    if (hasFullAccess) {
-      const getRTFilter = (coll: string) => {
-        const base = collection(db, coll);
-        const constraints = [where("tenantId", "in", tIds)];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubBalita = onSnapshot(
-        query(getRTFilter("balita"), limit(100)),
-        (snap) => {
-          setBalitaData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "balita");
-          onDataLoaded();
-        },
-      );
-      unsubIbuHamil = onSnapshot(
-        query(getRTFilter("ibu_hamil"), limit(100)),
-        (snap) => {
-          setIbuHamilData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "ibu_hamil");
-          onDataLoaded();
-        },
-      );
-      unsubPosyanduKegiatan = onSnapshot(
-        query(getRTFilter("posyandu_kegiatan"), limit(50)),
-        (snap) => {
-          setPosyanduKegiatanData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "posyandu_kegiatan");
-          onDataLoaded();
-        },
-      );
-      unsubPosbinduKegiatan = onSnapshot(
-        query(getRTFilter("posbindu_kegiatan"), limit(50)),
-        (snap) => {
-          setPosbinduKegiatanData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "posbindu_kegiatan");
-          onDataLoaded();
-        },
-      );
-      unsubPemeriksaanBalita = onSnapshot(
-        query(getRTFilter("pemeriksaan_balita"), limit(100)),
-        (snap) => {
-          setPemeriksaanBalitaData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "pemeriksaan_balita");
-          onDataLoaded();
-        },
-      );
-      unsubPemeriksaanPosbindu = onSnapshot(
-        query(getRTFilter("pemeriksaan_posbindu"), limit(100)),
-        (snap) => {
-          setPemeriksaanPosbinduData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "pemeriksaan_posbindu");
-          onDataLoaded();
-        },
-      );
-      unsubImunisasi = onSnapshot(
-        query(getRTFilter("imunisasi"), limit(50)),
-        (snap) => {
-          setImunisasiData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "imunisasi");
-          onDataLoaded();
-        },
-      );
-    }
-
-    // 4.9 Bank Sampah Listeners
-    let unsubSampahKategori = () => {};
-    let unsubSampahSetoran = () => {};
-    let unsubSampahTarikSaldo = () => {};
-    if (hasFullAccess) {
-      const getRTFilter = (coll: string) => {
-        const base = collection(db, coll);
-        const constraints = [where("tenantId", "in", tIds)];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-        }
-        return query(base, ...constraints);
-      };
-
-      unsubSampahKategori = onSnapshot(
-        getRTFilter("sampah_kategori"),
-        (snap) => {
-          setSampahKategoriData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "sampah_kategori");
-          onDataLoaded();
-        },
-      );
-      unsubSampahSetoran = onSnapshot(
-        query(getRTFilter("sampah_setoran"), limit(200)),
-        (snap) => {
-          setSampahSetoranData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "sampah_setoran");
-          onDataLoaded();
-        },
-      );
-      unsubSampahTarikSaldo = onSnapshot(
-        query(getRTFilter("sampah_tarik_saldo"), limit(200)),
-        (snap) => {
-          setSampahTarikSaldoData(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "sampah_tarik_saldo");
-          onDataLoaded();
-        },
-      );
-    }
-
+    // 3. SOS (Global) - Important for safety
     let isInitialLoad = true;
     const unsubEmergencies = onSnapshot(
       query(collection(db, "emergencies"), where("tenantId", "in", tIds)),
       (snap) => {
-        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-        // Detect new active emergencies to trigger alert
-        snap.docChanges().forEach((change) => {
-          if (
-            (change.type === "added" || change.type === "modified") &&
-            change.doc.data().status === "ACTIVE"
-          ) {
-            const sosData = change.doc.data();
-            const sosTime = sosData.timestamp
-              ? new Date(sosData.timestamp).getTime()
-              : Date.now();
-            const now = Date.now();
-            const isRecent = now - sosTime < 60000; // 60 seconds
-
-            if (!isInitialLoad || isRecent) {
-              triggerLocalSOSAlert(change.doc.id);
-            }
-          }
+        setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        snap.docChanges().forEach(change => {
+           if ((change.type === "added" || change.type === "modified") && change.doc.data().status === "ACTIVE") {
+              const data = change.doc.data();
+              const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
+              
+              const isMine = data.userId === auth.currentUser?.uid;
+              const isNewSinceAppStart = sosTime > appStartTime.current - 5000; // 5s buffer
+              
+              if (isMine || isNewSinceAppStart) {
+                 // Reveal if it was hidden by mistake
+                 setHiddenEmergencyId(null);
+              }
+           }
         });
-
         isInitialLoad = false;
-        setEmergenciesData(data);
-        onDataLoaded();
       },
-      (err) => {
-        handleFirestoreError(err, "list", "emergencies");
-        onDataLoaded();
-      },
-    );
-
-    const unsubVotingCandidates = onSnapshot(
-      query(collection(db, "voting_candidates"), where("tenantId", "in", tIds)),
-      (snap) => {
-        setVotingCandidates(snap.docs.map((doc) => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "voting_candidates");
-        onDataLoaded();
-      },
-    );
-
-    const unsubVotingConfig = onSnapshot(
-      doc(db, "voting_config", tId),
-      (snap) => {
-        if (snap.exists()) setVotingConfig(snap.data());
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "voting_config");
-        onDataLoaded();
-      },
-    );
-
-    const getVotingVotesQuery = () => {
-      const base = collection(db, "voting_votes");
-      const constraints = [where("tenantId", "in", tIds)];
-
-      const isOperatorRole =
-        currentUser &&
-        (currentUser.isSuperAdmin ||
-          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
-            currentUser.role,
-          ));
-
-      if (!isOperatorRole) {
-        constraints.push(
-          where("voterId", "==", auth.currentUser?.uid || "NONE"),
-        );
-      }
-
-      return query(base, ...constraints);
-    };
-
-    const unsubUserVotes = onSnapshot(
-      getVotingVotesQuery(),
-      (snap) => {
-        setUserVotes(snap.docs.map((doc) => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "voting_votes");
-        onDataLoaded();
-      },
-    );
-
-    const unsubTokoProducts = onSnapshot(
-      query(collection(db, "toko_products"), where("tenantId", "in", tIds)),
-      (snap) => {
-        setTokoProducts(snap.docs.map((doc) => ({ ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "toko_products");
-        onDataLoaded();
-      },
-    );
-
-    const getTokoOrdersQuery = () => {
-      const base = collection(db, "toko_orders");
-      const constraints = [where("tenantId", "in", tIds)];
-
-      const isOperatorRole =
-        currentUser &&
-        (currentUser.isSuperAdmin ||
-          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
-            currentUser.role,
-          ));
-
-      // Citizens and guests (non-operators) can only list their own orders to avoid permission errors
-      if (!isOperatorRole) {
-        constraints.push(
-          where("customerId", "==", auth.currentUser?.uid || "NONE"),
-        );
-      }
-
-      return query(base, ...constraints);
-    };
-
-    const unsubTokoOrders = onSnapshot(
-      getTokoOrdersQuery(),
-      (snap) => {
-        setTokoOrders(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "toko_orders");
-        onDataLoaded();
-      },
-    );
-
-    const unsubTokoReviews = onSnapshot(
-      query(collection(db, "toko_reviews")),
-      (snap) => {
-        setTokoReviews(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "toko_reviews");
-        onDataLoaded();
-      },
-    );
-
-    const getVerifikasiQuery = () => {
-      const base = collection(db, "verifikasi_warga");
-
-      // Prevent unauthorized list operations
-      if (!auth.currentUser) {
-        return null;
-      }
-
-      const isOperatorRole =
-        currentUser &&
-        (currentUser.isSuperAdmin ||
-          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
-            currentUser.role,
-          ));
-
-      if (!isOperatorRole) {
-        // If it's a citizen (logged in via anonymous auth or linked)
-        const uid = auth.currentUser.uid;
-        // Include tenantId in constraints for additional security layer
-        return query(base, where("authUid", "==", uid), where("tenantId", "in", tIds));
-      }
-
-      if (currentUser?.isSuperAdmin && !selectedTenantId) return query(base);
-
-      const constraints = [where("tenantId", "in", tIds)];
-      return query(base, ...constraints);
-    };
-
-    const verifikasiQuery = getVerifikasiQuery();
-    const unsubVerifikasi = verifikasiQuery
-      ? onSnapshot(
-          verifikasiQuery,
-          (snap) => {
-            setVerifikasiWargaData(
-              snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-            );
-            if (!currentUser && wargaAuth) onDataLoaded();
-          },
-          (err) => {
-            handleFirestoreError(err, "list", "verifikasi_warga");
-            if (!currentUser && wargaAuth) onDataLoaded();
-          },
-        )
-      : () => {
-          if (!currentUser && wargaAuth) onDataLoaded();
-        };
-
-    // 5. Users Listener
-    let unsubUsers = () => {};
-    if (
-      currentUser?.role === "ADMIN" ||
-      currentUser?.isSuperAdmin ||
-      currentUser?.role === "RW" ||
-      currentUser?.role === "RT"
-    ) {
-      const usersQuery = currentUser.isSuperAdmin
-        ? query(collection(db, "users"))
-        : currentUser.tenantId === "RW_BERJUANG"
-          ? query(
-              collection(db, "users"),
-              where("tenantId", "in", ["RW_BERJUANG", "trihprw26"]),
-            )
-          : query(
-              collection(db, "users"),
-              where("tenantId", "==", currentUser.tenantId || "RW26_SMART"),
-            );
-
-      unsubUsers = onSnapshot(
-        query(usersQuery, limit(5000)),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
-          data.sort((a: any, b: any) =>
-            (a.nama || a.name || "").localeCompare(b.nama || b.name || ""),
-          );
-          setUsersData(data);
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "users");
-          onDataLoaded();
-        },
-      );
-    } else {
-      onDataLoaded();
-    }
-
-    // 6. Tenants Listener (Super Admin Only)
-    let unsubTenants = () => {};
-    if (currentUser?.isSuperAdmin) {
-      unsubTenants = onSnapshot(
-        query(collection(db, "tenants"), limit(100)),
-        (snap) => {
-          const data = snap.docs.map((doc) => ({
-            id: doc.id,
-            docId: doc.id,
-            ...doc.data(),
-          }));
-          setTenantsData(data);
-          onDataLoaded();
-        },
-        (err) => {
-          handleFirestoreError(err, "list", "tenants");
-          onDataLoaded();
-        },
-      );
-    }
-
-    // 7. Audit Log Listener (Enterprise)
-    const unsubAudit =
-      hasFullAccess && getPlanFeatures(currentTenant).governance === "HIGH"
-        ? onSnapshot(
-            query(
-              collection(db, "audit_logs"),
-              where("tenantId", "in", tIds),
-              limit(100),
-            ),
-            (snap) => {
-              const data = snap.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-              }));
-              setAuditLogs(
-                data.sort(
-                  (a: any, b: any) =>
-                    new Date(b.timestamp).getTime() -
-                    new Date(a.timestamp).getTime(),
-                ),
-              );
-              onDataLoaded();
-            },
-            (err) => {
-              handleFirestoreError(err, "list", "audit_logs");
-              onDataLoaded();
-            },
-          )
-        : () => {
-            onDataLoaded();
-          };
-
-    // 8. Complaints Listener
-    const getComplaintsQuery = () => {
-      const base = collection(db, "complaints");
-      const constraints = [where("tenantId", "in", tIds)];
-
-      const isOperatorRole =
-        currentUser &&
-        (currentUser.isSuperAdmin ||
-          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
-            currentUser.role,
-          ));
-
-      if (!isOperatorRole) {
-        constraints.push(
-          where("userId", "==", auth.currentUser?.uid || "NONE"),
-        );
-      }
-      return query(base, ...constraints);
-    };
-
-    const unsubComplaints = onSnapshot(
-      getComplaintsQuery(),
-      (snap) => {
-        setComplaintsData(
-          snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-        );
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "complaints");
-        onDataLoaded();
-      },
-    );
-
-    // 9. Bookings Listener
-    const getBookingsQuery = () => {
-      const base = collection(db, "bookings");
-      const constraints = [where("tenantId", "in", tIds)];
-
-      const isOperatorRole =
-        currentUser &&
-        (currentUser.isSuperAdmin ||
-          ["RW", "RT", "ADMIN", "BENDAHARA", "SEKRETARIS"].includes(
-            currentUser.role,
-          ));
-
-      if (!isOperatorRole) {
-        constraints.push(
-          where("userId", "==", auth.currentUser?.uid || "NONE"),
-        );
-      }
-      return query(base, ...constraints);
-    };
-
-    const unsubBookings = onSnapshot(
-      getBookingsQuery(),
-      (snap) => {
-        setBookingsData(
-          snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-        );
-        onDataLoaded();
-      },
-      (err) => {
-        handleFirestoreError(err, "list", "bookings");
-        onDataLoaded();
-      },
+      (err) => handleFirestoreError(err, "list", "emergencies")
     );
 
     return () => {
-      unsubWarga();
-      unsubKas();
-      unsubSurat();
-      unsubIuran();
-      unsubPpob();
-      unsubInventaris();
-      unsubInventarisLogs();
-      unsubInventarisKategori();
-      unsubInventarisLokasi();
-      unsubInventarisSupplier();
-      unsubBalita();
-      unsubIbuHamil();
-      unsubPosyanduKegiatan();
-      unsubPosbinduKegiatan();
-      unsubPemeriksaanBalita();
-      unsubPemeriksaanPosbindu();
-      unsubImunisasi();
-      unsubSampahKategori();
-      unsubSampahSetoran();
-      unsubSampahTarikSaldo();
-      unsubEmergencies();
-      unsubVotingCandidates();
-      unsubVotingConfig();
-      unsubUserVotes();
-      unsubTokoProducts();
-      unsubTokoOrders();
-      unsubTokoReviews();
-      unsubVerifikasi();
-      unsubUsers();
-      unsubTenants();
       unsubSettings();
       unsubCurrentTenant();
-      unsubKopSettings();
-      unsubAudit();
-      unsubComplaints();
-      unsubBookings();
+      unsubEmergencies();
     };
-  }, [
-    currentUser,
-    wargaAuth,
-    selectedTenantId,
-    currentTenant?.parentId,
-    currentTenant?.id,
-  ]);
+  }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId]);
+
+  // --- FIREBASE SYNC (TAB-SPECIFIC LAZY LOADING) ---
+  
+  // Helper to normalize RT
+  const getQueryRtNormalized = (rtVal: any): string => {
+    const rtStr = (rtVal || "").toString();
+    const match = rtStr.match(/rt\s*(\d+)/i) || rtStr.match(/\d+/);
+    const num = match ? match[1] || match[0] : rtStr;
+    return num ? num.replace(/^0+/, "").padStart(2, "0") : "01";
+  };
+
+  // 1. Warga & Users Sync
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    if (activeTab !== "warga" && activeTab !== "dashboard" && activeTab !== "users") return;
+
+    const tIds = activeTenantIds;
+    const constraints = [where("tenantId", "in", tIds), limit(1000)];
+    if (currentUser?.role === "RT") {
+      constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
+    }
+
+    const unsubWarga = onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
+      setWargaData(snap.docs.map(doc => ({ docId: doc.id, ...doc.data() })));
+    });
+
+    let unsubUsers = () => {};
+    if (currentUser?.isSuperAdmin || ["ADMIN", "RW", "RT"].includes(currentUser?.role || "")) {
+      const uq = currentUser?.isSuperAdmin ? query(collection(db, "users")) : query(collection(db, "users"), where("tenantId", "in", tIds));
+      unsubUsers = onSnapshot(query(uq, limit(1000)), (snap) => {
+        setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
+      });
+    }
+
+    return () => { unsubWarga(); unsubUsers(); };
+  }, [activeTab, activeTenantIds, currentUser?.uid]);
+
+  // 2. Financial Sync (Kas, Iuran, PPOB)
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    if (!["keuangan", "dashboard"].includes(activeTab)) return;
+
+    const tIds = activeTenantIds;
+    const rt = currentUser?.role === "RT" ? getQueryRtNormalized(currentUser.rt) : null;
+    
+    let unsubKas = () => {};
+    if (hasFullAccess) {
+      const kq = rt ? query(collection(db, "kas"), where("tenantId", "in", tIds), where("rt", "==", rt), orderBy("tanggal", "desc"), limit(100)) : query(collection(db, "kas"), where("tenantId", "in", tIds), orderBy("tanggal", "desc"), limit(100));
+      unsubKas = onSnapshot(kq, (snap) => setKasData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+    }
+
+    const iuranQ = hasFullAccess ? 
+      (rt ? query(collection(db, "iuran"), where("tenantId", "in", tIds), where("rt", "==", rt)) : query(collection(db, "iuran"), where("tenantId", "in", tIds))) :
+      query(collection(db, "iuran"), where("tenantId", "in", tIds), where("userId", "==", auth.currentUser?.uid || ""));
+    
+    const unsubIuran = onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+
+    return () => { unsubKas(); unsubIuran(); };
+  }, [activeTab, activeTenantIds, currentUser?.uid, hasFullAccess]);
+
+  // 3. Posyandu & Health Sync
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    if (activeTab !== "posyandu") return;
+
+    const tIds = activeTenantIds;
+    const collections = ["balita", "ibu_hamil", "posyandu_kegiatan", "posbindu_kegiatan", "pemeriksaan_balita", "pemeriksaan_posbindu", "imunisasi"];
+    const unsubs = collections.map(col => {
+      const q = query(collection(db, col), where("tenantId", "in", tIds), limit(100));
+      return onSnapshot(q, (snap) => {
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (col === "balita") setBalitaData(data);
+        else if (col === "ibu_hamil") setIbuHamilData(data);
+        else if (col === "posyandu_kegiatan") setPosyanduKegiatanData(data);
+        else if (col === "posbindu_kegiatan") setPosbinduKegiatanData(data);
+        else if (col === "pemeriksaan_balita") setPemeriksaanBalitaData(data);
+        else if (col === "pemeriksaan_posbindu") setPemeriksaanPosbinduData(data);
+        else if (col === "imunisasi") setImunisasiData(data);
+      });
+    });
+
+    return () => unsubs.forEach(unsub => unsub());
+  }, [activeTab, activeTenantIds, currentUser?.uid]);
+
+  // 4. Inventory, Trash Bank, Store & more
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    const tIds = activeTenantIds;
+    const unsubs: (() => void)[] = [];
+
+    // Inventaris
+    if (activeTab === "inventaris") {
+      unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", tIds)), (snap) => setInventarisData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+      unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", tIds)), (snap) => setInventarisLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+    }
+
+    // Bank Sampah
+    if (activeTab === "bank-sampah") {
+      ["sampah_kategori", "sampah_setoran", "sampah_tarik_saldo"].forEach(c => {
+         unsubs.push(onSnapshot(query(collection(db, c), where("tenantId", "in", tIds), limit(200)), (snap) => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (c === "sampah_kategori") setSampahKategoriData(data);
+            else if (c === "sampah_setoran") setSampahSetoranData(data);
+            else setSampahTarikSaldoData(data);
+         }));
+      });
+    }
+
+    // Shop/Store
+    if (activeTab === "etoko") {
+       unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", tIds)), snap => setTokoProducts(snap.docs.map(doc => ({ ...doc.data() })))));
+       unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", tIds)), snap => setTokoOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+    }
+
+    return () => unsubs.forEach(u => u());
+  }, [activeTab, activeTenantIds, currentUser?.uid]);
+
+  // 5. Surat, Voting, Booking & Misc Sync
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    const tIds = activeTenantIds;
+    const unsubs: (() => void)[] = [];
+
+    // Surat
+    if (activeTab === "surat" || activeTab === "dashboard") {
+       unsubs.push(onSnapshot(query(collection(db, "surat"), where("tenantId", "in", tIds), limit(500)), snap => {
+          setSuratData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+       }));
+    }
+
+    // Voting
+    if (activeTab === "voting") {
+       unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", tIds)), snap => setVotingCandidates(snap.docs.map(d => ({ ...d.data() })))));
+       unsubs.push(onSnapshot(doc(db, "voting_config", currentUser?.tenantId || "RW26_SMART"), snap => snap.exists() && setVotingConfig(snap.data())));
+    }
+
+    // Booking
+    if (activeTab === "booking" || activeTab === "dashboard") {
+       unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", tIds)), snap => setBookingsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+    }
+
+    // Complaints
+    if (activeTab === "complaint" || activeTab === "dashboard") {
+       unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", tIds)), snap => setComplaintsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+    }
+
+    // Verifikasi
+    if (activeTab === "verifikasi" || activeTab === "dashboard") {
+       unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", tIds)), snap => setVerifikasiWargaData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+    }
+
+    return () => unsubs.forEach(u => u());
+  }, [activeTab, activeTenantIds, currentUser?.uid]);
+
+  // 6. Automation: Tenant Subscription Follow-up (2 months after expiration)
+  useEffect(() => {
+    const checkTenantFollowups = async () => {
+      if (!currentUser?.isSuperAdmin || tenantsData.length === 0) return;
+
+      const now = new Date();
+      const sixtyDaysInMs = 60 * 24 * 60 * 60 * 1000;
+
+      for (const tenant of tenantsData) {
+        if (['EXPIRED', 'TRIAL', 'BASIC', 'INACTIVE'].includes(tenant.status)) {
+          const endDate = tenant.endDate ? new Date(tenant.endDate) : (tenant.createdAt ? new Date(tenant.createdAt) : null);
+          if (!endDate) continue;
+
+          const diff = now.getTime() - endDate.getTime();
+          if (diff > sixtyDaysInMs && !tenant.autoFollowedUpAfterTwoMonths) {
+            try {
+              await updateDoc(doc(db, 'tenants', tenant.docId || tenant.id), {
+                autoFollowedUpAfterTwoMonths: true,
+                lastAutoFollowUpAt: new Date().toISOString()
+              });
+            } catch (e) {
+              console.error("Failed to update tenant follow up:", e);
+            }
+          }
+        }
+      }
+    };
+    checkTenantFollowups();
+  }, [currentUser?.isSuperAdmin, tenantsData.length]);
 
   // --- CENTRAL CONFIG HELPERS ---
   const getSetting = (key: string) => {
@@ -3361,12 +2501,22 @@ export default function App() {
           <SOSOverlay
             key={activeEmergency.id}
             emergency={activeEmergency}
-            onResolve={handleResolveSOS}
+            onResolve={(id) => {
+              handleResolveSOS(id);
+              setActiveTab("dashboard");
+            }}
             onCloseLocal={() => setHiddenEmergencyId(activeEmergency.id)}
-            canResolve={
-              currentUser.role !== "Viewer" ||
-              auth.currentUser?.uid === activeEmergency.userId
-            }
+            setActiveTab={setActiveTab}
+            canResolve={(() => {
+              const role = (currentUser?.role || "").toUpperCase();
+              const isPrivileged = 
+                role === "ADMIN" || 
+                role === "PENGURUS" || 
+                role === "SATPAM" || 
+                currentUser?.isSuperAdmin;
+              const isOwner = auth.currentUser?.uid === activeEmergency.userId;
+              return isPrivileged || isOwner;
+            })()}
           />
         )}
       </AnimatePresence>
@@ -4302,12 +3452,12 @@ export default function App() {
                 role === "PENGURUS" ||
                 role === "SATPAM" ||
                 currentUser?.isSuperAdmin ||
-                (currentUser?.linkedResidentId &&
-                  activeEmergency?.userId === auth.currentUser?.uid);
+                activeEmergency?.userId === auth.currentUser?.uid;
 
               if (canResolve) {
                 if (window.confirm("Hentikan sinyal darurat aktif?")) {
                   handleResolveSOS(activeEmergency.id);
+                  setActiveTab("dashboard");
                 }
                 return;
               }
@@ -5491,7 +4641,13 @@ function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
   );
 }
 
-function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
+function SOSOverlay({ 
+  emergency, 
+  onResolve, 
+  onCloseLocal, 
+  canResolve,
+  setActiveTab 
+}: any) {
   // Save to log when viewed (implied)
   useEffect(() => {
     if (emergency && !emergency.logged) {
@@ -5795,50 +4951,53 @@ function SOSOverlay({ emergency, onResolve, onCloseLocal, canResolve }: any) {
           </button>
         )}
 
-        {/* Global Resolve Button */}
+        {/* STOP SOS Button */}
         {canResolve && (
           <button
             onClick={() => onResolve(emergency.id)}
-            className="px-10 py-5 bg-white text-red-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-slate-100 transition-all active:scale-95 shadow-2xl mb-4 flex items-center justify-center gap-2"
+            className="px-10 py-5 bg-white text-rose-600 rounded-[2rem] font-black uppercase text-sm w-full tracking-widest hover:bg-rose-50 hover:scale-[1.02] transition-all active:scale-95 shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-4 flex items-center justify-center gap-3 border-2 border-white/50"
           >
-            <CheckCircle className="w-6 h-6 border-2 border-red-600 rounded-full" />
+            <CheckCircle className="w-6 h-6" />
             STOP SOS & KEMBALI KE MENU UTAMA
           </button>
         )}
 
-        {/* Local actions: Mute and Hide */}
         <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-2 flex-wrap">
+          {/* Back to menu without stopping */}
+          <button
+            onClick={() => {
+              onCloseLocal();
+              setActiveTab('dashboard');
+            }}
+            className="px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+          >
+            <LayoutDashboard className="w-4 h-4" /> Kembali Ke Menu Utama
+          </button>
+
           {audioBlocked && !isMuted ? (
             <button
               onClick={enableAudioManually}
-              className="px-6 py-4 bg-yellow-400 text-slate-900 border border-[#ffcbcb] rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-yellow-300 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto shadow-xl"
+              className="px-6 py-4 bg-yellow-400 text-slate-900 border border-[#ffcbcb] rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-yellow-300 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto shadow-xl"
             >
-              <Volume2 className="w-5 h-5" /> AKTIFKAN SUARA ALARM
+              <Volume2 className="w-5 h-5" /> AKTIFKAN ALARM
             </button>
           ) : null}
 
           {!isMuted ? (
             <button
               onClick={() => setIsMuted(true)}
-              className="px-6 py-4 bg-red-700/50 border border-[#ffcbcb] text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="px-6 py-4 bg-red-700/50 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <BellOff className="w-5 h-5" /> Stop Suara/Getar
+              <BellOff className="w-5 h-5" /> Stop Suara
             </button>
           ) : (
             <button
               onClick={() => setIsMuted(false)}
-              className="px-6 py-4 bg-emerald-600 border border-[#ffcbcb] text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="px-6 py-4 bg-emerald-600 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <Volume2 className="w-5 h-5" /> Nyalakan Suara/Getar
+              <Volume2 className="w-5 h-5" /> On Suara
             </button>
           )}
-
-          <button
-            onClick={onCloseLocal}
-            className="px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
-          >
-            <XCircle className="w-5 h-5" /> Tutup Sementara
-          </button>
         </div>
 
         <p className="mt-8 text-[10px] font-bold opacity-60 uppercase tracking-widest">

@@ -24,7 +24,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
     >
       <div className="absolute -right-8 -top-8 w-32 h-32 bg-rose-500/5 rounded-full blur-3xl group-hover:bg-rose-500/10 transition-colors"></div>
 
-      <div className="relative h-56 bg-slate-100 dark:bg-slate-800/50 rounded-2xl overflow-hidden group-hover:bg-rose-50/50 transition-colors border border-slate-200 dark:border-slate-800">
+      <div className="absolute top-4 right-4 z-10">
+         <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/80 backdrop-blur-md rounded-full border border-white/10 shadow-lg">
+           <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] animate-pulse" />
+           <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/90">Lapak 26 ORIGINAL</span>
+         </div>
+      </div>
+
+      <div className="relative h-56 bg-slate-100 dark:bg-slate-800/50 rounded-2xl overflow-hidden group-hover:bg-rose-50/50 transition-colors border border-slate-200 dark:border-slate-800 shadow-inner">
         <div className="absolute inset-0 flex items-center justify-center">
            <Package className="w-20 h-20 text-slate-300 dark:text-slate-700 group-hover:scale-110 group-hover:text-rose-200/50 transition-all duration-700" />
         </div>

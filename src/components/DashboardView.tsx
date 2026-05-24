@@ -128,7 +128,8 @@ export default function DashboardView({
   const activeSOS = useMemo(() => emergenciesData?.find(e => e.status === 'ACTIVE'), [emergenciesData]);
   const canResolve = useMemo(() => {
     const role = (currentUser?.role || '').toUpperCase();
-    return role === 'ADMIN' || role === 'PENGURUS' || role === 'SATPAM' || currentUser?.isSuperAdmin || (currentUser?.linkedResidentId && activeSOS?.userId === currentUser?.authUid);
+    const isOwner = activeSOS && (activeSOS.userId === currentUser?.uid || activeSOS.userId === currentUser?.authUid || activeSOS.authUid === currentUser?.authUid);
+    return role === 'ADMIN' || role === 'PENGURUS' || role === 'SATPAM' || currentUser?.isSuperAdmin || isOwner;
   }, [currentUser, activeSOS]);
 
   const months = useMemo(() => [
