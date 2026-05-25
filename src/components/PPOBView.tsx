@@ -271,13 +271,15 @@ export function PPOBView({
           >
             <div className="p-6 sm:p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                <div className="mt-[38px] mb-[-42px]">
-                  <h3 className="text-2xl font-black text-slate-800 flex items-center gap-4 tracking-tighter uppercase italic pb-0 pt-0 mt-[44px] mb-0">
+                  <h3 
+                    className="text-2xl font-black text-slate-800 flex items-center gap-4 tracking-tighter uppercase italic pb-0 pt-0 mt-[44px] mb-0"
+                    style={{ marginTop: '-59px' }}
+                  >
                     <div className="p-3 bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-2xl shadow-xl shadow-blue-500/30">
                       <Smartphone className="w-6 h-6" />
                     </div>
                     Konfigurasi Transaksi
                   </h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 ml-14">Gateway Pembayaran Digital Warga</p>
                 </div>
               <button 
                 type="button" 

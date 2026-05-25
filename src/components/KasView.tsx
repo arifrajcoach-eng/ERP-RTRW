@@ -928,13 +928,9 @@ export function KasView({
             >
               <div
                 className={`p-8 ${viewingKas.tipe === "Masuk" ? "bg-gradient-to-br from-emerald-600 to-teal-700" : "bg-gradient-to-br from-rose-600 to-red-800"} text-white flex justify-between items-center relative overflow-hidden`}
-                style={{ height: '121.9792px' }}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                <h3 
-                  className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10"
-                  style={{ marginTop: '-61px' }}
-                >
+                <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10">
                   <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                     <Wallet className="w-4 h-4" /> 
                   </div>
