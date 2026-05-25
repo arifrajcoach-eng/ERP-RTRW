@@ -855,7 +855,7 @@ export default function DashboardView({
               </div>
               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mb-10 ml-5 opacity-70">Layanan Akses Cepat Warga</p>
               
-              <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 custom-scrollbar">
+              <div className="grid md:grid-cols-5 gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 <button 
                   onClick={() => setShowQRModal(true)}
                   className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
@@ -863,7 +863,7 @@ export default function DashboardView({
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
                     <QrCode className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Pendaftaran</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Daftar</span>
                 </button>
                 
                 <button 
@@ -871,19 +871,29 @@ export default function DashboardView({
                   className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
                 >
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
-                    <Search className="w-6 h-6 text-white" />
+                    <FileText className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Cek Pengajuan</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Surat</span>
                 </button>
 
                 <button 
-                    onClick={() => setActiveTab('surat')}
+                  onClick={() => setActiveTab('keuangan')}
                   className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
                 >
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
-                    <FileText className="w-6 h-6 text-white" />
+                    <CreditCard className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Buat Surat</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Iuran</span>
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('etoko')}
+                  className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
+                >
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                    <Smartphone className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">PPOB</span>
                 </button>
               </div>
             </div>
@@ -897,7 +907,7 @@ export default function DashboardView({
               <h3 className="text-2xl font-black text-white tracking-tighter leading-none mb-2">DEMOGRAFI WARGA</h3>
               <p className="text-[#eabebe] text-xs font-bold uppercase tracking-widest mb-6">Sebaran penduduk rukun warga</p>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
                   <p className="text-[10px] font-black text-[#f5f5f5] uppercase tracking-widest mb-1">Pria</p>
                   <p className="text-2xl font-black text-white leading-none">{demographics.totalLaki}</p>
@@ -909,6 +919,14 @@ export default function DashboardView({
                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
                   <p className="text-[10px] font-black text-[#ffffff] uppercase tracking-widest mb-1">Balita</p>
                   <p className="text-2xl font-black text-white leading-none">{demographics.totalBalita}</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
+                  <p className="text-[10px] font-black text-[#ffffff] uppercase tracking-widest mb-1">Remaja</p>
+                  <p className="text-2xl font-black text-white leading-none">{demographics.totalRemaja}</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
+                  <p className="text-[10px] font-black text-[#ffffff] uppercase tracking-widest mb-1">Dewasa</p>
+                  <p className="text-2xl font-black text-white leading-none">{demographics.totalDewasa}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
                   <p className="text-[10px] font-black text-[#fdfdfd] uppercase tracking-widest mb-1">Lansia</p>

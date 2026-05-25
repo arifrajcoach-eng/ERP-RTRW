@@ -819,30 +819,30 @@ export function SuratView({
               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.9, y: 20 }} 
-              className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col max-h-[92vh] border border-white/20 dark:border-slate-800"
+              className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2rem] sm:rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col max-h-[95vh] border border-white/20 dark:border-slate-800"
             >
-              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 bg-gradient-to-tr from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
-                    <PlusCircle className="w-7 h-7" />
+              <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="flex items-center gap-3 sm:gap-5">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
+                    <PlusCircle className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
                   <div>
-                    <h3 className="font-black text-slate-800 dark:text-slate-100 text-xl font-elegant uppercase tracking-tight">
+                    <h3 className="font-black text-slate-800 dark:text-slate-100 text-lg sm:text-xl font-elegant uppercase tracking-tight">
                       {editingSurat ? 'Revisi Dokumen' : 'Permohonan Baru'}
                     </h3>
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Lengkapi data administrasi Anda</p>
+                    <p className="text-[9px] sm:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Lengkapi data administrasi</p>
                   </div>
                 </div>
                 <motion.button 
                   whileHover={{ rotate: 90, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
                   onClick={() => { setShowForm(false); setEditingSurat(null); }} 
-                  className="p-3 text-slate-400 hover:text-rose-500 rounded-2xl transition-all"
+                  className="p-2 sm:p-3 text-slate-400 hover:text-rose-500 rounded-2xl transition-all"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </motion.button>
               </div>
               
-              <form onSubmit={handleSaveSurat} ref={formRef} className="p-10 overflow-y-auto space-y-10 custom-scrollbar">
+              <form onSubmit={handleSaveSurat} ref={formRef} className="p-6 sm:p-10 overflow-y-auto space-y-6 sm:space-y-10 custom-scrollbar">
                 {/* 1. Pemohon Section */}
                 <div className="space-y-6">
                   <div className="flex items-center gap-4 text-brand-blue drop-shadow-sm">

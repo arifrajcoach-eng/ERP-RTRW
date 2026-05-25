@@ -269,7 +269,7 @@ export function PPOBView({
             animate={{ opacity: 1, scale: 1, y: 0 }} 
             className="bg-white/90 backdrop-blur-2xl w-full max-w-2xl rounded-[3rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[95vh] relative"
           >
-            <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+            <div className="p-6 sm:p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                <div>
                   <h3 className="text-2xl font-black text-slate-800 flex items-center gap-4 tracking-tighter uppercase italic">
                     <div className="p-3 bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-2xl shadow-xl shadow-blue-500/30">
@@ -288,7 +288,7 @@ export function PPOBView({
               </button>
             </div>
             
-            <form onSubmit={handleSimulasiBayar} className="p-10 overflow-y-auto space-y-8">
+            <form onSubmit={handleSimulasiBayar} className="p-6 sm:p-10 overflow-y-auto space-y-6 sm:space-y-8">
               <div className="space-y-4">
                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Pilih Kategori Layanan</label>
                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
