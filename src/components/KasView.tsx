@@ -604,7 +604,7 @@ export function KasView({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
               <tr className="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] border-b border-slate-100">
@@ -669,7 +669,7 @@ export function KasView({
                     <td className="px-8 py-6">
                       <div className="flex gap-2 justify-end items-center transition-all">
                         <button onClick={() => setViewingKas(trx)} className="p-3 text-white bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl shadow-lg shadow-amber-500/20 transform hover:scale-110 active:scale-95 transition-all border border-white/10 outline-none"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => setEditingKas(trx)} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => { setEditingKas(trx); setTrxType(trx.tipe); setStrukUrl(trx.strukUrl || ""); setShowMasukForm(true); }} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
                         <button onClick={() => setKasToDelete(trx)} className="p-3 text-rose-600 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white hover:scale-110 active:scale-95 transition-all outline-none"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
@@ -927,7 +927,7 @@ export function KasView({
                 className={`p-8 ${viewingKas.tipe === "Masuk" ? "bg-gradient-to-br from-emerald-600 to-teal-700" : "bg-gradient-to-br from-rose-600 to-red-800"} text-white flex justify-between items-center relative overflow-hidden`}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10">
+                <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10 mt-[47px]">
                   <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                     <Wallet className="w-4 h-4" /> 
                   </div>
@@ -942,7 +942,7 @@ export function KasView({
               </div>
 
               <div className="p-10 space-y-8">
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center mt-[-25px]">
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
                     Nominal Transaksi Digital
                   </div>
@@ -956,7 +956,7 @@ export function KasView({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-6 gap-x-10 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
+                <div className="grid grid-cols-2 gap-y-6 gap-x-10 bg-slate-50/50 p-8 rounded-2xl border border-slate-100 mt-[-38px]">
                   <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
                       ID Transaksi
@@ -1000,7 +1000,7 @@ export function KasView({
                 </div>
 
                 {viewingKas.strukUrl && (
-                  <div className="space-y-3">
+                  <div className="space-y-3 mt-[-32px]">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
                       Lampiran Dokumen Keuangan
                     </p>

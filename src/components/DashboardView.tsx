@@ -417,7 +417,7 @@ export default function DashboardView({
   }, [trialEndDate, isStarter]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 font-sans">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 font-sans pt-[54px]">
       {isStarter && (
         <div 
           onClick={() => window.open('https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmartRW%20AI%20premium%20untuk%20lingkungan%20kami.', '_blank')}
