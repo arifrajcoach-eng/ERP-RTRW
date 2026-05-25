@@ -547,9 +547,12 @@ export function KasView({
       <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/30 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden relative transition-all">
         <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-slate-50/50 dark:bg-slate-800/30">
           <div>
-            <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase italic font-elegant">
+            <h3 
+              className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase italic font-elegant"
+              style={{ width: '238.68099999999998px' }}
+            >
               <div className="w-2 h-8 bg-brand-blue rounded-full shadow-lg shadow-brand-blue/40"></div>
-              Log Transaksi <span className="text-brand-blue font-black tracking-tighter">Buku Kas</span>
+              Log Transaksi <span className="text-brand-blue font-black tracking-tighter" style={{ fontSize: '22px', height: '57.0069px' }}>Buku Kas</span>
             </h3>
             <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mt-1.5 ml-6 leading-relaxed">Pencatatan alur keuangan digital secara sistematis</p>
           </div>
@@ -925,9 +928,10 @@ export function KasView({
             >
               <div
                 className={`p-8 ${viewingKas.tipe === "Masuk" ? "bg-gradient-to-br from-emerald-600 to-teal-700" : "bg-gradient-to-br from-rose-600 to-red-800"} text-white flex justify-between items-center relative overflow-hidden`}
+                style={{ height: '104.9792px' }}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10 mt-[47px]">
+                <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10 mt-[53px]">
                   <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                     <Wallet className="w-4 h-4" /> 
                   </div>

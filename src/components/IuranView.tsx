@@ -808,11 +808,18 @@ export function IuranView({
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
           
           <div className="relative z-10 mb-10">
-            <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic flex items-center gap-4">
-              <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200">
+            <h3 className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200 shrink-0">
                 <Users className="w-6 h-6 text-white" />
               </div>
-              Rekapitulasi <span className="text-emerald-600">Iuran Wajib</span>
+              <div className="flex flex-col">
+                <span className="text-xl md:text-2xl font-black text-slate-800 tracking-tighter uppercase italic leading-tight">
+                  Rekapitulasi
+                </span>
+                <span className="text-emerald-600 text-xl md:text-2xl font-black tracking-tighter uppercase italic leading-tight">
+                  Iuran Wajib
+                </span>
+              </div>
             </h3>
             <p className="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest max-w-2xl leading-relaxed">
               Monitoring kepatuhan iuran bulanan warga tahun <span className="text-emerald-500 font-black">{selectedYear}</span>. Pastikan semua warga berkontribusi aktif.
