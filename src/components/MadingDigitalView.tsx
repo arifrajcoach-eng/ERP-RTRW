@@ -837,7 +837,7 @@ export default function MadingDigitalView({
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Preview Foto Terpilih</label>
                     <span className="text-[9px] font-black text-brand-blue dark:text-teal-400 uppercase tracking-wider">Mendukung Kamera HP/Tablet</span>
                   </div>
-                  <div className="h-44 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center group/review">
+                  <div className="h-64 sm:h-80 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center group/review">
                     {isLiveCameraActive ? (
                       <div className="w-full h-full relative bg-black">
                         <video 
