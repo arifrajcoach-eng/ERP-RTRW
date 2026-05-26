@@ -25,8 +25,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const agentTitle = isPrivileged ? "Chaty - AI Asisten Ketua" : "Chaty - AI Asisten Warga";
 
   const welcomeMessage = isPrivileged 
-    ? `Assalamu’alaikum Pak/Bu Ketua! 🫡 Aku Chaty, asisten pribadi Ketua yang super ceria, lincah, and literally ready to help! Boleh banget nih Chaty bisikin data keuangan, laporan warga, atau apa aja yang Kakak pimpinan butuhkan! Just let me know ya! 😉✨`
-    : `Assalamu’alaikum! Halo tetangga! 😊 Perkenalkan, aku Chaty, AI asisten warga kamu yang super ceria! Ada yang bisa Chaty bantu hari ini, literally apa aja, let me know ya! 😉`;
+    ? `Assalamu’alaikum Bapak/Ibu Ketua! 🫡 Aku Chaty, asisten pribadi Bapak/Ibu yang sopan, santun, dan sangat ceria! Chaty siap membantu melaporkan data keuangan, aktivitas warga, atau memberikan insight strategis untuk lingkungan kita. Ada yang bisa Chaty bantu hari ini, Pimpinan? 😊✨`
+    : `Assalamu’alaikum! Halo Kakak tetangga yang baik! 😊 Perkenalkan, aku Chaty, AI asisten warga yang sopan dan ceria. Ada yang bisa Chaty bantu hari ini? Chaty siap membantu membuat surat pengantar, booking fasilitas, atau menjawab pertanyaan Kakak seputar lingkungan kita! 😉✨`;
 
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
     { role: 'bot', text: welcomeMessage }
@@ -347,15 +347,22 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
         if (fullText && mountedRef.current) {
           // Speak clean version
           const speakText = (text: string) => {
-             // Basic check if it looks like JSON
-             if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
+             // 1. Remove markdown code blocks
+             let cleaned = text.replace(/```json[\s\S]*?```/g, '').replace(/```[\s\S]*?```/g, '').trim();
+             
+             // 2. If it's still raw JSON structure, attempt to extract 'text' field or return empty
+             if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
                  try {
-                     const parsed = JSON.parse(text);
+                     const parsed = JSON.parse(cleaned);
                      if (parsed.text) return parsed.text;
-                     return ""; // Don't speak raw action JSON
-                 } catch(e) { return text; }
+                     return ""; // Don't speak raw internal JSON
+                 } catch(e) {
+                     // Not valid JSON, keep as is
+                 }
              }
-             return text.replace(/```json/g, '').replace(/```/g, '').trim();
+             
+             // 3. Remove remaining emoji icons that might sound weird if too many
+             return cleaned;
           };
 
           try {

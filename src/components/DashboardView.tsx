@@ -327,7 +327,7 @@ export default function DashboardView({
         isPersonal: c.userId === currentUser?.uid || c.namaWarga === currentUser?.name
       })),
       ...bookingsData.map(b => ({
-        title: 'Booking Fasilitas',
+        title: 'Booking Fasum',
         desc: `${b.userName}: ${b.facilityName} (${b.bookingDate})`,
         date: b.createdAt ? new Date(b.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: b.status === 'APPROVED' ? 'Disetujui' : b.status === 'REJECTED' ? 'Ditolak' : 'Menunggu',

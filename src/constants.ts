@@ -38,7 +38,7 @@ export const PLAN_FEATURES: Record<string, any> = {
       "Fitur Mading Digital & Struktur Organisasi",
       "PPOB & Iuran Digital Integrasi",
       "Surat Digital, Keamanan Digital, SOS",
-      "Booking Fasilitas Umum",
+      "Booking Fasum",
       "AI Chatbot (50x/bln)",
     ],
     keuangan: "DASAR",
@@ -193,7 +193,7 @@ export const PLAN_ALIASES: Record<string, string> = {
 
 export const PLAN_CONFIG = {
   STARTER: { id: 'starter', name: 'STARTER', focus: 'GRATIS / TRIAL', priceMonthly: 0, priceYearly: 0, features: ['Fitur Mading Digital & Struktur Organisasi', 'Cetak Surat Pengantar dalam hitungan detik', 'Ubah Biaya jadi Income Kas RT dengan Fitur PPOB Bagi-Hasil', 'Coba keajaiban AI : Foto struk langsung jadi laporan (Batas 3x/Bulan)'], systemKey: 'TRIAL' },
-  FLASH: { id: 'flash', name: 'FLASH', focus: 'KHUSUS RT', priceMonthly: 55000, priceOldMonthly: 85000, priceYearly: 550000, features: ['Fitur Mading Digital & Struktur Organisasi', 'Maks 300 Warga', 'PPOB & Iuran Digital Integrasi', 'Surat Digital, Keamanan Digital, SOS', 'Booking Fasilitas Umum', 'AI Chatbot (50x/bln)'], systemKey: 'BASIC' },
+  FLASH: { id: 'flash', name: 'FLASH', focus: 'KHUSUS RT', priceMonthly: 55000, priceOldMonthly: 85000, priceYearly: 550000, features: ['Fitur Mading Digital & Struktur Organisasi', 'Maks 300 Warga', 'PPOB & Iuran Digital Integrasi', 'Surat Digital, Keamanan Digital, SOS', 'Booking Fasum', 'AI Chatbot (50x/bln)'], systemKey: 'BASIC' },
   PRO: { id: 'pro', name: 'PRO', focus: 'KHUSUS RW', priceMonthly: 129000, priceOldMonthly: 169000, priceYearly: 1290000, features: ['Fitur Mading Digital & Struktur Organisasi', 'Semua Fitur FLASH', 'Maks 1000 Warga', 'Modul Posyandu', 'Modul Bank Sampah', 'Modul E-Voting (Pemilu Warga)', 'AI Chatbot (200x/bln)'], systemKey: 'PRO' },
   PREMIUM: { id: 'premium', name: 'PREMIUM', focus: 'MULTI-TENANT RW', priceMonthly: 239000, priceOldMonthly: 479000, priceYearly: 2390000, features: ['Fitur Mading Digital & Struktur Organisasi', 'Available 6 Tenant (Multi-Tenant RW -> 5 RT + 1 RW)', 'Dashboard Konsolidasi Data RW', 'Integrasi CCTV Keamanan', 'AI Scan Struk (500x/bln)', 'Prioritas Layanan Support'], systemKey: 'PREMIUM', isBestSeller: true },
   ENTERPRISE: { id: 'enterprise', name: 'ENTERPRISE', focus: 'PERUMAHAN BESAR', priceMonthly: 4500000, priceOldMonthly: 5900000, priceYearly: 25000000, features: ['Fitur Mading Digital & Struktur Organisasi', 'Multi-RW / Skala Kelurahan/ Perumahan Besar', 'Custom Domain / White Labeling', 'AI Strategic & Big Data Insights', 'Warga Tanpa Batas (Unlimited)', 'Dedicated CS Manager 24/7'], systemKey: 'ENTERPRISE' },

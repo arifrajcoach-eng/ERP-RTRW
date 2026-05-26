@@ -2094,7 +2094,7 @@ export default function App() {
       },
       {
         id: "booking",
-        label: isApt ? "Booking Fasilitas" : "Booking",
+        label: isApt ? "Booking Fasilitas" : "Booking Fasum",
         icon: Calendar,
         plan: "booking",
       },
