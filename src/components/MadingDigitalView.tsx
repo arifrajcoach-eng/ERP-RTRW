@@ -423,7 +423,7 @@ export default function MadingDigitalView({
 
     try {
       await setDoc(doc(db, "mading", docId), payload);
-      showNotification(`Mading Slot ${editingSlot} untuk ${editDate} berhasil diperbarui!`, "success");
+      showNotification(`Mading Foto ${editingSlot} untuk ${editDate} berhasil diperbarui!`, "success");
       handleCloseEdit();
     } catch (err: any) {
       handleFirestoreError(err, "write", `mading/${docId}`);
@@ -555,7 +555,7 @@ export default function MadingDigitalView({
           {/* Glass Overlay bottom banner */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-6 sm:p-8 text-white flex flex-col justify-end h-2/3">
             <span className="text-[9px] bg-brand-blue text-white w-fit px-3 py-1 rounded-full font-black tracking-widest uppercase mb-2 shadow-md">
-              🎯 SLOT 1 • {item1.date}
+              🎯 FOTO 1 • {item1.date}
             </span>
             <h3 className="text-lg sm:text-2xl font-black font-elegant tracking-tight leading-tight">{item1.title}</h3>
             <p className="text-xs text-slate-200/90 font-medium line-clamp-2 mt-2 leading-relaxed">{item1.description}</p>
@@ -574,7 +574,7 @@ export default function MadingDigitalView({
                 <button 
                   onClick={() => handleOpenEdit(1)}
                   className="p-2.5 bg-white/20 hover:bg-amber-500 text-white rounded-xl transition-all border border-white/20 active:scale-95 hover:scale-105 cursor-pointer"
-                  title="Edit Slot 1"
+                  title="Edit Foto 1"
                 >
                   <Edit3 className="w-4 h-4" />
                 </button>
@@ -596,7 +596,7 @@ export default function MadingDigitalView({
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 text-white flex flex-col justify-end h-3/4">
               <span className="text-[8px] bg-purple-600 text-white w-fit px-2 py-0.5 rounded-full font-black tracking-wider uppercase mb-1">
-                📌 SLOT 2 • {item2.date}
+                📌 FOTO 2 • {item2.date}
               </span>
               <h4 className="text-xs font-bold leading-snug line-clamp-2">{item2.title}</h4>
               
@@ -613,7 +613,7 @@ export default function MadingDigitalView({
                   <button 
                     onClick={() => handleOpenEdit(2)}
                     className="p-1.5 bg-white/20 hover:bg-amber-500 hover:text-white rounded-lg transition-colors cursor-pointer"
-                    title="Edit Slot 2"
+                    title="Edit Foto 2"
                   >
                     <Edit3 className="w-3 h-3" />
                   </button>
@@ -632,7 +632,7 @@ export default function MadingDigitalView({
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 text-white flex flex-col justify-end h-3/4">
               <span className="text-[8px] bg-purple-600 text-white w-fit px-2 py-0.5 rounded-full font-black tracking-wider uppercase mb-1">
-                📌 SLOT 3 • {item3.date}
+                📌 FOTO 3 • {item3.date}
               </span>
               <h4 className="text-xs font-bold leading-snug line-clamp-2">{item3.title}</h4>
               
@@ -666,7 +666,7 @@ export default function MadingDigitalView({
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 text-white flex flex-col justify-end h-3/4">
               <span className="text-[8px] bg-purple-600 text-white w-fit px-2 py-0.5 rounded-full font-black tracking-wider uppercase mb-1">
-                📌 SLOT 4 • {item4.date}
+                📌 FOTO 4 • {item4.date}
               </span>
               <h4 className="text-xs font-bold leading-snug line-clamp-2">{item4.title}</h4>
               
@@ -700,7 +700,7 @@ export default function MadingDigitalView({
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 text-white flex flex-col justify-end h-3/4">
               <span className="text-[8px] bg-purple-600 text-white w-fit px-2 py-0.5 rounded-full font-black tracking-wider uppercase mb-1">
-                📌 SLOT 5 • {item5.date}
+                📌 FOTO 5 • {item5.date}
               </span>
               <h4 className="text-xs font-bold leading-snug line-clamp-2">{item5.title}</h4>
               
@@ -756,7 +756,7 @@ export default function MadingDigitalView({
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900 to-transparent p-6 flex items-end">
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[9px] font-black uppercase tracking-wider bg-brand-blue/90 text-white px-2.5 py-1 rounded-full w-fit">
-                      Slot {selectedItem.slot}
+                      Foto {selectedItem.slot}
                     </span>
                     <h3 className="text-xl sm:text-2xl font-black text-white leading-tight font-elegant">{selectedItem.title}</h3>
                   </div>
@@ -816,7 +816,7 @@ export default function MadingDigitalView({
                 <div>
                   <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant uppercase flex items-center gap-2">
                     <Edit3 className="w-5 h-5 text-brand-blue" />
-                    Edit Mading Slot {editingSlot}
+                    Edit Mading Foto {editingSlot}
                   </h3>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Edit konten mading digital bulanan rukun warga</p>
                 </div>

@@ -2755,7 +2755,7 @@ export default function App() {
           </button>
         </div>
 
-        <div className="flex-shrink-0 px-6 py-5 bg-slate-50/30 dark:bg-slate-800/30 border-b border-slate-100/50 dark:border-slate-800/50">
+        <div style={{ height: '137.08px', paddingTop: '-8px', marginBottom: '-39px' }} className="flex-shrink-0 px-6 py-5 bg-slate-50/30 dark:bg-slate-800/30 border-b border-slate-100/50 dark:border-slate-800/50">
           <div className="flex items-center gap-2.5 mb-3">
             <div className="relative flex">
               <div className="w-2.5 h-2.5 rounded-full bg-brand-green shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse"></div>
