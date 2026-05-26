@@ -10,6 +10,7 @@ import {
   Tooltip, PieChart, Pie, Cell, Legend 
 } from 'recharts';
 import AIChatBot from './AIChatBot';
+import MadingDigitalView from './MadingDigitalView';
 
 interface DashboardViewProps {
   kasData: any[];
@@ -625,6 +626,14 @@ export default function DashboardView({
           ))}
         </div>
       )}
+
+      <MadingDigitalView 
+        currentUser={currentUser}
+        userRole={userRole}
+        currentTenant={currentTenant}
+        showNotification={showNotification}
+        handleFirestoreError={handleFirestoreError}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-4 sm:p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:border-brand-blue/30 relative overflow-hidden group">

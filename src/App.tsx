@@ -27,6 +27,7 @@ import {
   User,
   Printer,
   AlertTriangle,
+  ExternalLink,
   Eye,
   EyeOff,
   ChevronRight,
@@ -7530,11 +7531,643 @@ function PengaturanView({
         });
       }
 
+      // Consistent choices of 3 residents from our generated list as examples for other features
+      const rWarga1 = generatedWargas[0] || { id: "WARGA-DUMMY-1", nama: "Budi Santoso", nik: "3216060000000001", rt: "01", blok: "Blok A No 1", hp: "08123456781", kk: "3216061111111111", jk: "Laki-Laki", tglLahir: "1980-05-15" };
+      const rWarga2 = generatedWargas[4] || { id: "WARGA-DUMMY-2", nama: "Ahmad Dahlan", nik: "3216060000000002", rt: "02", blok: "Blok B No 12", hp: "08123456782", kk: "3216062222222222", jk: "Laki-Laki", tglLahir: "1982-10-12" };
+      const rWarga3 = generatedWargas[8] || { id: "WARGA-DUMMY-3", nama: "Joko Widodo", nik: "3216060000000003", rt: "03", blok: "Blok C No 5", hp: "08123456783", kk: "3216063333333333", jk: "Laki-Laki", tglLahir: "1975-04-20" };
+
+      setGenerateMsg("Membuat data pengaduan, booking, dan verifikasi...");
+
+      // --- 4. DATA PENGADUAN / KELUHAN (3 Item) ---
+      const nowCP = Date.now();
+      const complaints = [
+        {
+          id: `CP-DUMMY-${nowCP}-1`,
+          tenantId: tenantId,
+          userId: rWarga1.id,
+          namaWarga: rWarga1.nama,
+          jenisKeluhan: "Fasilitas Umum",
+          deskripsi: "Lampu penerangan jalan utama dekat lapangan RT 01 padam, mohon responnya karena berbahaya saat malam hari.",
+          status: "PROCESS",
+          createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
+        },
+        {
+          id: `CP-DUMMY-${nowCP}-2`,
+          tenantId: tenantId,
+          userId: rWarga2.id,
+          namaWarga: rWarga2.nama,
+          jenisKeluhan: "Koleksi Sampah",
+          deskripsi: "Petugas pengangkut sampah belum lewat sejak hari senin lalu, tumpukan sampah mulai menimbulkan aroma tidak sedap.",
+          status: "SOLVED",
+          createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString()
+        },
+        {
+          id: `CP-DUMMY-${nowCP}-3`,
+          tenantId: tenantId,
+          userId: rWarga3.id,
+          namaWarga: rWarga3.nama,
+          jenisKeluhan: "Keamanan",
+          deskripsi: "Ada kendaraan mencurigakan sering parkir di gerbang pintu masuk Blok C dari jam 1 malam tanpa melapor ke satpam.",
+          status: "PENDING",
+          createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()
+        }
+      ];
+      for (const item of complaints) {
+        batch.set(doc(db, "complaints", item.id), item);
+      }
+
+      // --- 5. DATA BOOKING FASILITAS (3 Item) ---
+      const nowBK = Date.now();
+      const bookings = [
+        {
+          id: `BK-DUMMY-${nowBK}-1`,
+          tenantId: tenantId,
+          userId: rWarga1.id,
+          namaWarga: rWarga1.nama,
+          namaFasilitas: "Balai RW Serbaguna",
+          tanggal: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          keperluan: "Penyelenggaraan tumpengan & syukuran keluarga",
+          status: "APPROVED",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: `BK-DUMMY-${nowBK}-2`,
+          tenantId: tenantId,
+          userId: rWarga2.id,
+          namaWarga: rWarga2.nama,
+          namaFasilitas: "Satu Set Tenda & 50 Kursi Lipat",
+          tanggal: new Date(Date.now() + 12 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          keperluan: "Resepsi pernikahan sederhana halaman rumah",
+          status: "APPROVED",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: `BK-DUMMY-${nowBK}-3`,
+          tenantId: tenantId,
+          userId: rWarga3.id,
+          namaWarga: rWarga3.nama,
+          namaFasilitas: "Lapangan Olahraga Bulutangkis",
+          tanggal: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          keperluan: "Turnamen persahabatan anak-anak pemuda RT 03",
+          status: "PENDING",
+          createdAt: new Date().toISOString()
+        }
+      ];
+      for (const item of bookings) {
+        batch.set(doc(db, "bookings", item.id), item);
+      }
+
+      // --- 6. DATA VERIFIKASI WARGA MANDIRI (3 Item) ---
+      const nowVF = Date.now();
+      const verifikasiReqs = [
+        {
+          id: `VRF-DUMMY-${nowVF}-1`,
+          tenantId: tenantId,
+          nik: rWarga1.nik,
+          kk: rWarga1.kk || "3216060000001001",
+          nama: rWarga1.nama,
+          rt: rWarga1.rt,
+          rw: "26",
+          hp: rWarga1.hp || "081234567890",
+          posisi: rWarga1.posisi || "Kepala Keluarga",
+          profesi: "Wiraswasta Kuliner",
+          jk: rWarga1.jk || "Laki-Laki",
+          tglLahir: rWarga1.tglLahir || "1980-05-15",
+          status: "Menunggu Persetujuan",
+          submittedAt: new Date().toISOString(),
+          type: "PERBAIKAN_DATA",
+          ktpUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400",
+          kkUrl: "",
+        },
+        {
+          id: `VRF-DUMMY-${nowVF}-2`,
+          tenantId: tenantId,
+          nik: rWarga2.nik,
+          kk: rWarga2.kk || "3216060000001002",
+          nama: rWarga2.nama,
+          rt: rWarga2.rt,
+          rw: "26",
+          hp: rWarga2.hp || "081234567891",
+          posisi: rWarga2.posisi || "Kepala Keluarga",
+          profesi: "Pegawai Negeri Sipil",
+          jk: rWarga2.jk || "Laki-Laki",
+          tglLahir: rWarga2.tglLahir || "1982-10-12",
+          status: "Disetujui",
+          submittedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+          type: "PERBAIKAN_DATA",
+          ktpUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400",
+          kkUrl: "",
+        },
+        {
+          id: `VRF-DUMMY-${nowVF}-3`,
+          tenantId: tenantId,
+          nik: rWarga3.nik,
+          kk: rWarga3.kk || "3216060000001003",
+          nama: rWarga3.nama,
+          rt: rWarga3.rt,
+          rw: "26",
+          hp: rWarga3.hp || "081234567892",
+          posisi: rWarga3.posisi || "Kepala Keluarga",
+          profesi: "Dokter Swasta",
+          jk: rWarga3.jk || "Laki-Laki",
+          tglLahir: rWarga3.tglLahir || "1975-04-20",
+          status: "Menunggu Persetujuan",
+          submittedAt: new Date().toISOString(),
+          type: "PERBAIKAN_DATA",
+          ktpUrl: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400",
+          kkUrl: "",
+        }
+      ];
+      for (const item of verifikasiReqs) {
+        batch.set(doc(db, "verifikasi_warga", item.id), item);
+      }
+
+      setGenerateMsg("Membuat data Bank Sampah...");
+
+      // --- 7. DATA BANK SAMPAH (3 Kategori, 3 Setoran, 3 Tarikan) ---
+      const sampahKats = [
+        { tenantId, id: `KAT-DUMMY-1`, nama: "Botol Plastik PET", satuan: "Kg", hargaBeli: 3000 },
+        { tenantId, id: `KAT-DUMMY-2`, nama: "Kertas/Kardus Bekas", satuan: "Kg", hargaBeli: 2000 },
+        { tenantId, id: `KAT-DUMMY-3`, nama: "Minyak Jelantah Rumah Tangga", satuan: "Litter", hargaBeli: 6000 },
+      ];
+      for (const item of sampahKats) {
+        batch.set(doc(db, "sampah_kategori", item.id), item);
+      }
+
+      const nowSP = Date.now();
+      const setoranSampah = [
+        {
+          tenantId,
+          id: `STR-DUMMY-${nowSP}-1`,
+          nasabahId: rWarga1.nik,
+          namaNasabah: rWarga1.nama,
+          kategoriId: "KAT-DUMMY-1",
+          namaKategori: "Botol Plastik PET",
+          berat: 5,
+          harga: 3000,
+          total: 15000,
+          tanggal: new Date().toISOString().split('T')[0],
+          status: "Selesai",
+          keterangan: "Tabungan rutin mingguan keluarga",
+        },
+        {
+          tenantId,
+          id: `STR-DUMMY-${nowSP}-2`,
+          nasabahId: rWarga2.nik,
+          namaNasabah: rWarga2.nama,
+          kategoriId: "KAT-DUMMY-2",
+          namaKategori: "Kertas/Kardus Bekas",
+          berat: 12,
+          harga: 2000,
+          total: 24000,
+          tanggal: new Date().toISOString().split('T')[0],
+          status: "Selesai",
+          keterangan: "Hasil pembersihan gudang bulanan",
+        },
+        {
+          tenantId,
+          id: `STR-DUMMY-${nowSP}-3`,
+          nasabahId: rWarga3.nik,
+          namaNasabah: rWarga3.nama,
+          kategoriId: "KAT-DUMMY-3",
+          namaKategori: "Minyak Jelantah Rumah Tangga",
+          berat: 3,
+          harga: 6000,
+          total: 18000,
+          tanggal: new Date().toISOString().split('T')[0],
+          status: "Selesai",
+          keterangan: "Sisa pemakaian minyak goreng rumah tangga",
+        }
+      ];
+      for (const item of setoranSampah) {
+        batch.set(doc(db, "sampah_setoran", item.id), item);
+      }
+
+      const tarikanSampah = [
+        {
+          tenantId,
+          id: `TRK-DUMMY-${nowSP}-1`,
+          nasabahId: rWarga1.nik,
+          namaNasabah: rWarga1.nama,
+          nominal: 10000,
+          tanggal: new Date().toISOString().split('T')[0],
+          keterangan: "Penarikan tabungan untuk jajan anak",
+        },
+        {
+          tenantId,
+          id: `TRK-DUMMY-${nowSP}-2`,
+          nasabahId: rWarga2.nik,
+          namaNasabah: rWarga2.nama,
+          nominal: 20000,
+          tanggal: new Date().toISOString().split('T')[0],
+          keterangan: "Tarik kas sampah",
+        },
+        {
+          tenantId,
+          id: `TRK-DUMMY-${nowSP}-3`,
+          nasabahId: rWarga3.nik,
+          namaNasabah: rWarga3.nama,
+          nominal: 15000,
+          tanggal: new Date().toISOString().split('T')[0],
+          keterangan: "Tarik tabungan tunai",
+        }
+      ];
+      for (const item of tarikanSampah) {
+        batch.set(doc(db, "sampah_tarik_saldo", item.id), item);
+      }
+
+      setGenerateMsg("Membuat data Posyandu...");
+
+      // --- 8. DATA POSYANDU & KESEHATAN (3 Balita, 3 Ibu Hamil, 3 Pemeriksaan, 3 Imunisasi) ---
+      const balitas = [
+        {
+          id: `BLT-DUMMY-1`,
+          tenantId,
+          nama: "Budi Junior",
+          tglLahir: "2023-01-15",
+          jk: "Laki-Laki",
+          orangTuaId: rWarga1.nik,
+          namaOrangTua: rWarga1.nama,
+          alamat: rWarga1.blok,
+          rt: rWarga1.rt,
+          rw: "26",
+          statusStunting: "Normal"
+        },
+        {
+          id: `BLT-DUMMY-2`,
+          tenantId,
+          nama: "Siti Fatimah",
+          tglLahir: "2023-11-20",
+          jk: "Perempuan",
+          orangTuaId: rWarga2.nik,
+          namaOrangTua: rWarga2.nama,
+          alamat: rWarga2.blok,
+          rt: rWarga2.rt,
+          rw: "26",
+          statusStunting: "Normal"
+        },
+        {
+          id: `BLT-DUMMY-3`,
+          tenantId,
+          nama: "Joko Junior",
+          tglLahir: "2022-08-10",
+          jk: "Laki-Laki",
+          orangTuaId: rWarga3.nik,
+          namaOrangTua: rWarga3.nama,
+          alamat: rWarga3.blok,
+          rt: rWarga3.rt,
+          rw: "26",
+          statusStunting: "Tinggi Kurang (Risiko Stunting)"
+        }
+      ];
+      for (const item of balitas) {
+        batch.set(doc(db, "balita", item.id), item);
+      }
+
+      const ibuHamils = [
+        {
+          id: `MIL-DUMMY-1`,
+          tenantId,
+          nik: "3216069900000001",
+          nama: "Ibu Rahmawati (Istri Budi)",
+          tglHPL: new Date(Date.now() + 60 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          usiaKehamilan: 28,
+          riwayatKesehatan: "Kondisi sehat, HB normal",
+          rt: rWarga1.rt,
+          rw: "26"
+        },
+        {
+          id: `MIL-DUMMY-2`,
+          tenantId,
+          nik: "3216069900000002",
+          nama: "Ibu Susi Susanti",
+          tglHPL: new Date(Date.now() + 110 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          usiaKehamilan: 16,
+          riwayatKesehatan: "Mual di pagi hari, disarankan istirahat cukup",
+          rt: rWarga2.rt,
+          rw: "26"
+        },
+        {
+          id: `MIL-DUMMY-3`,
+          tenantId,
+          nik: "3216069900000003",
+          nama: "Ibu Megawati",
+          tglHPL: new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          usiaKehamilan: 36,
+          riwayatKesehatan: "Kaki bengkak ringan, tensi darah normal",
+          rt: rWarga3.rt,
+          rw: "26"
+        }
+      ];
+      for (const item of ibuHamils) {
+        batch.set(doc(db, "ibu_hamil", item.id), item);
+      }
+
+      const pemeriksaanBalitas = [
+        {
+          id: `PMK-DUMMY-1`,
+          tenantId,
+          balitaId: "BLT-DUMMY-1",
+          statusGizi: "Normal",
+          beratBadan: 14.2,
+          tinggiBadan: 94.5,
+          tanggal: new Date().toISOString().split('T')[0],
+          catatan: "Anak lincah dan nafsu makan sangat bagus",
+          pemeriksa: "Bid. Sri Lestari"
+        },
+        {
+          id: `PMK-DUMMY-2`,
+          tenantId,
+          balitaId: "BLT-DUMMY-2",
+          statusGizi: "Normal",
+          beratBadan: 8.5,
+          tinggiBadan: 71.2,
+          tanggal: new Date().toISOString().split('T')[0],
+          catatan: "ASI Eksklusif masih berlanjut, imunisasi tepat waktu",
+          pemeriksa: "Bid. Sri Lestari"
+        },
+        {
+          id: `PMK-DUMMY-3`,
+          tenantId,
+          balitaId: "BLT-DUMMY-3",
+          statusGizi: "Tinggi Kurang (Risiko Stunting)",
+          beratBadan: 11.8,
+          tinggiBadan: 82.0,
+          tanggal: new Date().toISOString().split('T')[0],
+          catatan: "Disarankan mengonsumsi protein dan susu pertumbuhan ekstra",
+          pemeriksa: "Bpk. Dokter RT"
+        }
+      ];
+      for (const item of pemeriksaanBalitas) {
+        batch.set(doc(db, "pemeriksaan_balita", item.id), item);
+      }
+
+      const imunisasiBalitas = [
+        {
+          id: `IMU-DUMMY-1`,
+          tenantId,
+          balitaId: "BLT-DUMMY-1",
+          jenisImunisasi: "DPT-HB-HIB 3",
+          tanggal: new Date().toISOString().split('T')[0],
+          keterangan: "Telah selesai disuntikkan"
+        },
+        {
+          id: `IMU-DUMMY-2`,
+          tenantId,
+          balitaId: "BLT-DUMMY-2",
+          jenisImunisasi: "Polio 4",
+          tanggal: new Date().toISOString().split('T')[0],
+          keterangan: "Tetes mulut, kondisi anak riang"
+        },
+        {
+          id: `IMU-DUMMY-3`,
+          tenantId,
+          balitaId: "BLT-DUMMY-3",
+          jenisImunisasi: "Campak Rubella (MR)",
+          tanggal: new Date().toISOString().split('T')[0],
+          keterangan: "Imunisasi ulang dlm program Bulan Imunisasi Anak Sekolah/Balita"
+        }
+      ];
+      for (const item of imunisasiBalitas) {
+        batch.set(doc(db, "imunisasi", item.id), item);
+      }
+
+      setGenerateMsg("Membuat data E-Toko...");
+
+      // --- 9. DATA E-TOKO WARGA (3 Produk, 3 Pesanan) ---
+      const tokoProds = [
+        {
+          id: "PROD-DUMMY-1",
+          tenantId,
+          name: "Madu Hutan Murni Asli RT 01",
+          price: 95000,
+          stock: 25,
+          category: "Kesehatan",
+          description: "Madu hutan lebah liar berkhasiat tinggi, diproduksi higienis oleh kelompok UKM warga RT 01.",
+          image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
+          sellerId: "seller_rt01",
+          sellerName: "UKM Mandiri RT 01"
+        },
+        {
+          id: "PROD-DUMMY-2",
+          tenantId,
+          name: "Sambal Garing Tempe Mak Nyus",
+          price: 15000,
+          stock: 60,
+          category: "Lauk Pauk",
+          description: "Pedas gurih, garing, nikmat. Sangat cocok disajikan bersama nasi hangat maupun mie kuah.",
+          image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400",
+          sellerId: "seller_rt02",
+          sellerName: "Dapur Bu Siti"
+        },
+        {
+          id: "PROD-DUMMY-3",
+          tenantId,
+          name: "Sabun Cuci Piring Cair Aromaterapi",
+          price: 8000,
+          stock: 100,
+          category: "Kebutuhan Rumah Tangga",
+          description: "Formula jeruk nipis konsentrat tinggi, kesat, harum dan sangat lembut di tangan.",
+          image: "https://images.unsplash.com/photo-1563453392212-326f5e854473?auto=format&fit=crop&q=80&w=400",
+          sellerId: "seller_rt03",
+          sellerName: "Koperasi Warga Lestari"
+        }
+      ];
+      for (const item of tokoProds) {
+        batch.set(doc(db, "toko_products", item.id), item);
+      }
+
+      const orders = [
+        {
+          id: `ORD-DUMMY-1`,
+          tenantId,
+          items: [{ id: "PROD-DUMMY-1", name: "Madu Hutan Murni Asli RT 01", price: 95000, qty: 1 }],
+          subtotal: 95000,
+          shippingFee: 5000,
+          discount: 0,
+          total: 100000,
+          promoApplied: null,
+          customerName: rWarga1.nama,
+          customerId: rWarga1.nik,
+          phone: rWarga1.hp || "-",
+          address: rWarga1.blok,
+          paymentMethod: "COD",
+          status: "DELIVERED",
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: `ORD-DUMMY-2`,
+          tenantId,
+          items: [{ id: "PROD-DUMMY-2", name: "Sambal Garing Tempe Mak Nyus", price: 15000, qty: 3 }],
+          subtotal: 45000,
+          shippingFee: 5000,
+          discount: 0,
+          total: 50000,
+          promoApplied: null,
+          customerName: rWarga2.nama,
+          customerId: rWarga2.nik,
+          phone: rWarga2.hp || "-",
+          address: rWarga2.blok,
+          paymentMethod: "COD",
+          status: "COMPLETED",
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: `ORD-DUMMY-3`,
+          tenantId,
+          items: [{ id: "PROD-DUMMY-3", name: "Sabun Cuci Piring Cair Aromaterapi", price: 8000, qty: 2 }],
+          subtotal: 16000,
+          shippingFee: 5000,
+          discount: 0,
+          total: 21000,
+          promoApplied: null,
+          customerName: rWarga3.nama,
+          customerId: rWarga3.nik,
+          phone: rWarga3.hp || "-",
+          address: rWarga3.blok,
+          paymentMethod: "TRANSFER",
+          status: "PENDING",
+          timestamp: new Date().toISOString()
+        }
+      ];
+      for (const item of orders) {
+        batch.set(doc(db, "toko_orders", item.id), item);
+      }
+
+      setGenerateMsg("Membuat data Inventaris...");
+
+      // --- 10. DATA INVENTARIS RT/RW (3 Item, 3 Logs) ---
+      const inventarisItems = [
+        {
+          id: "INV-DUMMY-1",
+          tenantId,
+          rtId: "rw_berjuang",
+          nama_barang: "Kursi Lipat Putih Chitose",
+          kategori: "Meja & Kursi",
+          jumlah: 60,
+          kondisi: "Baik",
+          lokasi: "Gudang RW Serbaguna",
+          tanggal_pengadaan: "2024-03-20",
+          keterangan: "Hibah pembinaan warga berprestasi"
+        },
+        {
+          id: "INV-DUMMY-2",
+          tenantId,
+          rtId: "rw_berjuang",
+          nama_barang: "Tenda Lipat Gazebo 3x4m",
+          kategori: "Tenda",
+          jumlah: 3,
+          kondisi: "Baik",
+          lokasi: "Gudang RW Serbaguna",
+          tanggal_pengadaan: "2024-05-10",
+          keterangan: "Pengadaan mandiri APB-RT"
+        },
+        {
+          id: "INV-DUMMY-3",
+          tenantId,
+          rtId: "rw_berjuang",
+          nama_barang: "Sound System Portable Bluetooth + 2 Mic Wireless",
+          kategori: "Elektronik",
+          jumlah: 1,
+          kondisi: "Sangat Baik",
+          lokasi: "Kantor Secretariat RW",
+          tanggal_pengadaan: "2025-01-15",
+          keterangan: "Bantuan dari aparat Kelurahan"
+        }
+      ];
+      for (const item of inventarisItems) {
+        batch.set(doc(db, "inventaris", item.id), item);
+      }
+
+      const invLogs = [
+        {
+          id: `INV-LOG-DUMMY-1`,
+          tenantId,
+          itemId: "INV-DUMMY-1",
+          namaBarang: "Kursi Lipat Putih Chitose",
+          tipe: "PINJAM",
+          jumlah: 20,
+          namaPeminjam: rWarga1.nama,
+          nikPeminjam: rWarga1.nik,
+          tanggalPinjam: new Date().toISOString().split('T')[0],
+          tanggalKembaliPlan: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          status: "AKTIF",
+          keterangan: "Dipinjam untuk acara syukuran rumah baru"
+        },
+        {
+          id: `INV-LOG-DUMMY-2`,
+          tenantId,
+          itemId: "INV-DUMMY-2",
+          namaBarang: "Tenda Lipat Gazebo 3x4m",
+          tipe: "PINJAM",
+          jumlah: 1,
+          namaPeminjam: rWarga2.nama,
+          nikPeminjam: rWarga2.nik,
+          tanggalPinjam: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          tanggalKembaliPlan: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          status: "SELESAI",
+          keterangan: "Dipinjam pelengkap syukuran"
+        },
+        {
+          id: `INV-LOG-DUMMY-3`,
+          tenantId,
+          itemId: "INV-DUMMY-3",
+          namaBarang: "Sound System Portable Bluetooth",
+          tipe: "PINJAM",
+          jumlah: 1,
+          namaPeminjam: rWarga3.nama,
+          nikPeminjam: rWarga3.nik,
+          tanggalPinjam: new Date().toISOString().split('T')[0],
+          tanggalKembaliPlan: new Date(Date.now() + 1 * 24 * 3600 * 1000).toISOString().split('T')[0],
+          status: "AKTIF",
+          keterangan: "Rapat karang taruna tingkat RT"
+        }
+      ];
+      for (const item of invLogs) {
+        batch.set(doc(db, "inventaris_logs", item.id), item);
+      }
+
+      setGenerateMsg("Membuat data Pemilihan...");
+
+      // --- 11. DATA KANDIDAT PEMILIHAN / VOTING (3 Kandidat) ---
+      const candidates = [
+        {
+          id: "1",
+          tenantId,
+          number: "01",
+          name: "Bpk. Ahmad Suhendar",
+          vision: "Menjadikan lingkungan rukun, asri, berdaya saing mandiri, serta melek teknologi pelayanan digital terpadu.",
+          mission: "1. Mengoptimalkan sistem keamanan ronda digital\n2. Melaksanakan gotong royong terpadu satu bulan sekali\n3. Pengelolaan sampah pintar dengan Bank Sampah.",
+          votes: 0,
+        },
+        {
+          id: "2",
+          tenantId,
+          number: "02",
+          name: "Bpk. Joko Anas",
+          vision: "E-Synergy RW26: Pelayanan cepat, responsif, transparan, berkeadilan serta mengutamakan kepentingan sosial.",
+          mission: "1. Menumbuhkan kewirausahaan warga di E-Toko\n2. Meningkatkan pelayanan Posyandu dan Lansia digital\n3. Transparansi laporan pemasukan kas RT/RW secara real-time.",
+          votes: 0,
+        },
+        {
+          id: "3",
+          tenantId,
+          number: "03",
+          name: "Bpk. Bambang Pamungkas",
+          vision: "Membangun lingkungan asri, harmonis, menjunjung tinggi toleransi kerukunan umat beragama serta sarana olahraga.",
+          mission: "1. Renovasi total lapangan serbaguna Blok D\n2. Membentuk perkumpulan senam pagi mingguan warga\n3. Optimalisasi permohonan surat elektronik.",
+          votes: 0,
+        }
+      ];
+      for (const item of candidates) {
+        batch.set(doc(db, "voting_candidates", `${tenantId}_${item.id}`), item);
+      }
+
       setGenerateMsg("Menulis semua data ke Database, mohon tunggu...");
       await batch.commit();
 
       setGenerateMsg(
-        "Selesai! 120 Data Dummy berhasil ditambahkan ke Database.",
+        "Selesai! Data Dummy berhasil ditambahkan ke seluruh Fitur Database.",
       );
       setTimeout(() => {
         setGenerateMsg("");
@@ -8812,6 +9445,7 @@ function LoginView({
   const [showKK, setShowKK] = useState(false);
   const [showNik, setShowNik] = useState(false);
   const [error, setError] = useState("");
+  const [iframeError, setIframeError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<"admin" | "warga" | "verifikasi">(
     initialMode,
@@ -9435,6 +10069,11 @@ function LoginView({
         setError(
           "Gagal login: Popup diblokir. Silakan buka aplikasi di tab baru (jika di dalam preview) atau izinkan popup browser Anda.",
         );
+      } else if (err.code === "auth/network-request-failed" || String(err.message || err).includes("network-request-failed")) {
+        setError(
+          "KEAMANAN IFRAME: Google Login diblokir oleh browser Anda karena aplikasi sedang berjalan di dalam IFrame Preview (masalah pembatasan Cookie Pihak Ketiga). Harap buka aplikasi di Tab Baru agar Google Auth berjalan normal.",
+        );
+        setIframeError(true);
       } else {
         setError(`Gagal login dengan Google: ${err.message}`);
       }
@@ -9541,9 +10180,29 @@ function LoginView({
                 : "VERIFIKASI NIK/NAMA & KK/HP"}
           </h2>
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700 font-medium">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex flex-col gap-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 font-medium">{error}</p>
+              </div>
+
+              {(iframeError || error.includes("IFRAME") || error.includes("Cookie") || error.includes("network-request-failed")) && (
+                <div className="mt-2 pt-3 border-t border-red-200/60 flex flex-col gap-2">
+                  <span className="text-xs text-red-800 font-black flex items-center gap-1">
+                    💡 Rekomendasi Solusi:
+                  </span>
+                  <p className="text-xs text-red-600 font-medium leading-relaxed">
+                    Browser memblokir login Google karena domain dijalankan di frame eksternal. Silakan klik tombol di bawah untuk membukanya di tab terpisah, sehingga Google login berjalan dengan aman.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => window.open(window.location.href, "_blank")}
+                    className="mt-1 w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                  >
+                    Buka di Tab Baru <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

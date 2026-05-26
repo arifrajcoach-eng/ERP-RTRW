@@ -668,6 +668,23 @@
       },
       "required": ["tenantId", "status", "startDate", "endDate"]
     },
+    "Mading": {
+      "title": "Mading Digital",
+      "description": "Kolase foto mading kegiatan bulanan warga",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "slot": { "type": "number" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["id", "tenantId", "slot", "title", "date", "description", "imageUrl"]
+    },
     "Complaint": {
       "title": "Keluhan",
       "description": "Data keluhan warga",
@@ -844,6 +861,10 @@
     "/complaints/{id}": {
       "schema": "Complaint",
       "description": "Koleksi keluhan warga"
+    },
+    "/mading/{id}": {
+      "schema": "Mading",
+      "description": "Koleksi foto mading digital kolase"
     }
   }
 }

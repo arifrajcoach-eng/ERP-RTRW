@@ -184,6 +184,8 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       console.error('Registration Error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
         showNotification('Pendaftaran dibatalkan (Login Google ditutup).', 'warning');
+      } else if (err.code === 'auth/network-request-failed' || String(err.message || err).includes('network-request-failed')) {
+        showNotification('BLOKIR IFRAME: Google Login diblokir karena dijalankan di dalam IFrame Preview. Silakan klik "Buka di Tab Baru" di pojok kanan atas preview Anda untuk aktivasi yang lancar.', 'error');
       } else {
         showNotification(`Gagal: ${err.message || 'Terjadi kesalahan sistem.'}`, 'error');
       }

@@ -327,6 +327,14 @@ service cloud.firestore {
       allow update: if isPengurus() && isTenantMember(resource.data.tenantId);
     }
 
+    match /mading/{docId} {
+      allow list: if isSignedIn() && isTenantMemberStatic(resource.data.tenantId);
+      allow get: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow create: if isPengurus() && isTenantMember(request.resource.data.tenantId);
+      allow update: if isPengurus() && isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId);
+      allow delete: if isPengurus() && isTenantMember(resource.data.tenantId);
+    }
+
     match /bookings/{docId} {
       allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMemberStatic(resource.data.tenantId));
       allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMember(resource.data.tenantId));
