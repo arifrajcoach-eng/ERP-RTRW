@@ -132,19 +132,19 @@ GAYA KOMUNIKASI (SPEECH-READY):
 
 // Chaty TTS Performance Persona (Warga)
 const AISYAH_TTS_SYSTEM_INSTRUCTION = `
-Kamu adalah Chaty, asisten wanita berusia 28 tahun yang sopan, ramah, dan sangat ceria. 
-Suaramu harus terdengar manis, berjiwa muda, dan penuh energi positif.
-Bicaralah dengan nada yang riang dan luwes.
-Wajib terdengar seperti sedang tersenyum ramah saat berbicara.
+Bicaralah sebagai Chaty, seorang asisten wanita berusia 28 tahun yang sangat ramah dan ceria.
+Suaramu harus terdengar alami (human-like), bukan robot. 
+Gunakan intonasi yang merdu, luwes, dan penuh ekspresi. 
+Berikan penekanan yang tepat pada kata-kata penting agar terdengar seperti percakapan nyata.
+Sampaikan pesan dengan nada seolah-olah kamu sedang tersenyum tulus kepada warga.
 `;
 
 // Chaty Assistant for Chairman TTS Performance Persona (Ketua)
 const ARYA_TTS_SYSTEM_INSTRUCTION = `
-Kamu adalah Chaty, asisten wanita berusia 28 tahun yang sangat sopan, santun, dan ceria. 
-Suaramu harus terdengar sangat menghormati Pimpinan (Ketua).
-Bicaralah dengan nada yang riang, santun, dan penuh semangat.
-Gunakan intonasi yang luwes dan natural.
-Wajib terdengar seperti sedang tersenyum bangga dan ramah saat berbicara.
+Bicaralah sebagai Chaty, asisten wanita berusia 28 tahun yang sangat sopan, santun, dan setia. 
+Suaramu harus terdengar sangat alami, profesional, namun tetap hangat dan bersemangat. 
+Gunakan intonasi yang mengalir, luwes, dan sangat menghargai Pimpinan. 
+Pastikan suara terdengar humanis dengan penekanan emosi yang bangga dan ramah, seolah-olah sedang berbicara langsung di depan Pimpinan.
 `;
 
 export async function chatWithAI(params: {
@@ -308,34 +308,48 @@ Silakan isi rincian transaksi keuangan secara manual dahulu yaa, atau klik banne
 export async function textToSpeech(text: string, isChairman: boolean = false) {
   try {
     checkApiKey();
-    const cleanedText = text.substring(0, 500); 
+    const cleanedText = text
+      .substring(0, 500)
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .replace(/__/g, "")
+      .replace(/#/g, "")
+      .replace(/`/g, "")
+      .trim();
+    
     const personaInstruction = isChairman ? ARYA_TTS_SYSTEM_INSTRUCTION : AISYAH_TTS_SYSTEM_INSTRUCTION;
     
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [{ parts: [{ text: cleanedText }] }], 
+      model: "gemini-3.1-flash-tts-preview",
+      contents: [{ parts: [{ text: cleanedText }] }],
       config: {
         systemInstruction: personaInstruction,
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Kore" }
+            // 'Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'
+            prebuiltVoiceConfig: { voiceName: isChairman ? "Zephyr" : "Kore" }
           }
         },
-        temperature: 0.7
+        temperature: 1.0
       }
     });
 
-    const audioPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-    if (!audioPart) {
-      // Fallback: check if it's in a different part structure or candidate
-      console.warn('TTS Response without direct audio part, full response:', JSON.stringify(response));
-      return null;
+    const candidates = response.candidates || [];
+    for (const candidate of candidates) {
+      const parts = candidate.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          return { 
+            data: part.inlineData.data, 
+            mimeType: part.inlineData.mimeType || 'audio/pcm;rate=24000' 
+          };
+        }
+      }
     }
-    return { 
-      data: audioPart.inlineData.data, 
-      mimeType: audioPart.inlineData.mimeType || 'audio/pcm;rate=24000' 
-    };
+
+    console.warn('TTS Response without audio data:', JSON.stringify(response));
+    return null;
   } catch (error) {
     console.warn("TTS Generation Error:", error);
     return null;

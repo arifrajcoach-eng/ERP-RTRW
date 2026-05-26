@@ -1727,10 +1727,13 @@ export default function App() {
     return () => unsubs.forEach(u => u());
   }, [activeTab, activeTenantIds, currentUser?.uid]);
 
-  // Real-time synchronization of all tenants for Super Admin
+  // Real-time synchronization of all tenants
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser && !wargaAuth) return;
     
+    // For normal users, we might want to restrict this, but for hierarchy to work 
+    // in activeTenantIds, we need at least the parent/child structure.
+    // In this app, many views depend on tenantsData for name mapping and hierarchy.
     const q = query(collection(db, "tenants"), orderBy("createdAt", "desc"));
     const unsubTenants = onSnapshot(q, (snap) => {
       setTenantsData(snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() })));
@@ -1739,7 +1742,7 @@ export default function App() {
     });
 
     return () => unsubTenants();
-  }, [currentUser, activeTab]);
+  }, [currentUser, wargaAuth]);
 
   // 6. Automation: Tenant Subscription Follow-up (2 months after expiration)
   useEffect(() => {
@@ -1847,8 +1850,16 @@ export default function App() {
           "Firestore Quota Exceeded. Reading/Writing disabled until tomorrow.",
         );
       }
-      return; // Stop execution without throwing to avoid mounting uncaught errors
+      return; 
     }
+
+    if (err?.code === 'unavailable' || errorMessage.includes('Could not reach Cloud Firestore')) {
+       console.warn(`Firestore Unavailable for ${op} on ${path}:`, errorMessage);
+       setDbStatus("UNAVAILABLE");
+       // Don't flood user with notifications for every failed poll, but maybe show a subtle indicator
+       return; 
+    }
+
     const errInfo = {
       error: errorMessage,
       operationType: op,
@@ -9962,19 +9973,19 @@ function LoginView({
         } catch (loginErr: any) {
           if (
             loginErr.code === "auth/user-not-found" ||
-            loginErr.code === "auth/invalid-credential"
+            loginErr.code === "auth/invalid-credential" ||
+            loginErr.code === "auth/wrong-password"
           ) {
             let wasCreated = false;
             try {
               // Sign in anonymously to query the users collection
+              console.log("Attempting anonymous registration check for:", loginEmail);
               await signInAnonymously(auth);
               const usersRef = collection(db, "users");
               const q = query(usersRef, where("email", "==", loginEmail));
-              // getDocs(q) will work because anonymous users can read /users
               const snap = await getDocs(q);
 
               if (!snap.empty) {
-                // Verify password matches the one set by Admin in Firestore
                 const matchFound = snap.docs.some(
                   (d) => d.data().password === targetPass,
                 );
@@ -9985,12 +9996,19 @@ function LoginView({
                     targetPass,
                   );
                   wasCreated = true;
+                } else {
+                   console.warn("Password in Firestore does not match input for:", loginEmail);
                 }
               }
-            } catch (autoErr) {
+            } catch (autoErr: any) {
               console.warn("Auto-registration check failed:", autoErr);
+              if (autoErr.code === 'unavailable' || autoErr.message?.includes('Could not reach')) {
+                throw new Error("DATABASE_UNAVAILABLE");
+              }
             }
             if (!wasCreated) throw loginErr;
+          } else if (loginErr.code === "auth/network-request-failed") {
+            throw loginErr;
           } else {
             throw loginErr;
           }
@@ -10002,6 +10020,8 @@ function LoginView({
 
       if (err.message === "Username tidak ditemukan.") {
         msg = "Gagal masuk (ERR). Username tidak ditemukan.";
+      } else if (err.message === "DATABASE_UNAVAILABLE") {
+        msg = "KONEKSI DATABASE GAGAL: Tidak dapat menjangkau server Firestore. Silakan periksa koneksi internet Anda atau coba lagi beberapa saat lagi.";
       } else if (
         err.code === "auth/user-not-found" ||
         err.code === "auth/invalid-credential"

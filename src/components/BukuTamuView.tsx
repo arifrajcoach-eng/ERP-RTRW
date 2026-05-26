@@ -398,29 +398,38 @@ export function BukuTamuView({
                   <button onClick={() => setShowForm(false)} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
                 </div>
                 
-                <form onSubmit={handleSubmitTamu} style={{ height: '538.54px', marginTop: '-28px', marginBottom: '28px', marginRight: '0px' }} className="p-6 overflow-y-auto space-y-5">
-                    <div className="flex flex-col items-center gap-4">
+                <form onSubmit={handleSubmitTamu} className="p-6 overflow-y-auto space-y-5">
+                    <div className="flex flex-col items-center gap-4 w-full" style={{ height: '229.965px', marginBottom: '-15px' }}>
                        {capturedImage ? (
-                         <div className="relative w-40 h-40 bg-black rounded-3xl overflow-hidden border-4 border-white shadow-xl flex items-center justify-center">
-                            <img src={capturedImage} className="w-full h-full object-contain bg-black" />
-                            {formMode !== 'view' && <button type="button" onClick={() => setCapturedImage(null)} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-md"><X className="w-4 h-4" /></button>}
+                         <div className="relative w-full h-full bg-black rounded-[2rem] overflow-hidden border-4 border-white shadow-xl flex items-center justify-center group/img">
+                            <img src={capturedImage} className="w-full h-full object-cover" />
+                            {formMode !== 'view' && (
+                              <button 
+                                type="button" 
+                                onClick={() => setCapturedImage(null)} 
+                                className="absolute top-4 right-4 p-2 bg-red-600/90 text-white rounded-xl shadow-lg backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-opacity"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
+                            )}
                          </div>
                        ) : (
                          formMode !== 'view' ? (
-                           <div className="flex gap-4">
-                              <div className="w-32 h-32 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onClick={() => setShowWebcam(true)}>
-                                <Camera className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform" />
-                                <span className="text-[8px] font-black uppercase tracking-widest text-center px-2">Ambil Foto</span>
+                           <div className="flex gap-4 w-full h-full">
+                              <div className="flex-1 h-full bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all cursor-pointer group" onClick={() => setShowWebcam(true)}>
+                                <Camera className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform text-blue-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-center px-2">Ambil Foto</span>
                               </div>
-                              <div className="w-32 h-32 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
-                                <Image className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform" />
-                                <span className="text-[8px] font-black uppercase tracking-widest text-center px-2">Unggah Foto</span>
+                              <div className="flex-1 h-full bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
+                                <Image className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform text-emerald-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-center px-2">Unggah Foto</span>
                                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
                               </div>
                            </div>
                          ) : (
-                           <div className="w-40 h-40 bg-slate-50 rounded-3xl border border-slate-200 flex items-center justify-center text-slate-400">
-                             <span className="text-[10px] font-bold uppercase">Tanpa Foto</span>
+                           <div className="w-full h-full bg-slate-50 dark:bg-slate-800 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 opacity-50">
+                             <Image className="w-10 h-10 mb-2" />
+                             <span className="text-[10px] font-black uppercase tracking-widest">Tanpa Foto</span>
                            </div>
                          )
                        )}
@@ -481,7 +490,7 @@ export function BukuTamuView({
                   videoConstraints={{ facingMode }}
                   forceScreenshotSourceSize={true}
                   mirrored={facingMode === 'user'}
-                  className="w-full h-full object-contain select-none bg-black" 
+                  className="w-full h-full object-cover select-none bg-black" 
                 />
              </div>
 

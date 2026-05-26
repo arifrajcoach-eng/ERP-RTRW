@@ -97,21 +97,22 @@ export function SuratView({
 
   const isWarga = normalizedRole === 'WARGA';
 
-  const isRTUser = isGlobalSuperAdmin ||
-                   normalizedRole === 'RT' || 
-                   normalizedRole.includes('RT') || 
-                   normalizedRole === 'ADMIN RT' || 
-                   normalizedRole.includes('RT_') ||
-                   normalizedRole.includes('_RT') ||
-                   (isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
-
   const isRWUser = isGlobalSuperAdmin ||
                    normalizedRole === 'RW' || 
-                   normalizedRole.includes('RW') || 
                    normalizedRole === 'ADMIN RW' || 
-                   normalizedRole.includes('RW_') ||
-                   normalizedRole.includes('_RW') ||
+                   normalizedRole === 'KETUA RW' ||
+                   normalizedRole.startsWith('RW_') ||
+                   normalizedRole.endsWith('_RW') ||
                    (!isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
+
+  const isRTUser = isGlobalSuperAdmin ||
+                   isRWUser || // RW has authority over RT in the hierarchy
+                   normalizedRole === 'RT' || 
+                   normalizedRole === 'ADMIN RT' || 
+                   normalizedRole === 'KETUA RT' ||
+                   normalizedRole.startsWith('RT_') ||
+                   normalizedRole.endsWith('_RT') ||
+                   (isRT_Tenant && (normalizedRole === 'ADMIN' || normalizedRole === 'PENGURUS' || normalizedRole === 'KETUA'));
 
   const isPengurus = isRTUser || isRWUser || isGlobalSuperAdmin || normalizedRole === 'BENDAHARA' || normalizedRole === 'SEKRETARIS';
   
@@ -482,7 +483,7 @@ export function SuratView({
 
     const payload = {
       id,
-      tenantId: currentUser.tenantId,
+      tenantId: currentWarga?.tenantId || currentUser.tenantId,
       rt: finalRt,
       rw: finalRw,
       tanggal: new Date().toISOString(),

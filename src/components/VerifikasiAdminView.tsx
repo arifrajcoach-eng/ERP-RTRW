@@ -95,6 +95,10 @@ export function VerifikasiAdminView({
 
       const vRef = doc(db, 'verifikasi_warga', docId);
       const approveNote = catatan.trim() || 'Disetujui oleh admin';
+      
+      // Use the tenantId from the item itself to ensure it stays in the correct RT/RW node
+      const recordTenantId = item.tenantId || tenantId;
+
       batch.update(vRef, {
         status: 'Disetujui',
         approvedAt: new Date().toISOString(),
@@ -102,7 +106,7 @@ export function VerifikasiAdminView({
         catatan: approveNote
       });
 
-      const standardDocId = `${tenantId}_${item.nik}`;
+      const standardDocId = `${recordTenantId}_${item.nik}`;
       const targetRef = doc(db, 'data_warga', standardDocId);
       const targetSnap = await getDoc(targetRef);
       
@@ -134,7 +138,7 @@ export function VerifikasiAdminView({
       };
 
       batch.set(targetRef, {
-        tenantId: tenantId,
+        tenantId: recordTenantId,
         status: 'Warga Tetap',
         ...updatedData
       }, { merge: true });
@@ -187,7 +191,8 @@ export function VerifikasiAdminView({
       });
 
       if (isAlreadyApproved) {
-        const citizenDocId = `${tenantId}_${item.nik}`;
+        const recordTenantId = item.tenantId || tenantId;
+        const citizenDocId = `${recordTenantId}_${item.nik}`;
         const wargaRef = doc(db, 'data_warga', citizenDocId);
         batch.update(wargaRef, {
           terverifikasi: false,
@@ -227,7 +232,8 @@ export function VerifikasiAdminView({
     try {
       const batch = writeBatch(db);
       for (const item of approvedNotSynced) {
-        const targetDocId = `${tenantId}_${item.nik}`;
+        const recordTenantId = item.tenantId || tenantId;
+        const targetDocId = `${recordTenantId}_${item.nik}`;
         const wargaRef = doc(db, 'data_warga', targetDocId);
         const vRef = doc(db, 'verifikasi_warga', item.id);
         
@@ -240,7 +246,7 @@ export function VerifikasiAdminView({
           rt: item.rt || "01",
           rw: item.rw || "26",
           terverifikasi: true,
-          tenantId: tenantId,
+          tenantId: recordTenantId,
           lastSyncedAt: new Date().toISOString()
         }, { merge: true });
 
