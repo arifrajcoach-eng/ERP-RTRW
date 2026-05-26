@@ -2191,16 +2191,16 @@ export default function App() {
         label: "MONITORING",
         icon: LayoutGrid,
         plan: "multiRegion",
-        minPlan: "ENTERPRISE",
+        minPlan: "PRO",
       },
       {
         id: "audit",
         label: "GOVERNANCE",
         icon: Shield,
         plan: "governance",
-        minPlan: "ENTERPRISE",
+        minPlan: "PRO",
       },
-      { id: "pengaturan", label: "Pengaturan", icon: Settings },
+      { id: "pengaturan", label: "Pengaturan", icon: Settings, minPlan: "PRO" },
     ]
       .filter((item) => {
         const role = (currentUser?.role || "TAMU").toUpperCase();
@@ -2210,6 +2210,26 @@ export default function App() {
         const isFreePlan =
           (currentTenant?.status || "TRIAL") === "TRIAL" ||
           (currentTenant?.status || "TRIAL") === "FREE";
+
+        const planLevels: Record<string, number> = {
+          'TRIAL': 0, 'FREE': 0, 'STARTER': 0,
+          'BASIC': 1, 'FLASH': 1, 'LITE': 1, 'RT': 1,
+          'PRO': 2, 'RW': 2,
+          'PREMIUM': 3, 'GOLD': 3,
+          'ENTERPRISE': 4, 'DIAMOND': 4, 'PRIME': 4, 'GOV': 4
+        };
+
+        const currentPlanStatus = (currentTenant?.status || 'TRIAL')
+          .toUpperCase()
+          .replace("V4.0 ", "")
+          .replace("PLAN", "")
+          .trim();
+        
+        const currentLevel = planLevels[currentPlanStatus] || 0;
+        const requiredLevel = item.minPlan ? (planLevels[item.minPlan] || 0) : 0;
+
+        // Hide items strictly above plan level (Gatekeeper)
+        if (requiredLevel > currentLevel) return false;
 
         const isOwnerOrSuperAdmin = isSuperAdmin || role === 'OWNER' || role === 'SUPER_ADMIN' || ['arifrajcoach@gmail.com'].includes(currentUser?.email);
         const restrictedItems = ["daftar-trial", "super-admin", "leads"];
