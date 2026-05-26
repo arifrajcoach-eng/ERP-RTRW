@@ -335,6 +335,11 @@ service cloud.firestore {
       allow delete: if isPengurus() && isTenantMember(resource.data.tenantId);
     }
 
+    match /organisasi_struktur/{docId} {
+      allow read: if isTenantMember(docId);
+      allow write: if isPengurus() && isTenantMember(docId);
+    }
+
     match /bookings/{docId} {
       allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMemberStatic(resource.data.tenantId));
       allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isTenantMember(resource.data.tenantId));

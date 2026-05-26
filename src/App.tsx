@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
+  Network,
   Siren,
   ShieldAlert,
   MapPin,
@@ -173,6 +174,7 @@ import { VerifikasiAdminView } from "./components/VerifikasiAdminView";
 import { WargaProfileView } from "./components/WargaProfileView";
 import { ComplaintView } from "./components/ComplaintView";
 import { BookingView } from "./components/BookingView";
+import { OrganisasiView } from "./components/OrganisasiView";
 import { StyledButton } from "./components/StyledButton";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
 import { MessageSquare, Bot } from "lucide-react";
@@ -2110,6 +2112,7 @@ export default function App() {
         plan: "booking",
       },
       { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy, plan: "bukuTamu" },
+      { id: "organisasi", label: "Struktur Organisasi", icon: Network },
       {
         id: "verifikasi",
         label: "VERIFIKASI",
@@ -2385,6 +2388,7 @@ export default function App() {
         };
 
         const allowed = rolePermissions[role] || ["dashboard"];
+        if (item.id === "organisasi") return true;
         return allowed.includes(item.id);
       })
       .map((item) => {
@@ -3082,6 +3086,13 @@ export default function App() {
               }
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
+              showNotification={showNotification}
+            />
+          )}
+          {activeTab === "organisasi" && (
+            <OrganisasiView
+              currentUser={currentUser}
+              currentTenant={currentTenant}
               showNotification={showNotification}
             />
           )}

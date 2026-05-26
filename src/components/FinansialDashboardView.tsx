@@ -43,7 +43,7 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
         {[
           { id: 'iuran', label: isApt ? "Internal IPL" : "Iuran Kolektif", icon: CreditCard, gradient: 'from-brand-blue to-indigo-600' },
           { id: 'kas', label: "Ledger Kas", icon: Wallet, gradient: 'from-emerald-500 to-teal-600' },
-          { id: 'rekomendasi', label: "Rekomendasi Tarif & HPP", icon: PieChart, gradient: 'from-amber-500 to-orange-600' },
+          { id: 'rekomendasi', label: "Hitung Biaya", icon: PieChart, gradient: 'from-amber-500 to-orange-600' },
           { id: 'ppob', label: "Digital Hub", icon: Smartphone, gradient: 'from-purple-600 to-pink-600' }
         ].filter(tab => (tab.id !== 'kas' && tab.id !== 'rekomendasi') || props.isPengurus).map((tab) => (
           <motion.button
