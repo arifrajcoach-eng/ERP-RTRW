@@ -3314,7 +3314,11 @@ export default function App() {
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
 
           {activeTab === "daftar-trial" && (
-            <DaftarPendaftarTrialView onAdd={() => setShowFreeTrialModal(true)} />
+            <DaftarPendaftarTrialView 
+              onAdd={() => setShowFreeTrialModal(true)} 
+              showNotification={showNotification}
+              handleFirestoreError={handleFirestoreError}
+            />
           )}
 
           {activeTab === "users" && (

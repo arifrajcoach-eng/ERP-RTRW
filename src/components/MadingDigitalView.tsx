@@ -837,14 +837,14 @@ export default function MadingDigitalView({
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Preview Foto Terpilih</label>
                     <span className="text-[9px] font-black text-brand-blue dark:text-teal-400 uppercase tracking-wider">Mendukung Kamera HP/Tablet</span>
                   </div>
-                  <div className="h-64 sm:h-80 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center group/review">
+                  <div className="h-64 sm:h-80 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative bg-black flex items-center justify-center group/review shadow-inner">
                     {isLiveCameraActive ? (
-                      <div className="w-full h-full relative bg-black">
+                      <div className="w-full h-full relative bg-black flex items-center justify-center">
                         <video 
                           ref={videoRef} 
                           autoPlay 
                           playsInline 
-                          className="w-full h-full object-cover select-none"
+                          className="w-full h-full object-contain select-none bg-black"
                         />
                         <div className="absolute top-3 left-3 px-2 py-1 bg-red-600 text-[8px] font-black text-white rounded-md tracking-wider animate-pulse uppercase">
                           ● KAMERA LIVE HP/TABLET AKTIF
@@ -862,7 +862,7 @@ export default function MadingDigitalView({
                       <img 
                         src={editImageUrl} 
                         alt="Preview mading" 
-                        className="w-full h-full object-cover" 
+                        className="w-full h-full object-contain bg-black" 
                         onError={() => showNotification("Format URL foto salah atau tidak bisa dimuat!", "error")}
                         referrerPolicy="no-referrer"
                       />

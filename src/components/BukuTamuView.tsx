@@ -197,21 +197,21 @@ export function BukuTamuView({
             Live Secure Feed
           </div>
           
-          <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
-             <div className="space-y-2 bg-slate-950/60 p-5 rounded-[2rem] backdrop-blur-2xl border border-white/10 shadow-2xl">
-                <div className="flex items-center gap-3 text-emerald-400 text-[11px] font-black uppercase tracking-widest">
-                   <ShieldCheck className="w-5 h-5 animate-bounce" /> Area Monitoring Aktif
+          <div className="absolute bottom-4 left-4 right-4 sm:bottom-8 sm:left-8 sm:right-8 flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-end z-20">
+             <div className="space-y-1.5 bg-slate-950/60 p-4 sm:p-5 rounded-2xl sm:rounded-[2rem] backdrop-blur-2xl border border-white/10 shadow-2xl">
+                <div className="flex items-center gap-2 sm:gap-3 text-emerald-400 text-[10px] sm:text-[11px] font-black uppercase tracking-widest">
+                   <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" /> Area Monitoring Aktif
                 </div>
-                <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest">Sensors: Active | Logs: Stabil</p>
+                <p className="text-white/40 text-[8px] sm:text-[10px] font-mono uppercase tracking-widest">Sensors: Active | Logs: Stabil</p>
              </div>
              
              <motion.button 
-               whileHover={{ scale: 1.05, shadow: '0 25px 50px -12px rgba(59, 130, 246, 0.5)' }}
-               whileTap={{ scale: 0.95 }}
+               whileHover={{ scale: 1.02 }}
+               whileTap={{ scale: 0.98 }}
                onClick={() => { setFormMode('add'); setCapturedImage(null); setSelectedTamu(null); setShowForm(true); }} 
-               className="bg-white text-slate-900 px-10 py-5 rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl hover:bg-blue-50 transition-all z-20 flex items-center gap-3"
+               className="bg-white text-slate-900 px-6 py-4 sm:px-10 sm:py-5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-[11px] uppercase tracking-[0.2em] sm:tracking-[0.3em] shadow-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer z-20"
              >
-                <PlusCircle className="w-5 h-5" />
+                <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 Registrasi Tamu
              </motion.button>
           </div>
@@ -401,8 +401,8 @@ export function BukuTamuView({
                 <form onSubmit={handleSubmitTamu} className="p-6 overflow-y-auto space-y-5">
                     <div className="flex flex-col items-center gap-4">
                        {capturedImage ? (
-                         <div className="relative w-40 h-40 bg-slate-100 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
-                            <img src={capturedImage} className="w-full h-full object-cover" />
+                         <div className="relative w-40 h-40 bg-black rounded-3xl overflow-hidden border-4 border-white shadow-xl flex items-center justify-center">
+                            <img src={capturedImage} className="w-full h-full object-contain bg-black" />
                             {formMode !== 'view' && <button type="button" onClick={() => setCapturedImage(null)} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-md"><X className="w-4 h-4" /></button>}
                          </div>
                        ) : (
@@ -470,8 +470,9 @@ export function BukuTamuView({
 
       <AnimatePresence>
         {showWebcam && (
-          <div className="fixed inset-0 bg-slate-900/90 flex flex-col justify-center items-center z-[130] p-4">
-             <div className="relative rounded-[2rem] overflow-hidden border-4 border-white/20 shadow-2xl max-w-lg w-full aspect-square md:aspect-video bg-black">
+          <div className="fixed inset-0 bg-black z-[130] flex flex-col justify-between overflow-hidden">
+             {/* Fullscreen Webcam Feed */}
+             <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center">
                 {/* @ts-ignore */}
                 <Webcam 
                   audio={false} 
@@ -480,21 +481,57 @@ export function BukuTamuView({
                   videoConstraints={{ facingMode }}
                   forceScreenshotSourceSize={true}
                   mirrored={facingMode === 'user'}
-                  className="w-full h-full object-cover" 
+                  className="w-full h-full object-contain select-none bg-black" 
                 />
-                <div className="absolute top-4 left-4 flex gap-2">
-                   <button onClick={toggleFacingMode} title="Balik Kamera" className="bg-white/20 hover:bg-white/40 p-2 rounded-full text-white backdrop-blur-md transition-all"><RefreshCw className="w-6 h-6" /></button>
-                </div>
-                <button onClick={() => setShowWebcam(false)} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 p-2 rounded-full text-white backdrop-blur-md transition-all"><X className="w-6 h-6" /></button>
              </div>
-             <div className="mt-8 flex gap-6">
-                <button onClick={capture} className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl shadow-white/20 border-4 border-blue-600 group active:scale-95 transition-all">
-                   <div className="w-14 h-14 bg-white group-hover:bg-slate-50 border-2 border-slate-100 rounded-full flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-blue-600" />
+
+             {/* Immersive UI Overlay on top of camera stream */}
+             <div className="relative z-10 flex flex-col justify-between h-full p-6 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none">
+                {/* Header Actions Row */}
+                <div className="flex items-center justify-between w-full pointer-events-auto">
+                   <div className="flex items-center gap-3">
+                      <button 
+                         type="button"
+                         onClick={toggleFacingMode} 
+                         title="Balik Kamera" 
+                         className="bg-white/10 hover:bg-white/25 border border-white/20 p-3 rounded-full text-white backdrop-blur-xl hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                      >
+                         <RefreshCw className="w-5 h-5" />
+                      </button>
+                      <div className="px-3 py-1.5 bg-red-600/90 text-white rounded-lg text-[9px] font-black tracking-widest uppercase flex items-center gap-1.5 animate-pulse select-none border border-red-500/30">
+                         <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                         Secure Camera Active
+                      </div>
                    </div>
-                </button>
+                   
+                   <button 
+                      type="button"
+                      onClick={() => setShowWebcam(false)} 
+                      className="bg-white/10 hover:bg-red-600/80 border border-white/20 p-3 rounded-full text-white backdrop-blur-xl hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                      title="Tutup Kamera"
+                   >
+                      <X className="w-5 h-5" />
+                   </button>
+                </div>
+
+                {/* Bottom Trigger and Guide Row */}
+                <div className="flex flex-col items-center gap-4 w-full pointer-events-auto mb-4">
+                   <div className="bg-slate-950/65 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/10 text-center select-none shadow-xl max-w-xs transition-opacity">
+                      <p className="text-white text-[10px] font-black uppercase tracking-wider block">Scan Wajah / KTP Tamu</p>
+                      <span className="text-white/40 text-[8px] font-bold uppercase tracking-widest block mt-0.5">Posisikan tegak lurus pada lensa</span>
+                   </div>
+
+                   <button 
+                      type="button"
+                      onClick={capture} 
+                      className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/25 ring-4 ring-white/30 border-4 border-blue-600 hover:scale-105 active:scale-90 transition-all cursor-pointer"
+                   >
+                      <div className="w-14 h-14 bg-white hover:bg-slate-100 rounded-full flex items-center justify-center shadow-inner">
+                         <Camera className="w-7 h-7 text-blue-600 animate-pulse" />
+                      </div>
+                   </button>
+                </div>
              </div>
-             <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-6">Arahkan Kamera ke Wajah atau KTP Tamu</p>
           </div>
         )}
       </AnimatePresence>
