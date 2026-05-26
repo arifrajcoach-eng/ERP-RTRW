@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Image as ImageIcon, Calendar, Edit3, X, ChevronRight, User, 
-  Clock, Info, LayoutGrid, Check, RefreshCw
+  Clock, Info, LayoutGrid, Check, RefreshCw, Upload, Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
@@ -78,8 +78,12 @@ export default function MadingDigitalView({
   showNotification,
   handleFirestoreError
 }: MadingDigitalViewProps) {
-  const [madingItems, setMadingItems] = useState<Record<number, MadingItem>>({});
+  const [allMadingDocs, setAllMadingDocs] = useState<MadingItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Default to current year and month (May 2026)
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedMonth, setSelectedMonth] = useState<number>(5);
   
   // Modals / Selection States
   const [selectedItem, setSelectedItem] = useState<MadingItem | null>(null);
@@ -92,12 +96,95 @@ export default function MadingDigitalView({
   const [editDescription, setEditDescription] = useState('');
   const [editImageUrl, setEditImageUrl] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
+  const [isUploadingLocal, setIsUploadingLocal] = useState(false);
+
+  // Live Camera API States
+  const [isLiveCameraActive, setIsLiveCameraActive] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+
+  // Stop camera helper
+  const stopLiveCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsLiveCameraActive(false);
+  };
+
+  // Start direct web camera stream
+  const startLiveCamera = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showNotification("Browser atau perangkat Anda tidak mendukung akses kamera secara langsung!", "error");
+        return;
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: { ideal: "environment" }, // prefer rear camera on HP/tablet
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+      
+      streamRef.current = stream;
+      setIsLiveCameraActive(true);
+      
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 150);
+      showNotification("Kamera langsung aktif! Arahkan ke objek lalu klik jepret.", "success");
+    } catch (err: any) {
+      console.error("Camera capture error:", err);
+      showNotification("Gagal membuka kamera. Harap berikan izin akses kamera pada browser.", "error");
+    }
+  };
+
+  // Capture current frame as compressed base64
+  const captureLivePhoto = async () => {
+    if (!videoRef.current || !streamRef.current) {
+      showNotification("Kamera tidak aktif!", "error");
+      return;
+    }
+
+    try {
+      setIsUploadingLocal(true);
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 800;
+      canvas.height = video.videoHeight || 600;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const rawBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        const optimizedBase64 = await compressImage(rawBase64, 1000, 1000);
+        setEditImageUrl(optimizedBase64);
+        showNotification("Foto berhasil dijepret & tersimpan di preview!", "success");
+      }
+    } catch (err) {
+      console.error("Capture photo error:", err);
+      showNotification("Gagal memproses jepretan foto!", "error");
+    } finally {
+      setIsUploadingLocal(false);
+      stopLiveCamera();
+    }
+  };
+
+  const handleCloseEdit = () => {
+    stopLiveCamera();
+    setIsEditOpen(false);
+  };
 
   const tId = currentTenant?.id || '';
   const isPengurus = userRole !== 'WARGA';
 
   // Default fallback values for slots 1 - 5 to ensure a always-beautiful initial UI
-  const getFallbackItem = (slot: number): MadingItem => {
+  const getFallbackItem = (slot: number, yr?: number, mo?: number): MadingItem => {
     const fallbacks: Record<number, { title: string; description: string; date: string; url: string }> = {
       1: {
         title: "Kerja Bakti Peduli Saluran Air",
@@ -132,45 +219,46 @@ export default function MadingDigitalView({
     };
 
     const fb = fallbacks[slot];
+    let dateStr = fb.date;
+    if (yr && mo) {
+      const monthNames = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      ];
+      dateStr = `${monthNames[mo - 1]} ${yr}`;
+    }
+
     return {
-      id: `fallback-${slot}`,
+      id: `fallback-${slot}-${yr || 2026}-${mo || 5}`,
       tenantId: tId,
       slot,
       title: fb.title,
       description: fb.description,
-      date: fb.date,
+      date: dateStr,
       imageUrl: fb.url,
       updatedAt: new Date().toISOString(),
       updatedBy: "System Default"
     };
   };
 
-  // 1. Fetch data in real-time, filtered by tenantId
+  // 1. Fetch data in real-time, filtered by tenantId (compliant with tenant security rules)
   useEffect(() => {
     if (!tId) return;
 
     setLoading(true);
-    // New Firestore query includes a filter for current owner's tenantId (enforces security rules)
     const q = query(collection(db, "mading"), where("tenantId", "==", tId));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const itemsMap: Record<number, MadingItem> = {};
+      const itemsList: MadingItem[] = [];
       
       snapshot.forEach((doc) => {
         const data = doc.data() as MadingItem;
-        if (data && data.slot >= 1 && data.slot <= 5) {
-          itemsMap[data.slot] = data;
+        if (data) {
+          itemsList.push({ ...data, id: doc.id });
         }
       });
 
-      // Fill missing slots with fallbacks
-      for (let s = 1; s <= 5; s++) {
-        if (!itemsMap[s]) {
-          itemsMap[s] = getFallbackItem(s);
-        }
-      }
-
-      setMadingItems(itemsMap);
+      setAllMadingDocs(itemsList);
       setLoading(false);
     }, (error) => {
       handleFirestoreError(error, "list", "mading");
@@ -180,9 +268,124 @@ export default function MadingDigitalView({
     return () => unsubscribe();
   }, [tId]);
 
+  // Compute madingItems in-memory based on selectedYear and selectedMonth
+  const madingItems = React.useMemo(() => {
+    const itemsMap: Record<number, MadingItem> = {};
+    
+    // First, find exact fits for the chosen month and year
+    allMadingDocs.forEach((item) => {
+      const itemYear = item.year || (item.date && item.date.includes("2026") ? 2026 : undefined);
+      // Try parsing month from item.date or its stored properties
+      const itemMonth = item.month || (item.date && item.date.toLowerCase().includes("mei") ? 5 : undefined);
+      
+      const isMatch = (item.year === selectedYear && item.month === selectedMonth) ||
+                      (!item.year && selectedYear === 2026 && selectedMonth === 5 && item.id === `${tId}_slot_${item.slot}`);
+
+      if (isMatch && item.slot >= 1 && item.slot <= 5) {
+        itemsMap[item.slot] = item;
+      }
+    });
+
+    // Populate missing slots using fallbacks or generic entries
+    for (let s = 1; s <= 5; s++) {
+      if (!itemsMap[s]) {
+        const legacyDoc = allMadingDocs.find(
+          item => item.slot === s && (item.id === `${tId}_slot_${s}` || !item.year)
+        );
+        if (legacyDoc && selectedYear === 2026 && selectedMonth === 5) {
+          itemsMap[s] = legacyDoc;
+        } else {
+          itemsMap[s] = getFallbackItem(s, selectedYear, selectedMonth);
+        }
+      }
+    }
+
+    return itemsMap;
+  }, [allMadingDocs, selectedYear, selectedMonth, tId]);
+
+  // Compress image helper using HTML Canvas
+  const compressImage = (base64Str: string, maxWidth = 1000, maxHeight = 1000): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // Compress with JPEG format & 0.7 quality to be lightweight (approx. 50KB to 120KB)
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedBase64);
+        } else {
+          resolve(base64Str);
+        }
+      };
+      img.onerror = () => {
+        resolve(base64Str);
+      };
+    });
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      showNotification("Ukuran foto terlalu besar (maksimal 15MB)!", "error");
+      return;
+    }
+
+    setIsUploadingLocal(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const originalBase64 = event.target?.result as string;
+      if (!originalBase64) {
+        showNotification("Gagal membaca file foto!", "error");
+        setIsUploadingLocal(false);
+        return;
+      }
+
+      try {
+        const compressedBase64 = await compressImage(originalBase64, 1000, 1000);
+        setEditImageUrl(compressedBase64);
+        showNotification("Foto berhasil diunggah langsung & dioptimalkan otomatis!", "success");
+      } catch (err) {
+        console.error("Error compressing image:", err);
+        showNotification("Gagal memproses & kompresi foto!", "error");
+      } finally {
+        setIsUploadingLocal(false);
+      }
+    };
+
+    reader.onerror = () => {
+      showNotification("Terjadi kesalahan membaca file gambar!", "error");
+      setIsUploadingLocal(false);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   // Open Edit Dialog
   const handleOpenEdit = (slot: number) => {
-    const item = madingItems[slot] || getFallbackItem(slot);
+    const item = madingItems[slot] || getFallbackItem(slot, selectedYear, selectedMonth);
     setEditingSlot(slot);
     setEditTitle(item.title);
     setEditDate(item.date);
@@ -191,7 +394,7 @@ export default function MadingDigitalView({
     setIsEditOpen(true);
   };
 
-  // Submit Edit to Firestore
+  // Submit Edit to Firestore with year and month tags
   const handleSaveMadingSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSlot || !tId) return;
@@ -202,8 +405,9 @@ export default function MadingDigitalView({
     }
 
     setSaveLoading(true);
-    const docId = `${tId}_slot_${editingSlot}`;
-    const payload: MadingItem = {
+    // Include selected year and month in doc ID to allow multi-month and multi-year archiving
+    const docId = `${tId}_${selectedYear}_${selectedMonth}_slot_${editingSlot}`;
+    const payload: MadingItem & { year: number; month: number } = {
       id: docId,
       tenantId: tId,
       slot: editingSlot,
@@ -212,13 +416,15 @@ export default function MadingDigitalView({
       description: editDescription,
       imageUrl: editImageUrl,
       updatedAt: new Date().toISOString(),
-      updatedBy: currentUser?.name || currentUser?.email || "Pengurus RT"
+      updatedBy: currentUser?.name || currentUser?.email || "Pengurus RT",
+      year: selectedYear,
+      month: selectedMonth
     };
 
     try {
       await setDoc(doc(db, "mading", docId), payload);
-      showNotification(`Mading Slot ${editingSlot} berhasil diperbarui!`, "success");
-      setIsEditOpen(false);
+      showNotification(`Mading Slot ${editingSlot} untuk ${editDate} berhasil diperbarui!`, "success");
+      handleCloseEdit();
     } catch (err: any) {
       handleFirestoreError(err, "write", `mading/${docId}`);
     } finally {
@@ -227,11 +433,11 @@ export default function MadingDigitalView({
   };
 
   // Retrieve item of slot
-  const item1 = madingItems[1] || getFallbackItem(1);
-  const item2 = madingItems[2] || getFallbackItem(2);
-  const item3 = madingItems[3] || getFallbackItem(3);
-  const item4 = madingItems[4] || getFallbackItem(4);
-  const item5 = madingItems[5] || getFallbackItem(5);
+  const item1 = madingItems[1] || getFallbackItem(1, selectedYear, selectedMonth);
+  const item2 = madingItems[2] || getFallbackItem(2, selectedYear, selectedMonth);
+  const item3 = madingItems[3] || getFallbackItem(3, selectedYear, selectedMonth);
+  const item4 = madingItems[4] || getFallbackItem(4, selectedYear, selectedMonth);
+  const item5 = madingItems[5] || getFallbackItem(5, selectedYear, selectedMonth);
 
   if (loading) {
     return (
@@ -271,9 +477,69 @@ export default function MadingDigitalView({
         )}
       </div>
 
-      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium leading-relaxed mb-6 -mt-3">
+      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium leading-relaxed mb-4 -mt-3">
         Berikut adalah mading dokumentasi kegiatan rutin bulanan lingkungan. Klik gambar pada kolase di bawah untuk memperbesar detail berita, melacak riwayat kegiatan, atau memperbarui konten khusus pengurus.
       </p>
+
+      {/* --- MONTH & YEAR ARCHIVE SELECTORS --- */}
+      <div className="mb-6 p-4 sm:p-5 bg-slate-50 dark:bg-slate-850 rounded-[1.5rem] border border-slate-100 dark:border-slate-800/80 shadow-inner flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5" id="mading-archive-filter-bar">
+        {/* Year Select Selector */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-brand-blue border border-indigo-150 dark:border-brand-blue/10">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">ARSIP TAHUN</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-blue/45 rounded-xl text-xs font-black uppercase text-slate-700 dark:text-slate-100 pr-8 pl-3 py-1.5 outline-none focus:ring-4 ring-brand-blue/5 shadow-sm transition-all appearance-none cursor-pointer"
+              style={{ backgroundPosition: "right 0.5rem center" }}
+            >
+              {[2024, 2025, 2026, 2027, 2028].map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* 12 Months selection layout */}
+        <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-1.5 md:pl-4 md:border-l border-slate-200 dark:border-slate-800">
+          <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2 shrink-0">PILIH BULAN:</span>
+          <div className="flex items-center gap-1.5 min-w-max py-0.5">
+            {[
+              { val: 1, label: "Jan" },
+              { val: 2, label: "Feb" },
+              { val: 3, label: "Mar" },
+              { val: 4, label: "Apr" },
+              { val: 5, label: "Mei" },
+              { val: 6, label: "Jun" },
+              { val: 7, label: "Jul" },
+              { val: 8, label: "Ags" },
+              { val: 9, label: "Sep" },
+              { val: 10, label: "Okt" },
+              { val: 11, label: "Nov" },
+              { val: 12, label: "Des" }
+            ].map((m) => {
+              const isActive = selectedMonth === m.val;
+              return (
+                <button
+                  key={m.val}
+                  type="button"
+                  onClick={() => setSelectedMonth(m.val)}
+                  className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 transform active:scale-95 cursor-pointer ${
+                    isActive
+                      ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white shadow-md shadow-brand-blue/25 scale-102"
+                      : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 border border-slate-200/50 dark:border-slate-700/60"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* Modern Bento Grid 5-photo collage */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 h-auto lg:h-[500px]" id="mading-grid-layout">
@@ -543,6 +809,7 @@ export default function MadingDigitalView({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col overflow-hidden max-h-[90vh]"
+              style={{ height: "616.631px", marginBottom: "-64px" }}
             >
               {/* Header title */}
               <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -554,7 +821,7 @@ export default function MadingDigitalView({
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Edit konten mading digital bulanan rukun warga</p>
                 </div>
                 <button 
-                  onClick={() => setIsEditOpen(false)}
+                  onClick={handleCloseEdit}
                   className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -565,10 +832,33 @@ export default function MadingDigitalView({
               <form onSubmit={handleSaveMadingSlot} className="flex-1 overflow-y-auto p-6 space-y-6">
                 
                 {/* Image Preview Window */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Preview Foto Terpilih</label>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Preview Foto Terpilih</label>
+                    <span className="text-[9px] font-black text-brand-blue dark:text-teal-400 uppercase tracking-wider">Mendukung Kamera HP/Tablet</span>
+                  </div>
                   <div className="h-44 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center group/review">
-                    {editImageUrl ? (
+                    {isLiveCameraActive ? (
+                      <div className="w-full h-full relative bg-black">
+                        <video 
+                          ref={videoRef} 
+                          autoPlay 
+                          playsInline 
+                          className="w-full h-full object-cover select-none"
+                        />
+                        <div className="absolute top-3 left-3 px-2 py-1 bg-red-600 text-[8px] font-black text-white rounded-md tracking-wider animate-pulse uppercase">
+                          ● KAMERA LIVE HP/TABLET AKTIF
+                        </div>
+                        <button
+                          type="button"
+                          onClick={stopLiveCamera}
+                          className="absolute top-3 right-3 p-1.5 bg-slate-900/80 hover:bg-slate-905 text-white rounded-full transition-colors cursor-pointer"
+                          title="Matikan Kamera"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : editImageUrl ? (
                       <img 
                         src={editImageUrl} 
                         alt="Preview mading" 
@@ -578,9 +868,61 @@ export default function MadingDigitalView({
                       />
                     ) : (
                       <div className="text-center text-slate-400 p-4">
-                        <ImageIcon className="w-10 h-10 mx-auto opacity-50 mb-2 animate-bounce" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Silakan pilih preset atau masukkan URL foto</span>
+                        <ImageIcon className="w-10 h-10 mx-auto opacity-50 mb-2" />
+                        <span className="text-xs font-bold uppercase tracking-wider block">Silakan ambil kamera, unggah foto, atau pilih preset</span>
                       </div>
+                    )}
+                    {isUploadingLocal && (
+                      <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center text-white backdrop-blur-sm">
+                        <RefreshCw className="w-8 h-8 animate-spin text-brand-blue mb-2" />
+                        <span className="text-[10px] font-black uppercase tracking-wider">Membaca & Mengompresi Foto...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Direct Device/Tablet File Upload & Camera triggers */}
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <input
+                      type="file"
+                      id="mading-device-upload-input"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopLiveCamera();
+                        const fileInput = document.getElementById('mading-device-upload-input') as HTMLInputElement;
+                        if (fileInput) {
+                          fileInput.removeAttribute('capture');
+                          fileInput.click();
+                        }
+                      }}
+                      className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-brand-blue to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-black text-[10px] uppercase tracking-wider shadow-md shadow-brand-blue/10 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Pilih Foto dari HP / Tablet / PC</span>
+                    </button>
+                    
+                    {isLiveCameraActive ? (
+                      <button
+                        type="button"
+                        onClick={captureLivePhoto}
+                        className="py-3 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-wider shadow-md shadow-red-600/10 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer animate-pulse"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>Jepret Foto Sekarang (Snapshot)</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={startLiveCamera}
+                        className="py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wider shadow-md shadow-emerald-600/10 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>Ambil Kamera Langsung</span>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -657,15 +999,30 @@ export default function MadingDigitalView({
 
                 {/* Custom Photo URL Input */}
                 <div className="space-y-1.5Col">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">ATAU Input Custom URL Web Foto (https://...)</label>
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">ATAU Input Custom URL Web / Lokasi Foto</label>
                   <input 
-                    type="url" 
-                    value={editImageUrl}
-                    onChange={(e) => setEditImageUrl(e.target.value)}
+                    type="text" 
+                    value={editImageUrl.startsWith('data:') ? 'Foto Terpilih dari Perangkat Anda (Format Base64 Terkompresi)' : editImageUrl}
+                    onChange={(e) => {
+                      if (!editImageUrl.startsWith('data:')) {
+                        setEditImageUrl(e.target.value);
+                      } else {
+                        // If they modify the indicator string, clear it to allow pasting
+                        setEditImageUrl(e.target.value === 'Foto Terpilih dari Perangkat Anda (Format Base64 Terkompresi)' ? editImageUrl : e.target.value);
+                      }
+                    }}
                     placeholder="Masukkan url gambar dari hosting luar (Google Drive, ImgBB, Unsplash, dll)"
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-xs font-mono placeholder-slate-400 focus:outline-none focus:border-brand-blue focus:bg-white text-slate-800 dark:text-slate-100"
-                    required
                   />
+                  {editImageUrl.startsWith('data:') && (
+                    <button
+                      type="button"
+                      onClick={() => setEditImageUrl('')}
+                      className="text-[9px] font-black uppercase text-rose-500 tracking-wider hover:underline"
+                    >
+                      Hapus Foto Unggahan
+                    </button>
+                  )}
                 </div>
 
                 {/* Description Input */}
@@ -685,7 +1042,7 @@ export default function MadingDigitalView({
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                   <button 
                     type="button"
-                    onClick={() => setIsEditOpen(false)}
+                    onClick={handleCloseEdit}
                     className="px-5 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-250 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs uppercase cursor-pointer"
                   >
                     Batal
