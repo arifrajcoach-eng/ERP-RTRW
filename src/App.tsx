@@ -2913,6 +2913,7 @@ export default function App() {
               <div className="h-5 w-px bg-slate-200 dark:bg-slate-800"></div>
 
               <div
+                style={{ color: '#0fcb82' }}
                 className={`flex items-center gap-2.5 px-4 py-1 rounded-full border transition-all duration-500 
                   ${dbStatus === "UNAVAILABLE" ? "bg-red-50 text-red-600 border-red-100" : 
                     dbStatus === "OFFLINE" ? "bg-amber-50 text-amber-600 border-amber-100" : 
@@ -4958,16 +4959,16 @@ function SOSOverlay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-red-600 flex flex-col items-center justify-center p-6 text-white text-center sm:p-12 overflow-hidden"
+      className="fixed inset-0 z-[100] bg-red-600 flex flex-col items-center p-6 text-white text-center sm:p-12 overflow-y-auto"
     >
       {/* Flashing Background Animation */}
       <motion.div
         animate={{ opacity: [0.7, 1, 0.7] }}
         transition={{ repeat: Infinity, duration: 0.8 }}
-        className="absolute inset-0 bg-red-700"
+        className="absolute inset-0 bg-red-700 pointer-events-none"
       />
 
-      <div className="relative z-10 flex flex-col items-center max-w-2xl w-full">
+      <div className="relative z-10 flex flex-col items-center max-w-2xl w-full my-auto py-6">
         <motion.div
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ repeat: Infinity, duration: 1 }}
