@@ -170,10 +170,14 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       }
 
       const base64Audio = response.data;
-      const audioContext = new (
+      const audioContext = audioContextRef.current || new (
         window.AudioContext || (window as any).webkitAudioContext
       )({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
+
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
 
       const binary = atob(base64Audio);
       const bytes = new Uint8Array(binary.length);

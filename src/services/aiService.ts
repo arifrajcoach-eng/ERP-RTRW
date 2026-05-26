@@ -184,7 +184,7 @@ export async function chatWithAI(params: {
 
     try {
       const stream = await ai.models.generateContentStream({
-        model: "gemini-3.5-flash",
+        model: "gemini-flash-latest",
         config: {
           systemInstruction: params.isPrivileged ? ARYA_SYSTEM_INSTRUCTION : AISYAH_SYSTEM_INSTRUCTION,
           temperature: 0.8
@@ -219,7 +219,7 @@ export async function generateAIReport(dataSummary: any) {
   try {
     checkApiKey();
     const response = await ai.models.generateContent({ 
-      model: "gemini-3.5-flash",
+      model: "gemini-flash-latest",
       contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
       Laporan harus mencakup: 
       1. Ringkasan Keuangan (Saldo Akhir). 
@@ -256,7 +256,7 @@ export async function generateRegionalInsight(regionsData: any) {
     Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-flash-latest",
       contents: prompt
     });
     return response.text || "";
@@ -279,7 +279,7 @@ export async function scanReceiptAI(base64: string, mimeType: string = "image/jp
     checkApiKey();
     const dataPart = base64.includes(',') ? base64.split(',')[1] : base64;
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-flash-latest",
       contents: {
         parts: [
           { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi (bisa berupa gambar atau PDF). Ekstrak informasi dari file struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: \n        {\n          "tanggal": "2023-10-05",\n          "nominal": 150000, \n          "transaksi": "Konsumsi",\n          "keterangan": "Beli semen",\n          "tipe": "Keluar",\n          "nama": "Toko Bangunan XYZ"\n        }\n        Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat).\n        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Return HANYA JSON block.` },
