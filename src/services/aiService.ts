@@ -312,7 +312,7 @@ export async function textToSpeech(text: string, isChairman: boolean = false) {
     const personaInstruction = isChairman ? ARYA_TTS_SYSTEM_INSTRUCTION : AISYAH_TTS_SYSTEM_INSTRUCTION;
     
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
+      model: "gemini-1.5-flash",
       contents: [{ parts: [{ text: cleanedText }] }], 
       config: {
         systemInstruction: personaInstruction,
@@ -328,7 +328,8 @@ export async function textToSpeech(text: string, isChairman: boolean = false) {
 
     const audioPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
     if (!audioPart) {
-      console.warn('TTS Response without audio part:', JSON.stringify(response));
+      // Fallback: check if it's in a different part structure or candidate
+      console.warn('TTS Response without direct audio part, full response:', JSON.stringify(response));
       return null;
     }
     return { 

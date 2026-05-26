@@ -185,23 +185,34 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
         bytes[i] = binary.charCodeAt(i);
       }
 
-      const buffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
-      const data = buffer.getChannelData(0);
-      const view = new DataView(bytes.buffer);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = view.getInt16(i * 2, true) / 32768;
+      // Use the pcmToWavBlob for broader compatibility (iOS, etc)
+      const blob = pcmToWavBlob(bytes, 24000);
+      const url = URL.createObjectURL(blob);
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
       }
-
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
-      source.onended = () => {
+      
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
         if (mountedRef.current) {
           setIsSpeaking(false);
+          URL.revokeObjectURL(url);
         }
       };
-      source.start();
-      sourceRef.current = source;
+      
+      audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        if (mountedRef.current) {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(url);
+        }
+      };
+
+      await audio.play();
     } catch (error) {
       console.error("Speech Error:", error);
       if (mountedRef.current) {
@@ -211,11 +222,12 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   };
 
   const stopSpeaking = () => {
-    if (sourceRef.current) {
+    if (audioRef.current) {
       try {
-        sourceRef.current.stop();
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
       } catch (e) {}
-      sourceRef.current = null;
+      audioRef.current = null;
     }
     setIsSpeaking(false);
   };
