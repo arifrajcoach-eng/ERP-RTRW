@@ -2223,9 +2223,9 @@ export default function App() {
           (currentTenant?.status || "TRIAL") === "TRIAL" ||
           (currentTenant?.status || "TRIAL") === "FREE";
 
-        const isArif = currentUser?.email === 'arifrajcoach@gmail.com';
-        const restrictedItems = ["daftar-trial", "super-admin", "pengaturan", "monitoring", "audit", "leads"];
-        if (restrictedItems.includes(item.id) && !isArif) return false;
+        const isOwnerOrSuperAdmin = isSuperAdmin || ['arifrajcoach@gmail.com', 'trihprw26@rw26.com'].includes(currentUser?.email);
+        const restrictedItems = ["daftar-trial", "super-admin", "leads"];
+        if (restrictedItems.includes(item.id) && !isOwnerOrSuperAdmin) return false;
         
         if (isSuperAdmin) return true;
         if (
