@@ -9817,7 +9817,7 @@ function LoginView({
               >
                 <Tag className="w-4 h-4" />
                 <span className="text-[11px] font-black uppercase tracking-widest">
-                  Pricing & List Fitur
+                  Pilih Paket & List Fitur
                 </span>
               </motion.button>
 
