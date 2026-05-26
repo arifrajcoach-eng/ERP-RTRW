@@ -4804,7 +4804,8 @@ function SOSOverlay({
       }
     };
 
-    let activeOsc: OscillatorNode | null = null;
+    let activeOsc1: OscillatorNode | null = null;
+    let activeOsc2: OscillatorNode | null = null;
     let activeLFO: OscillatorNode | null = null;
     let activeGain: GainNode | null = null;
 
@@ -4812,56 +4813,72 @@ function SOSOverlay({
       if (!audioCtxRef.current || isMuted || !emergency) return;
 
       const ctx = audioCtxRef.current;
+      const now = ctx.currentTime;
+
+      // Create primary oscillators (Carriers)
+      // Detuned sawtooth oscillators create a rich, realistic, massive mechanical war siren sound.
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      const mainGain = ctx.createGain();
+
+      osc1.type = "sawtooth";
+      osc2.type = "sawtooth"; // Both sawtooth for maximum acoustic pressure / wailing buzz
       
-      const playSirenPattern = () => {
+      // Setup frequencies
+      osc1.frequency.setValueAtTime(550, now);
+      osc2.frequency.setValueAtTime(550, now);
+      
+      // Detune them slightly to simulate dual physical sirens / mechanical acoustic beats
+      osc1.detune.setValueAtTime(-15, now);
+      osc2.detune.setValueAtTime(15, now);
+
+      // LFO (Low Frequency Oscillator) to modulate pitch up and down
+      lfo.type = "triangle";
+      lfo.frequency.setValueAtTime(0.20, now); // 5-second cycle for realistic heavy war siren wail
+
+      // LFO Gain controls the depth of frequency modulation (+/- 250Hz around 550Hz)
+      // This sweeps the frequencies smoothly between 300Hz (low moan) and 800Hz (high scream)
+      lfoGain.gain.setValueAtTime(250, now);
+
+      // Master volume node
+      mainGain.gain.setValueAtTime(0.01, now);
+      // Realistic siren startup: wind up the rotor and build volume over 2 seconds
+      mainGain.gain.linearRampToValueAtTime(0.85, now + 2.0);
+
+      // Connect LFO modulation to frequencies of both carriers
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.frequency);
+      lfoGain.connect(osc2.frequency);
+
+      // Connect audio signal chain
+      osc1.connect(mainGain);
+      osc2.connect(mainGain);
+      mainGain.connect(ctx.destination);
+
+      // Start everything
+      osc1.start(now);
+      osc2.start(now);
+      lfo.start(now);
+
+      // Save references so we can safely stop or modify them on cleanup/mute
+      activeOsc1 = osc1;
+      activeOsc2 = osc2;
+      activeLFO = lfo;
+      activeGain = mainGain;
+
+      // Vibration: synchronized rumble during active alarm
+      const startVibration = () => {
         if (!emergency || isMuted) return;
-        const now = ctx.currentTime;
-
-        // "12x" Urgency Pattern: 12 rapid piercing pulses per cycle
-        // Kentongan style: rhythmic, intense, and unmistakable
-        for (let i = 0; i < 12; i++) {
-          const hitTime = now + (i * 0.15); // Faster 0.15s rhythm for "12x" intensity
-          
-          const osc1 = ctx.createOscillator();
-          const osc2 = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-          
-          osc1.type = "sawtooth";
-          osc2.type = "square";
-          
-          const freq = 800 + (i * 15); // Faster rising pitch for high urgency
-          osc1.frequency.setValueAtTime(freq, hitTime);
-          osc1.frequency.exponentialRampToValueAtTime(freq * 1.8, hitTime + 0.08);
-          
-          osc2.frequency.setValueAtTime(freq + 10, hitTime);
-          osc2.frequency.exponentialRampToValueAtTime((freq + 10) * 1.8, hitTime + 0.08);
-
-          gainNode.gain.setValueAtTime(0, hitTime);
-          gainNode.gain.linearRampToValueAtTime(0.9, hitTime + 0.015);
-          gainNode.gain.linearRampToValueAtTime(0, hitTime + 0.1);
-
-          osc1.connect(gainNode);
-          osc2.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          
-          osc1.start(hitTime);
-          osc2.start(hitTime);
-          osc1.stop(hitTime + 0.12);
-          osc2.stop(hitTime + 0.12);
-        }
-
-        // Synchronized Vibration: 12 pulses
         if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-          const pattern = [];
-          for(let j=0; j<12; j++) pattern.push(80, 80);
-          navigator.vibrate(pattern);
+          // Classic pulsating air raid alert vibration pattern
+          navigator.vibrate([1800, 400, 1800, 400]);
         }
       };
-
-      // Loop rhythmic siren for continuous attention
-      playSirenPattern();
-      // Cycle: 12 hits * 0.15s = 1.8s. We repeat every 2.5s for rapid loop.
-      sirenIntervalRef.current = setInterval(playSirenPattern, 2500); 
+      
+      startVibration();
+      sirenIntervalRef.current = setInterval(startVibration, 4400); // loops to align with siren sweep
     };
 
     startAudioContext();
@@ -4879,10 +4896,16 @@ function SOSOverlay({
 
     return () => {
       if (vibInterval) clearInterval(vibInterval);
-      if (activeOsc) {
+      if (activeOsc1) {
         try {
-          activeOsc.stop();
-          activeOsc.disconnect();
+          activeOsc1.stop();
+          activeOsc1.disconnect();
+        } catch (e) {}
+      }
+      if (activeOsc2) {
+        try {
+          activeOsc2.stop();
+          activeOsc2.disconnect();
         } catch (e) {}
       }
       if (activeLFO) {

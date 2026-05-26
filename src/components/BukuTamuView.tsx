@@ -387,8 +387,8 @@ export function BukuTamuView({
       <AnimatePresence>
         {showForm && (
           <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[120] p-4">
-             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] mt-[102px]">
+                <div className="h-[60px] pt-5 pb-5 px-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                   <h3 className="font-black text-slate-800 flex items-center gap-2">
                     <div className="p-2 bg-blue-600 text-white rounded-xl">
                       {formMode === 'view' ? <Eye className="w-4 h-4" /> : formMode === 'edit' ? <Edit className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
@@ -398,7 +398,7 @@ export function BukuTamuView({
                   <button onClick={() => setShowForm(false)} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
                 </div>
                 
-                <form onSubmit={handleSubmitTamu} className="p-6 overflow-y-auto space-y-5">
+                <form onSubmit={handleSubmitTamu} style={{ height: '538.54px', marginTop: '-28px', marginBottom: '28px', marginRight: '0px' }} className="p-6 overflow-y-auto space-y-5">
                     <div className="flex flex-col items-center gap-4">
                        {capturedImage ? (
                          <div className="relative w-40 h-40 bg-black rounded-3xl overflow-hidden border-4 border-white shadow-xl flex items-center justify-center">

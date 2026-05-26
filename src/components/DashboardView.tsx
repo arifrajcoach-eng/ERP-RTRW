@@ -567,7 +567,7 @@ export default function DashboardView({
         <div className="bg-white dark:bg-slate-900 p-2 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <LayoutGrid className="w-5 h-5 text-brand-blue" />
-            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase">Modul & Pintasan</h3>
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase">Fitur Klik</h3>
           </div>
           <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
             {allowedMenuItems.filter(item => !['dashboard', 'pengaturan', 'super-admin', 'users', 'kop-template'].includes(item.id)).map((item) => (
