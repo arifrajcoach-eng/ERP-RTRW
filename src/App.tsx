@@ -687,9 +687,9 @@ export default function App() {
               user.email?.toLowerCase().includes("handoko");
             let needsUpdate = false;
 
-            if (isTrihUser && userData.tenantId !== "trihprw26") {
-              userData.tenantId = "trihprw26";
-              userData.role = "ADMIN";
+            if (isTrihUser && userData.tenantId !== "rw26_berjuang") {
+              userData.tenantId = "rw26_berjuang";
+              userData.role = "RW";
               needsUpdate = true;
             }
 
@@ -798,9 +798,9 @@ export default function App() {
                     ? "Bpk. Arif (Super Admin)"
                     : "Admin RW Berjuang",
                   username: user.email?.split("@")[0] || "user",
-                  role: isMasterEmail ? "SUPER_ADMIN" : "ADMIN",
+                  role: isMasterEmail ? "SUPER_ADMIN" : "RW",
                   email: user.email,
-                  tenantId: isMasterEmail ? "MASTER" : "trihprw26",
+                  tenantId: isMasterEmail ? "MASTER" : "rw26_berjuang",
                   isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
@@ -1204,33 +1204,34 @@ export default function App() {
       currentUser?.isSuperAdmin && selectedTenantId
         ? selectedTenantId
         : baseTenantId;
-    if (tId === "rw26_berjuang") {
-      return ["rw26_berjuang", "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang"];
-    } else if (tId.endsWith("_rw26_berjuang")) {
-      return [tId, "rw26_berjuang"];
-    }
-    const list = [tId];
-    if (
-      tId === "rw26_berjuang" ||
-      tId === "trihprw26" ||
-      tId.toLowerCase().includes("rt01") ||
-      tId.toLowerCase().includes("rw26") ||
-      tId.toLowerCase().includes("rt_01") ||
-      tId.toLowerCase().includes("berjuang")
-    ) {
-      if (tId.toLowerCase().includes("rt")) {
-        // RT isolated scope
-        list.push("rw26_berjuang", "trihprw26");
-      } else {
-        // Parent cluster scope
-        list.push(
-          "rw26_berjuang", "trihprw26",
-          "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang"
-        );
+    
+    const list = new Set<string>([tId]);
+
+    // Gather all valid options from actual tenant collection
+    const addChildren = (parentId: string) => {
+      tenantsData.forEach(t => {
+        if (t.parentId === parentId) {
+          if (!list.has(t.id)) {
+            list.add(t.id);
+            addChildren(t.id);
+          }
+        }
+      });
+    };
+    
+    addChildren(tId);
+
+    // Give children context for their parent
+    let current = tenantsData.find(t => t.id === tId);
+    while (current && current.parentId) {
+      if (!list.has(current.parentId)) {
+        list.add(current.parentId);
       }
+      current = tenantsData.find(t => t.id === current?.parentId);
     }
-    return Array.from(new Set(list));
-  }, [currentUser, wargaAuth, selectedTenantId]);
+    
+    return Array.from(list);
+  }, [currentUser, wargaAuth, selectedTenantId, tenantsData]);
 
   // Tenant friendly name display format mapper
   const getTenantFriendlyName = (tId: string) => {
@@ -1260,14 +1261,7 @@ export default function App() {
 
   // Synchronized active workspace list (Only actual active tenant IDs)
   const realRWList = useMemo(() => {
-    const validTenantIdsSet = new Set<string>([
-      "rw26_berjuang",
-      "trihprw26",
-      "rt01_rw26_berjuang",
-      "rt02_rw26_berjuang",
-      "rt03_rw26_berjuang",
-      "rt04_rw26_berjuang"
-    ]);
+    const validTenantIdsSet = new Set<string>();
 
     tenantsData.forEach(t => {
       if (t.id) {
@@ -1282,25 +1276,12 @@ export default function App() {
       }
     });
 
-    const orderedList: string[] = [];
-    const orderRef = [
-      "rw26_berjuang",
-      "trihprw26",
-      "rt01_rw26_berjuang",
-      "rt02_rw26_berjuang",
-      "rt03_rw26_berjuang",
-      "rt04_rw26_berjuang",
-    ];
-
-    orderRef.forEach(key => {
-      if (list.has(key)) {
-        orderedList.push(key);
-        list.delete(key);
-      }
-    });
-
-    list.forEach(item => {
-      orderedList.push(item);
+    const orderedList = Array.from(list).sort((a, b) => {
+      const tenantA = tenantsData.find(t => t.id === a);
+      const tenantB = tenantsData.find(t => t.id === b);
+      if (!tenantA?.parentId) return -1;
+      if (!tenantB?.parentId) return 1;
+      return a.localeCompare(b);
     });
 
     return orderedList;
@@ -1364,12 +1345,11 @@ export default function App() {
     null;
 
   // Derived Access Roles
-  const isViewer =
-    currentUser?.role === "Viewer" || currentUser?.role === "TAMU";
-  const isCitizen =
-    currentUser?.role === "Warga" || (!currentUser && !!wargaAuth);
+  const roleUpperApp = currentUser?.role?.toUpperCase() || "";
+  const isViewer = roleUpperApp === "VIEWER" || roleUpperApp === "TAMU";
+  const isCitizen = roleUpperApp === "WARGA" || (!currentUser && !!wargaAuth);
   const hasFullAccess =
-    !!currentUser && !isCitizen && !isViewer && currentUser?.role !== "Viewer";
+    !!currentUser && !isCitizen && !isViewer && roleUpperApp !== "VIEWER";
 
   useEffect(() => {
     if (currentUser?.role === "Viewer" || (!currentUser && wargaAuth)) {
@@ -2099,6 +2079,13 @@ export default function App() {
         label: isApt ? "Data Penghuni" : "Data Warga",
         icon: Users,
       },
+      // --- KEBUTUHAN WARGA ---
+      {
+        id: "buku-tamu",
+        label: "Keamanan Digital",
+        icon: BookCopy,
+        plan: "bukuTamu",
+      },
       {
         id: "complaint",
         label: isApt ? "Keluhan/Defect" : "Keluhan",
@@ -2111,8 +2098,36 @@ export default function App() {
         icon: Calendar,
         plan: "booking",
       },
-      { id: "buku-tamu", label: "Buku Tamu", icon: BookCopy, plan: "bukuTamu" },
+      {
+        id: "etoko",
+        label: "E-LAPAK26",
+        icon: ShoppingBag,
+        plan: "eLapak",
+        minPlan: "BASIC",
+      },
+      {
+        id: "voting",
+        label: isApt ? "Voting Penghuni" : "E-Pemilu",
+        icon: Vote,
+        plan: "ePemilu",
+        minPlan: "PRO",
+      },
       { id: "organisasi", label: "Struktur Organisasi", icon: Network },
+      {
+        id: "chat",
+        label: "Grup Chat",
+        icon: MessageSquare,
+        plan: "chatMode",
+        minPlan: "BASIC",
+      },
+      {
+        id: "ai-bot",
+        label: "AI Agent",
+        icon: Bot,
+        plan: "ai",
+        minPlan: "PREMIUM",
+      },
+      // --- FITUR OPERATOR ---
       {
         id: "verifikasi",
         label: "VERIFIKASI",
@@ -2142,25 +2157,12 @@ export default function App() {
         minPlan: "PRO",
       },
       {
-        id: "etoko",
-        label: "E-LAPAK26",
-        icon: ShoppingBag,
-        plan: "eLapak",
-        minPlan: "BASIC",
-      },
-      {
-        id: "voting",
-        label: isApt ? "Voting Penghuni" : "E-Pemilu",
-        icon: Vote,
-        plan: "ePemilu",
-        minPlan: "PRO",
-      },
-      {
         id: "inventaris",
         label: "Inventaris",
         icon: Package,
         plan: "inventaris",
       },
+      // --- FITUR ADMIN ---
       {
         id: "surat",
         label: "Surat",
@@ -2184,21 +2186,6 @@ export default function App() {
       },
       { id: "users", label: "Manage User", icon: User },
       { id: "super-admin", label: "Manajemen Tenant", icon: Shield },
-      { id: "pengaturan", label: "Pengaturan", icon: Settings },
-      {
-        id: "chat",
-        label: "Grup Chat",
-        icon: MessageSquare,
-        plan: "chatMode",
-        minPlan: "BASIC",
-      },
-      {
-        id: "ai-bot",
-        label: "AI Agent",
-        icon: Bot,
-        plan: "ai",
-        minPlan: "PREMIUM",
-      },
       {
         id: "monitoring",
         label: "MONITORING",
@@ -2213,6 +2200,7 @@ export default function App() {
         plan: "governance",
         minPlan: "ENTERPRISE",
       },
+      { id: "pengaturan", label: "Pengaturan", icon: Settings },
     ]
       .filter((item) => {
         const role = (currentUser?.role || "TAMU").toUpperCase();
@@ -2223,7 +2211,7 @@ export default function App() {
           (currentTenant?.status || "TRIAL") === "TRIAL" ||
           (currentTenant?.status || "TRIAL") === "FREE";
 
-        const isOwnerOrSuperAdmin = isSuperAdmin || ['arifrajcoach@gmail.com', 'trihprw26@rw26.com'].includes(currentUser?.email);
+        const isOwnerOrSuperAdmin = isSuperAdmin || role === 'OWNER' || role === 'SUPER_ADMIN' || ['arifrajcoach@gmail.com'].includes(currentUser?.email);
         const restrictedItems = ["daftar-trial", "super-admin", "leads"];
         if (restrictedItems.includes(item.id) && !isOwnerOrSuperAdmin) return false;
         
@@ -2384,7 +2372,7 @@ export default function App() {
             "inventaris",
           ],
           TAMU: ["dashboard", "etoko"],
-          VIEWER: ["dashboard", "warga", "etoko"],
+          VIEWER: ["dashboard", "etoko"],
         };
 
         const allowed = rolePermissions[role] || ["dashboard"];
@@ -3158,7 +3146,7 @@ export default function App() {
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
               plan={currentTenant?.status}
-              isPengurus={["ADMIN", "SUPER_ADMIN", "RW", "RT", "BENDAHARA", "SEKRETARIS", "KADER"].includes(
+              isPengurus={["ADMIN", "SUPER_ADMIN", "OWNER", "RW", "RT", "BENDAHARA", "SEKRETARIS", "KADER"].includes(
                 currentUser.role?.toUpperCase(),
               )}
             />
@@ -5256,6 +5244,7 @@ function ETokoView({
   const isAdmin =
     userRole === "ADMIN" ||
     userRole === "SUPER_ADMIN" ||
+    userRole === "OWNER" ||
     userRole === "RW" ||
     userRole === "RT";
 
@@ -5840,22 +5829,26 @@ function ETokoView({
                     </p>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                    <button
-                      onClick={() => {
-                        setEditingProduct(p);
-                        setIsAddingProduct(true);
-                        setProductForm({ ...p });
-                      }}
-                      className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteProduct(p.id)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {!isWarga && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingProduct(p);
+                            setIsAddingProduct(true);
+                            setProductForm({ ...p });
+                          }}
+                          className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteProduct(p.id)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -6569,6 +6562,7 @@ function EVotingView({
     userRole === "ADMIN" ||
     userRole === "RW" ||
     userRole === "SUPER_ADMIN" ||
+    userRole === "OWNER" ||
     tenantId === "MASTER";
   const canManage =
     electionScope === "RW"
@@ -7260,6 +7254,7 @@ function PengaturanView({
     if (
       roleUpper !== "ADMIN" &&
       roleUpper !== "SUPER_ADMIN" &&
+      roleUpper !== "OWNER" &&
       roleUpper !== "SUPER ADMIN" &&
       !currentUser?.isSuperAdmin
     ) {
@@ -8294,6 +8289,7 @@ function PengaturanView({
             </h3>
             {(userRole === "ADMIN" ||
               userRole === "SUPER_ADMIN" ||
+              userRole === "OWNER" ||
               userRole === "SUPER ADMIN") && (
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
                 Mode Editor
@@ -8557,6 +8553,7 @@ function PengaturanView({
                     isSaving ||
                     (userRole !== "ADMIN" &&
                       userRole !== "SUPER_ADMIN" &&
+                      userRole !== "OWNER" &&
                       userRole !== "SUPER ADMIN")
                   }
                   className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
@@ -10032,9 +10029,7 @@ function LoginView({
 
       const isArif = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
       let tenantId = "rw26_berjuang";
-      if (user.email?.toLowerCase().includes("trihprw26")) {
-        tenantId = "trihprw26";
-      } else if (isArif) {
+      if (isArif) {
         tenantId = "MASTER";
       }
 
@@ -11354,6 +11349,7 @@ function TenantsView({
           if (
             userRole === "ADMIN" ||
             userRole === "SUPER_ADMIN" ||
+            userRole === "OWNER" ||
             userData.email === editingTenant.adminEmail
           ) {
             hasAdminUser = true;
@@ -12123,8 +12119,9 @@ function PosyanduView({
   handleFirestoreError,
   showNotification,
 }: any) {
-  const isViewer = ["WARGA", "Viewer", "TAMU"].includes(currentUser.role);
-  const isWarga = currentUser.role === "WARGA";
+  const roleUpper = currentUser?.role?.toUpperCase() || "";
+  const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpper);
+  const isWarga = roleUpper === "WARGA";
 
   const filteredBalita = useMemo(() => {
     if (isWarga && currentUser?.nik) {
@@ -14695,8 +14692,9 @@ function BankSampahView({
     reader.readAsBinaryString(file);
   };
 
-  const canEdit = !["Viewer", "WARGA", "TAMU"].includes(currentUser?.role);
-  const isWarga = currentUser?.role === "WARGA";
+  const roleUpper = currentUser?.role?.toUpperCase() || "";
+  const canEdit = !["VIEWER", "WARGA", "TAMU"].includes(roleUpper);
+  const isWarga = roleUpper === "WARGA";
 
   // Nasabah Summary (Warga with their balances)
   const nasabahSummary = wargaData
@@ -16426,7 +16424,8 @@ function InventarisView({
   showNotification,
   handleFileUpload,
 }: any) {
-  const isViewer = ["WARGA", "Viewer", "TAMU"].includes(currentUser.role);
+  const roleUpperGlobal = currentUser?.role?.toUpperCase() || "";
+  const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpperGlobal);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showLogForm, setShowLogForm] = useState(false);
   const [showLogHistory, setShowLogHistory] = useState(false);

@@ -95,6 +95,8 @@ export function SuratView({
                              normalizedRole === 'SUPER_ADMIN' || 
                              currentUser?.role === 'SUPER_ADMIN';
 
+  const isWarga = normalizedRole === 'WARGA';
+
   const isRTUser = isGlobalSuperAdmin ||
                    normalizedRole === 'RT' || 
                    normalizedRole.includes('RT') || 
@@ -790,7 +792,7 @@ export function SuratView({
                             )}
                           </>
                         )}
-                        {(isPengurus || s.userId === (currentUser?.uid || currentUser?.id_user) || s.authUid === (currentUser?.uid || currentUser?.id_user)) && (
+                        {(!isWarga && (isPengurus || s.userId === (currentUser?.uid || currentUser?.id_user) || s.authUid === (currentUser?.uid || currentUser?.id_user))) && (
                           <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 text-slate-400 hover:text-slate-600" title="Edit"><Edit className="w-4 h-4" /></button>
                         )}
                          {isGlobalSuperAdmin && (

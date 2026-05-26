@@ -58,7 +58,7 @@ export const GuestBookFormPublic = ({ tenantId }: { tenantId: string }) => {
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="max-w-md mx-auto bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-100">
         <div className="bg-slate-900 p-8 text-white">
-          <h1 className="text-2xl font-black tracking-tight uppercase">Buku Tamu Digital</h1>
+          <h1 className="text-2xl font-black tracking-tight uppercase">Keamanan Digital</h1>
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Tenant ID: {tenantId}</p>
         </div>
 

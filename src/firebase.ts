@@ -35,7 +35,7 @@ try {
 // AI Studio uses Enterprise Firestore which requires the databaseId
 // experimentalForceLongPolling is often needed in container environments
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
+  experimentalAutoDetectLongPolling: true,
   localCache: cacheConfig,
 }, firebaseConfig.firestoreDatabaseId);                
 console.log("DB Loaded with Firestore ID:", firebaseConfig.firestoreDatabaseId);

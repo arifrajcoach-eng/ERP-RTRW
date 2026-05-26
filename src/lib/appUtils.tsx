@@ -1,20 +1,20 @@
 import { PLAN_FEATURES, PLAN_ALIASES } from "../constants";
 
-export type AppRole = 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'RW' | 'RT' | 'WARGA' | 'USER';
+export type AppRole = 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'OWNER' | 'RW' | 'RT' | 'WARGA' | 'USER';
 
 export const canView = (role?: string) => true; // All roles can view basic data
 export const canCreate = (role?: string) => {
   if (!role) return false;
-  return ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'OPERATOR'].includes(role.toUpperCase());
+  return ['ADMIN', 'SUPER_ADMIN', 'OWNER', 'RW', 'RT', 'OPERATOR'].includes(role.toUpperCase());
 };
 export const canUpdate = (role?: string) => {
   if (!role) return false;
-  return ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'OPERATOR'].includes(role.toUpperCase());
+  return ['ADMIN', 'SUPER_ADMIN', 'OWNER', 'RW', 'RT', 'OPERATOR'].includes(role.toUpperCase());
 };
 export const canDelete = (role?: string) => {
   if (!role) return false;
   // Operator cannot delete
-  return ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT'].includes(role.toUpperCase());
+  return ['ADMIN', 'SUPER_ADMIN', 'OWNER', 'RW', 'RT'].includes(role.toUpperCase());
 };
 
 export const getPlanFeatures = (tenantOrStatus: any) => {

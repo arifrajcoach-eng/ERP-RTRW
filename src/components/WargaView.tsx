@@ -53,6 +53,22 @@ function WargaView(props: WargaViewProps) {
       currentUser,
       settings 
   } = props;
+
+  // Restriction: WARGA cannot access Data Warga
+  if (userRole?.toUpperCase() === 'WARGA') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+        <div className="bg-rose-50 dark:bg-rose-500/10 p-6 rounded-full mb-6">
+          <Lock className="w-12 h-12 text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Akses Terbatas</h2>
+        <p className="text-slate-500 dark:text-slate-400 max-w-md">
+          Mohon maaf, Anda tidak memiliki izin untuk mengakses data warga. 
+          Hanya Admin dan Operator yang diperbolehkan melihat modul ini.
+        </p>
+      </div>
+    );
+  }
   const isApt = settings?.themeMode === 'apartemen';
   const tenant = currentTenant || {};
   const isFree = !tenant.status || tenant.status === "TRIAL" || tenant.status === "FREE";
@@ -137,6 +153,11 @@ function WargaView(props: WargaViewProps) {
         w.kk?.toLowerCase().includes(searchLower));
     }).sort((a: any, b: any) => (a.nama || "").localeCompare(b.nama || ""));
   }, [wargaData, filterRT, filterRW, filterKategoriUmur, searchQuery]);
+
+  const canEdit = useMemo(() => {
+    const role = userRole?.toUpperCase();
+    return ["ADMIN", "RT", "RW", "SUPER_ADMIN", "BENDAHARA", "KADER"].includes(role);
+  }, [userRole]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -744,7 +765,7 @@ function WargaView(props: WargaViewProps) {
         </div>
         
         <div className="flex flex-wrap gap-3 items-center">
-          {['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(userRole) && (
+          {canEdit && (
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-3xl border border-slate-200/50 dark:border-slate-700/50">
               <button 
                 onClick={cleanupWarga} 
@@ -773,7 +794,7 @@ function WargaView(props: WargaViewProps) {
           )}
           
           <AnimatePresence>
-            {selectedWargaIds.length > 0 && (
+            {selectedWargaIds.length > 0 && canEdit && (
               <motion.button 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -788,30 +809,34 @@ function WargaView(props: WargaViewProps) {
 
           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
           
-          <button 
-            onClick={() => fileInputRef.current?.click()} 
-            disabled={isUploading || limitReached} 
-            className="group relative bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-6 py-4 rounded-2xl flex items-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none shadow-sm disabled:opacity-50"
-          >
-            <Download size={18} className="translate-y-[1px] group-hover:-translate-y-1 transition-transform" />
-            {isUploading ? 'Syncing...' : 'Import Data'}
-          </button>
+          {canEdit && (
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              disabled={isUploading || limitReached} 
+              className="group relative bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-6 py-4 rounded-2xl flex items-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none shadow-sm disabled:opacity-50"
+            >
+              <Download size={18} className="translate-y-[1px] group-hover:-translate-y-1 transition-transform" />
+              {isUploading ? 'Syncing...' : 'Import Data'}
+            </button>
+          )}
 
-          <button 
-            onClick={() => {
-              if (limitReached) {
-                showNotification(`Limit ${maxWargaLimit} tercapai. Mohon Upgrade.`, 'error');
-                return;
-              }
-              setShowAddForm(true);
-            }} 
-            className="bg-gradient-to-tr from-brand-blue via-blue-600 to-indigo-700 hover:shadow-[0_20px_50px_rgba(59,130,246,0.3)] text-white px-8 py-4.5 rounded-2xl flex items-center gap-4 text-[11px] font-black uppercase tracking-widest transition-all duration-500 hover:scale-[1.03] active:scale-95 shadow-xl shadow-brand-blue/20 group"
-          >
-            <div className="bg-white/20 p-1.5 rounded-lg group-hover:rotate-12 transition-transform">
-              <UserPlus size={18} /> 
-            </div>
-            {limitReached ? 'Limit Penuh' : `Tambah ${isApt ? "Penghuni" : "Warga"}`}
-          </button>
+          {canEdit && (
+            <button 
+              onClick={() => {
+                if (limitReached) {
+                  showNotification(`Limit ${maxWargaLimit} tercapai. Mohon Upgrade.`, 'error');
+                  return;
+                }
+                setShowAddForm(true);
+              }} 
+              className="bg-gradient-to-tr from-brand-blue via-blue-600 to-indigo-700 hover:shadow-[0_20px_50px_rgba(59,130,246,0.3)] text-white px-8 py-4.5 rounded-2xl flex items-center gap-4 text-[11px] font-black uppercase tracking-widest transition-all duration-500 hover:scale-[1.03] active:scale-95 shadow-xl shadow-brand-blue/20 group"
+            >
+              <div className="bg-white/20 p-1.5 rounded-lg group-hover:rotate-12 transition-transform">
+                <UserPlus size={18} /> 
+              </div>
+              {limitReached ? 'Limit Penuh' : `Tambah ${isApt ? "Penghuni" : "Warga"}`}
+            </button>
+          )}
         </div>
       </div>
 

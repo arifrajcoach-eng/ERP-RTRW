@@ -416,7 +416,7 @@
       "required": ["id", "nik", "nama", "tenantId", "status"]
     },
     "BukuTamu": {
-      "title": "Buku Tamu Digital",
+      "title": "Keamanan Digital",
       "description": "Catatan tamu atau pengunjung lingkungan",
       "type": "object",
       "properties": {

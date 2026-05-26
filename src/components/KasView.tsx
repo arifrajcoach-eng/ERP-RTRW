@@ -113,6 +113,14 @@ export function KasView({
   const [isSavingKas, setIsSavingKas] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isPengurus = (userRole?.toLowerCase() === 'admin' || 
+                      userRole?.toLowerCase() === 'rw' || 
+                      userRole?.toLowerCase() === 'rt' || 
+                      userRole?.toLowerCase() === 'bendahara' || 
+                      userRole?.toLowerCase() === 'super_admin' ||
+                      userRole?.toLowerCase() === 'super admin' ||
+                      currentUser?.isSuperAdmin);
+
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -587,22 +595,26 @@ export function KasView({
             
             <div className="flex gap-3 w-full lg:w-auto">
               <input type="file" ref={scanInputRef} className="hidden" accept="image/*,application/pdf" capture="environment" onChange={handleScanReceipt} />
-              <button
-                onClick={() => scanInputRef.current?.click()}
-                disabled={isScanning}
-                className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 shadow-sm group disabled:opacity-50"
-              >
-                {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg group-hover:bg-brand-blue/10 transition-colors"><Camera className="w-3.5 h-3.5 text-brand-blue" /></div>}
-                {isScanning ? "Memindai..." : "AI SCAN STRUK"}
-              </button>
-              
-              <button
-                onClick={() => { setTrxType("Masuk"); setShowMasukForm(true); }}
-                className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-tr from-brand-blue to-indigo-700 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-brand-blue/20 active:scale-95 shadow-xl shadow-brand-blue/20 group"
-              >
-                <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> 
-                ENTRI KAS BARU
-              </button>
+              {isPengurus && (
+                <>
+                  <button
+                    onClick={() => scanInputRef.current?.click()}
+                    disabled={isScanning}
+                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 shadow-sm group disabled:opacity-50"
+                  >
+                    {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg group-hover:bg-brand-blue/10 transition-colors"><Camera className="w-3.5 h-3.5 text-brand-blue" /></div>}
+                    {isScanning ? "Memindai..." : "AI SCAN STRUK"}
+                  </button>
+                  
+                  <button
+                    onClick={() => { setTrxType("Masuk"); setShowMasukForm(true); }}
+                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-tr from-brand-blue to-indigo-700 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-brand-blue/20 active:scale-95 shadow-xl shadow-brand-blue/20 group"
+                  >
+                    <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> 
+                    ENTRI KAS BARU
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -672,8 +684,12 @@ export function KasView({
                     <td className="px-8 py-6">
                       <div className="flex gap-2 justify-end items-center transition-all">
                         <button onClick={() => setViewingKas(trx)} className="p-3 text-white bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl shadow-lg shadow-amber-500/20 transform hover:scale-110 active:scale-95 transition-all border border-white/10 outline-none"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => { setEditingKas(trx); setTrxType(trx.tipe); setStrukUrl(trx.strukUrl || ""); setShowMasukForm(true); }} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
-                        <button onClick={() => setKasToDelete(trx)} className="p-3 text-rose-600 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white hover:scale-110 active:scale-95 transition-all outline-none"><Trash2 className="w-4 h-4" /></button>
+                        {isPengurus && (
+                          <>
+                            <button onClick={() => { setEditingKas(trx); setTrxType(trx.tipe); setStrukUrl(trx.strukUrl || ""); setShowMasukForm(true); }} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
+                            <button onClick={() => setKasToDelete(trx)} className="p-3 text-rose-600 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white hover:scale-110 active:scale-95 transition-all outline-none"><Trash2 className="w-4 h-4" /></button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </motion.tr>

@@ -264,7 +264,7 @@ export default function DashboardView({
         isPersonal: s.nik === currentUser?.nik || s.pemohon === currentUser?.name
       })),
       ...bukuTamuData.map(b => ({ 
-        title: 'Aktivitas Buku Tamu',
+        title: 'Aktivitas Keamanan Digital',
         desc: `${b.nama} berkunjung ke ${b.tujuan} (${b.keperluan || 'Tamu'})`,
         date: b.waktuDatang ? new Date(b.waktuDatang).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: b.status,
