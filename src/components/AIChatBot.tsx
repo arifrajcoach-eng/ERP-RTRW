@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { PLAN_FEATURES } from '../constants';
 import { 
   getFinancialSummary, 
   getHealthSummary, 
@@ -80,17 +81,20 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const tenantId = currentUser?.tenantId || 'rw26_berjuang';
   const roleUpper = currentUser?.role?.toUpperCase();
   
-  // Calculate maxUsage based on plan
+  // Calculate weeklyLimit based on plan
   const normalizedPlan = (plan || 'STARTER').toUpperCase();
-  let maxUsage = 5; // Default for STARTER/FREE (5 chats/month as requested)
-  if (roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN' || roleUpper === 'SUPER ADMIN' || currentUser?.isSuperAdmin) {
-    maxUsage = 9999;
-  } else if (normalizedPlan.includes('FLASH') || normalizedPlan.includes('BASIC')) {
-    maxUsage = 50;
-  } else if (normalizedPlan.includes('PRO')) {
-    maxUsage = 200;
-  } else if (normalizedPlan.includes('PREMIUM') || normalizedPlan.includes('ENTERPRISE')) {
-    maxUsage = 1000;
+  const baseKey = normalizedPlan.includes('TRIAL') || normalizedPlan.includes('STARTER') ? 'TRIAL' :
+                  normalizedPlan.includes('FLASH') || normalizedPlan.includes('BASIC') ? 'BASIC' :
+                  normalizedPlan.includes('PRO') ? 'PRO' :
+                  normalizedPlan.includes('PREMIUM') ? 'PREMIUM' :
+                  normalizedPlan.includes('ENTERPRISE') ? 'ENTERPRISE' : 'TRIAL';
+  
+  const planDetails = PLAN_FEATURES[baseKey] || PLAN_FEATURES.TRIAL;
+
+  let weeklyLimit = planDetails.weeklyAiLimit || 2;
+  const isSuperUser = roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN' || roleUpper === 'SUPER ADMIN' || currentUser?.isSuperAdmin;
+  if (isSuperUser) {
+    weeklyLimit = 9999;
   }
 
   useEffect(() => {
@@ -290,8 +294,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     const textToSend = manualInput || input;
     if (!textToSend.trim() || isLoading) return;
 
-    if (usageCount >= maxUsage) {
-      setMessages(prev => [...prev, { role: 'bot', text: 'Maaf, kuota AI harian Anda telah habis.' }]);
+    if (usageCount >= weeklyLimit) {
+      setMessages(prev => [...prev, { role: 'bot', text: `Aduh maaf sekali Kakak/Pimpinan! 🫣 Kuota Chat AI Mingguan (${weeklyLimit}x per minggu) untuk Paket ${baseKey === 'TRIAL' ? 'STARTER' : baseKey} Anda sudah habis.\n\nSupaya Kakak/Pimpinan bisa bebas chatingan dengan Chaty tanpa hambatan batas mingguan, silakan lakukan Upgrade Paket dengan klik banner "SmartRW AI" di dashboard utama atau hubungi Tim Support kami via wa.me/6287726741143 ya! Terima kasih banyak atas pengertiannya! 😉✨` }]);
       return;
     }
 
@@ -451,9 +455,9 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
           </div>
           <div>
             <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-widest">{agentTitle}</h3>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1.5">
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1.5 font-mono">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Sistem Cerdas Lingkungan • {maxUsage > 100 ? 'Kuota Unlimited' : `Sisa Kuota: ${maxUsage - usageCount}`}
+              Sistem Cerdas Lingkungan • {weeklyLimit >= 9999 ? 'Kuota Unlimited' : `Sisa Kuota Mingguan: ${weeklyLimit - usageCount}`}
             </p>
           </div>
         </div>

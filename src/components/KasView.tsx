@@ -31,6 +31,7 @@ import Papa from "papaparse";
 import { jsPDF } from "jspdf";
 import { ConfirmModal } from "./ui/ConfirmModal";
 import { scanReceiptAI } from "../services/aiService";
+import { PLAN_FEATURES } from "../constants";
 
 interface KasViewProps {
   kasData: any[];
@@ -133,19 +134,46 @@ export function KasView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check Plan Limit (STARTER/TRIAL gets 3 scans per month)
+    // Check Plan Limit (weekly limit for scan based on recommendations)
     const normalizedPlan = (plan || 'STARTER').toUpperCase();
-    if (normalizedPlan.includes('TRIAL') || normalizedPlan.includes('STARTER')) {
-      // Simple check: count how many transactions have 'AI Scan' in description or similar
-      // Or just track it in local state for the session if we don't want to persist count yet
-      // For a better UX, I'll just check kasData for this month
-      const currentMonth = new Date().toLocaleString('id-ID', { month: 'short', year: 'numeric' });
-      const aiScansThisMonth = kasData.filter(k => k.tanggal.includes(currentMonth) && (k.keterangan || '').includes('[AI Scan]')).length;
+    const baseKey = normalizedPlan.includes('TRIAL') || normalizedPlan.includes('STARTER') ? 'TRIAL' :
+                    normalizedPlan.includes('FLASH') || normalizedPlan.includes('BASIC') ? 'BASIC' :
+                    normalizedPlan.includes('PRO') ? 'PRO' :
+                    normalizedPlan.includes('PREMIUM') ? 'PREMIUM' :
+                    normalizedPlan.includes('ENTERPRISE') ? 'ENTERPRISE' : 'TRIAL';
+    const planDetails = PLAN_FEATURES[baseKey] || PLAN_FEATURES.TRIAL;
+    const isSuperUser = userRole?.toUpperCase() === 'SUPER_ADMIN' || userRole?.toUpperCase() === 'SUPER ADMIN' || currentUser?.isSuperAdmin;
+    const scanLimit = isSuperUser ? 99999 : (planDetails.weeklyScanLimit || 1);
+
+    const countScansLast7Days = () => {
+      let count = 0;
+      const nowMs = Date.now();
+      const sevenDaysAgoMs = nowMs - 7 * 24 * 60 * 60 * 1000;
       
-      if (aiScansThisMonth >= 3) {
-        showNotification("Kuota AI Scan Paket Gratis habis (Maks 3/bln). Silakan Upgrade!", "error");
-        return;
-      }
+      kasData.forEach(k => {
+        if ((k.keterangan || '').includes('[AI Scan]')) {
+          let cleanDateStr = k.tanggal || '';
+          const idMonths: Record<string, string> = {
+            'Jan': 'Jan', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Apr', 'Mei': 'May', 'Jun': 'Jun',
+            'Jul': 'Jul', 'Agt': 'Aug', 'Sep': 'Sep', 'Okt': 'Oct', 'Nov': 'Nov', 'Des': 'Dec'
+          };
+          Object.keys(idMonths).forEach(month => {
+            cleanDateStr = cleanDateStr.replace(month, idMonths[month]);
+          });
+          
+          const kasDate = new Date(cleanDateStr);
+          if (!isNaN(kasDate.getTime()) && kasDate.getTime() >= sevenDaysAgoMs) {
+            count++;
+          }
+        }
+      });
+      return count;
+    };
+
+    const aiScansLast7DaysCount = countScansLast7Days();
+    if (aiScansLast7DaysCount >= scanLimit) {
+      showNotification(`Aduh maaf sekali! Kuota AI Scan Struk Anda habis (${scanLimit}x / minggu). Silakan lakukan Upgrade Paket untuk menikmati scan instan tanpa batas!`, "error");
+      return;
     }
 
     console.log("File detected:", file.name, file.type, file.size);
@@ -381,6 +409,26 @@ export function KasView({
   const handleSaveKas = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSavingKas) return;
+    
+    // Check monthly transaction limits
+    const currentMonthForTrx = new Date().toLocaleDateString("id-ID", { month: "short", year: "numeric" });
+    const trxThisMonthCount = kasData.filter(k => k.tanggal && k.tanggal.includes(currentMonthForTrx)).length;
+
+    const normalizedPlan = (plan || 'STARTER').toUpperCase();
+    const baseKey = normalizedPlan.includes('TRIAL') || normalizedPlan.includes('STARTER') ? 'TRIAL' :
+                    normalizedPlan.includes('FLASH') || normalizedPlan.includes('BASIC') ? 'BASIC' :
+                    normalizedPlan.includes('PRO') ? 'PRO' :
+                    normalizedPlan.includes('PREMIUM') ? 'PREMIUM' :
+                    normalizedPlan.includes('ENTERPRISE') ? 'ENTERPRISE' : 'TRIAL';
+    const planDetails = PLAN_FEATURES[baseKey] || PLAN_FEATURES.TRIAL;
+    const isSuperUser = userRole?.toUpperCase() === 'SUPER_ADMIN' || userRole?.toUpperCase() === 'SUPER ADMIN' || currentUser?.isSuperAdmin;
+    const trxLimit = isSuperUser ? 999999 : (planDetails.monthlyTrxLimit || 25);
+    
+    if (!editingKas && trxThisMonthCount >= trxLimit) {
+      showNotification(`Gagal mencatat kas: Wilayah Anda telah mencapai batas kuota bulanan (${trxLimit} transaksi) untuk paket ${baseKey === 'TRIAL' ? 'STARTER' : baseKey}. Silakan lakukan upgrade paket untuk mencatat transaksi tanpa batasan! 😉✨`, "error");
+      return;
+    }
+
     setIsSavingKas(true);
     const formData = new FormData(e.currentTarget);
     const dateInput = formData.get("tanggal") as string;
