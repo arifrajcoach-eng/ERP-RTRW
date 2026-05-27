@@ -1,0 +1,34 @@
+name: SmartRW AI - Automated QC Code Verification
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  verify:
+    name: Lint, Test, and Build Sanity Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up NodeJS 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Project Dependencies
+        run: npm install
+
+      - name: Run Linter (TypeScript Type-Checks)
+        run: npm run lint
+
+      - name: Execute Tenant & Architecture Safeguard Checks (Automated Test)
+        run: npm run verify
+
+      - name: Run Production Compiler Verification (Build Applet)
+        run: npm run build
