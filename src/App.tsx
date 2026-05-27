@@ -552,6 +552,49 @@ const INITIAL_INVENTARIS_DATA = [
 // Removed duplicate generateSuratHTML
 
 // Global utility helpers
+export function getTrialStatus(tenant: any, currentUser?: any) {
+  if (!tenant) {
+    return { phase: "ACTIVE" as const, daysRemainingActive: 30, daysRemainingFrozen: 30 };
+  }
+  
+  if (currentUser?.isSuperAdmin || tenant.id === "MASTER" || tenant.id === "rw26_berjuang") {
+    return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 9999 };
+  }
+
+  const isPaidPremium = tenant.id === "rw26_berjuang" || 
+                        tenant.id === "trihprw26" || 
+                        (tenant.id && tenant.id.endsWith("_rw26_berjuang")) ||
+                        ["PREMIUM", "PRIME", "ENTERPRISE"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
+
+  const isStarter = !isPaidPremium && (!tenant.status || 
+                    ["STARTER", "GRATIS", "BASIC", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
+
+  if (!isStarter) {
+    return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 9999 };
+  }
+
+  let createdAt = tenant.createdAt;
+  if (!createdAt) {
+    return { phase: "ACTIVE" as const, daysRemainingActive: 30, daysRemainingFrozen: 30 };
+  }
+
+  const startDate = typeof createdAt === "string" 
+    ? new Date(createdAt) 
+    : (createdAt.toDate ? createdAt.toDate() : new Date(createdAt.seconds * 1000));
+  
+  const now = new Date();
+  const diffMs = now.getTime() - startDate.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays >= 60) {
+    return { phase: "DELETED" as const, daysRemainingActive: 0, daysRemainingFrozen: 0 };
+  } else if (diffDays >= 30) {
+    return { phase: "FROZEN" as const, daysRemainingActive: 0, daysRemainingFrozen: 60 - diffDays };
+  } else {
+    return { phase: "ACTIVE" as const, daysRemainingActive: 30 - diffDays, daysRemainingFrozen: 30 };
+  }
+}
+
 const calculateAge = (tglLahir: string) => {
   if (!tglLahir) return "-";
   // Format anticipated: "YYYY-MM-DD"
@@ -908,13 +951,29 @@ export default function App() {
 
   const [kasData, setKasData] = useState(() => {
     const saved = localStorage.getItem("rw26_kasData");
-    return saved ? JSON.parse(saved) : INITIAL_KAS_DATA;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Corrupted kasData detected, self-healing memory check run...", e);
+        try { localStorage.removeItem("rw26_kasData"); } catch (_) {}
+      }
+    }
+    return INITIAL_KAS_DATA;
   });
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   const [suratData, setSuratData] = useState(() => {
     const saved = localStorage.getItem("rw26_suratData");
-    return saved ? JSON.parse(saved) : INITIAL_SURAT_DATA;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Corrupted suratData detected, self-healing memory check run...", e);
+        try { localStorage.removeItem("rw26_suratData"); } catch (_) {}
+      }
+    }
+    return INITIAL_SURAT_DATA;
   });
 
   const [iuranData, setIuranData] = useState<any[]>([]);
@@ -922,7 +981,15 @@ export default function App() {
 
   const [inventarisData, setInventarisData] = useState(() => {
     const saved = localStorage.getItem("rw26_inventarisData");
-    return saved ? JSON.parse(saved) : INITIAL_INVENTARIS_DATA;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Corrupted inventarisData detected, self-healing memory check run...", e);
+        try { localStorage.removeItem("rw26_inventarisData"); } catch (_) {}
+      }
+    }
+    return INITIAL_INVENTARIS_DATA;
   });
 
   const [inventarisLogs, setInventarisLogs] = useState<any[]>([]);
@@ -1112,7 +1179,13 @@ export default function App() {
     return normalizeRwValue(w.rw) === globalRw;
   };
 
+  const isDeletedTrial = useMemo(() => {
+    if (!currentTenant) return false;
+    return getTrialStatus(currentTenant, currentUser).phase === "DELETED";
+  }, [currentTenant, currentUser]);
+
   const filteredWargaDataCentral = useMemo(() => {
+    if (isDeletedTrial) return [];
     let result = wargaData;
     if (tenantRT) {
       const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
@@ -1122,9 +1195,10 @@ export default function App() {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
     return result;
-  }, [wargaData, tenantRT, globalSelectedRw]);
+  }, [wargaData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   const filteredIuranDataCentral = useMemo(() => {
+    if (isDeletedTrial) return [];
     let result = iuranData;
     if (tenantRT) {
       const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
@@ -1134,9 +1208,10 @@ export default function App() {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
     return result;
-  }, [iuranData, tenantRT, globalSelectedRw]);
+  }, [iuranData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   const filteredKasDataCentral = useMemo(() => {
+    if (isDeletedTrial) return [];
     let result = kasData;
     if (tenantRT) {
       const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
@@ -1146,9 +1221,10 @@ export default function App() {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
     return result;
-  }, [kasData, tenantRT, globalSelectedRw]);
+  }, [kasData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   const filteredSuratDataCentral = useMemo(() => {
+    if (isDeletedTrial) return [];
     let result = suratData;
     if (tenantRT) {
       const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
@@ -1158,9 +1234,10 @@ export default function App() {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
     return result;
-  }, [suratData, tenantRT, globalSelectedRw]);
+  }, [suratData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   const filteredVerifikasiWargaDataCentral = useMemo(() => {
+    if (isDeletedTrial) return [];
     let result = verifikasiWargaData;
     if (tenantRT) {
       const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
@@ -1170,9 +1247,10 @@ export default function App() {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
     return result;
-  }, [verifikasiWargaData, tenantRT, globalSelectedRw]);
+  }, [verifikasiWargaData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   const filteredBalitaDataCentral = useMemo(() => {
+    if (isDeletedTrial) return [];
     let result = balitaData;
     if (tenantRT) {
       const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
@@ -1182,9 +1260,10 @@ export default function App() {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
     return result;
-  }, [balitaData, tenantRT, globalSelectedRw]);
+  }, [balitaData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   const filteredIbuHamilDataCentral = useMemo(() => {
+    if (isDeletedTrial) return [];
     let result = ibuHamilData;
     if (tenantRT) {
       const targetRtNorm = tenantRT.replace(/\D/g, "").replace(/^0+/, "");
@@ -1194,7 +1273,7 @@ export default function App() {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
     return result;
-  }, [ibuHamilData, tenantRT, globalSelectedRw]);
+  }, [ibuHamilData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   // Securely resolve active tenant IDs for filtering
   const activeTenantIds = useMemo(() => {
@@ -2571,6 +2650,123 @@ export default function App() {
         )}
       </>
     );
+  }
+
+  // CHECK TRIAL EXPIRY BLOCKER (FROZEN OR DELETED PHASES)
+  if (currentTenant) {
+    const trialStatus = getTrialStatus(currentTenant, currentUser);
+    if (trialStatus.phase === "DELETED") {
+      return (
+        <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">
+          {/* Decorative ambient background */}
+          <div className="absolute top-10 right-10 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-96 h-96 bg-red-600/10 rounded-full blur-3xl"></div>
+          
+          <div className="max-w-xl w-full bg-slate-900/40 backdrop-blur-3xl border border-slate-800/80 p-8 sm:p-10 rounded-3xl shadow-2xl text-center relative z-10 flex flex-col items-center">
+            <div className="w-20 h-20 bg-red-500/15 border border-red-500/30 rounded-3xl flex items-center justify-center text-red-400 mb-6 shadow-inner animate-bounce">
+              <Trash2 className="w-10 h-10" />
+            </div>
+            
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-100 uppercase tracking-tight leading-snug">
+              Data Uji Coba Telah Dihapus!
+            </h2>
+            <div className="mt-2 text-red-400 font-extrabold uppercase text-[10px] tracking-widest pl-3 pr-3 py-1 bg-red-500/10 rounded-full border border-red-500/20 inline-block mb-6">
+              Masa Tenggat 60 Hari Terlampaui
+            </div>
+
+            <p className="text-slate-400 text-sm leading-relaxed mb-8">
+              Uji coba wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah melewati tenggat 60 hari. Sesuai dengan kebijakan privasi dan pembersihan data berkala SmartRW AI, database wilayah Anda <strong>telah dihapus secara permanen</strong> dari server kami.
+            </p>
+
+            <div className="w-full bg-slate-950/40 border border-slate-800/60 p-5 rounded-2xl mb-8 text-left space-y-2">
+              <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                Info Kebijakan Sistem:
+              </h4>
+              <ul className="text-[11px] text-slate-400 space-y-1 bg-transparent font-sans list-disc list-inside">
+                <li>Hari 1-30: Masa uji coba penuh aktif.</li>
+                <li>Hari 31-60: Data dibekukan & disimpan aman.</li>
+                <li>Hari 61: Penghapusan data permanen tak terpulihkan.</li>
+              </ul>
+            </div>
+
+            {/* Action Button */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              <button
+                onClick={() => window.open(`https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20terbawa%20penghapusan%20data%20karena%20telat%20upgrade%20untuk%20tenant%20${currentTenant.id}.%20Apakah%20kami%20bisa%20daftar%20baru?`, "_blank")}
+                className="flex-1 px-6 py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-700 active:scale-95 shadow-xl shadow-rose-600/20 transition-all flex items-center justify-center gap-2"
+              >
+                Hubungi Admin WA 💬
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-6 py-4 bg-slate-800 text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-700 active:scale-95 transition-all"
+              >
+                Keluar Sesi
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (trialStatus.phase === "FROZEN") {
+      return (
+        <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">
+          {/* Decorative ambient background */}
+          <div className="absolute top-10 right-10 w-96 h-96 bg-brand-pink/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+          
+          <div className="max-w-xl w-full bg-slate-900/40 backdrop-blur-3xl border border-slate-800/80 p-8 sm:p-10 rounded-3xl shadow-2xl text-center relative z-10 flex flex-col items-center">
+            <div className="w-20 h-20 bg-amber-500/15 border border-amber-500/30 rounded-3xl flex items-center justify-center text-amber-400 mb-6 shadow-inner animate-pulse duration-[2s]">
+              <Lock className="w-10 h-10" />
+            </div>
+            
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-100 uppercase tracking-tight leading-snug">
+              Masa Uji Coba Selesai!
+            </h2>
+            <div className="mt-2 text-rose-450 font-extrabold uppercase text-[10px] tracking-widest pl-3 pr-3 py-1 bg-rose-500/10 rounded-full border border-rose-500/20 inline-block mb-6">
+              Sistem Terkunci • Mode Penyimpanan Aman
+            </div>
+
+            <p className="text-slate-400 text-sm leading-relaxed mb-8">
+              Uji coba gratis 30 hari untuk wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah berakhir. Seluruh data warga, keuangan, dan surat pengantar Anda tetap tersimpan dengan aman, namun database <strong>terkunci sementara</strong> hingga Anda melakukan upgrade paket.
+            </p>
+
+            {/* Countdown Area */}
+            <div className="w-full bg-slate-950/40 border border-slate-800/60 p-6 rounded-2xl mb-8 flex flex-col items-center justify-center">
+              <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-rose-500" />
+                Sisa Waktu Penyimpanan Data Anda:
+              </span>
+              <div className="flex items-baseline gap-1.5 text-white">
+                <span className="text-4xl font-extrabold font-mono text-amber-500 animate-pulse">{trialStatus.daysRemainingFrozen}</span>
+                <span className="text-sm font-black uppercase text-slate-400">Hari Lagi</span>
+              </div>
+              <span className="text-[10px] text-slate-400 italic mt-2 text-center">
+                Perhatian: Pada hari ke-61, data Anda akan dihapus secara otomatis & permanen oleh sistem.
+              </span>
+            </div>
+
+            {/* Action Button */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              <button
+                onClick={() => window.open(`https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmartRW%20AI%20premium%20untuk%20wilayah%20kami%20${currentTenant.id}.%20Saat%20ini%20status%20kami%20Free%20Trial%20Frozen.`, "_blank")}
+                className="flex-1 px-6 py-4 bg-brand-pink text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-pink/90 active:scale-95 shadow-xl shadow-brand-pink/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4 animate-bounce" />
+                Upgrade Sekarang ⚡
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-6 py-4 bg-slate-800 text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-700 active:scale-95 transition-all"
+              >
+                Keluar Sesi
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   if (wargaAuth && !currentUser?.isSuperAdmin) {
@@ -10604,7 +10800,7 @@ function LoginView({
               </div>
               <div className="flex items-center gap-2 px-6 py-2 bg-brand-pink text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-brand-pink/20 whitespace-nowrap">
                 <Sparkles className="w-3 h-3" />
-                Daftar Trial Gratis 2 Bulan
+                Daftar Trial Gratis 30 hari
               </div>
            </div>
            <div className="p-4 sm:p-10 scale-95 lg:scale-100 origin-top">

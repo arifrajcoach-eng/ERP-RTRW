@@ -435,15 +435,22 @@ export default function DashboardView({
             <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 shadow-inner shrink-0">
               <Zap className="w-8 h-8 text-white animate-pulse" />
             </div>
-            <div>
+            <div className="space-y-2">
               <h3 className="text-lg font-black uppercase tracking-widest leading-tight font-elegant flex items-center gap-2">
-                Masa Percobaan Aktif
+                Masa Percobaan Aktif (30 Hari)
                 <span className="text-[10px] bg-white/30 px-2 py-0.5 rounded-full font-sans tracking-normal uppercase animate-bounce" style={{ animationDuration: '1.5s' }}>Starter</span>
               </h3>
-              <p className="text-[11px] font-bold text-white/80 uppercase tracking-wider mt-1">
-                Status: Open Beta • Nikmati Full Fitur AI
+              <p className="text-[11px] font-bold text-white/80 uppercase tracking-wider">
+                Status: Open Beta • Nikmati Akses Penuh Fitur AI
               </p>
-              <div className="mt-3 inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl border border-white/20 backdrop-blur-md transition-colors shadow-inner">
+              
+              {/* Alert Tagline warning of deletion to motivate upgrade */}
+              <div className="bg-red-500/35 border border-red-400/40 px-3 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider text-yellow-300 flex items-center gap-2 animate-pulse shadow-md">
+                <span className="shrink-0 text-sm">⚠️</span>
+                <span>Amankan Data: Upgrade ke premium segera sebelum trial habis agar seluruh data wilayah Anda tidak terhapus permanen pada hari ke-61!</span>
+              </div>
+
+              <div className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl border border-white/20 backdrop-blur-md transition-colors shadow-inner">
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>Call WA / Klik banner SmartRW AI</span>
               </div>
