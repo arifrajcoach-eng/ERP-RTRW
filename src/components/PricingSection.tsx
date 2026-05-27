@@ -14,15 +14,17 @@ const icons: Record<string, any> = {
 
 interface PricingSectionProps {
   onSelectPlan?: (planId: string) => void;
+  hideHeader?: boolean;
 }
 
-export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan }) => {
+export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, hideHeader }) => {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <section className="py-12 bg-white">
+    <section className={`bg-white ${hideHeader ? 'py-0' : 'py-12'}`}>
       <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-12">
+        {!hideHeader && (
+          <div className="text-center mb-12">
           {/* ... existing header ... */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-pink/10 text-brand-pink text-[10px] font-black uppercase tracking-widest mb-4">
             <Sparkles className="w-3 h-3" />
@@ -35,8 +37,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan }) 
             Solusi digitalisasi RT/RW tercanggih di Indonesia. <br className="hidden md:block" />
             Pilih paket yang sesuai dengan kebutuhan lingkungan Anda.
           </p>
-          
-          <div className="mt-8 flex justify-center items-center gap-5">
+        </div>
+      )}
+          <div className={`flex justify-center items-center gap-5 ${hideHeader ? 'mb-8' : 'mt-8'}`}>
             <span className={`text-xs font-bold uppercase tracking-widest ${!isYearly ? 'text-brand-blue' : 'text-slate-400'}`}>Bulanan</span>
             <button 
               onClick={() => setIsYearly(!isYearly)}
@@ -49,7 +52,6 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan }) 
               <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black rounded-full animate-pulse">HEMAT 20%</span>
             </div>
           </div>
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {Object.values(PLAN_CONFIG).map((plan) => {

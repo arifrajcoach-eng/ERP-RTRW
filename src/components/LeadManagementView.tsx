@@ -30,10 +30,13 @@ import {
   Upload,
   Download,
   UserPlus,
-  Trash2
+  Trash2,
+  Package,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
+import { PricingSection } from './PricingSection';
 
 interface Lead {
   id: string;
@@ -554,6 +557,28 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Pricing Guide Section */}
+      <div className="mt-16 bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
+        <div className="p-10 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-slate-100">
+                <Package className="w-6 h-6" />
+             </div>
+             <div>
+                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Panduan Paket & Benefits</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Struktur Kapasitas & Fitur Nexapps Intelligent</p>
+             </div>
+          </div>
+          <div className="px-5 py-2 bg-indigo-50 border border-indigo-100 rounded-full">
+            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Master Price List</span>
+          </div>
+        </div>
+        
+        <div className="p-10">
+           <PricingSection hideHeader={true} />
+        </div>
+      </div>
     </div>
   );
 }

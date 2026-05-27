@@ -10156,16 +10156,18 @@ function LoginView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row lg:gap-16 items-center justify-center p-4 sm:p-8 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 sm:p-8 relative overflow-y-auto">
       {/* Decorative background elements */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-brand-pink/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 "></div>
+      <div className="absolute top-0 right-0 w-64 h-64 bg-brand-pink/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
       <div
-        className="absolute bottom-0 left-0 w-80 h-80 bg-brand-blue/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 "
+        className="absolute bottom-0 left-0 w-80 h-80 bg-brand-blue/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none"
         style={{ animationDelay: "2s" }}
       ></div>
-      <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-brand-yellow/20 rounded-full blur-2xl "></div>
+      <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-brand-yellow/20 rounded-full blur-2xl pointer-events-none"></div>
 
-      <div className="w-full max-w-md relative z-10">
+      {/* Main Login Content Area */}
+      <div className="min-h-[95vh] flex flex-col lg:flex-row lg:gap-16 items-center justify-center w-full max-w-7xl relative z-10">
+        <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-28 h-28 rounded-[3rem] bg-white shadow-2xl shadow-brand-blue/20 mb-8 relative group isolate overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/20 via-brand-yellow/20 to-brand-pink/20 animate-spin-slow"></div>
@@ -10583,6 +10585,31 @@ function LoginView({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Embedded Pricing Section as Banner */}
+      <div className="w-full max-w-7xl mt-12 mb-24 relative z-10 animate-fade-in-up px-4">
+        <div className="bg-white rounded-[3.5rem] shadow-2xl border border-slate-100 overflow-hidden">
+           <div className="bg-slate-50 py-10 px-8 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                 <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-brand-blue shadow-xl shadow-slate-200 border border-slate-100">
+                    <Package className="w-8 h-8" />
+                 </div>
+                 <div>
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Pilih Paket & List Fitur</h2>
+                    <p className="text-[10px] text-slate-400 font-bold tracking-[0.3em] uppercase mt-1">SmartRW AI nexapps intelligent ecosystem</p>
+                 </div>
+              </div>
+              <div className="flex items-center gap-2 px-6 py-2 bg-brand-pink text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-brand-pink/20 whitespace-nowrap">
+                <Sparkles className="w-3 h-3" />
+                Daftar Trial Gratis 2 Bulan
+              </div>
+           </div>
+           <div className="p-4 sm:p-10 scale-95 lg:scale-100 origin-top">
+              <PricingSection onSelectPlan={onShowFreeTrial} hideHeader={true} />
+           </div>
         </div>
       </div>
     </div>
