@@ -643,16 +643,24 @@ export default function App() {
 
   // --- FIREBASE AUTH SYNC ---
   useEffect(() => {
-    // 0. Validate Connection to Firestore (Critical Constraint)
+    // 0. Validate Connection to Firestore (Critical Constraint with watchdog retry & online monitoring)
+    let retryTimeoutId: any = null;
+    let isUnmounted = false;
+
     const testConnection = async () => {
       try {
         await getDocFromServer(doc(db, "test", "connection"));
-        setDbError(null);
+        if (!isUnmounted) {
+          setDbError(null);
+          setDbStatus("ONLINE");
+        }
       } catch (error: any) {
         console.warn(
           "Firestore Connectivity Check:",
           error.message || error.code,
         );
+        if (isUnmounted) return;
+        
         if (
           error instanceof Error &&
           (error.message.includes("the client is offline") ||
@@ -662,9 +670,37 @@ export default function App() {
         } else if (error?.code === "unavailable") {
           setDbStatus("UNAVAILABLE");
         }
+
+        // Resilient retry watchdog inside sandboxed or iframe browser environment
+        if (navigator.onLine && !retryTimeoutId) {
+          retryTimeoutId = setTimeout(() => {
+            retryTimeoutId = null;
+            if (!isUnmounted) {
+              testConnection();
+            }
+          }, 20000); // retry every 20 seconds if browser is online but firestore hasn't synced yet
+        }
       }
     };
+
     testConnection();
+
+    const handleOnline = () => {
+      console.log("Device is online. Triggering Firestore diagnostic check...");
+      testConnection();
+    };
+
+    const handleOffline = () => {
+      console.log("Device is offline. Flagging offline local mode.");
+      if (retryTimeoutId) {
+        clearTimeout(retryTimeoutId);
+        retryTimeoutId = null;
+      }
+      setDbStatus("OFFLINE");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     // Ensure persistence
     setPersistence(auth, browserLocalPersistence);
@@ -890,7 +926,15 @@ export default function App() {
       setIsAuthInitializing(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      isUnmounted = true;
+      if (retryTimeoutId) {
+        clearTimeout(retryTimeoutId);
+      }
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -2290,7 +2334,7 @@ export default function App() {
         plan: "governance",
         minPlan: "PRO",
       },
-      { id: "pengaturan", label: "Pengaturan", icon: Settings, minPlan: "PRO" },
+      { id: "pengaturan", label: "Pengaturan", icon: Settings, minPlan: "BASIC" },
     ]
       .filter((item) => {
         const role = (currentUser?.role || "TAMU").toUpperCase();
@@ -2416,6 +2460,7 @@ export default function App() {
             "ai-bot",
             "monitoring",
             "audit",
+            "pengaturan",
           ],
           RT: [
             "dashboard",
@@ -2435,6 +2480,7 @@ export default function App() {
             "ai-bot",
             "complaint",
             "booking",
+            "pengaturan",
           ],
           OPERATOR: [
             "dashboard",
@@ -7483,6 +7529,8 @@ function PengaturanView({
       roleUpper !== "SUPER_ADMIN" &&
       roleUpper !== "OWNER" &&
       roleUpper !== "SUPER ADMIN" &&
+      roleUpper !== "RW" &&
+      roleUpper !== "RT" &&
       !currentUser?.isSuperAdmin
     ) {
       showNotification("Hanya Admin yang dapat mengubah pengaturan.", "error");
