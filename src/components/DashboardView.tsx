@@ -465,12 +465,12 @@ export default function DashboardView({
           </div>
 
           {/* Sisi Kanan: Widget Countdown & Tombol CTA */}
-          <div className="flex flex-row sm:flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-4 shrink-0 bg-slate-950/40 p-4 rounded-2xl border border-white/5 shadow-inner">
+          <div className="flex flex-col items-center justify-center gap-4 shrink-0 bg-slate-950/40 p-5 rounded-2xl border border-white/5 shadow-inner text-center w-full lg:w-auto">
             {isStarter && (
-              <div className="flex items-center lg:items-end gap-3 lg:gap-1.5 text-left lg:text-right">
-                <div className="flex flex-col justify-center leading-none">
-                  <p className="text-[9px] font-black uppercase tracking-widest opacity-80 text-slate-400 mb-0.5">Sisa Trial</p>
-                  <p className="text-[8px] font-bold uppercase tracking-wider opacity-65 text-slate-500 hidden sm:block">Dari 30 Hari</p>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <div className="flex flex-col items-center justify-center leading-none">
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-80 text-slate-400 mb-1">Sisa Trial</p>
+                  <p className="text-[8px] font-bold uppercase tracking-wider opacity-65 text-slate-500">Dari 30 Hari</p>
                 </div>
                 <div className="flex items-baseline gap-1 font-elegant text-white leading-none">
                   <span className="text-3xl font-black tabular-nums drop-shadow-lg text-amber-400 tracking-tight">
