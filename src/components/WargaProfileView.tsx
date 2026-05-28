@@ -33,9 +33,10 @@ import {
   GraduationCap,
   Briefcase,
   Flame,
-  Globe
+  Globe,
+  Trash2
 } from 'lucide-react';
-import { doc, setDoc, updateDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, query, where, collection, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { jsPDF } from 'jspdf';
 
@@ -101,6 +102,24 @@ export function WargaProfileView({
   const [formNamaUsaha, setFormNamaUsaha] = useState<string>("");
   const [formJenisUsaha, setFormJenisUsaha] = useState<string>("");
   const [formAlamatUsaha, setFormAlamatUsaha] = useState<string>("");
+
+  const [suratToDelete, setSuratToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  const handleDeleteSurat = async () => {
+    if (!suratToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'surat', suratToDelete.id));
+      showNotification('Surat pengantar berhasil dihapus.', 'success');
+      setSuratToDelete(null);
+    } catch (err: any) {
+      console.error("[WargaProfileView] Error deleting surat", err);
+      handleFirestoreError(err, 'delete', 'surat');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const activeSubmission = verifikasiData.find(v => v.nik === wargaData.nik) || verifikasiData.find(v => v.authUid === wargaData.authUid);
   const familyNiks = wargaData.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
@@ -633,7 +652,7 @@ export function WargaProfileView({
                                         </div>
                                      </div>
                                      
-                                     <div className="flex items-center gap-3 shrink-0">
+                                     <div className="flex items-center gap-3 shrink-0 flex-wrap md:flex-nowrap">
                                         {item.status === 'Selesai' && (
                                            <button
                                               onClick={() => generateMySuratPDF(item)}
@@ -643,6 +662,13 @@ export function WargaProfileView({
                                               <Printer className="w-4 h-4" /> Cetak Surat
                                            </button>
                                         )}
+                                        <button
+                                           onClick={() => setSuratToDelete(item)}
+                                           className="flex items-center justify-center gap-2 px-6 py-4 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/40 border border-rose-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                                           title="Hapus Permohonan"
+                                        >
+                                           <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-450" /> Hapus
+                                        </button>
                                      </div>
                                   </div>
                                );
@@ -654,6 +680,52 @@ export function WargaProfileView({
              )}
           </AnimatePresence>
        </div>
+
+        {/* Modal Konfirmasi Hapus Surat (Warga) */}
+         <AnimatePresence>
+            {suratToDelete && (
+               <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                  <motion.div 
+                     initial={{ opacity: 0 }} 
+                     animate={{ opacity: 1 }} 
+                     exit={{ opacity: 0 }} 
+                     onClick={() => setSuratToDelete(null)} 
+                     className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+                  />
+                  <motion.div 
+                     initial={{ scale: 0.95, opacity: 0 }} 
+                     animate={{ scale: 1, opacity: 1 }} 
+                     exit={{ scale: 0.95, opacity: 0 }} 
+                     className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 p-8 text-center"
+                  >
+                     <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <Trash2 className="w-8 h-8" />
+                     </div>
+                     <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant mb-3">Hapus Permohonan Surat?</h3>
+                     <p className="text-sm text-slate-500 dark:text-slate-450 leading-relaxed mb-8">
+                        Apakah Anda yakin ingin menghapus permohonan surat <strong>{suratToDelete.jenis}</strong> ini? Tindakan ini tidak dapat dibatalkan dan data akan permanen terhapus dari sistem RT/RW.
+                     </p>
+                     <div className="flex gap-4">
+                        <button
+                           type="button"
+                           onClick={() => setSuratToDelete(null)}
+                           className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 rounded-2xl text-xs font-black uppercase tracking-widest transition-colors font-extrabold"
+                        >
+                           Batal
+                        </button>
+                        <button
+                           type="button"
+                           disabled={isDeleting}
+                           onClick={handleDeleteSurat}
+                           className="flex-1 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/10 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 font-extrabold"
+                        >
+                           {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+                        </button>
+                     </div>
+                  </motion.div>
+               </div>
+            )}
+         </AnimatePresence>
 
         {/* Modal Request Surat Baru */}
         <AnimatePresence>

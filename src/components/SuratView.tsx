@@ -30,7 +30,8 @@ import {
   Baby,
   Globe,
   Files,
-  RefreshCw
+  RefreshCw,
+  Archive
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -80,6 +81,8 @@ export function SuratView({
   const [suratToDelete, setSuratToDelete] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAutoArchiveModal, setShowAutoArchiveModal] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [ktpUrl, setKtpUrl] = useState("");
   const [kkUrl, setKkUrl] = useState("");
   const [selectedWargaId, setSelectedWargaId] = useState("");
@@ -683,6 +686,43 @@ export function SuratView({
     }
   };
 
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  
+  const olderLetters = (suratData || []).filter((s: any) => {
+    if (!s.tanggal) return false;
+    const t = new Date(s.tanggal);
+    return t < ninetyDaysAgo && s.status !== 'Diarsipkan';
+  });
+
+  const handleRunAutoArchive = async () => {
+    if (olderLetters.length === 0) {
+      showNotification('Tidak ada surat yang berumur lebih dari 3 bulan.', 'info');
+      return;
+    }
+    setIsArchiving(true);
+    let archivedCount = 0;
+    let deletedCount = 0;
+    try {
+      for (const s of olderLetters) {
+        if (s.status === 'Selesai' || s.status === 'Ditolak') {
+          await deleteDoc(doc(db, 'surat', s.id));
+          deletedCount++;
+        } else {
+          await updateDoc(doc(db, 'surat', s.id), { status: 'Diarsipkan', archivedAt: new Date().toISOString() });
+          archivedCount++;
+        }
+      }
+      showNotification(`Auto-Arsip sukses: ${archivedCount} surat aktif diarsipkan, ${deletedCount} surat selesai/ditolak yang kedaluwarsa dibersihkan.`, 'success');
+      setShowAutoArchiveModal(false);
+    } catch (err: any) {
+      console.error("[SuratView] Error running auto archive", err);
+      handleFirestoreError(err, 'write/delete', 'surat');
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
   const handleDeleteSurat = async () => {
     if (!suratToDelete) return;
     setIsDeleting(true);
@@ -764,6 +804,24 @@ export function SuratView({
                 className="pl-14 pr-8 py-5 bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[13px] font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/20 w-full lg:w-80 shadow-sm transition-all placeholder:text-slate-300 placeholder:italic"
               />
             </div>
+
+            {isPengurus && (
+              <motion.button 
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setShowAutoArchiveModal(true)} 
+                className={`w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-md relative overflow-hidden group border ${
+                  olderLetters.length > 0
+                    ? 'bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/60'
+                    : 'bg-white dark:bg-slate-800 hover:bg-slate-105 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                }`}
+                title="Pembersihan Otomatis Surat > 3 Bulan"
+              >
+                <Archive className={`w-4 h-4 ${olderLetters.length > 0 ? 'text-amber-500 animate-bounce' : 'text-slate-400'}`} /> 
+                <span>Auto-Arsip ({olderLetters.length})</span>
+              </motion.button>
+            )}
+
             <motion.button 
               whileHover={{ scale: 1.03, boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.4)' }}
               whileTap={{ scale: 0.97 }}
@@ -838,8 +896,8 @@ export function SuratView({
                         {(!isWarga && (isPengurus || s.userId === (currentUser?.uid || currentUser?.id_user) || s.authUid === (currentUser?.uid || currentUser?.id_user))) && (
                           <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 text-slate-400 hover:text-slate-600" title="Edit"><Edit className="w-4 h-4" /></button>
                         )}
-                         {isGlobalSuperAdmin && (
-                          <button onClick={() => setSuratToDelete(s)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>
+                         {isPengurus && (
+                          <button onClick={() => setSuratToDelete(s)} className="p-2 text-slate-400 hover:text-rose-600" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         )}
                       </td>
                     </tr>
@@ -1516,6 +1574,70 @@ export function SuratView({
             type={approvalConfirm.action === 'approve' ? 'info' : 'danger'}
             isLoading={isLoadingDB}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAutoArchiveModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setShowAutoArchiveModal(false)} 
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 p-8 text-center animate-in fade-in zoom-in-95 duration-200"
+            >
+              <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-amber-100 dark:border-amber-900/40 animate-pulse">
+                <Archive className="w-8 h-8 text-amber-500" />
+              </div>
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant mb-3">Pengarsipan & Pembersihan Otomatis</h3>
+              
+              {olderLetters.length > 0 ? (
+                <>
+                  <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed mb-6">
+                    Sistem mendeteksi <strong>{olderLetters.length}</strong> permohonan surat yang berumur <strong>lebih dari 3 bulan (90 hari)</strong>.
+                  </p>
+                  <div className="p-5 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/30 rounded-2.5xl text-xs text-left text-amber-805 dark:text-amber-400 space-y-2.5 mb-8">
+                    <p className="font-extrabold uppercase tracking-wider text-[10px]">Tindakan pembersihan otomatis:</p>
+                    <ul className="list-disc pl-5 space-y-1 font-bold">
+                      <li>Surat aktif (Draft / Menunggu Persetujuan) akan dipindahkan ke status <strong>'Diarsipkan'</strong> (disembunyikan dari daftar utama).</li>
+                      <li>Surat penyelesaian (Selesai / Ditolak) akan <strong>dihapus permanen</strong> dari Firestore untuk menghemat penyimpanan data Anda.</li>
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed mb-8">
+                  Luar biasa! Tidak ditemukan berkas atau catatan surat yang berumur lebih dari 3 bulan (90 hari). Database surat Anda dalam kondisi optimal!
+                </p>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAutoArchiveModal(false)}
+                  className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors font-extrabold"
+                >
+                  {olderLetters.length > 0 ? "Batal" : "Tutup"}
+                </button>
+                {olderLetters.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={isArchiving}
+                    onClick={handleRunAutoArchive}
+                    className="flex-1 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 font-extrabold"
+                  >
+                    {isArchiving ? "Memproses..." : "Ya, Mulai"}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
