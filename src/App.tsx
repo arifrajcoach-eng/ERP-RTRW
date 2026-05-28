@@ -5987,7 +5987,7 @@ function ETokoView({
               Masuk
             </h3>
             <div className="space-y-4">
-              {orders
+              {displayOrders
                 .sort(
                   (a, b) =>
                     new Date(b.timestamp).getTime() -
@@ -6102,7 +6102,7 @@ function ETokoView({
             </div>
 
             <div className="space-y-3">
-              {products.map((p) => (
+              {displayProducts.map((p) => (
                 <div
                   key={p.id}
                   className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 group"
@@ -6122,7 +6122,7 @@ function ETokoView({
                     </p>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                    {!isWarga && (
+                    {(!isWarga || p.sellerId === (wargaAuth?.nik || currentUser?.email || currentUser?.uid)) && (
                       <>
                         <button
                           onClick={() => {
@@ -13546,64 +13546,68 @@ function PosyanduView({
                     onChange={handleImportExcel}
                   />
                 </div>
-                <div className="flex gap-2 justify-center w-full sm:w-auto">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90"
-                    title="Impor Data"
-                  >
-                    <Upload className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const doc = new jsPDF();
-                      doc.text("Laporan Posbindu", 10, 10);
-                      autoTable(doc, {
-                        head: [["NIK", "Nama", "TD", "GDS"]],
-                        body: pemeriksaanPosbinduData.map((p) => [
-                          p.nik,
-                          p.nama,
-                          p.tekananDarah,
-                          p.gulaDarah,
-                        ]),
-                      });
-                      doc.save(
-                        `Laporan_Posbindu_${new Date().toISOString().split("T")[0]}.pdf`,
-                      );
-                    }}
-                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
-                    title="Export PDF"
-                  >
-                    <FileText className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const ws = XLSX.utils.json_to_sheet(
-                        pemeriksaanPosbinduData,
-                      );
-                      const wb = XLSX.utils.book_new();
-                      XLSX.utils.book_append_sheet(wb, ws, "Posbindu");
-                      XLSX.writeFile(
-                        wb,
-                        `Data_Posbindu_${new Date().toISOString().split("T")[0]}.xlsx`,
-                      );
-                    }}
-                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
-                    title="Export Excel"
-                  >
-                    <FileSpreadsheet className="w-5 h-5" />
-                  </button>
-                </div>
+                {!isViewer && (
+                  <div className="flex gap-2 justify-center w-full sm:w-auto">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90"
+                      title="Impor Data"
+                    >
+                      <Upload className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const doc = new jsPDF();
+                        doc.text("Laporan Posbindu", 10, 10);
+                        autoTable(doc, {
+                          head: [["NIK", "Nama", "TD", "GDS"]],
+                          body: pemeriksaanPosbinduData.map((p) => [
+                            p.nik,
+                            p.nama,
+                            p.tekananDarah,
+                            p.gulaDarah,
+                          ]),
+                        });
+                        doc.save(
+                          `Laporan_Posbindu_${new Date().toISOString().split("T")[0]}.pdf`,
+                        );
+                      }}
+                      className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
+                      title="Export PDF"
+                    >
+                      <FileText className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const ws = XLSX.utils.json_to_sheet(
+                          pemeriksaanPosbinduData,
+                        );
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Posbindu");
+                        XLSX.writeFile(
+                          wb,
+                          `Data_Posbindu_${new Date().toISOString().split("T")[0]}.xlsx`,
+                        );
+                      }}
+                      className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
+                      title="Export Excel"
+                    >
+                      <FileSpreadsheet className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <button
-                onClick={() => {
-                  setEditingPosbinduItem(null);
-                  setShowPosbinduForm(true);
-                }}
-                className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 flex items-center gap-2 transition-all active:scale-95"
-              >
-                <PlusCircle className="w-5 h-5" /> Tambah Pemeriksaan
-              </button>
+              {!isViewer && (
+                <button
+                  onClick={() => {
+                    setEditingPosbinduItem(null);
+                    setShowPosbinduForm(true);
+                  }}
+                  className="px-6 py-3 bg-brand-pink text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-pink-100 hover:bg-pink-600 flex items-center gap-2 transition-all active:scale-95"
+                >
+                  <PlusCircle className="w-5 h-5" /> Tambah Pemeriksaan
+                </button>
+              )}
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -13854,47 +13858,51 @@ function PosyanduView({
                   className="w-full md:w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
                 />
               </div>
-              <div className="flex gap-2 justify-center w-full sm:w-auto">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleImportExcel}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90"
-                  title="Impor Database (Excel/CSV)"
-                >
-                  <Upload className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={exportBalitaPDF}
-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
-                  title="Export PDF"
-                >
-                  <FileText className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={exportBalitaExcel}
-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
-                  title="Export Excel"
-                >
-                  <FileSpreadsheet className="w-5 h-5" />
-                </button>
-              </div>
+              {!isViewer && (
+                <div className="flex gap-2 justify-center w-full sm:w-auto">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleImportExcel}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90"
+                    title="Impor Database (Excel/CSV)"
+                  >
+                    <Upload className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={exportBalitaPDF}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
+                    title="Export PDF"
+                  >
+                    <FileText className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={exportBalitaExcel}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
+                    title="Export Excel"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => {
-                setEditingItem(null);
-                setShowBalitaForm(true);
-              }}
-              className="px-4 py-2 bg-brand-blue text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-brand-blue/90 flex items-center gap-2 transition-all active:scale-95"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Daftar Balita
-            </button>
+            {!isViewer && (
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  setShowBalitaForm(true);
+                }}
+                className="px-4 py-2 bg-brand-blue text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-brand-blue/90 flex items-center gap-2 transition-all active:scale-95"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Daftar Balita
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -14239,47 +14247,51 @@ function PosyanduView({
                   className="w-full md:w-80 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-pink-500 outline-none"
                 />
               </div>
-              <div className="flex gap-2 justify-center w-full sm:w-auto">
-                <input
-                  type="file"
-                  ref={fileInputRefIbuHamil}
-                  className="hidden"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleImportIbuHamilExcel}
-                />
-                <button
-                  onClick={() => fileInputRefIbuHamil.current?.click()}
-                  className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90"
-                  title="Impor Database (Excel/CSV)"
-                >
-                  <Upload className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={exportIbuHamilPDF}
-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
-                  title="Export PDF"
-                >
-                  <FileText className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={exportIbuHamilExcel}
-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
-                  title="Export Excel"
-                >
-                  <FileSpreadsheet className="w-5 h-5" />
-                </button>
-              </div>
+              {!isViewer && (
+                <div className="flex gap-2 justify-center w-full sm:w-auto">
+                  <input
+                    type="file"
+                    ref={fileInputRefIbuHamil}
+                    className="hidden"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleImportIbuHamilExcel}
+                  />
+                  <button
+                    onClick={() => fileInputRefIbuHamil.current?.click()}
+                    className="p-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-blue-100 transition-all active:scale-90"
+                    title="Impor Database (Excel/CSV)"
+                  >
+                    <Upload className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={exportIbuHamilPDF}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
+                    title="Export PDF"
+                  >
+                    <FileText className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={exportIbuHamilExcel}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-green hover:bg-green-50 shadow-sm transition-all active:scale-90"
+                    title="Export Excel"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => {
-                setEditingItem(null);
-                setShowIbuHamilForm(true);
-              }}
-              className="px-4 py-2 bg-brand-blue text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-brand-blue/90 transition-all flex items-center gap-2"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Daftar Ibu Hamil
-            </button>
+            {!isViewer && (
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  setShowIbuHamilForm(true);
+                }}
+                className="px-4 py-2 bg-brand-blue text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-brand-blue/90 transition-all flex items-center gap-2"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Daftar Ibu Hamil
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -15047,30 +15059,51 @@ function BankSampahView({
   const canEdit = !["VIEWER", "WARGA", "TAMU"].includes(roleUpper);
   const isWarga = roleUpper === "WARGA";
 
+  const filteredSampahSetoran = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (sampahSetoranData || []).filter((s: any) => s.nasabahId === currentUser.nik);
+    }
+    return sampahSetoranData || [];
+  }, [sampahSetoranData, isWarga, currentUser?.nik]);
+
+  const filteredSampahTarikSaldo = useMemo(() => {
+    if (isWarga && currentUser?.nik) {
+      return (sampahTarikSaldoData || []).filter((t: any) => t.nasabahId === currentUser.nik);
+    }
+    return sampahTarikSaldoData || [];
+  }, [sampahTarikSaldoData, isWarga, currentUser?.nik]);
+
   // Nasabah Summary (Warga with their balances)
-  const nasabahSummary = wargaData
-    .map((w: any) => {
-      const setoran = sampahSetoranData
-        .filter((s: any) => s.nasabahId === w.nik)
-        .reduce(
-          (acc: number, curr: any) => acc + (parseFloat(curr.total) || 0),
-          0,
-        );
-      const tarikan = sampahTarikSaldoData
-        .filter((t: any) => t.nasabahId === w.nik)
-        .reduce(
-          (acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0),
-          0,
-        );
-      return {
-        ...w,
-        saldo: setoran - tarikan,
-        totalSetoran: setoran,
-      };
-    })
-    .filter(
-      (n: any) => n.totalSetoran > 0 || n.saldo > 0 || n.isNasabah === true,
-    );
+  const nasabahSummary = useMemo(() => {
+    let summary = wargaData
+      .map((w: any) => {
+        const setoran = sampahSetoranData
+          .filter((s: any) => s.nasabahId === w.nik)
+          .reduce(
+            (acc: number, curr: any) => acc + (parseFloat(curr.total) || 0),
+            0,
+          );
+        const tarikan = sampahTarikSaldoData
+          .filter((t: any) => t.nasabahId === w.nik)
+          .reduce(
+            (acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0),
+            0,
+          );
+        return {
+          ...w,
+          saldo: setoran - tarikan,
+          totalSetoran: setoran,
+        };
+      })
+      .filter(
+        (n: any) => n.totalSetoran > 0 || n.saldo > 0 || n.isNasabah === true,
+      );
+      
+    if (isWarga && currentUser?.nik) {
+      summary = summary.filter((n: any) => n.nik === currentUser.nik);
+    }
+    return summary;
+  }, [wargaData, sampahSetoranData, sampahTarikSaldoData, isWarga, currentUser?.nik]);
 
   // Auto-select self as nasabah for WARGA
   useEffect(() => {
@@ -15084,25 +15117,30 @@ function BankSampahView({
   }, [isWarga, currentUser?.nik, currentUser?.email, nasabahSummary, activeSubTab]);
 
   // Statistics
-  const stats = {
-    totalSampah: sampahSetoranData.reduce(
-      (acc: number, curr: any) => acc + (parseFloat(curr.berat) || 0),
-      0,
-    ),
-    totalTabungan:
-      sampahSetoranData.reduce(
-        (acc: number, curr: any) => acc + (parseFloat(curr.total) || 0),
-        0,
-      ) -
-      sampahTarikSaldoData.reduce(
-        (acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0),
+  const stats = useMemo(() => {
+    const activeSetoran = isWarga ? filteredSampahSetoran : sampahSetoranData;
+    const activeTarikan = isWarga ? filteredSampahTarikSaldo : sampahTarikSaldoData;
+
+    return {
+      totalSampah: activeSetoran.reduce(
+        (acc: number, curr: any) => acc + (parseFloat(curr.berat) || 0),
         0,
       ),
-    transaksiBulanIni: sampahSetoranData.filter((s: any) =>
-      s.tanggal?.startsWith(new Date().toISOString().slice(0, 7)),
-    ).length,
-    nasabahAktif: new Set(sampahSetoranData.map((s: any) => s.nasabahId)).size,
-  };
+      totalTabungan:
+        activeSetoran.reduce(
+          (acc: number, curr: any) => acc + (parseFloat(curr.total) || 0),
+          0,
+        ) -
+        activeTarikan.reduce(
+          (acc: number, curr: any) => acc + (parseFloat(curr.nominal) || 0),
+          0,
+        ),
+      transaksiBulanIni: activeSetoran.filter((s: any) =>
+        s.tanggal?.startsWith(new Date().toISOString().slice(0, 7)),
+      ).length,
+      nasabahAktif: new Set(activeSetoran.map((s: any) => s.nasabahId)).size,
+    };
+  }, [sampahSetoranData, sampahTarikSaldoData, filteredSampahSetoran, filteredSampahTarikSaldo, isWarga]);
 
   const selectedNasabah = selectedNasabahId
     ? nasabahSummary.find((n: any) => n.nik === selectedNasabahId)
@@ -15509,20 +15547,6 @@ function BankSampahView({
     );
     showNotification("Eksport Ringkasan Nasabah PDF Berhasil!");
   };
-
-  const filteredSampahSetoran = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
-      return (sampahSetoranData || []).filter((s: any) => s.nasabahId === currentUser.nik);
-    }
-    return sampahSetoranData || [];
-  }, [sampahSetoranData, isWarga, currentUser?.nik]);
-
-  const filteredSampahTarikSaldo = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
-      return (sampahTarikSaldoData || []).filter((t: any) => t.nasabahId === currentUser.nik);
-    }
-    return sampahTarikSaldoData || [];
-  }, [sampahTarikSaldoData, isWarga, currentUser?.nik]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -16083,43 +16107,62 @@ function BankSampahView({
                 </div>
               )}
               <div className="flex gap-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleImportExcel}
-                />
-                <StyledButton
-                  label={isWarga ? "Daftar Jadi Nasabah" : "Nasabah"}
-                  onClick={() => {
-                    setEditingItem(null);
-                    setShowNasabahForm(true);
-                  }}
-                  colorType="success"
-                  icon={<PlusCircle className="w-4 h-4" />}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-all active:scale-95"
-                  title="Impor Database (Excel/CSV)"
-                >
-                  <Upload className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={exportNasabahSummaryPDF}
-                  className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100"
-                  title="Export PDF Semua Nasabah"
-                >
-                  <FileText className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={exportNasabahSummaryExcel}
-                  className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100"
-                  title="Export Excel Semua Nasabah"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                </button>
+                {!isWarga && (
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleImportExcel}
+                  />
+                )}
+                {!isWarga && (
+                  <StyledButton
+                    label="Nasabah"
+                    onClick={() => {
+                      setEditingItem(null);
+                      setShowNasabahForm(true);
+                    }}
+                    colorType="success"
+                    icon={<PlusCircle className="w-4 h-4" />}
+                  />
+                )}
+                {isWarga && nasabahSummary.length === 0 && (
+                  <StyledButton
+                    label="Daftar Jadi Nasabah"
+                    onClick={() => {
+                      setEditingItem(null);
+                      setShowNasabahForm(true);
+                    }}
+                    colorType="success"
+                    icon={<PlusCircle className="w-4 h-4" />}
+                  />
+                )}
+                {!isWarga && (
+                  <>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-100 transition-all active:scale-95"
+                      title="Impor Database (Excel/CSV)"
+                    >
+                      <Upload className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={exportNasabahSummaryPDF}
+                      className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 border border-red-100"
+                      title="Export PDF Semua Nasabah"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={exportNasabahSummaryExcel}
+                      className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-100"
+                      title="Export Excel Semua Nasabah"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
