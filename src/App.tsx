@@ -5534,14 +5534,15 @@ function ETokoView({
     image: "",
   });
 
+  const roleUpper = userRole?.toUpperCase() || "";
   const isAdmin =
-    userRole === "ADMIN" ||
-    userRole === "SUPER_ADMIN" ||
-    userRole === "OWNER" ||
-    userRole === "RW" ||
-    userRole === "RT";
+    roleUpper === "ADMIN" ||
+    roleUpper === "SUPER_ADMIN" ||
+    roleUpper === "OWNER" ||
+    roleUpper === "RW" ||
+    roleUpper === "RT";
 
-  const isWarga = userRole === "WARGA" || userRole === "USER";
+  const isWarga = roleUpper === "WARGA" || roleUpper === "USER";
 
   // Allow Warga to toggle to seller view too
   const canToggleView = isAdmin || isWarga;
@@ -5694,7 +5695,7 @@ function ETokoView({
     setIsLoading(true);
     try {
       const id = editingProduct ? editingProduct.id : `PROD-${Date.now()}`;
-      const sellerId = wargaAuth?.nik || currentUser?.email || currentUser?.uid || "unknown";
+      const sellerId = editingProduct?.sellerId || wargaAuth?.nik || currentUser?.email || currentUser?.uid || "unknown";
       await setDoc(
         doc(db, "toko_products", id),
         {
@@ -6851,17 +6852,18 @@ function EVotingView({
 
   const voterId = wargaAuth?.nik || currentUser?.uid;
   const hasVoted = filteredVotes.some((v) => v.voterId === voterId);
+  const roleUpper = userRole?.toUpperCase() || "";
   const isAtLeastRW =
-    userRole === "ADMIN" ||
-    userRole === "RW" ||
-    userRole === "SUPER_ADMIN" ||
-    userRole === "OWNER" ||
+    roleUpper === "ADMIN" ||
+    roleUpper === "RW" ||
+    roleUpper === "SUPER_ADMIN" ||
+    roleUpper === "OWNER" ||
     tenantId === "MASTER";
   const canManage =
     electionScope === "RW"
       ? isAtLeastRW
       : isAtLeastRW ||
-        (userRole === "RT" && userRt === (wargaAuth?.rt || currentUser?.rt));
+        (roleUpper === "RT" && userRt === (wargaAuth?.rt || currentUser?.rt));
 
   const totalFilteredVotes = filteredVotes.length;
 
@@ -15664,7 +15666,7 @@ function BankSampahView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
-                    {sampahSetoranData
+                    {(isWarga ? filteredSampahSetoran : sampahSetoranData)
                       .slice(0, 5)
                       .map((item: any, idx: number) => (
                         <tr
