@@ -1712,6 +1712,37 @@ export default function App() {
     };
   }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId]);
 
+  // Sync Kop/Branding Settings (optimized dependencies)
+  const currentParentId = useMemo(() => {
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
+    return tenantsData.find(t => t.id === tId)?.parentId;
+  }, [currentUser?.tenantId, wargaAuth?.tenantId, selectedTenantId, tenantsData]);
+
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
+    
+    console.log("[App] Syncing kopSettings for:", tId);
+    
+    const unsubKopSettings = onSnapshot(doc(db, "tenant_settings", tId), (snap) => {
+      let currentKop = snap.exists() ? snap.data() : {};
+      
+      if (currentParentId && !snap.exists()) {
+        getDoc(doc(db, "tenant_settings", currentParentId)).then(parentSnap => {
+          if (parentSnap.exists()) {
+            setKopSettings(parentSnap.data());
+          }
+        }).catch(e => console.warn("Parent settings fetch failed:", e));
+      } else {
+        setKopSettings(currentKop);
+      }
+    }, (err) => {
+      console.warn("Firestore connection/permission issue for tenant_settings:", err.message);
+    });
+
+    return () => unsubKopSettings();
+  }, [currentUser?.uid, selectedTenantId, currentParentId]);
+
   // --- FIREBASE SYNC (TAB-SPECIFIC LAZY LOADING) ---
   
   // Helper to normalize RT

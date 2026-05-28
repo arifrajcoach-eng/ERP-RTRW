@@ -177,7 +177,8 @@ export function WargaProfileView({
         return;
     }
     
-    const kop = kopSettings || getSetting("KOP_SURAT") || {};
+    const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
+    const kop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) {

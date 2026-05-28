@@ -10,6 +10,25 @@ export default defineConfig(({mode}) => {
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ""),
     },
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+      chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-firebase-app': ['firebase/app'],
+            'vendor-firebase-auth': ['firebase/auth'],
+            'vendor-firebase-db': ['firebase/firestore'],
+            'vendor-firebase-storage': ['firebase/storage'],
+            'vendor-ui': ['lucide-react', 'motion'],
+            'vendor-charts': ['recharts'],
+            'vendor-docs': ['jspdf', 'jspdf-autotable', 'html2canvas', 'xlsx'],
+          }
+        }
+      }
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

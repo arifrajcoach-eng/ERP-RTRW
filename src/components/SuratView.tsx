@@ -236,7 +236,8 @@ export function SuratView({
     }
     
     // Priority: use kopSettings (from tenant_settings), fallback to settings["KOP_SURAT"], then hardcoded defaults
-    const kop = kopSettings || getSetting("KOP_SURAT") || {};
+    const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
+    const kop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) {

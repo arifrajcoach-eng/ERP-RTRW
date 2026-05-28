@@ -640,7 +640,7 @@ export default function DashboardView({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             { label: 'Total Warga', val: stats.totalWarga, sub: `KK: ${stats.kepalaKeluarga} Terdaftar`, icon: Users, gradient: 'from-emerald-600 to-teal-700', shadow: 'shadow-emerald-500/20' },
-            { label: 'Saldo Kas RW', val: `Rp ${formatRupiah(stats.saldoTotal)}`, sub: 'Perekaman Otomatis', icon: CreditCard, gradient: 'from-brand-blue to-indigo-800', shadow: 'shadow-brand-blue/20' },
+            { label: 'Saldo Kas RT', val: `Rp ${formatRupiah(stats.saldoTotal)}`, sub: 'Perekaman Otomatis', icon: CreditCard, gradient: 'from-brand-blue to-indigo-800', shadow: 'shadow-brand-blue/20' },
             { label: 'Permohonan Surat', val: stats.suratPending, sub: 'Menunggu Persetujuan', icon: FileText, gradient: 'from-rose-600 to-pink-700', shadow: 'shadow-pink-500/20' }
           ].map((item, i) => (
             <div 
