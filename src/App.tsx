@@ -1712,27 +1712,49 @@ export default function App() {
     };
   }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId]);
 
-  // Sync Kop/Branding Settings (optimized dependencies)
-  const currentParentId = useMemo(() => {
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
-    return tenantsData.find(t => t.id === tId)?.parentId;
-  }, [currentUser?.tenantId, wargaAuth?.tenantId, selectedTenantId, tenantsData]);
+  const [activeParentTenantId, setActiveParentTenantId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
     
-    console.log("[App] Syncing kopSettings for:", tId);
+    const found = tenantsData.find(t => t.id === tId)?.parentId;
+    if (found) {
+      setActiveParentTenantId(found);
+    } else {
+      // Direct fetch for citizens who might not have read access to the whole tenants collection
+      getDoc(doc(db, "tenants", tId)).then(snap => {
+        if (snap.exists()) {
+          setActiveParentTenantId(snap.data().parentId || null);
+        } else {
+          // Robust fallback derivation for sub-tenants following the rtXX_rwYY_... pattern
+          const derivedParent = tId.replace(/^rt\d+_/, "");
+          if (derivedParent !== tId) {
+            setActiveParentTenantId(derivedParent);
+          }
+        }
+      }).catch(() => {
+        const derivedParent = tId.replace(/^rt\d+_/, "");
+        if (derivedParent !== tId) {
+          setActiveParentTenantId(derivedParent);
+        }
+      });
+    }
+  }, [currentUser?.uid, wargaAuth?.tenantId, selectedTenantId, tenantsData]);
+
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
     
     const unsubKopSettings = onSnapshot(doc(db, "tenant_settings", tId), (snap) => {
       let currentKop = snap.exists() ? snap.data() : {};
       
-      if (currentParentId) {
-        getDoc(doc(db, "tenant_settings", currentParentId)).then(parentSnap => {
+      const parentIdToFetch = activeParentTenantId;
+      
+      if (parentIdToFetch) {
+        getDoc(doc(db, "tenant_settings", parentIdToFetch)).then(parentSnap => {
           if (parentSnap.exists()) {
             const parentData = parentSnap.data();
-            // Merge parent data with child overrides
-            // Only use child values if they are actually set and not placeholders
             const mergedKop = { ...parentData };
             Object.keys(currentKop).forEach(key => {
               const val = currentKop[key];
@@ -1746,7 +1768,7 @@ export default function App() {
             setKopSettings(currentKop);
           }
         }).catch(e => {
-          console.warn("[App] Parent settings fetch failed (possibly permission):", e);
+          console.warn("[App] Parent settings fetch failed:", e);
           setKopSettings(currentKop);
         });
       } else {
@@ -1757,7 +1779,7 @@ export default function App() {
     });
 
     return () => unsubKopSettings();
-  }, [currentUser?.uid, wargaAuth?.tenantId, selectedTenantId, currentParentId]);
+  }, [currentUser?.uid, wargaAuth?.tenantId, selectedTenantId, activeParentTenantId]);
 
   // --- FIREBASE SYNC (TAB-SPECIFIC LAZY LOADING) ---
   

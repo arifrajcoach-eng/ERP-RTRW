@@ -488,7 +488,7 @@ export function WargaProfileView({
                       <p className="text-slate-500 font-bold mt-4 max-w-lg leading-relaxed">Pilih jenis persuratan yang Anda butuhkan. Sistem akan memproses data Anda secara otomatis ke otoritas RT/RW.</p>
                    </div>
 
-                   <div className="relative group/scroll">
+                    <div className="relative group/scroll">
                       {/* Navigation Buttons */}
                       <div className="absolute top-1/2 -left-4 -translate-y-1/2 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 pointer-events-none">
                          <motion.button 
@@ -512,47 +512,43 @@ export function WargaProfileView({
                          </motion.button>
                       </div>
 
-                      <div ref={scrollContainerRef} className="flex overflow-x-auto pb-8 gap-6 snap-x no-scrollbar scroll-smooth">
+                      <div ref={scrollContainerRef} className="flex overflow-x-auto pb-10 gap-6 snap-x no-scrollbar scroll-smooth px-4 -mx-4">
                         {[
-                           { id: 'ktp', name: 'Surat pengantar pembuatan KTP', icon: UserPlus, color: 'from-blue-500 to-indigo-600' },
-                           { id: 'domisili', name: 'Surat pengantar domisili', icon: MapPin, color: 'from-rose-500 to-red-600' },
-                           { id: 'skck', name: 'Surat pengantar SKCK', icon: ShieldCheck, color: 'from-emerald-500 to-teal-600' },
-                           { id: 'sktm', name: 'Surat keterangan tidak mampu (SKTM)', icon: FileText, color: 'from-amber-500 to-orange-600' },
-                           { id: 'usaha', name: 'Surat keterangan usaha (SKU)', icon: Briefcase, color: 'from-indigo-500 to-purple-600' },
-                           { id: 'pindah', name: 'Surat pengantar pindah / datang', icon: ArrowLeftRight, color: 'from-cyan-500 to-blue-600' },
-                           { id: 'kelahiran', name: 'Surat pengantar akta kelahiran', icon: Baby, color: 'from-pink-500 to-rose-600' },
-                           { id: 'kematian', name: 'Surat pengantar akta kematian', icon: Flame, color: 'from-slate-600 to-slate-800' },
-                           { id: 'nikah', name: 'Surat pengantar nikah', icon: Heart, color: 'from-red-400 to-pink-500' },
-                           { id: 'cerai', name: 'Surat pengantar cerai', icon: Scissors, color: 'from-gray-400 to-gray-600' },
-                           { id: 'keramaian', name: 'Surat izin keramaian / acara', icon: Music, color: 'from-violet-500 to-purple-600' },
-                           { id: 'npwp', name: 'Surat pengantar NPWP', icon: CreditCard, color: 'from-blue-600 to-cyan-600' },
-                           { id: 'usahakecil', name: 'Surat pengantar izin usaha kecil', icon: Globe, color: 'from-teal-500 to-emerald-600' },
-                           { id: 'penghasilan', name: 'Surat keterangan penghasilan', icon: CreditCard, color: 'from-green-500 to-emerald-600' },
-                           { id: 'properti', name: 'Surat keterangan kepemilikan rumah / tanah', icon: Home, color: 'from-orange-500 to-red-600' },
-                           { id: 'imb', name: 'Surat pengantar IMB/PBG', icon: Hammer, color: 'from-yellow-600 to-amber-700' },
-                           { id: 'renovasi', name: 'Surat izin renovasi rumah', icon: Hammer, color: 'from-stone-500 to-stone-700' },
-                           { id: 'sengketa', name: 'Surat keterangan tidak sengketa', icon: Gavel, color: 'from-red-600 to-rose-700' },
-                           { id: 'beasiswa', name: 'Surat keterangan beasiswa', icon: GraduationCap, color: 'from-sky-500 to-indigo-600' },
-                           { id: 'sekolah', name: 'Surat pengantar sekolah', icon: GraduationCap, color: 'from-blue-400 to-blue-600' },
-                           { id: 'magang', name: 'Surat keterangan magang / kerja', icon: Briefcase, color: 'from-emerald-600 to-teal-700' }
+                           { id: 'ktp', name: 'PENGANTAR KTP/KK', icon: UserPlus, color: 'bg-blue-50 text-blue-600' },
+                           { id: 'domisili', name: 'KET. DOMISILI', icon: MapPin, color: 'bg-rose-50 text-rose-600' },
+                           { id: 'skck', name: 'PENGANTAR SKCK', icon: ShieldCheck, color: 'bg-emerald-50 text-emerald-600' },
+                           { id: 'sktm', name: 'SUKET. TIDAK MAMPU', icon: FileText, color: 'bg-amber-50 text-amber-600' },
+                           { id: 'usaha', name: 'SUKET. USAHA', icon: PlusCircle, color: 'bg-indigo-50 text-indigo-600' },
+                           { id: 'pindah', name: 'PENGANTAR PINDAH', icon: ArrowLeftRight, color: 'bg-cyan-50 text-cyan-600' },
+                           { id: 'kelahiran', name: 'AKTA KELAHIRAN', icon: Baby, color: 'bg-pink-50 text-pink-600' },
+                           { id: 'kematian', name: 'AKTA KEMATIAN', icon: Flame, color: 'bg-slate-100 text-slate-600' },
+                           { id: 'nikah', name: 'PENGANTAR NIKAH', icon: Heart, color: 'bg-red-50 text-red-500' },
+                           { id: 'cerai', name: 'SURAT CERAI', icon: Scissors, color: 'bg-gray-100 text-gray-500' },
+                           { id: 'keramaian', name: 'IZIN KERAMAIAN', icon: Music, color: 'bg-violet-50 text-violet-600' },
+                           { id: 'npwp', name: 'PENGANTAR NPWP', icon: CreditCard, color: 'bg-blue-50 text-blue-700' },
+                           { id: 'domisiliusaha', name: 'DOMISILI USAHA', icon: Globe, color: 'bg-teal-50 text-teal-600' },
+                           { id: 'penghasilan', name: 'SUKET. PENGHASILAN', icon: CreditCard, color: 'bg-green-50 text-green-600' },
+                           { id: 'properti', name: 'SURAT KEPEMILIKAN', icon: Home, color: 'bg-orange-50 text-orange-600' },
+                           { id: 'imb', name: 'PENGANTAR IMB', icon: Hammer, color: 'bg-yellow-50 text-yellow-700' },
+                           { id: 'renovasi', name: 'IZIN RENOVASI', icon: Hammer, color: 'bg-stone-100 text-stone-600' },
+                           { id: 'sengketa', name: 'TIDAK SENGKETA', icon: Gavel, color: 'bg-red-50 text-red-700' },
+                           { id: 'beasiswa', name: 'KET. BEASISWA', icon: GraduationCap, color: 'bg-sky-50 text-sky-600' },
+                           { id: 'sekolah', name: 'KETERANGAN SEKOLAH', icon: GraduationCap, color: 'bg-blue-50 text-blue-500' },
+                           { id: 'magang', name: 'KET. MAGANG/KERJA', icon: Briefcase, color: 'bg-emerald-50 text-emerald-700' }
                         ].map(item => (
                            <motion.button 
                              key={item.id} 
                              whileHover={{ y: -8, scale: 1.02 }}
                              whileTap={{ scale: 0.98 }}
                              onClick={() => handleRequestSurat(item.id, item.name)} 
-                             className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-xl hover:border-brand-blue/30 transition-all text-left flex flex-col gap-8 group relative overflow-hidden snap-start"
+                             className="flex-shrink-0 w-64 bg-white dark:bg-slate-900 p-10 rounded-[3rem] border-2 border-white dark:border-slate-800 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] hover:shadow-2xl hover:border-brand-blue/10 transition-all text-center flex flex-col items-center gap-6 group relative overflow-hidden snap-center"
                            >
-                              <div className="absolute -right-8 -top-8 w-24 h-24 bg-slate-50 dark:bg-slate-800/50 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
-                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 shadow-lg group-hover:rotate-12 bg-gradient-to-tr ${item.color} text-white`}>
-                                 <item.icon className="w-7 h-7" />
+                              <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center transition-all duration-700 shadow-sm group-hover:rotate-6 ${item.color}`}>
+                                 <item.icon className="w-8 h-8" />
                               </div>
-                              <div className="relative z-10">
-                                 <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight group-hover:text-brand-blue transition-colors text-base leading-tight min-h-[40px] flex items-center">{item.name}</h4>
-                                 <p className="text-[9px] text-slate-400 mt-2 uppercase font-black tracking-[0.2em] group-hover:text-brand-blue transition-colors">Klik Untuk Ajukan</p>
-                              </div>
-                              <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <ChevronRight className="w-5 h-5 text-brand-blue" />
+                              <div className="relative z-10 flex flex-col items-center">
+                                 <h4 className="font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-tight group-hover:text-brand-blue transition-colors text-[15px] leading-tight min-h-[44px] flex items-center text-center">{item.name}</h4>
+                                 <p className="text-[10px] text-brand-blue mt-2 uppercase font-black tracking-widest opacity-80 group-hover:opacity-100 transition-all">Ajukan Surat</p>
                               </div>
                            </motion.button>
                         ))}

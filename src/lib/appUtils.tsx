@@ -98,7 +98,7 @@ export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
           <!-- Kop Surat -->
           <div class="flex items-center relative py-1">
                 <div class="flex items-center w-48">
-                    ${surat.show_logo !== "no" && kop.logo_url ? `<img src="${kop.logo_url}" alt="Logo" class="w-[90px] h-[90px] object-contain mr-4 ml-4" />` : ""}
+                    ${surat.show_logo !== "no" && (kop.logo_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png") ? `<img src="${kop.logo_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png"}" alt="Logo" class="w-[90px] h-[90px] object-contain mr-4 ml-4" />` : ""}
                 </div>
                 <div class="flex-1 text-center px-4 flex flex-col justify-center items-center">
                     <h2 class="font-['Arial'] text-lg font-bold uppercase w-[393.992px] h-[23.9844px]">RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}</h2>
@@ -107,7 +107,7 @@ export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
                     <p class="w-[347.242px] h-[23.2461px] text-[8px] leading-[11.14px]">Sekretariat : ${kop.alamat || "..."} | Email: ${kop.email || "..."} | Instagram: ${kop.instagram || "..."}</p>
                 </div>
                 <div class="flex items-center justify-start w-48">
-                    ${surat.show_logo !== "no" && kop.logo_rw_url ? `<img src="${kop.logo_rw_url}" alt="Logo RW" class="w-[100px] h-[95px] object-contain ml-4" />` : ""}
+                    ${surat.show_logo !== "no" && (kop.logo_rw_url || "/logo_rw.png") ? `<img src="${kop.logo_rw_url || "/logo_rw.png"}" alt="Logo RW" class="w-[100px] h-[95px] object-contain ml-4" />` : ""}
                 </div>
            </div>
           <div class="border-b-4 border-black mt-2"></div>
