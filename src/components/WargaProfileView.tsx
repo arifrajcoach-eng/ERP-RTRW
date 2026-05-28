@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, 
@@ -20,6 +20,7 @@ import {
   Shield,
   LifeBuoy,
   ChevronRight,
+  ChevronLeft,
   ArrowLeftRight,
   Baby,
   Heart,
@@ -81,6 +82,16 @@ export function WargaProfileView({
   const [formData, setFormData] = useState<any>(wargaData);
   const [files, setFiles] = useState<{ktp?: File, kk?: File}>({});
   const [uploading, setUploading] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, clientWidth } = scrollContainerRef.current;
+      const scrollAmount = clientWidth * 0.8;
+      const scrollToValue = direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount;
+      scrollContainerRef.current.scrollTo({ left: scrollToValue, behavior: 'smooth' });
+    }
+  };
 
   // States for E-Administrasi
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
@@ -477,7 +488,30 @@ export function WargaProfileView({
                    </div>
 
                    <div className="relative group/scroll">
-                      <div className="flex overflow-x-auto pb-8 gap-6 snap-x no-scrollbar">
+                      {/* Navigation Buttons */}
+                      <div className="absolute top-1/2 -left-4 -translate-y-1/2 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 pointer-events-none">
+                         <motion.button 
+                           whileHover={{ scale: 1.1 }}
+                           whileTap={{ scale: 0.9 }}
+                           onClick={() => scroll('left')}
+                           className="w-12 h-12 bg-white dark:bg-slate-800 shadow-2xl rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-700 pointer-events-auto hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                         >
+                            <ChevronLeft className="w-6 h-6 text-slate-800 dark:text-slate-200" />
+                         </motion.button>
+                      </div>
+                      
+                      <div className="absolute top-1/2 -right-4 -translate-y-1/2 z-20 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 pointer-events-none">
+                         <motion.button 
+                           whileHover={{ scale: 1.1 }}
+                           whileTap={{ scale: 0.9 }}
+                           onClick={() => scroll('right')}
+                           className="w-12 h-12 bg-white dark:bg-slate-800 shadow-2xl rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-700 pointer-events-auto hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                         >
+                            <ChevronRight className="w-6 h-6 text-slate-800 dark:text-slate-200" />
+                         </motion.button>
+                      </div>
+
+                      <div ref={scrollContainerRef} className="flex overflow-x-auto pb-8 gap-6 snap-x no-scrollbar scroll-smooth">
                         {[
                            { id: 'ktp', name: 'Surat pengantar pembuatan KTP', icon: UserPlus, color: 'from-blue-500 to-indigo-600' },
                            { id: 'domisili', name: 'Surat pengantar domisili', icon: MapPin, color: 'from-rose-500 to-red-600' },
