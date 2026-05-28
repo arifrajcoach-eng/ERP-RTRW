@@ -645,9 +645,14 @@ export default function App() {
   useEffect(() => {
     // 0. Validate Connection to Firestore (Critical Constraint with watchdog retry & online monitoring)
     let retryTimeoutId: any = null;
+    let initialDelayId: any = null;
     let isUnmounted = false;
 
     const testConnection = async () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setDbStatus("OFFLINE");
+        return;
+      }
       try {
         await getDocFromServer(doc(db, "test", "connection"));
         if (!isUnmounted) {
@@ -664,7 +669,8 @@ export default function App() {
         if (
           error instanceof Error &&
           (error.message.includes("the client is offline") ||
-            error.message.includes("Could not reach Cloud Firestore"))
+            error.message.includes("Could not reach Cloud Firestore") ||
+            error.message.includes("failed to connect"))
         ) {
           setDbStatus("OFFLINE");
         } else if (error?.code === "unavailable") {
@@ -678,12 +684,17 @@ export default function App() {
             if (!isUnmounted) {
               testConnection();
             }
-          }, 20000); // retry every 20 seconds if browser is online but firestore hasn't synced yet
+          }, 25000); // retry every 25 seconds if browser is online but firestore hasn't synced yet
         }
       }
     };
 
-    testConnection();
+    // Delay slightly to give Firestore connection time to establish its background channel gracefully
+    initialDelayId = setTimeout(() => {
+      if (!isUnmounted) {
+        testConnection();
+      }
+    }, 2500);
 
     const handleOnline = () => {
       console.log("Device is online. Triggering Firestore diagnostic check...");
@@ -930,6 +941,9 @@ export default function App() {
       isUnmounted = true;
       if (retryTimeoutId) {
         clearTimeout(retryTimeoutId);
+      }
+      if (initialDelayId) {
+        clearTimeout(initialDelayId);
       }
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
@@ -2999,19 +3013,19 @@ export default function App() {
               {(currentTenant?.name || settings?.nama_rt) && (
                 <div className="mt-2 space-y-1.5 flex flex-col items-center">
                   {(currentTenant?.tagline || settings?.tagline) && (
-                    <p className="text-[10px] font-bold text-brand-pink dark:text-pink-400 italic text-center leading-normal max-w-[180px]">
+                    <p className="text-[12px] font-bold text-brand-pink dark:text-pink-400 italic text-center leading-normal max-w-[180px]">
                       "{currentTenant?.tagline || settings?.tagline}"
                     </p>
                   )}
-                  <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">
-                    Nexapps Intelligent
-                  </p>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-brand-blue/5 to-cyan-500/5 border border-brand-blue/10 rounded-full">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-brand-blue/5 to-cyan-500/5 border border-brand-blue/10 rounded-full !mt-[6px]">
                     <Zap className="w-2.5 h-2.5 text-brand-blue animate-pulse" />
                     <span className="text-[10px] font-black text-brand-blue uppercase tracking-wider">
                       {(currentTenant?.status || "STARTER").toUpperCase()} PLAN
                     </span>
                   </div>
+                  <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none !mt-[-1px]">
+                    Nexapps Intelligent
+                  </p>
                 </div>
               )}
             </div>
@@ -3031,7 +3045,7 @@ export default function App() {
               <div className="w-2.5 h-2.5 rounded-full bg-brand-green shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse"></div>
               <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-brand-green animate-ping opacity-20"></div>
             </div>
-            <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest !mt-[-4px]">
               System Active
             </p>
           </div>

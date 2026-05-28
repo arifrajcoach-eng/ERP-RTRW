@@ -419,7 +419,7 @@ export default function DashboardView({
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 font-sans pt-[54px]">
-      {/* Banner CTA Upgrade Paket - Sangat Menarik & Mudah Dilihat */}
+      {/* Banner CTA Upgrade Paket - Sangat Menarik, Minimalis, Terintegrasi dengan Masa Trial 30 Hari */}
       <div 
         onClick={() => setShowUpgradeModal(true)}
         className="w-full relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-3xl p-6 md:p-8 text-white shadow-2xl shadow-indigo-500/20 group cursor-pointer hover:border-brand-blue/60 hover:shadow-brand-blue/20 hover:scale-[1.005] active:scale-[0.99] transition-all duration-300"
@@ -431,155 +431,69 @@ export default function DashboardView({
         <div className="absolute -left-12 -bottom-12 w-48 h-48 bg-brand-blue/30 rounded-full blur-3xl group-hover:bg-brand-blue/40 transition-colors pointer-events-none"></div>
         <div className="absolute right-1/4 top-1/2 -translate-y-1/2 w-40 h-40 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 relative z-10">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6 relative z-10">
+          {/* Sisi Kiri: Informasi Utama */}
           <div className="space-y-3 flex-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-blue/20 border border-brand-blue/30 text-cyan-400 text-[10px] font-black uppercase tracking-widest animate-pulse">
-              <Zap className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Dapatkan Akses Fitur Premium Terlengkap</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-blue/20 border border-brand-blue/30 text-cyan-400 text-[10px] font-black uppercase tracking-widest">
+                <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                <span>Akses Fitur Premium Terlengkap</span>
+              </div>
+              
+              {isStarter && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-widest animate-pulse">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Masa Percobaan Aktif</span>
+                </div>
+              )}
             </div>
-            <h3 className="text-2xl md:text-3xl font-black font-elegant tracking-tight leading-tight text-white flex flex-wrap items-center gap-2">
+
+            <h3 className="text-xl md:text-2xl font-black font-elegant tracking-tight leading-tight text-white flex flex-wrap items-center gap-2">
               Upgrade Paket SmartRW AI Selengkapnya!
               <span className="text-[10px] bg-gradient-to-r from-amber-500 to-rose-500 text-white font-extrabold uppercase px-2.5 py-1 rounded-full">FLASH / PRO / PREMIUM</span>
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-3xl leading-relaxed">
-              Tingkatkan status wilayah Anda ke paket <strong className="text-cyan-400">Flash, Pro, Premium, atau Enterprise</strong> untuk mengaktifkan modul eksklusif seperti Robot AI WhatsApp, Posyandu Digital, Mading Digital, Bank Sampah Mandiri, ePemilu, Real-time CCTV, dan hilangkan batas kuota warga!
+            
+            <p className="text-xs text-slate-300 font-medium max-w-2xl leading-relaxed">
+              Tingkatkan status wilayah Anda ke paket premium untuk mengaktifkan modul eksklusif seperti Robot AI WhatsApp, Posyandu Digital, Mading, Bank Sampah Mandiri, ePemilu, Real-time CCTV, dan hilangkan batas kuota warga!
             </p>
+
+            {isStarter && (
+              <div className="bg-red-500/20 border border-red-500/30 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-yellow-300 inline-flex items-center gap-2 animate-pulse shadow-sm">
+                <span>⚠️ Amankan Data: Seluruh data wilayah Anda akan tetap tersimpan aman dengan upgrade ke premium</span>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center shrink-0">
+          {/* Sisi Kanan: Widget Countdown & Tombol CTA */}
+          <div className="flex flex-row sm:flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-4 shrink-0 bg-slate-950/40 p-4 rounded-2xl border border-white/5 shadow-inner">
+            {isStarter && (
+              <div className="flex items-center lg:items-end gap-3 lg:gap-1.5 text-left lg:text-right">
+                <div className="flex flex-col justify-center leading-none">
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-80 text-slate-400 mb-0.5">Sisa Trial</p>
+                  <p className="text-[8px] font-bold uppercase tracking-wider opacity-65 text-slate-500 hidden sm:block">Dari 30 Hari</p>
+                </div>
+                <div className="flex items-baseline gap-1 font-elegant text-white leading-none">
+                  <span className="text-3xl font-black tabular-nums drop-shadow-lg text-amber-400 tracking-tight">
+                    {daysRemaining !== null ? daysRemaining : 30}
+                  </span>
+                  <span className="text-[10px] font-black uppercase text-slate-300">Hari</span>
+                </div>
+              </div>
+            )}
+
             <button 
               onClick={(e) => {
                 e.stopPropagation();
                 setShowUpgradeModal(true);
               }}
-              className="w-full md:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-400 to-brand-blue hover:from-cyan-300 hover:to-indigo-500 text-white font-black uppercase text-xs tracking-widest px-8 py-4 rounded-2xl shadow-xl shadow-brand-blue/40 transform hover:scale-105 active:scale-95 transition-all text-center border border-white/20 whitespace-nowrap"
+              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-cyan-400 to-brand-blue hover:from-cyan-300 hover:to-indigo-500 text-white font-black uppercase text-[10px] tracking-widest px-5 py-3.5 rounded-xl shadow-lg shadow-brand-blue/30 hover:scale-[1.03] active:scale-95 transition-all text-center border border-white/15 whitespace-nowrap"
             >
               <span>Upgrade Sekarang</span>
-              <ChevronRight className="w-4 h-4 text-white" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
-
-      {/* Fitur Add-On Custom (Eceran) */}
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-1.5 text-indigo-600 font-extrabold uppercase text-[10px] tracking-widest">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
-              <span>Aktivasi Add-On Custom (Eceran)</span>
-            </div>
-            <h4 className="text-lg font-black text-slate-800 tracking-tight mt-1">Kustomisasi Modul Sesuai Kebutuhan Anda</h4>
-            <p className="text-xs text-slate-500 font-medium">
-              Aktifkan fitur spesifik tambahan secara eceran tanpa wajib migrasi paket keseluruhan.
-            </p>
-          </div>
-          <button 
-            onClick={() => setShowUpgradeModal(true)}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all border border-indigo-100/50"
-          >
-            <span>Selengkapnya</span>
-            <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { name: "ROBOT WA & AI AGENT", desc: "Asisten otomatis 24/7", price: "Rp 59k/bln", icon: Bot, color: "from-blue-500/10 to-indigo-500/10 text-indigo-600 border-indigo-500/20" },
-            { name: "POSYANDU DIGITAL", desc: "Kesehatan ibu & balita", price: "Rp 35k/bln", icon: Baby, color: "from-rose-500/10 to-pink-500/10 text-rose-600 border-rose-500/20" },
-            { name: "E-VOTING & PEMILU", desc: "Pemilihan aman terpercaya", price: "Rp 45k/bln", icon: Vote, color: "from-amber-500/10 to-orange-500/10 text-amber-600 border-amber-500/20" },
-            { name: "BANK SAMPAH MANDIRI", desc: "Tabungan sampah warga", price: "Rp 35k/bln", icon: Recycle, color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 border-emerald-500/20" },
-            { name: "INTEGRASI CCTV", desc: "Keamanan real-time", price: "Rp 80k/bln", icon: ShieldCheck, color: "from-cyan-500/10 to-blue-500/10 text-cyan-600 border-cyan-500/20" },
-            { name: "E-LAPAK PASAR WARGA", desc: "E-commerce lokal RW", price: "Rp 50k/bln", icon: ShoppingBag, color: "from-purple-500/10 to-pink-500/10 text-purple-600 border-purple-500/20" }
-          ].map((addon, idx) => {
-            const IconComponent = addon.icon;
-            return (
-              <div 
-                key={idx}
-                onClick={() => setShowUpgradeModal(true)}
-                className="bg-white border border-slate-100 hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/5 hover:scale-[1.02] active:scale-[0.98] rounded-3xl p-4 flex flex-col justify-between gap-4 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-              >
-                <div className="space-y-3">
-                  <div className={`w-10 h-10 bg-gradient-to-tr ${addon.color} border rounded-xl flex items-center justify-center`}>
-                    <IconComponent className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h5 className="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
-                      {addon.name}
-                    </h5>
-                    <p className="text-[10px] text-slate-400 font-semibold leading-normal mt-1">
-                      {addon.desc}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-slate-50 pt-3 mt-1">
-                  <span className="text-[11px] font-black text-slate-800">{addon.price}</span>
-                  <div className="p-1 px-2 rounded-lg bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition-all text-[9px] font-black uppercase tracking-widest">
-                    Aktivasi
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {isStarter && (
-        <div 
-          onClick={() => window.open('https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmartRW%20AI%20premium%20untuk%20lingkungan%20kami.', '_blank')}
-          className="bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 p-6 rounded-3xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-6 shadow-2xl shadow-orange-500/30 dark:shadow-none text-white overflow-hidden relative border border-white/20 cursor-pointer hover:scale-[1.01] hover:brightness-105 active:scale-[0.99] transition-all duration-300 group"
-          id="trial-banner"
-          title="Klik banner ini / Hubungi WA untuk Aktivasi Premium"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Clock className="w-24 h-24 group-hover:rotate-12 transition-transform duration-500" />
-          </div>
-          <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-          
-          <div className="flex items-center gap-6 relative z-10 flex-1">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 shadow-inner shrink-0">
-              <Zap className="w-8 h-8 text-white animate-pulse" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-black uppercase tracking-widest leading-tight font-elegant flex items-center gap-2">
-                Masa Percobaan Aktif (30 Hari)
-                <span className="text-[10px] bg-white/30 px-2 py-0.5 rounded-full font-sans tracking-normal uppercase animate-bounce" style={{ animationDuration: '1.5s' }}>Starter</span>
-              </h3>
-              <p className="text-[11px] font-bold text-white/80 uppercase tracking-wider">
-                Status: Open Beta • Nikmati Akses Penuh Fitur AI
-              </p>
-              
-              {/* Alert Tagline warning of deletion to motivate upgrade */}
-              <div className="bg-red-500/35 border border-red-400/40 px-3 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider text-yellow-300 flex items-center gap-2 animate-pulse shadow-md">
-                <span className="shrink-0 text-sm">⚠️</span>
-                <span>Amankan Data: Upgrade ke premium segera sebelum trial habis agar seluruh data wilayah Anda tidak terhapus permanen pada hari ke-61!</span>
-              </div>
-
-              <div className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl border border-white/20 backdrop-blur-md transition-colors shadow-inner">
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Call WA / Klik banner SmartRW AI</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4 relative z-10 border-t sm:border-t-0 border-white/10 pt-4 sm:pt-0 shrink-0">
-            <div className="text-left sm:text-right">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Berakhir Dalam</p>
-              <div className="flex items-baseline gap-1 font-elegant text-white justify-start sm:justify-end">
-                <span className="text-4xl font-black tabular-nums drop-shadow-lg leading-none">
-                  {daysRemaining !== null ? daysRemaining : 27}
-                </span>
-                <span className="text-sm font-black uppercase">Hari</span>
-              </div>
-            </div>
-            <div className="bg-white text-orange-600 font-extrabold uppercase text-[10px] tracking-widest px-4 py-2.5 rounded-xl shadow-lg group-hover:bg-orange-50 group-hover:scale-105 active:scale-95 transition-all text-center flex items-center gap-1.5 border border-white/50">
-              <span>Aktivasi Premium</span>
-              <span className="text-xs">⚡</span>
-            </div>
-          </div>
-        </div>
-      )}
       {/* SOS Alert & Plan Info */}
       <div className="flex flex-col md:flex-row gap-6 mb-2">
         {activeSOS ? (
