@@ -1727,21 +1727,37 @@ export default function App() {
     const unsubKopSettings = onSnapshot(doc(db, "tenant_settings", tId), (snap) => {
       let currentKop = snap.exists() ? snap.data() : {};
       
-      if (currentParentId && !snap.exists()) {
+      if (currentParentId) {
         getDoc(doc(db, "tenant_settings", currentParentId)).then(parentSnap => {
           if (parentSnap.exists()) {
-            setKopSettings(parentSnap.data());
+            const parentData = parentSnap.data();
+            // Merge parent data with child overrides
+            // Only use child values if they are actually set and not placeholders
+            const mergedKop = { ...parentData };
+            Object.keys(currentKop).forEach(key => {
+              const val = currentKop[key];
+              const isInvalid = !val || val === "..." || val === "-" || val === "RT ... / RW ...";
+              if (!isInvalid) {
+                mergedKop[key] = val;
+              }
+            });
+            setKopSettings(mergedKop);
+          } else {
+            setKopSettings(currentKop);
           }
-        }).catch(e => console.warn("Parent settings fetch failed:", e));
+        }).catch(e => {
+          console.warn("[App] Parent settings fetch failed (possibly permission):", e);
+          setKopSettings(currentKop);
+        });
       } else {
         setKopSettings(currentKop);
       }
     }, (err) => {
-      console.warn("Firestore connection/permission issue for tenant_settings:", err.message);
+      console.warn("[App] Firestore error for tenant_settings:", err.message);
     });
 
     return () => unsubKopSettings();
-  }, [currentUser?.uid, selectedTenantId, currentParentId]);
+  }, [currentUser?.uid, wargaAuth?.tenantId, selectedTenantId, currentParentId]);
 
   // --- FIREBASE SYNC (TAB-SPECIFIC LAZY LOADING) ---
   

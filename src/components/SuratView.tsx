@@ -237,7 +237,16 @@ export function SuratView({
     
     // Priority: use kopSettings (from tenant_settings), fallback to settings["KOP_SURAT"], then hardcoded defaults
     const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
-    const kop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
+    const rawKop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
+    
+    // Clean up placeholders from the kop object
+    const kop: any = {};
+    Object.keys(rawKop).forEach(key => {
+      const val = rawKop[key];
+      if (val && val !== "..." && val !== "-" && val !== "RT ... / RW ...") {
+        kop[key] = val;
+      }
+    });
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -246,28 +255,26 @@ export function SuratView({
     }
 
     // Map kopSettings to the variables used in the template
-    // Default Bekasi logo if no logo provided. Using a more stable URL for default.
-    const defaultLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
-    const logoPemerintah = (kop.logo_url && kop.logo_url.startsWith('data:')) ? kop.logo_url : (kop.logo_url || defaultLogo);
-    const logoOrganisasi = kop.logo_rw_url || ""; // Right logo (RT/RW logo)
+    const defaultLogoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
+    const logoPemerintah = (kop.logo_url && kop.logo_url.length > 10) ? kop.logo_url : defaultLogoUrl;
+    const logoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : ""; 
     
     // User requirements: RT from data warga (surat.rt), RW from standard kop settings
-    const displayRT = surat.rt || "03"; 
-    const displayRW = kop.rw || "26"; // Standard RW from Kop Settings
+    const displayRT = surat.rt || kop.rt || "03"; 
+    const displayRW = kop.rw || "26"; 
     
-    // Construct dynamic organization name according to RT of the citizen
     const orgName = `RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}`;
     
-    const kelurahanText = kop.kelurahan && kop.kecamatan 
+    const kelurahanText = kop.kelurahan && kop.kecamatan && kop.kelurahan !== "..."
       ? `KELURAHAN ${kop.kelurahan.toUpperCase()} - KECAMATAN ${kop.kecamatan.toUpperCase()}`
       : "KELURAHAN KEBALEN - KECAMATAN BABELAN";
       
     const kabupaten = kop.kabupaten || "KABUPATEN BEKASI";
     const displayKabupaten = kabupaten.toUpperCase().includes('KABUPATEN') || kabupaten.toUpperCase().includes('KOTA') 
       ? kabupaten.toUpperCase() 
-      : `KABUPATEN ${kabupaten.toUpperCase()}`;
+      : (kabupaten !== "..." ? `KABUPATEN ${kabupaten.toUpperCase()}` : "KABUPATEN BEKASI");
 
-    const alamatText = kop.alamat 
+    const alamatText = kop.alamat && kop.alamat !== "..."
       ? `Sekretariat : ${kop.alamat} ${kop.email ? ' | Email: ' + kop.email : ''} ${kop.instagram ? ' | Instagram: ' + kop.instagram : ''}`
       : "Sekretariat : Jl. Katala 3 Blok K3 No. 1 RT 02 / RW 26 | Email: kebalenrw26@gmail.com | Instagram: @kebalenrw26";
 

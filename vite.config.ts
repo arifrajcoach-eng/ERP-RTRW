@@ -16,15 +16,15 @@ export default defineConfig(({mode}) => {
       chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-firebase-app': ['firebase/app'],
-            'vendor-firebase-auth': ['firebase/auth'],
-            'vendor-firebase-db': ['firebase/firestore'],
-            'vendor-firebase-storage': ['firebase/storage'],
-            'vendor-ui': ['lucide-react', 'motion'],
-            'vendor-charts': ['recharts'],
-            'vendor-docs': ['jspdf', 'jspdf-autotable', 'html2canvas', 'xlsx'],
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              // Combine react and generic vendor to avoid circular dependencies
+              if (id.includes('firebase')) return 'vendor-firebase';
+              if (id.includes('lucide') || id.includes('motion')) return 'vendor-ui';
+              if (id.includes('recharts') || id.includes('d3')) return 'vendor-charts';
+              if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('xlsx')) return 'vendor-docs';
+              return 'vendor';
+            }
           }
         }
       }
