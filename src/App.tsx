@@ -2252,7 +2252,6 @@ export default function App() {
         label: "E-LAPAK26",
         icon: ShoppingBag,
         plan: "eLapak",
-        minPlan: "BASIC",
       },
       {
         id: "voting",
@@ -2274,7 +2273,6 @@ export default function App() {
         label: "AI Agent",
         icon: Bot,
         plan: "ai",
-        minPlan: "PREMIUM",
       },
       // --- FITUR OPERATOR ---
       {
@@ -2282,14 +2280,12 @@ export default function App() {
         label: "VERIFIKASI",
         icon: ShieldCheck,
         plan: "verifikasi",
-        minPlan: "BASIC",
       },
       {
         id: "keuangan",
         label: isApt ? "Keuangan / IPL" : "Keuangan",
         icon: CreditCard,
         plan: "keuangan",
-        minPlan: "BASIC",
       },
       {
         id: "posyandu",
@@ -2317,7 +2313,6 @@ export default function App() {
         label: "Surat",
         icon: FileText,
         plan: "surat",
-        minPlan: "BASIC",
       },
       { id: "kop-template", label: "KOP & Template", icon: FileSpreadsheet },
       { id: "leads", label: "CRM & Leads", icon: Users },
@@ -2349,7 +2344,7 @@ export default function App() {
         plan: "governance",
         minPlan: "PRO",
       },
-      { id: "pengaturan", label: "Pengaturan", icon: Settings, minPlan: "BASIC" },
+      { id: "pengaturan", label: "Pengaturan", icon: Settings },
     ]
       .filter((item) => {
         const role = (currentUser?.role || "TAMU").toUpperCase();
@@ -5545,7 +5540,10 @@ function ETokoView({
   const isWarga = roleUpper === "WARGA" || roleUpper === "USER";
 
   // Allow Warga to toggle to seller view too
-  const canToggleView = isAdmin || isWarga;
+  const canToggleView = (isAdmin || isWarga) && accessMode !== "READ";
+  
+  const isReadOnly = accessMode === "READ" || accessMode === "LIHAT";
+
   const categories = [
     "Semua",
     "Sembako",
@@ -5637,6 +5635,10 @@ function ETokoView({
   const finalTotal = Math.max(0, cartTotal + shippingFee - discountAmount);
 
   const handleCheckout = async () => {
+    if (isReadOnly) {
+      setShowUpgradeModal(true);
+      return;
+    }
     if (cart.length === 0) return;
     const voterId = wargaAuth?.nik || currentUser?.uid;
     if (!voterId) {
@@ -5796,6 +5798,25 @@ function ETokoView({
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
+      {isReadOnly && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 flex-shrink-0">
+            <Lock className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-black text-amber-800 uppercase tracking-tight">Mode Pratinjau (Lihat Saja)</p>
+            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest mt-0.5">
+              Paket Trial memberikan akses penuh melihat lapak warga. Untuk fitur Jual-Beli (Checkout) & Pengelolaan Toko, silakan Aktivasi Premium.
+            </p>
+          </div>
+          <button 
+            onClick={() => setShowUpgradeModal(true)}
+            className="ml-auto px-4 py-2 bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-200 shrink-0"
+          >
+            Upgrade Paket
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h2 className="text-4xl font-black text-slate-800 tracking-tighter">
@@ -6487,12 +6508,16 @@ function ETokoView({
                     <div className="flex gap-4">
                       <button
                         onClick={() => {
+                          if (isReadOnly) {
+                            setShowUpgradeModal(true);
+                            return;
+                          }
                           addToCart(selectedProduct);
                           setShowProductModal(false);
                         }}
-                        className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200"
+                        className={`flex-1 py-4 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-95 shadow-xl ${isReadOnly ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
                       >
-                        Tambah Ke Keranjang
+                        {isReadOnly ? "Hanya Bisa Dilihat (Trial)" : "Tambah Ke Keranjang"}
                       </button>
                     </div>
                   </>

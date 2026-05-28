@@ -19,7 +19,7 @@ export const PLAN_FEATURES: Record<string, any> = {
     chatMode: false,
     ai: true,
     maxAiChats: 8,
-    weeklyAiLimit: 2,
+    weeklyAiLimit: 8,
     weeklyScanLimit: 1,
     monthlyTrxLimit: 25,
     multiRT: false,
