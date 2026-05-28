@@ -1042,14 +1042,17 @@ export function SuratView({
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Pendidikan Terakhir</label>
                       <select name="pendidikan" defaultValue={getInitialValue('pendidikan')} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
                         <option key="none" value="">-- Pilih --</option>
+                        <option key="belum" value="BELUM SEKOLAH">BELUM SEKOLAH</option>
                         <option key="sd" value="SD">SD</option>
                         <option key="smp" value="SMP">SMP</option>
-                        <option key="sma" value="SMA/SMK">SMA/SMK</option>
-                        <option key="d3" value="D3">D3</option>
+                        <option key="sma" value="SMA">SMA</option>
+                        <option key="d1" value="DIPLOMA 1">DIPLOMA 1</option>
+                        <option key="d2" value="DIPLOMA 2">DIPLOMA 2</option>
+                        <option key="d3" value="DIPLOMA 3">DIPLOMA 3</option>
+                        <option key="d4" value="DIPLOMA 4">DIPLOMA 4</option>
                         <option key="s1" value="S1">S1</option>
                         <option key="s2" value="S2">S2</option>
                         <option key="s3" value="S3">S3</option>
-                        <option key="ts" value="Tidak Sekolah">Tidak Sekolah</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">

@@ -1451,17 +1451,17 @@ function WargaView(props: WargaViewProps) {
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pendidikan Terakhir</label>
                             <select name="pendidikan" defaultValue={editingWarga?.pendidikan || 'SMA'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                               <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
                                <option value="SD">SD</option>
                                <option value="SMP">SMP</option>
                                <option value="SMA">SMA</option>
-                               <option value="S1">S1</option>
-                               <option value="S2">S2</option>
-                               <option value="S3">S3</option>
                                <option value="DIPLOMA 1">DIPLOMA 1</option>
                                <option value="DIPLOMA 2">DIPLOMA 2</option>
                                <option value="DIPLOMA 3">DIPLOMA 3</option>
                                <option value="DIPLOMA 4">DIPLOMA 4</option>
-                               <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
+                               <option value="S1">S1</option>
+                               <option value="S2">S2</option>
+                               <option value="S3">S3</option>
                             </select>
                          </div>
                          <div className="flex flex-col text-left">

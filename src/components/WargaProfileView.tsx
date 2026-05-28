@@ -847,10 +847,17 @@ export function WargaProfileView({
                          <div>
                             <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Pendidikan Terakhir</label>
                             <select defaultValue={wargaData.pendidikanTerakhir} onChange={e => setFormData({...formData, pendidikanTerakhir: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                               <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
                                <option value="SD">SD</option>
                                <option value="SMP">SMP</option>
                                <option value="SMA">SMA</option>
+                               <option value="DIPLOMA 1">DIPLOMA 1</option>
+                               <option value="DIPLOMA 2">DIPLOMA 2</option>
+                               <option value="DIPLOMA 3">DIPLOMA 3</option>
+                               <option value="DIPLOMA 4">DIPLOMA 4</option>
                                <option value="S1">S1</option>
+                               <option value="S2">S2</option>
+                               <option value="S3">S3</option>
                             </select>
                          </div>
                          <div>

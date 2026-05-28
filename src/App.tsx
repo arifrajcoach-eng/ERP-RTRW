@@ -3700,6 +3700,7 @@ export default function App() {
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
               accessMode={getPlanFeatures(currentTenant).eLapak}
+              setShowUpgradeModal={setShowUpgradeModal}
             />
           )}
           {activeTab === "analitik" &&
@@ -5481,6 +5482,7 @@ function ETokoView({
   handleFileUpload,
   showNotification,
   accessMode,
+  setShowUpgradeModal,
 }: {
   userRole: string;
   tenantId: string;
@@ -5492,7 +5494,8 @@ function ETokoView({
   handleFirestoreError: any;
   handleFileUpload: (file: File, folder: string) => Promise<string>;
   showNotification: any;
-  accessMode?: "LIHAT" | "JUAL" | "PRIORITAS" | boolean;
+  accessMode?: "LIHAT" | "READ" | "JUAL" | "PRIORITAS" | boolean;
+  setShowUpgradeModal: any;
 }) {
   const [view, setView] = useState<"buyer" | "seller">("buyer");
   const [activeTab, setActiveTab] = useState<"shop" | "orders">("shop");
@@ -9893,27 +9896,15 @@ function LoginView({
         .toLowerCase();
       const cKKDigits = cKK.replace(/\D/g, "");
 
-      // Evaluate matches based on inputs that are provided
-      const idMatch = !cleanId
-        ? null
-        : cNik === cleanIdLower ||
-          (idDigits && cNikDigits === idDigits) ||
-          cNama === cleanIdLower ||
-          cHp === cleanIdLower ||
-          (idDigits && cHpDigits === idDigits);
-      const secretMatch = !cleanPass
-        ? null
-        : cKK === cleanPassLower ||
-          (passDigits && cKKDigits === passDigits) ||
-          cHp === cleanPassLower ||
-          (passDigits && cHpDigits === passDigits) ||
-          cNik === cleanPassLower ||
-          (passDigits && cNikDigits === passDigits);
+      if (!cleanId || !cleanPass) return false;
 
-      if (idMatch === null && secretMatch === null) return false;
-      if (idMatch === null) return secretMatch;
-      if (secretMatch === null) return idMatch;
-      return idMatch && secretMatch;
+      const idIsNIK = cNik === cleanIdLower || (idDigits && cNikDigits === idDigits);
+      const idIsNama = cNama === cleanIdLower;
+      const passIsKK = cKK === cleanPassLower || (passDigits && cKKDigits === passDigits);
+      const passIsHP = cHp === cleanPassLower || (passDigits && cHpDigits === passDigits);
+
+      // Combinations: NIK+KK, Nama+KK, NIK+HP
+      return (idIsNIK && passIsKK) || (idIsNama && passIsKK) || (idIsNIK && passIsHP);
     });
 
     // Pre-authenticate anonymously if needed to allow discovery queries
@@ -9972,17 +9963,25 @@ function LoginView({
                   .trim()
                   .toLowerCase();
 
-                const otherInp =
-                  idCandidate === cleanId ? cleanPassLower : cleanIdLower;
-                const matches =
-                  cNik === otherInp ||
-                  (otherInp.replace(/\D/g, "") &&
-                    cNik.replace(/\D/g, "") === otherInp.replace(/\D/g, "")) ||
-                  cNama === otherInp ||
-                  cHp === otherInp ||
-                  cKK === otherInp ||
-                  (otherInp.replace(/\D/g, "") &&
-                    cKK.replace(/\D/g, "") === otherInp.replace(/\D/g, ""));
+                const docIsId = idCandidate === cleanId;
+                const cNikDigits = cNik.replace(/\D/g, "");
+                const cKKDigits = cKK.replace(/\D/g, "");
+                const cHpDigits = cHp.replace(/\D/g, "");
+                const otherVal = docIsId ? cleanPassLower : cleanIdLower;
+                const otherDigits = otherVal.replace(/\D/g, "");
+
+                const idIsNIK = cNik === cleanIdLower || (idDigits && cNikDigits === idDigits);
+                const idIsNama = cNama === cleanIdLower;
+                
+                const passIsKK = cKK === cleanPassLower || (passDigits && cKKDigits === passDigits);
+                const passIsHP = cHp === cleanPassLower || (passDigits && cHpDigits === passDigits);
+
+                // We need to know which one was supposed to be ID and which one Key
+                // Based on pair requirements:
+                // 1. cleanId(ID)=NIK/Nama + cleanPass(Pass)=KK
+                // 2. cleanId(ID)=NIK + cleanPass(Pass)=HP
+                
+                const matches = (idIsNIK && passIsKK) || (idIsNama && passIsKK) || (idIsNIK && passIsHP);
 
                 if (matches) {
                   found = candidate;
@@ -10062,35 +10061,26 @@ function LoginView({
                   if (!snap.empty) {
                     for (const d of snap.docs) {
                       const cand = { docId: d.id, ...d.data() } as any;
-                      const otherVal =
-                        token === cleanId ? cleanPassLower : cleanIdLower;
+                      const isTokenId = token === cleanId;
+                      const otherVal = isTokenId ? cleanPassLower : cleanIdLower;
+                      const otherDigits = otherVal.replace(/\D/g, "");
 
-                      const cNik = String(cand.nik || "")
-                        .trim()
-                        .toLowerCase();
-                      const cNama = String(cand.nama || cand.pemohon || "")
-                        .trim()
-                        .toLowerCase();
-                      const cHp = String(cand.hp || cand.phone || "")
-                        .trim()
-                        .toLowerCase();
-                      const cKK = String(cand.kk || cand.kodeKeluarga || "")
-                        .trim()
-                        .toLowerCase();
+                      const cNik = String(cand.nik || "").trim().toLowerCase();
+                      const cNama = String(cand.nama || cand.pemohon || "").trim().toLowerCase();
+                      const cHp = String(cand.hp || cand.phone || "").trim().toLowerCase();
+                      const cKK = String(cand.kk || cand.kodeKeluarga || "").trim().toLowerCase();
 
-                      const matches =
-                        cNik === otherVal ||
-                        (otherVal.replace(/\D/g, "") &&
-                          cNik.replace(/\D/g, "") ===
-                            otherVal.replace(/\D/g, "")) ||
-                        cNama === otherVal ||
-                        cHp === otherVal ||
-                        (otherVal.replace(/\D/g, "") &&
-                          cHp.replace(/\D/g, "") ===
-                            otherVal.replace(/\D/g, "")) ||
-                        cKK === otherVal ||
-                        (otherVal.replace(/\D/g, "") &&
-                          cKK.replace(/\D/g, "") === otherVal.replace(/\D/g, ""));
+                      const idVal = isTokenId ? token.toLowerCase() : otherVal;
+                      const idDigitsVal = isTokenId ? token.replace(/\D/g, "") : otherDigits;
+                      const passVal = isTokenId ? otherVal : token.toLowerCase();
+                      const passDigitsVal = isTokenId ? otherDigits : token.replace(/\D/g, "");
+
+                      const idIsNIK = cNik === idVal || (idDigitsVal && cNik.replace(/\D/g, "") === idDigitsVal);
+                      const idIsNama = cNama === idVal;
+                      const passIsKK = cKK === passVal || (passDigitsVal && cKK.replace(/\D/g, "") === passDigitsVal);
+                      const passIsHP = cHp === passVal || (passDigitsVal && cHp.replace(/\D/g, "") === passDigitsVal);
+
+                      const matches = (idIsNIK && passIsKK) || (idIsNama && passIsKK) || (idIsNIK && passIsHP);
 
                       if (matches) {
                         found = cand;
@@ -10555,7 +10545,7 @@ function LoginView({
               {loginMode === "warga"
                 ? 'KHUSUS AKUN GOOGLE. Jika ingin masuk pakai NIK & KK, silakan pilih tab "NIK & KK" di atas.'
                 : loginMode === "verifikasi"
-                  ? "VERIFIKASI WARGA (Tanpa Google). Masukkan NIK atau Nama sebagai ID, dan Nomor KK atau No. HP sebagai Kunci."
+                  ? "VERIFIKASI WARGA (Tanpa Google). Masukkan NIK/Nama + Nomor KK, atau NIK + No. HP sebagai Kunci verifikasi."
                   : "Akses khusus pengurus RT/RW yang telah terdaftar."}
             </p>
           </div>
