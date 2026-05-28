@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
   MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot, LayoutGrid,
-  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap, ChevronRight,
+  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap, ChevronRight, Sparkles,
   PieChart as PieIcon
 } from 'lucide-react';
 import { 
@@ -458,6 +458,70 @@ export default function DashboardView({
               <ChevronRight className="w-4 h-4 text-white" />
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Fitur Add-On Custom (Eceran) */}
+      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-indigo-600 font-extrabold uppercase text-[10px] tracking-widest">
+              <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
+              <span>Aktivasi Add-On Custom (Eceran)</span>
+            </div>
+            <h4 className="text-lg font-black text-slate-800 tracking-tight mt-1">Kustomisasi Modul Sesuai Kebutuhan Anda</h4>
+            <p className="text-xs text-slate-500 font-medium">
+              Aktifkan fitur spesifik tambahan secara eceran tanpa wajib migrasi paket keseluruhan.
+            </p>
+          </div>
+          <button 
+            onClick={() => setShowUpgradeModal(true)}
+            className="self-start sm:self-auto flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all border border-indigo-100/50"
+          >
+            <span>Selengkapnya</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { name: "ROBOT WA & AI AGENT", desc: "Asisten otomatis 24/7", price: "Rp 59k/bln", icon: Bot, color: "from-blue-500/10 to-indigo-500/10 text-indigo-600 border-indigo-500/20" },
+            { name: "POSYANDU DIGITAL", desc: "Kesehatan ibu & balita", price: "Rp 35k/bln", icon: Baby, color: "from-rose-500/10 to-pink-500/10 text-rose-600 border-rose-500/20" },
+            { name: "E-VOTING & PEMILU", desc: "Pemilihan aman terpercaya", price: "Rp 45k/bln", icon: Vote, color: "from-amber-500/10 to-orange-500/10 text-amber-600 border-amber-500/20" },
+            { name: "BANK SAMPAH MANDIRI", desc: "Tabungan sampah warga", price: "Rp 35k/bln", icon: Recycle, color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 border-emerald-500/20" },
+            { name: "INTEGRASI CCTV", desc: "Keamanan real-time", price: "Rp 80k/bln", icon: ShieldCheck, color: "from-cyan-500/10 to-blue-500/10 text-cyan-600 border-cyan-500/20" },
+            { name: "E-LAPAK PASAR WARGA", desc: "E-commerce lokal RW", price: "Rp 50k/bln", icon: ShoppingBag, color: "from-purple-500/10 to-pink-500/10 text-purple-600 border-purple-500/20" }
+          ].map((addon, idx) => {
+            const IconComponent = addon.icon;
+            return (
+              <div 
+                key={idx}
+                onClick={() => setShowUpgradeModal(true)}
+                className="bg-white border border-slate-100 hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/5 hover:scale-[1.02] active:scale-[0.98] rounded-3xl p-4 flex flex-col justify-between gap-4 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+              >
+                <div className="space-y-3">
+                  <div className={`w-10 h-10 bg-gradient-to-tr ${addon.color} border rounded-xl flex items-center justify-center`}>
+                    <IconComponent className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
+                      {addon.name}
+                    </h5>
+                    <p className="text-[10px] text-slate-400 font-semibold leading-normal mt-1">
+                      {addon.desc}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-slate-50 pt-3 mt-1">
+                  <span className="text-[11px] font-black text-slate-800">{addon.price}</span>
+                  <div className="p-1 px-2 rounded-lg bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition-all text-[9px] font-black uppercase tracking-widest">
+                    Aktivasi
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

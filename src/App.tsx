@@ -2996,8 +2996,13 @@ export default function App() {
                   </span>
                 )}
               </h1>
-              {currentTenant?.name && (
+              {(currentTenant?.name || settings?.nama_rt) && (
                 <div className="mt-2 space-y-1.5 flex flex-col items-center">
+                  {(currentTenant?.tagline || settings?.tagline) && (
+                    <p className="text-[10px] font-bold text-brand-pink dark:text-pink-400 italic text-center leading-normal max-w-[180px]">
+                      "{currentTenant?.tagline || settings?.tagline}"
+                    </p>
+                  )}
                   <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">
                     Nexapps Intelligent
                   </p>
@@ -7559,6 +7564,9 @@ function PengaturanView({
         tenantUpdate.name = newSettings.nama_rt;
         tenantUpdate.nama = newSettings.nama_rt;
       }
+      if (newSettings.tagline !== undefined) {
+        tenantUpdate.tagline = newSettings.tagline;
+      }
 
       // Save Tenant Info if we have updates
       if (Object.keys(tenantUpdate).length > 0) {
@@ -8614,6 +8622,23 @@ function PengaturanView({
                   <p className="text-[10px] text-slate-500 italic leading-tight">
                     Nama ini akan menjadi identitas utama di sidebar menu dan
                     kop surat dokumen warga.
+                  </p>
+                </div>
+              </div>
+              <div className="p-4 bg-purple-50/50 rounded-xl border border-purple-100 mb-2">
+                <label className="text-[10px] font-black text-purple-600 uppercase mb-2 block tracking-wider">
+                  Tagline Organisasi (Muncul di bawah Nama Organisasi)
+                </label>
+                <input
+                  name="tagline"
+                  defaultValue={settings.tagline || ""}
+                  placeholder="Contoh: Guyub Rukun Saklawase"
+                  className="w-full px-4 py-3 bg-white border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 transition-all font-bold text-slate-800 shadow-sm"
+                />
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="w-1 h-1 rounded-full bg-purple-400 mt-1.5 shrink-0"></div>
+                  <p className="text-[10px] text-slate-500 italic leading-tight">
+                    Tagline ini akan muncul tepat di bawah nama instansi/organisasi dan di atas teks Nexapps Intelligent di sidebar.
                   </p>
                 </div>
               </div>
