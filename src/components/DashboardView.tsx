@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
   MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot, LayoutGrid,
-  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap,
+  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap, ChevronRight,
   PieChart as PieIcon
 } from 'lucide-react';
 import { 
@@ -419,6 +419,48 @@ export default function DashboardView({
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 font-sans pt-[54px]">
+      {/* Banner CTA Upgrade Paket - Sangat Menarik & Mudah Dilihat */}
+      <div 
+        onClick={() => setShowUpgradeModal(true)}
+        className="w-full relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-3xl p-6 md:p-8 text-white shadow-2xl shadow-indigo-500/20 group cursor-pointer hover:border-brand-blue/60 hover:shadow-brand-blue/20 hover:scale-[1.005] active:scale-[0.99] transition-all duration-300"
+      >
+        {/* Dekorasi Cahaya Latar Belakang */}
+        <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
+          <Zap className="w-32 h-32 text-cyan-400 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500 animate-pulse" />
+        </div>
+        <div className="absolute -left-12 -bottom-12 w-48 h-48 bg-brand-blue/30 rounded-full blur-3xl group-hover:bg-brand-blue/40 transition-colors pointer-events-none"></div>
+        <div className="absolute right-1/4 top-1/2 -translate-y-1/2 w-40 h-40 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-3 flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-blue/20 border border-brand-blue/30 text-cyan-400 text-[10px] font-black uppercase tracking-widest animate-pulse">
+              <Zap className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Dapatkan Akses Fitur Premium Terlengkap</span>
+            </div>
+            <h3 className="text-2xl md:text-3xl font-black font-elegant tracking-tight leading-tight text-white flex flex-wrap items-center gap-2">
+              Upgrade Paket SmartRW AI Selengkapnya!
+              <span className="text-[10px] bg-gradient-to-r from-amber-500 to-rose-500 text-white font-extrabold uppercase px-2.5 py-1 rounded-full">FLASH / PRO / PREMIUM</span>
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-3xl leading-relaxed">
+              Tingkatkan status wilayah Anda ke paket <strong className="text-cyan-400">Flash, Pro, Premium, atau Enterprise</strong> untuk mengaktifkan modul eksklusif seperti Robot AI WhatsApp, Posyandu Digital, Mading Digital, Bank Sampah Mandiri, ePemilu, Real-time CCTV, dan hilangkan batas kuota warga!
+            </p>
+          </div>
+
+          <div className="flex items-center shrink-0">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowUpgradeModal(true);
+              }}
+              className="w-full md:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-400 to-brand-blue hover:from-cyan-300 hover:to-indigo-500 text-white font-black uppercase text-xs tracking-widest px-8 py-4 rounded-2xl shadow-xl shadow-brand-blue/40 transform hover:scale-105 active:scale-95 transition-all text-center border border-white/20 whitespace-nowrap"
+            >
+              <span>Upgrade Sekarang</span>
+              <ChevronRight className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {isStarter && (
         <div 
           onClick={() => window.open('https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmartRW%20AI%20premium%20untuk%20lingkungan%20kami.', '_blank')}

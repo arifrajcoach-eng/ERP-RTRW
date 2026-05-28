@@ -8826,10 +8826,10 @@ function PengaturanView({
                   type="submit"
                   disabled={
                     isSaving ||
-                    (userRole !== "ADMIN" &&
-                      userRole !== "SUPER_ADMIN" &&
-                      userRole !== "OWNER" &&
-                      userRole !== "SUPER ADMIN")
+                    !(
+                      ["ADMIN", "SUPER_ADMIN", "OWNER", "SUPER ADMIN", "RW", "RT"].includes(userRole?.toUpperCase()) ||
+                      currentUser?.isSuperAdmin
+                    )
                   }
                   className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
                 >
