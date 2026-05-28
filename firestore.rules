@@ -154,7 +154,7 @@ service cloud.firestore {
       return isPengurusStatic() || (
         isSignedIn() && (
           getUserData() != null && (
-            ('role' in getUserData() && getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS', 'KADER']) ||
+            ('role' in getUserData() && getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'RT', 'RW', 'BENDAHARA', 'SEKRETARIS', 'KADER', 'KETUA RT', 'KETUA RW', 'ADMIN RT', 'ADMIN RW', 'PENGURUS', 'KETUA']) ||
             ('tenantId' in getUserData() && (getUserData().tenantId == 'MASTER' || getUserData().tenantId == 'master'))
           )
         )
@@ -287,10 +287,19 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin() || isAdminStatic() || (
-        isSignedIn() && getUserData() != null && (
-          getUserData().role in ['SUPER_ADMIN', 'ADMIN'] ||
-          ('tenantId' in getUserData() && (getUserData().tenantId == 'MASTER' || getUserData().tenantId == 'master')) ||
-          (isPengurus() && isTenantMember(resource.data.tenantId))
+        isSignedIn() && (
+          // Is owner/creator of the document (akun warga pada E-Administrasi)
+          (resource != null && (
+            resource.data.authUid == request.auth.uid || 
+            resource.data.userId == request.auth.uid || 
+            (getUserData() != null && 'nik' in getUserData() && resource.data.nik == getUserData().nik)
+          )) ||
+          // Or is an administrative officer (akun warga pada RW / pengurus)
+          (getUserData() != null && (
+            getUserData().role in ['SUPER_ADMIN', 'ADMIN'] ||
+            ('tenantId' in getUserData() && (getUserData().tenantId == 'MASTER' || getUserData().tenantId == 'master')) ||
+            (isPengurus() && isTenantMember(resource.data.tenantId))
+          ))
         )
       );
     }
