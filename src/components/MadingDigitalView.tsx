@@ -17,6 +17,8 @@ interface MadingItem {
   imageUrl: string;
   updatedAt: string;
   updatedBy: string;
+  year?: number;
+  month?: number;
 }
 
 interface MadingDigitalViewProps {

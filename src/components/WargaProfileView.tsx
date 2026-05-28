@@ -479,7 +479,7 @@ export function WargaProfileView({
                       ].map(item => (
                          <motion.button 
                            key={item.id} 
-                           whileHover={{ y: -8, scale: 1.02, shadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }}
+                           whileHover={{ y: -8, scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }}
                            whileTap={{ scale: 0.98 }}
                            onClick={() => handleRequestSurat(item.id, item.name)} 
                            className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-xl hover:border-brand-blue/30 transition-all text-left flex flex-col gap-10 group relative overflow-hidden"

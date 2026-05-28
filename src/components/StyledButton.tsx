@@ -8,6 +8,7 @@ interface StyledButtonProps {
   className?: string;
   icon?: React.ReactNode;
   disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const colorMap = {
@@ -25,9 +26,10 @@ const colorMap = {
   brightPink: 'from-[#f5007f] to-[#d4006e] hover:from-[#d4006e] hover:to-[#b3005d] text-white',
 };
 
-export const StyledButton: React.FC<StyledButtonProps> = ({ label, onClick, colorType = 'primary', className, icon, disabled }) => {
+export const StyledButton: React.FC<StyledButtonProps> = ({ label, onClick, colorType = 'primary', className, icon, disabled, type = 'button' }) => {
   return (
     <motion.button
+      type={type}
       whileHover={disabled ? {} : { scale: 1.02 }}
       whileTap={disabled ? {} : { scale: 0.98 }}
       onClick={onClick}

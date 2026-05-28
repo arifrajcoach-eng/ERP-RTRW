@@ -650,7 +650,7 @@ export function IuranView({
                 </select>
               </div>
               <motion.button 
-                whileHover={{ scale: 1.03, shadow: '0 20px 25px -5px rgba(59, 130, 246, 0.4)' }}
+                whileHover={{ scale: 1.03, boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.4)' }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setShowForm(true)} 
                 className="w-full sm:w-auto flex items-center justify-center gap-4 bg-slate-900 dark:bg-brand-blue text-white px-10 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl relative overflow-hidden group"

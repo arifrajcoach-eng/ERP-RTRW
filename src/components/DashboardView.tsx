@@ -234,7 +234,18 @@ export default function DashboardView({
   }, [wargaData]);
 
   const recentActivities = useMemo(() => {
-    let rawActivities = [
+    interface DashboardActivityItem {
+      id?: string;
+      title: string;
+      desc: any;
+      date: any;
+      amount?: any;
+      status?: any;
+      type: string;
+      dateObj: Date;
+      isPersonal?: boolean;
+    }
+    let rawActivities: DashboardActivityItem[] = [
       ...kasData.map(k => ({ 
         title: k.tipe === 'Masuk' ? 'Pemasukan Keuangan' : 'Pengeluaran Keuangan',
         desc: k.keterangan || k.transaksi,

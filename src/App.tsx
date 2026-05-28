@@ -638,6 +638,7 @@ export default function App() {
     email?: string;
     tenantId?: string;
     isSuperAdmin?: boolean;
+    [key: string]: any;
   } | null>(null);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
 
@@ -2379,9 +2380,9 @@ export default function App() {
         // Hide items strictly above plan level (Gatekeeper)
         if (requiredLevel > currentLevel) return false;
 
-        const isOwnerOrSuperAdmin = isSuperAdmin || role === 'OWNER' || role === 'SUPER_ADMIN' || ['arifrajcoach@gmail.com'].includes(currentUser?.email);
+        const isPlatformOwner = currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com";
         const restrictedItems = ["daftar-trial", "super-admin", "leads"];
-        if (restrictedItems.includes(item.id) && !isOwnerOrSuperAdmin) return false;
+        if (restrictedItems.includes(item.id) && !isPlatformOwner) return false;
         
         if (isSuperAdmin) return true;
         if (
@@ -13214,13 +13215,13 @@ function PosyanduView({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1 bg-slate-50 p-1 rounded-xl overflow-x-auto no-scrollbar">
-          {[
+          {([
             { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
             { id: "balita", label: "Balita", icon: Users },
             { id: "ibuhamil", label: "Ibu Hamil", icon: HeartPulse },
             { id: "posbindu", label: "Posbindu", icon: Activity },
             { id: "kegiatan", label: "Kegiatan", icon: Calendar },
-          ].map((tab) => (
+          ] as { id: typeof activeSubTab; label: string; icon: any }[]).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
@@ -15537,7 +15538,7 @@ function BankSampahView({
           </p>
         </div>
         <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-          {[
+          {([
             { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
             { id: "setoran", label: "Setoran", icon: PlusCircle },
             { id: "tarik", label: "Tarik Saldo", icon: HandCoins },
@@ -15548,7 +15549,7 @@ function BankSampahView({
               icon: Settings,
               adminOnly: true,
             },
-          ]
+          ] as { id: typeof activeSubTab; label: string; icon: any; adminOnly?: boolean }[])
             .filter((tab) => !tab.adminOnly || canEdit)
             .map((tab) => (
               <button
