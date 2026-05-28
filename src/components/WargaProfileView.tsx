@@ -19,7 +19,20 @@ import {
   Calendar,
   Shield,
   LifeBuoy,
-  ChevronRight
+  ChevronRight,
+  ArrowLeftRight,
+  Baby,
+  Heart,
+  Scissors,
+  Music,
+  CreditCard,
+  Home,
+  Hammer,
+  Gavel,
+  GraduationCap,
+  Briefcase,
+  Flame,
+  Globe
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -194,17 +207,11 @@ export function WargaProfileView({
       const id = `SRT-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       const nowStr = new Date().toISOString();
       
-      let selectedJenisSurat = "Surat Pengantar";
+      let selectedJenisSurat = selectedLetterName || "Surat Pengantar";
       let finalKeterangan = formKeperluan;
 
       if (selectedLetter === 'ktp') {
         selectedJenisSurat = formJenisKtpKk;
-      } else if (selectedLetter === 'domisili') {
-        selectedJenisSurat = "Surat pengantar domisili";
-      } else if (selectedLetter === 'skck') {
-        selectedJenisSurat = "Surat pengantar SKCK";
-      } else if (selectedLetter === 'sktm') {
-        selectedJenisSurat = "Surat keterangan tidak mampu (SKTM)";
       } else if (selectedLetter === 'usaha') {
         selectedJenisSurat = "Surat keterangan usaha (SKU)";
         finalKeterangan = `Nama Usaha: ${formNamaUsaha}, Jenis Sektor: ${formJenisUsaha}, Alamat Usaha: ${formAlamatUsaha}. Keperluan: ${formKeperluan}`;
@@ -469,40 +476,62 @@ export function WargaProfileView({
                       <p className="text-slate-500 font-bold mt-4 max-w-lg leading-relaxed">Pilih jenis persuratan yang Anda butuhkan. Sistem akan memproses data Anda secara otomatis ke otoritas RT/RW.</p>
                    </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 font-bold">
-                      {[
-                         { id: 'ktp', name: 'Pengantar KTP/KK', icon: UserPlus, color: 'brand-blue' },
-                         { id: 'domisili', name: 'Ket. Domisili', icon: MapPin, color: 'rose-500' },
-                         { id: 'skck', name: 'Pengantar SKCK', icon: ShieldCheck, color: 'emerald-500' },
-                         { id: 'sktm', name: 'Suket. Tidak Mampu', icon: FileText, color: 'amber-500' },
-                         { id: 'usaha', name: 'Suket. Usaha', icon: PlusCircle, color: 'indigo-500' }
-                      ].map(item => (
-                         <motion.button 
-                           key={item.id} 
-                           whileHover={{ y: -8, scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }}
-                           whileTap={{ scale: 0.98 }}
-                           onClick={() => handleRequestSurat(item.id, item.name)} 
-                           className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-xl hover:border-brand-blue/30 transition-all text-left flex flex-col gap-10 group relative overflow-hidden"
-                         >
-                            <div className="absolute -right-8 -top-8 w-24 h-24 bg-slate-50 dark:bg-slate-800/50 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
-                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-700 shadow-lg group-hover:rotate-12 ${
-                              item.color === 'brand-blue' ? 'bg-brand-blue/10 text-brand-blue shadow-brand-blue/10' :
-                              item.color === 'rose-500' ? 'bg-rose-50 text-rose-500 shadow-rose-500/10' :
-                              item.color === 'emerald-500' ? 'bg-emerald-50 text-emerald-500 shadow-emerald-500/10' :
-                              item.color === 'amber-500' ? 'bg-amber-50 text-amber-500 shadow-amber-500/10' :
-                              'bg-indigo-50 text-indigo-500 shadow-indigo-500/10'
-                            }`}>
-                               <item.icon className="w-8 h-8" />
-                            </div>
-                            <div className="relative z-10">
-                               <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight group-hover:text-brand-blue transition-colors text-lg leading-tight">{item.name}</h4>
-                               <p className="text-[10px] text-brand-blue mt-2 uppercase font-black tracking-[0.2em]">Ajukan Surat</p>
-                            </div>
-                            <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <ChevronRight className="w-6 h-6 text-brand-blue" />
-                            </div>
-                         </motion.button>
-                      ))}
+                   <div className="relative group/scroll">
+                      <div className="flex overflow-x-auto pb-8 gap-6 snap-x no-scrollbar">
+                        {[
+                           { id: 'ktp', name: 'Surat pengantar pembuatan KTP', icon: UserPlus, color: 'from-blue-500 to-indigo-600' },
+                           { id: 'domisili', name: 'Surat pengantar domisili', icon: MapPin, color: 'from-rose-500 to-red-600' },
+                           { id: 'skck', name: 'Surat pengantar SKCK', icon: ShieldCheck, color: 'from-emerald-500 to-teal-600' },
+                           { id: 'sktm', name: 'Surat keterangan tidak mampu (SKTM)', icon: FileText, color: 'from-amber-500 to-orange-600' },
+                           { id: 'usaha', name: 'Surat keterangan usaha (SKU)', icon: Briefcase, color: 'from-indigo-500 to-purple-600' },
+                           { id: 'pindah', name: 'Surat pengantar pindah / datang', icon: ArrowLeftRight, color: 'from-cyan-500 to-blue-600' },
+                           { id: 'kelahiran', name: 'Surat pengantar akta kelahiran', icon: Baby, color: 'from-pink-500 to-rose-600' },
+                           { id: 'kematian', name: 'Surat pengantar akta kematian', icon: Flame, color: 'from-slate-600 to-slate-800' },
+                           { id: 'nikah', name: 'Surat pengantar nikah', icon: Heart, color: 'from-red-400 to-pink-500' },
+                           { id: 'cerai', name: 'Surat pengantar cerai', icon: Scissors, color: 'from-gray-400 to-gray-600' },
+                           { id: 'keramaian', name: 'Surat izin keramaian / acara', icon: Music, color: 'from-violet-500 to-purple-600' },
+                           { id: 'npwp', name: 'Surat pengantar NPWP', icon: CreditCard, color: 'from-blue-600 to-cyan-600' },
+                           { id: 'usahakecil', name: 'Surat pengantar izin usaha kecil', icon: Globe, color: 'from-teal-500 to-emerald-600' },
+                           { id: 'penghasilan', name: 'Surat keterangan penghasilan', icon: CreditCard, color: 'from-green-500 to-emerald-600' },
+                           { id: 'properti', name: 'Surat keterangan kepemilikan rumah / tanah', icon: Home, color: 'from-orange-500 to-red-600' },
+                           { id: 'imb', name: 'Surat pengantar IMB/PBG', icon: Hammer, color: 'from-yellow-600 to-amber-700' },
+                           { id: 'renovasi', name: 'Surat izin renovasi rumah', icon: Hammer, color: 'from-stone-500 to-stone-700' },
+                           { id: 'sengketa', name: 'Surat keterangan tidak sengketa', icon: Gavel, color: 'from-red-600 to-rose-700' },
+                           { id: 'beasiswa', name: 'Surat keterangan beasiswa', icon: GraduationCap, color: 'from-sky-500 to-indigo-600' },
+                           { id: 'sekolah', name: 'Surat pengantar sekolah', icon: GraduationCap, color: 'from-blue-400 to-blue-600' },
+                           { id: 'magang', name: 'Surat keterangan magang / kerja', icon: Briefcase, color: 'from-emerald-600 to-teal-700' }
+                        ].map(item => (
+                           <motion.button 
+                             key={item.id} 
+                             whileHover={{ y: -8, scale: 1.02 }}
+                             whileTap={{ scale: 0.98 }}
+                             onClick={() => handleRequestSurat(item.id, item.name)} 
+                             className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-xl hover:border-brand-blue/30 transition-all text-left flex flex-col gap-8 group relative overflow-hidden snap-start"
+                           >
+                              <div className="absolute -right-8 -top-8 w-24 h-24 bg-slate-50 dark:bg-slate-800/50 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 shadow-lg group-hover:rotate-12 bg-gradient-to-tr ${item.color} text-white`}>
+                                 <item.icon className="w-7 h-7" />
+                              </div>
+                              <div className="relative z-10">
+                                 <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight group-hover:text-brand-blue transition-colors text-base leading-tight min-h-[40px] flex items-center">{item.name}</h4>
+                                 <p className="text-[9px] text-slate-400 mt-2 uppercase font-black tracking-[0.2em] group-hover:text-brand-blue transition-colors">Klik Untuk Ajukan</p>
+                              </div>
+                              <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <ChevronRight className="w-5 h-5 text-brand-blue" />
+                              </div>
+                           </motion.button>
+                        ))}
+                      </div>
+                      
+                      {/* Scroll Hint */}
+                      <div className="flex items-center justify-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">
+                         <span>Geser untuk kategori lainnya</span>
+                         <div className="flex gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-brand-blue animate-pulse"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-100"></div>
+                         </div>
+                      </div>
                    </div>
 
                    {/* Riwayat Pengajuan Surat */}

@@ -184,6 +184,15 @@
   font-family: var(--font-serif);
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .bg-mesh {
   background-color: #fafafa;
   background-image: 

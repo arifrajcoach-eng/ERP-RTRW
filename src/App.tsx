@@ -10545,7 +10545,7 @@ function LoginView({
               {loginMode === "warga"
                 ? 'KHUSUS AKUN GOOGLE. Jika ingin masuk pakai NIK & KK, silakan pilih tab "NIK & KK" di atas.'
                 : loginMode === "verifikasi"
-                  ? "VERIFIKASI WARGA (Tanpa Google). Masukkan NIK/Nama + Nomor KK, atau NIK + No. HP sebagai Kunci verifikasi."
+                  ? "VERIFIKASI WARGA (Tanpa Google). Gunakan kombinasi: NIK + KK, Nama + KK, atau NIK + HP."
                   : "Akses khusus pengurus RT/RW yang telah terdaftar."}
             </p>
           </div>
