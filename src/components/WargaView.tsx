@@ -10,6 +10,7 @@ import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query, collection, where } from 'firebase/firestore';                
 import { db } from '../firebase';
+import { getTranslatedLabel } from '../lib/langUtils';
 
 interface WargaViewProps {
   wargaData: any[];
@@ -756,7 +757,7 @@ function WargaView(props: WargaViewProps) {
               <Users className="w-8 h-8 text-brand-blue" />
             </div>
             <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">
-              Kelola {isApt ? "Penghuni" : "Warga"}
+              Kelola {getTranslatedLabel("Warga", settings?.themeMode)}
             </h2>
           </div>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">

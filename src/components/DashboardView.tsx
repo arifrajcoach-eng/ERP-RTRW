@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import AIChatBot from './AIChatBot';
 import MadingDigitalView from './MadingDigitalView';
+import { getTranslatedLabel } from '../lib/langUtils';
 
 interface DashboardViewProps {
   kasData: any[];
@@ -639,9 +640,9 @@ export default function DashboardView({
       {!isWarga && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
-            { label: 'Total Warga', val: stats.totalWarga, sub: `KK: ${stats.kepalaKeluarga} Terdaftar`, icon: Users, gradient: 'from-emerald-600 to-teal-700', shadow: 'shadow-emerald-500/20' },
-            { label: 'Saldo Kas RT', val: `Rp ${formatRupiah(stats.saldoTotal)}`, sub: 'Perekaman Otomatis', icon: CreditCard, gradient: 'from-brand-blue to-indigo-800', shadow: 'shadow-brand-blue/20' },
-            { label: 'Permohonan Surat', val: stats.suratPending, sub: 'Menunggu Persetujuan', icon: FileText, gradient: 'from-rose-600 to-pink-700', shadow: 'shadow-pink-500/20' }
+            { label: getTranslatedLabel("Daftar Warga", settings?.themeMode), val: stats.totalWarga, sub: `KK: ${stats.kepalaKeluarga} Terdaftar`, icon: Users, gradient: 'from-emerald-600 to-teal-700', shadow: 'shadow-emerald-500/20' },
+            { label: getTranslatedLabel("Kas Warga", settings?.themeMode), val: `Rp ${formatRupiah(stats.saldoTotal)}`, sub: 'Perekaman Otomatis', icon: CreditCard, gradient: 'from-brand-blue to-indigo-800', shadow: 'shadow-brand-blue/20' },
+            { label: getTranslatedLabel("Permohonan Surat", settings?.themeMode), val: stats.suratPending, sub: 'Menunggu Persetujuan', icon: FileText, gradient: 'from-rose-600 to-pink-700', shadow: 'shadow-pink-500/20' }
           ].map((item, i) => (
             <div 
               key={i}

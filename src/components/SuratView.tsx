@@ -38,6 +38,7 @@ import { db } from '../firebase';
 import { jsPDF } from 'jspdf';
 import { StyledButton } from './StyledButton';
 import { ConfirmModal } from './ui/ConfirmModal';
+import { getTranslatedLabel } from '../lib/langUtils';
 
 interface SuratViewProps {
   suratData: any[];
@@ -788,9 +789,9 @@ export function SuratView({
           <div>
             <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase font-elegant">
               <div className="w-2.5 h-8 bg-brand-blue rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-              Layanan Administrasi
+              {getTranslatedLabel("Layanan Administrasi", settings?.themeMode)}
             </h3>
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2 ml-7">Verifikasi & Penerbitan Dokumen</p>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2 ml-7">Verifikasi & Penerbitan {getTranslatedLabel("Surat", settings?.themeMode)}</p>
           </div>
 
           <div className="flex flex-wrap gap-4 w-full lg:w-auto">
@@ -830,7 +831,7 @@ export function SuratView({
             >
               <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-full blur-xl -mr-6 -mt-6"></div>
               <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-700" /> 
-              <span>Pengajuan Baru</span>
+              <span>Pengajuan {getTranslatedLabel("Surat", settings?.themeMode)} Baru</span>
             </motion.button>
           </div>
         </div>

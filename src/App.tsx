@@ -178,6 +178,7 @@ import { OrganisasiView } from "./components/OrganisasiView";
 import { StyledButton } from "./components/StyledButton";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
 import { MessageSquare, Bot } from "lucide-react";
+import { getTranslatedLabel } from "./lib/langUtils";
 import { checkFeatureAccess } from "./services/subscriptionService";
 import {
   generateAIReport,
@@ -2289,12 +2290,12 @@ export default function App() {
   // --- VIEW SELECTION (Must be after all hooks) ---
 
   const renderableNavItems = useMemo(() => {
-    const isApt = settings?.themeMode === "apartemen";
+    const mode = settings?.themeMode || "rt_rw";
     return [
       { id: "dashboard", label: "DASHBOARD", icon: LayoutDashboard },
       {
         id: "warga",
-        label: isApt ? "Data Penghuni" : "Data Warga",
+        label: getTranslatedLabel("Data Warga", mode),
         icon: Users,
       },
       // --- KEBUTUHAN WARGA ---
@@ -2306,13 +2307,13 @@ export default function App() {
       },
       {
         id: "complaint",
-        label: isApt ? "Keluhan/Defect" : "Keluhan",
+        label: mode === "apartemen" ? "Keluhan/Defect" : "Keluhan",
         icon: AlertTriangle,
         plan: "complaint",
       },
       {
         id: "booking",
-        label: isApt ? "Booking Fasilitas" : "Booking Fasum",
+        label: mode === "apartemen" ? "Booking Fasilitas" : "Booking Fasum",
         icon: Calendar,
         plan: "booking",
       },
@@ -2324,7 +2325,7 @@ export default function App() {
       },
       {
         id: "voting",
-        label: isApt ? "Voting Penghuni" : "E-Pemilu",
+        label: mode === "apartemen" ? "Voting Penghuni" : "E-Pemilu",
         icon: Vote,
         plan: "ePemilu",
         minPlan: "PRO",
@@ -2346,13 +2347,13 @@ export default function App() {
       // --- FITUR OPERATOR ---
       {
         id: "verifikasi",
-        label: "VERIFIKASI",
+        label: getTranslatedLabel("Verifikasi Warga", mode).toUpperCase(),
         icon: ShieldCheck,
         plan: "verifikasi",
       },
       {
         id: "keuangan",
-        label: isApt ? "Keuangan / IPL" : "Keuangan",
+        label: getTranslatedLabel("Keuangan", mode),
         icon: CreditCard,
         plan: "keuangan",
       },
@@ -2379,7 +2380,7 @@ export default function App() {
       // --- FITUR ADMIN ---
       {
         id: "surat",
-        label: "Surat",
+        label: getTranslatedLabel("Surat", mode),
         icon: FileText,
         plan: "surat",
       },
@@ -8705,16 +8706,14 @@ function PengaturanView({
                   defaultValue={settings.themeMode || "rt_rw"}
                   className="w-full px-4 py-3 bg-white border border-orange-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 transition-all font-bold text-slate-800 shadow-sm"
                 >
-                  <option value="rt_rw">Mode Lingkungan (RT/RW)</option>
-                  <option value="apartemen">
-                    Mode Apartemen / Perumahan Mandiri
-                  </option>
+                  <option value="rt_rw">Mode Lingkungan (RT/RW - Default)</option>
+                  <option value="cluster">Mode Perumahan & Cluster (Blok/Cluster)</option>
+                  <option value="apartemen">Mode Apartemen & Gedung (Unit/Lantai/Gedung)</option>
                 </select>
                 <div className="flex items-start gap-2 mt-2">
                   <div className="w-1 h-1 rounded-full bg-orange-400 mt-1.5 shrink-0"></div>
                   <p className="text-[10px] text-slate-500 italic leading-tight">
-                    Mode Apartemen akan menyesuaikan beberapa istilah (misal:
-                    Kas Warga menjadi IPL, RT/RW menjadi Tower/Lantai, dsb).
+                    Pengaturan White-Labeling ini akan otomatis merubah seluruh istilah di UI aplikasi (RT/RW, Kompleks Cluster, atau Apartemen) tanpa merusak database sistem.
                   </p>
                 </div>
               </div>
