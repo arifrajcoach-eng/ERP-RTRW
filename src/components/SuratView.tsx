@@ -209,9 +209,27 @@ export function SuratView({
   });
 
   const generateSuratPDF = (surat: any) => {
-    // Identity verification check
-    const warga = wargaData.find(w => w.nik === surat.nik) || (currentUser?.nik === surat.nik ? currentUser : null);
-    const isWargaVerified = warga?.terverifikasi === true || warga?.status === "Disetujui" || (currentUser?.role?.toUpperCase() === "WARGA" && currentUser?.status === "Disetujui");
+    // Robust identity verification check
+    const normalizedTargetNik = String(surat.nik || '').trim();
+    const warga = wargaData.find(w => {
+      const wNik = String(w.nik || w.NIK || '').trim();
+      const wId = String(w.id || w.docId || '').trim();
+      return (wNik && wNik === normalizedTargetNik) || 
+             (wId && wId === normalizedTargetNik) ||
+             (surat.authUid && w.authUid === surat.authUid) ||
+             (surat.userId && w.userId === surat.userId) ||
+             (surat.nik && w.nikMapping === surat.nik);
+    }) || (String(currentUser?.nik || '').trim() === normalizedTargetNik ? currentUser : null);
+
+    const isWargaVerified = warga?.terverifikasi === true || 
+                            warga?.status === "Disetujui" || 
+                            warga?.status === "DISETUJUI" ||
+                            warga?.isVerified === true ||
+                            warga?.verifikasi === true ||
+                            (warga?.statusVerification === "Verified") ||
+                            (currentUser?.role?.toUpperCase() === "WARGA" && currentUser?.status === "Disetujui") ||
+                            isGlobalSuperAdmin;
+                            
     if (!isWargaVerified) {
         showNotification('Surat tidak dapat dicetak: Identitas belum terverifikasi oleh Admin.', 'error');
         return;
@@ -547,9 +565,27 @@ export function SuratView({
       tenantId
     });
 
-    // Check identity verification
-    const warga = wargaData.find(w => w.nik === s.nik);
-    if (!warga?.terverifikasi) {
+    // Robust identity verification check
+    const normalizedTargetNik = String(s.nik || '').trim();
+    const warga = wargaData.find(w => {
+      const wNik = String(w.nik || w.NIK || '').trim();
+      const wId = String(w.id || w.docId || '').trim();
+      return (wNik && wNik === normalizedTargetNik) || 
+             (wId && wId === normalizedTargetNik) ||
+             (s.authUid && w.authUid === s.authUid) ||
+             (s.userId && w.userId === s.userId) ||
+             (s.nik && w.nikMapping === s.nik);
+    });
+    
+    const isWargaVerified = warga?.terverifikasi === true || 
+                            warga?.status === "Disetujui" || 
+                            warga?.status === "DISETUJUI" ||
+                            warga?.isVerified === true ||
+                            warga?.verifikasi === true ||
+                            (warga?.statusVerification === "Verified") ||
+                            (String(currentUser?.nik || '').trim() === normalizedTargetNik && (currentUser?.terverifikasi || currentUser?.status === "Disetujui"));
+    
+    if (!isWargaVerified && !isGlobalSuperAdmin) {
         showNotification('Identitas pemohon (Nama, NIK, KK) belum terverifikasi oleh Admin.', 'error');
         return;
     }
@@ -782,12 +818,10 @@ export function SuratView({
                           </button>
                         ) : isPengurus && (
                           <>
-                            {false ? null : (
-                               (((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
+                            {(((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
                                (s.status.includes('Persetujuan RW') && isRWUser)) && (
                                 <button onClick={() => handleApproveSurat(s)} className="p-2 text-emerald-600 hover:text-emerald-700"><CheckCircle2 className="w-4 h-4" /></button>
-                              )
-                            )}
+                              )}
                             {(s.status.includes('Menunggu') || s.status === 'Diajukan') && (
                               <button onClick={() => handleRejectSurat(s)} className="p-2 text-rose-600 hover:text-rose-700"><X className="w-4 h-4" /></button>
                             )}
