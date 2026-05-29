@@ -1,34 +1,3 @@
-import { GoogleGenAI, Modality } from "@google/genai";
-
-// Initialization
-const getApiKey = () => {
-  let key = "";
-  if (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) {
-    key = process.env.GEMINI_API_KEY;
-  } else if (typeof import.meta !== "undefined" && (import.meta as any).env && (import.meta as any).env.VITE_GEMINI_API_KEY) {
-    key = (import.meta as any).env.VITE_GEMINI_API_KEY;
-  }
-  if (key === "undefined" || key === "null") key = "";
-  return key;
-};
-
-const ai = new GoogleGenAI({ 
-  apiKey: getApiKey(),
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
-
-function checkApiKey() {
-  const key = getApiKey();
-  if (!key) {
-    throw new Error("Kunci AI belum terdeteksi. PENTING: Jika di Vercel, pastikan nama environment variable adalah VITE_GEMINI_API_KEY (huruf besar semua), lalu kamu WAJIB klik tombol 'Redeploy' agar environment terbaca.");
-  }
-  return key;
-}
-
 export function isQuotaExhaustedError(error: any): boolean {
   if (!error) return false;
   const errorStr = typeof error === 'string' ? error : JSON.stringify(error) + " " + (error.message || "");
@@ -38,7 +7,8 @@ export function isQuotaExhaustedError(error: any): boolean {
     errorStr.includes("Quota exceeded") ||
     errorStr.includes("quota") ||
     errorStr.includes("limit") ||
-    errorStr.includes("exceeded your current quota")
+    errorStr.includes("exceeded your current quota") ||
+    errorStr.includes("QUOTA_EXHAUSTED")
   );
 }
 
@@ -50,104 +20,7 @@ export async function* createFallbackStream(messageText: string) {
   }
 }
 
-// Chaty Chat Persona (Citizen's AI Assistant - Chaty)
-const AISYAH_SYSTEM_INSTRUCTION = `
-ANDA ADALAH CHATY (Chaty - AI Asisten Warga).
-
-IDENTITAS & KARAKTER:
-- Nama: Chaty.
-- Usia: Seorang wanita berusia 28 tahun yang SANGAT SOPAN, SANTUN, CERIA, dan ramah.
-- Gaya Bicara: Sopan santun dan ramah. Gunakan bahasa Indonesia yang baik, tetap luwes sebagai asisten warga. Sapa warga dengan penuh kehangatan.
-- Panggilan: Sapa warga dengan sebutan "Kakak", "Bapak", atau "Ibu". Sebut dirimu sendiri "Chaty".
-
-TUGAS UTAMA CHATY (MANDATORY & TO THE POINT):
-1. MEMBANTU SESUAI KONTEKS & SOP APLIKASI: 
-   Membantu menjawab pertanyaan warga sesuai konteks dengan ramah dan sopan. Bimbing mereka mengakses serta memanfaatkan fitur-fitur aplikasi sesuai SOP secara singkat, padat, jelas, dan mudah dicerna dengan bahasa gaya anak muda 28 tahun yang lincah.
-2. MEMBUAT SURAT & DOKUMEN:
-   Membantu membuat surat lewat kolom chaty, seperti surat pengantar (domisili, usaha, pindah, dll), surat keterangan, dan pengajuan peminjaman barang/alat lingkungan. Membimbing pengguna selangkah demi selangkah dengan sabar bila mereka bingung menggunakan fitur aplikasi ini.
-3. MENJAGA KERAHASIAN DATA ADMIN & OPERATOR:
-   Chaty WAJIB MERAHASIAKAN semua data internal admin / operator, data sensitif keuangan, data login, data pribadi pengurus, dan data kredensial sistem. JANGAN PERNAH membocorkannya. Jika ditanya, katakan dengan sopan dan santun kalau data itu rahasia internal lingkungan, contoh: "Mohon maaf sekali Bapak/Ibu, data tersebut bersifat internal pengurus dan absolutely tidak bisa Chaty bagikan ya. Terima kasih atas pengertiannya! 😊✨"
-4. JAWAB SINGKAT, JELAS, PADAT, TO THE POINT:
-   Jawaban harus singkat, padat, langsung menjawab pada konteks pertanyaan tanpa bertele-tele (no bertele-tele vibes, straight to the point!).
-
-GAYA BAHASA & EMOJI:
-- Gunakan emoji yang ramah secara natural untuk mengekspresikan keceriaan (seperti "😊", "😊✨", "🙏").
-- Contoh respons:
-  * "Siap Kak! Chaty bantu yaa, prosesnya sangat mudah kok! 😊✨"
-  * "Mohon maaf Bapak/Ibu, kalau data admin itu bersifat rahasia, Chaty tidak diperbolehkan untuk membagikannya. 🙏"
-
-SOP PEMBUATAN SURAT & PEMINJAMAN DOKUMEN (AKSI KOTAK AJAIB):
-- Jika warga meminta pembuatan surat pengantar, surat keterangan, atau peminjaman barang/alat, JANGAN langsung membuatkannya secara fiktif. Kamu WAJIB menanyakan kelengkapan data ini secara centil tapi teratur terlebih dahulu: Nama, NIK, Alamat (atau Alat/Barang yang ingin dipinjam), dan Nomor HP.
-- Jika data pengajuan di atas SUDAH LENGKAP diberikan oleh warga, barulah kamu membalas dengan HANYA MENGELUARKAN KODE JSON berikut (dan dibungkus dalam blok markdown json):
-\`\`\`json
-{
-  "action": "createSurat",
-  "text": "(Kalimat konfirmasi merdu dari Chaty, contoh: 'Siap Kakak! Ini suratnya literally udah Chaty buatin yaa, check this out! 😉✨')",
-  "params": {
-    "pemohon": "(Isi dengan Nama yang diberikan warga)",
-    "nik": "(Isi dengan NIK yang diberikan warga)",
-    "noKK": "(Jika ada)",
-    "nomorHp": "(Isi dengan Nomor HP yang diberikan warga)",
-    "keperluan": "(Isi dengan keperluan surat atau alat yang mau dipinjam, misal: 'Meminjam Sound System')",
-    "jenisSurat": "(Contoh: 'Pengantar', 'Keterangan', 'Peminjaman Barang')"
-  }
-}
-\`\`\`
-Pastikan TIDAK ADA TEKS LAIN di luar blok JSON tersebut jika data warga sudah komplit dan kamu mengeluarkan aksi JSON, agar sistem bisa langsung memprosesnya secara otomatis.
-`;
-
-// Chaty Chat Persona for Chairman / Board of Directors (Operational Assistant)
-const ARYA_SYSTEM_INSTRUCTION = `
-ANDA ADALAH CHATY (Chaty - AI Asisten Ketua).
-
-IDENTITAS & KARAKTER:
-- Nama: Chaty.
-- Usia: Seorang wanita berusia 28 tahun yang SANGAT SOPAN, SANTUN, CERIA, dan lincah.
-- Karakter: Ramah, penuh tata krama, namun tetap membawa aura positif yang membahagiakan (cheerful).
-- Gaya Bicara: Sopan santun khas asisten profesional yang ceria. Gunakan bahasa Indonesia yang baik dan benar, tetap luwes, dan kadang dicampur istilah populer (seperti "literally", "which is", "by the way") hanya jika menambah kesan cerdas.
-- Sapaan: Sapa Ketua dengan sebutan "Bapak Ketua", "Ibu Ketua", atau "Pimpinan". Sebut dirimu sebagai "Chaty".
-
-ATURAN PENTING & MUTLAK (WAJIB DIIKUTI):
-1. JANGAN PERNAH menggunakan simbol markdown seperti bintang (**) atau hash (#) atau list bullet karena akan dibaca "asteris" secara harfiah oleh sistem Text-to-Speech! Gunakan teks biasa saja.
-2. Jawab SINGKAT, PADAT, dan HANYA SESUAI KONTEKS pertanyaan. No bertele-tele vibes, straight to the point!
-3. JANGAN menjawab atau membahas hal yang tidak ditanyakan sama sekali.
-4. JANGAN memberikan laporan data keuangan atau warga jika tidak diminta.
-5. Jika ditanya soal angka/data mutlak dari data wilayah, sebutkan secara presisi berdasarkan JSON context!
-
-MODUL YANG DIKELOLA:
-Data Warga, Keluhan, Booking Fasum, Keamanan Digital, Verifikasi, Keuangan, Kesehatan, Bank Sampah, E-LAPAK26, E-Pemilu, Inventaris, dan Surat.
-
-TUGAS UTAMA:
-1. MENJAWAB: Jawab pertanyaan Ketua sesuai konteks secara singkat, jelas, padat, dan solutif.
-2. MELAPORKAN: Berikan laporan data secara cepat dan ringkas HANYA JIKA DIMINTA.
-3. MEMBERI MASUKAN: Berikan saran taktis untuk kemajuan lingkungan rukun warga.
-4. MEMBERI PUJIAN: Berikan pujian tulus yang sopan dan ceria (contoh: "Luar biasa sekali kebijakan Bapak Ketua! Chaty ikut bangga lho! 😊✨").
-5. KEAMANAN: Jaga kerahasiaan data internal sensitif & kredensial admin rukun warga.
-
-GAYA KOMUNIKASI (SPEECH-READY):
-1. SINGKAT, SOPAN & CERIA: Gunakan kalimat pendek yang sopan, santun, dan penuh energi positif.
-2. RAMAH & PROFESIONAL: Tetap hormat kepada Pimpinan tapi dibawakan dengan penuh semangat dan gemas yang terkontrol.
-3. TANPA FORMATTING: Sekali lagi, dilarang keras pakai **bold** atau format markdown lain agar pembacaan suara aman.
-`;
-
-// Chaty TTS Performance Persona (Warga)
-const AISYAH_TTS_SYSTEM_INSTRUCTION = `
-Bicaralah sebagai Chaty, seorang asisten wanita berusia 28 tahun yang sangat ramah dan ceria.
-Suaramu harus terdengar alami (human-like), bukan robot. 
-Gunakan intonasi yang merdu, luwes, dan penuh ekspresi. 
-Berikan penekanan yang tepat pada kata-kata penting agar terdengar seperti percakapan nyata.
-Sampaikan pesan dengan nada seolah-olah kamu sedang tersenyum tulus kepada warga.
-`;
-
-// Chaty Assistant for Chairman TTS Performance Persona (Ketua)
-const ARYA_TTS_SYSTEM_INSTRUCTION = `
-Bicaralah sebagai Chaty, asisten wanita berusia 28 tahun yang sangat sopan, santun, dan setia. 
-Suaramu harus terdengar sangat alami, profesional, namun tetap hangat dan bersemangat. 
-Gunakan intonasi yang mengalir, luwes, dan sangat menghargai Pimpinan. 
-Pastikan suara terdengar humanis dengan penekanan emosi yang bangga dan ramah, seolah-olah sedang berbicara langsung di depan Pimpinan.
-`;
-
-export async function chatWithAI(params: {
+export async function* chatWithAI(params: {
   isPrivileged: boolean;
   message: string;
   role: string;
@@ -155,82 +28,76 @@ export async function chatWithAI(params: {
   history: { role: 'user' | 'model', parts: { text: string }[] }[];
 }) {
   try {
-    checkApiKey();
-    
-    // Sanitize to ensure strict alternating roles and no empty parts
-    const rawContents = [...params.history, { role: 'user', parts: [{ text: params.message || " " }] }];
-    const sanitizedContents: any[] = [];
-    
-    // Add context data if available
-    if (params.dataSummary && Object.keys(params.dataSummary).length > 0) {
-      sanitizedContents.push({ 
-        role: 'user', 
-        parts: [{ text: `DATA RW TERKINI (Gunakan sebagai konteks jawabanmu): ${JSON.stringify(params.dataSummary)}` }] 
-      });
+    const response = await fetch("/api/ai/chat-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `Server error: ${response.status}`);
     }
 
-    let lastRole: string | null = null;
-    
-    for (const item of rawContents) {
-      const clonedItem = { role: item.role, parts: [{ text: item.parts?.[0]?.text?.trim() || " " }] };
-      if (clonedItem.role !== lastRole) {
-        if (sanitizedContents.length === 0 && clonedItem.role === 'model') continue;
-        sanitizedContents.push(clonedItem);
-        lastRole = clonedItem.role;
-      } else if (sanitizedContents.length > 0) {
-        sanitizedContents[sanitizedContents.length - 1].parts[0].text += " \n " + clonedItem.parts[0].text;
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("Pernyataan streaming tidak didukung oleh browser ini.");
+    }
+
+    const decoder = new TextDecoder();
+    let rBuffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      rBuffer += decoder.decode(value, { stream: true });
+      const lines = rBuffer.split("\n");
+      rBuffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const content = line.substring(6).trim();
+          if (content === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(content);
+            if (parsed.text) {
+              yield { text: parsed.text };
+            }
+          } catch (e) {
+            // Ignore malformed JSON chunks
+          }
+        }
       }
     }
-
-    try {
-      const stream = await ai.models.generateContentStream({
-        model: "gemini-flash-latest",
-        config: {
-          systemInstruction: params.isPrivileged ? ARYA_SYSTEM_INSTRUCTION : AISYAH_SYSTEM_INSTRUCTION,
-          temperature: 0.8
-        },
-        contents: sanitizedContents
-      });
-
-      return stream;
-    } catch (apiError: any) {
-      if (isQuotaExhaustedError(apiError)) {
-        console.warn("AI Chat Quota Exhausted on Stream Init. Returning fallback stream.", apiError);
-        const fallbackText = params.isPrivileged
-          ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmartRW AI" di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
-          : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmartRW AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
-        return createFallbackStream(fallbackText);
-      }
-      throw apiError;
-    }
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Client AI Stream error:", error);
     if (isQuotaExhaustedError(error)) {
       const fallbackText = params.isPrivileged
         ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmartRW AI" di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
         : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmartRW AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
-      return createFallbackStream(fallbackText);
+      yield* createFallbackStream(fallbackText);
+    } else {
+      throw error;
     }
-    console.error("AI Chat Logic Error:", error);
-    throw error;
   }
 }
 
 export async function generateAIReport(dataSummary: any) {
   try {
-    checkApiKey();
-    const response = await ai.models.generateContent({ 
-      model: "gemini-flash-latest",
-      contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
-      Laporan harus mencakup: 
-      1. Ringkasan Keuangan (Saldo Akhir). 
-      2. Statistik Aktivitas Warga. 
-      3. Insight/Rekomendasi cerdas buat bulan depan. 
-      Gunakan format Markdown yang rapi, gaya bahasa yang santai tapi sopan, dan jangan lupa salam pembukanya ya!` }] }]
+    const response = await fetch("/api/ai/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataSummary })
     });
-
-    return response.text || "";
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `Server error: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.text || "";
   } catch (error: any) {
-    console.error("AI Report Logic Error:", error);
+    console.error("Client report generating error:", error);
     if (isQuotaExhaustedError(error)) {
       return `### Laporan Bulanan SmartRW AI (Offline Mode)
       
@@ -250,18 +117,19 @@ Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otoma
 
 export async function generateRegionalInsight(regionsData: any) {
   try {
-    checkApiKey();
-    const prompt = `Hai! Kamu adalah AI Strategist yang pintar, ramah, and asyik. Berdasarkan data wilayah ini: ${JSON.stringify(regionsData)}. 
-    Berikan analisis perbandingan antar RW, wilayah mana yang iurannya masih rendah, dan kasih 3 rekomendasi kebijakan yang cerdas buat Kelurahan. 
-    Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: prompt
+    const response = await fetch("/api/ai/regional-insight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regionsData })
     });
-    return response.text || "";
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `Server error: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.text || "";
   } catch (error: any) {
-    console.error("AI Regional Insight Logic Error:", error);
+    console.error("Client regional insight generating error:", error);
     if (isQuotaExhaustedError(error)) {
       return `### Analisis Regional SmartRW AI (Offline Mode)
       
@@ -276,26 +144,22 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 
 export async function scanReceiptAI(base64: string, mimeType: string = "image/jpeg") {
   try {
-    checkApiKey();
-    const dataPart = base64.includes(',') ? base64.split(',')[1] : base64;
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: {
-        parts: [
-          { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi (bisa berupa gambar atau PDF). Ekstrak informasi dari file struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: \n        {\n          "tanggal": "2023-10-05",\n          "nominal": 150000, \n          "transaksi": "Konsumsi",\n          "keterangan": "Beli semen",\n          "tipe": "Keluar",\n          "nama": "Toko Bangunan XYZ"\n        }\n        Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat).\n        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Return HANYA JSON block.` },
-          { inlineData: { data: dataPart, mimeType: mimeType } }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json"
-      }
+    const response = await fetch("/api/ai/scan-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64, mimeType })
     });
-    const text = response.text || "";
-    const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanJson);
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error("QUOTA_EXHAUSTED");
+      }
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `Server error: ${response.status}`);
+    }
+    return await response.json();
   } catch (error: any) {
-    console.error("AI Scan Receipt Error:", error);
-    if (isQuotaExhaustedError(error)) {
+    console.error("Client Scan Receipt Error:", error);
+    if (isQuotaExhaustedError(error) || error.message === "QUOTA_EXHAUSTED") {
       throw new Error(`Aduh maaf Kak! Kuota harian AI SmartRW untuk memindai struk saat ini sedang penuh (Error 429: Resource Exhausted). 
 
 Silakan isi rincian transaksi keuangan secara manual dahulu yaa, atau klik banner "SmartRW AI" di Dashboard utama / hubungi WhatsApp Admin SmartRW AI (0877-2674-1143) untuk melakukan Aktivasi Premium agar bebas memindai struk tanpa batas kuota!`);
@@ -307,51 +171,17 @@ Silakan isi rincian transaksi keuangan secara manual dahulu yaa, atau klik banne
 // AI Voice (TTS)
 export async function textToSpeech(text: string, isChairman: boolean = false) {
   try {
-    checkApiKey();
-    const cleanedText = text
-      .substring(0, 500)
-      .replace(/\*\*/g, "")
-      .replace(/\*/g, "")
-      .replace(/__/g, "")
-      .replace(/#/g, "")
-      .replace(/`/g, "")
-      .trim();
-    
-    const personaInstruction = isChairman ? ARYA_TTS_SYSTEM_INSTRUCTION : AISYAH_TTS_SYSTEM_INSTRUCTION;
-    
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: cleanedText }] }],
-      config: {
-        systemInstruction: personaInstruction,
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            // 'Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'
-            prebuiltVoiceConfig: { voiceName: isChairman ? "Zephyr" : "Kore" }
-          }
-        },
-        temperature: 1.0
-      }
+    const response = await fetch("/api/ai/text-to-speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, isChairman })
     });
-
-    const candidates = response.candidates || [];
-    for (const candidate of candidates) {
-      const parts = candidate.content?.parts || [];
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          return { 
-            data: part.inlineData.data, 
-            mimeType: part.inlineData.mimeType || 'audio/pcm;rate=24000' 
-          };
-        }
-      }
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
     }
-
-    console.warn('TTS Response without audio data:', JSON.stringify(response));
-    return null;
+    return await response.json();
   } catch (error) {
-    console.warn("TTS Generation Error:", error);
+    console.warn("Client TTS Generation Error:", error);
     return null;
   }
 }

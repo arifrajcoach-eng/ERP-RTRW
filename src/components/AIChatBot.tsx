@@ -21,7 +21,7 @@ import { chatWithAI, textToSpeech } from '../services/aiService';
 export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string }) {
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
-                       ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
+                       ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role?.toUpperCase());
   const agentName = "Chaty";
   const agentTitle = isPrivileged ? "Chaty - AI Asisten Ketua" : "Chaty - AI Asisten Warga";
 
