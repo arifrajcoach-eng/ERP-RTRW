@@ -24,6 +24,8 @@ import {
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
+import { getTranslatedLabel } from '../lib/langUtils';
+
 interface IuranViewProps {
   iuranData: any[];
   setIuranData: React.Dispatch<React.SetStateAction<any[]>>;
@@ -55,14 +57,14 @@ export function IuranView({
   handleFileUpload, 
   showNotification 
 }: IuranViewProps) {
-  const isApt = getSetting("themeMode") === "apartemen";
+  const mode = getSetting("themeMode") || "rt_rw";
   const [activeSubTab, setActiveSubTab] = useState<'pembayaran' | 'rekap'>('pembayaran');
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [buktiUrl, setBuktiUrl] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [jenisPembayaran, setJenisPembayaran] = useState('Iuran Warga');
+  const [jenisPembayaran, setJenisPembayaran] = useState(getTranslatedLabel("Iuran Bulanan", mode));
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWargaId, setSelectedWargaId] = useState<string>("");
 

@@ -35,6 +35,31 @@ Aplikasi SmartRW AI berjalan di atas sistem multi-tenant terdistribusi dengan hu
 
 ---
 
+## 🤖 SPECIALIZED AI PERSONAS (For Claude Code & CI Agents)
+
+Gunakan instruksi ini saat memanggil Claude Code di terminal (misal: `claude "jalankan audit keamanan"`).
+
+### 1. Peran: Automated Quality Control & Security Auditor
+- **Trigger:** Setiap kali ada fungsi baru di `/src/services/` atau perubahan di `firestore.rules`.
+- **Protokol:**
+  - AI wajib melakukan `grep` pada seluruh file untuk mencari query Firestore yang **TIDAK** menyertakan filter `where('tenantId', '==', ...)`.
+  - Jika ditemukan, AI harus otomatis mengajukan perbaikan (refactor) sebelum file disimpan.
+  - Memastikan tidak ada API Key yang tersimpan sebagai string literal di kode klien.
+
+### 2. Peran: Autonomous Operations Engineer
+- **Trigger:** Terdeteksi eror berulang di `ErrorBoundary` atau malfungsi integrasi Firebase.
+- **Protokol:**
+  - AI berwenang melakukan pemeriksaan integritas pada `package.json` dan memulihkan ketergantungan yang hilang.
+  - Jika ada ketidaksesuaian versi antara Child Tenant (RT) dan Parent Tenant (RW), AI melakukan sinkronisasi konfigurasi melalui skrip migrasi.
+
+### 3. Peran: Intelligent Governance Assistant
+- **Trigger:** Pembuatan fitur baru terkait kebijakan wilayah (Lapak, Pemilu, Iuran).
+- **Protokol:**
+  - AI memvalidasi apakah fitur baru tersebut mendukung hierarki "RT/RW/Cluster/Apartemen" secara dinamis menggunakan `getTranslatedLabel`.
+  - Memastikan setiap input data memiliki audit log (siapa yang mengubah, kapan, dan di tenant mana).
+
+---
+
 ## 🛠️ ATURAN EMAS 3: Self-Healing & Automated QC
 1. **Penanganan Eror Runtime:**
    - Semua modul utama wajib dilindungi oleh `ErrorBoundary` global yang ramah pengguna.

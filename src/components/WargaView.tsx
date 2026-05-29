@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query, collection, where } from 'firebase/firestore';                
 import { db } from '../firebase';
 import { getTranslatedLabel } from '../lib/langUtils';
+import { getPlanFeatures } from '../lib/appUtils';
 
 interface WargaViewProps {
   wargaData: any[];
@@ -72,9 +73,10 @@ function WargaView(props: WargaViewProps) {
   }
   const isApt = settings?.themeMode === 'apartemen';
   const tenant = currentTenant || {};
-  const isFree = !tenant.status || tenant.status === "TRIAL" || tenant.status === "FREE";
-  // The plan limits are stored in tenant or we just use hardcoded checks / maxWarga from the object. This is a bit rough but works for trial
-  const maxWargaLimit = isFree ? 50 : (tenant?.maxWarga || 5000);
+  
+  // Use shared logic to calculate features (including maxWarga from add-ons)
+  const planFeatures = getPlanFeatures(tenant);
+  const maxWargaLimit = planFeatures.maxWarga;
   const limitReached = wargaData.length >= maxWargaLimit;
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -761,7 +763,7 @@ function WargaView(props: WargaViewProps) {
             </h2>
           </div>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-            Platform {currentTenant?.name || ''} • {filteredWargaData.length} Terdaftar
+            Platform {currentTenant?.name || ''} • {filteredWargaData.length} {getTranslatedLabel("Warga", settings?.themeMode)} Terdaftar
           </p>
         </div>
         

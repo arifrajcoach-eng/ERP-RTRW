@@ -303,7 +303,7 @@ export default function DashboardView({
         isPersonal: s.nik === currentUser?.nik || s.namaNasabah === currentUser?.name
       })),
       ...userVotes.map(v => ({
-        title: 'E-Pemilu SmartRW',
+        title: settings?.themeMode === "apartemen" ? "Voting Penghuni" : settings?.themeMode === "cluster" ? "Voting Cluster" : "E-Pemilu SmartRW",
         desc: `${v.voterName} telah memberikan suara`,
         date: v.timestamp ? new Date(v.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: 'Suara Masuk',
@@ -312,7 +312,7 @@ export default function DashboardView({
         isPersonal: v.voterId === currentUser?.uid || v.voterId === currentUser?.nik
       })),
       ...tokoOrders.map(o => ({
-        title: 'Pesanan E-LAPAK SmartRW',
+        title: `Pesanan E-LAPAK ${getTranslatedLabel("RT/RW", settings?.themeMode)}`,
         desc: `${o.customerName} memesan ${o.items.length} item`,
         date: o.timestamp ? new Date(o.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         amount: o.total,
@@ -330,7 +330,7 @@ export default function DashboardView({
         isPersonal: e.userId === currentUser?.uid
       })),
       ...complaintsData.map(c => ({
-        title: 'Keluhan Warga',
+        title: `Keluhan ${getTranslatedLabel("Warga", settings?.themeMode)}`,
         desc: `${c.namaWarga}: ${c.deskripsi}`,
         date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: c.status === 'DONE' ? 'Selesai' : c.status === 'PROCESS' ? 'Diproses' : 'Diajukan',
@@ -348,7 +348,7 @@ export default function DashboardView({
         isPersonal: b.userId === currentUser?.uid || b.userName === currentUser?.name
       })),
       ...verifikasiWargaData.map(v => ({
-        title: 'Verifikasi Data Warga',
+        title: `Verifikasi Data ${getTranslatedLabel("Warga", settings?.themeMode)}`,
         desc: `${v.nama}: Pembaruan data mandiri`,
         date: v.timestamp ? new Date(v.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: v.status || 'Diajukan',
@@ -374,8 +374,8 @@ export default function DashboardView({
       return [
         { name: 'Pemasukan Kas', value: filteredKas.filter(k => k.tipe === 'Masuk').length },
         { name: 'Pengeluaran Kas', value: filteredKas.filter(k => k.tipe === 'Keluar').length },
-        { name: 'Surat Pengantar', value: filteredSurat.length },
-        { name: 'Data Warga', value: wargaData.length },
+        { name: getTranslatedLabel("Surat Pengantar", settings?.themeMode), value: filteredSurat.length },
+        { name: getTranslatedLabel("Data Warga", settings?.themeMode), value: wargaData.length },
       ];
     };
     return piePeriod === 'yearly' ? getActData('yearly') : getActData('30days');
@@ -550,7 +550,7 @@ export default function DashboardView({
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-2">
                  <div className="w-1.5 h-8 bg-cyan-400 rounded-full"></div>
-                 <h2 className="text-4xl font-black font-elegant tracking-tight">Halo, {currentUser?.name || 'Warga'}!</h2>
+                 <h2 className="text-4xl font-black font-elegant tracking-tight">Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</h2>
               </div>
               <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmartRW AI Dashboard</p>
               

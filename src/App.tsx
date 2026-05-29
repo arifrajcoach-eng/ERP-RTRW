@@ -1469,11 +1469,8 @@ export default function App() {
   // Enforce Max Warga limit locally for UI based on Plan
   const cappedWargaData = useMemo(() => {
     if (!currentTenant) return filteredWargaDataCentral.slice(0, 50);
-    const isFree =
-      currentTenant.status === "TRIAL" || currentTenant.status === "FREE";
-    const maxWargaLimit = isFree
-      ? 50
-      : getPlanFeatures(currentTenant).maxWarga || 50;
+    const planFeatures = getPlanFeatures(currentTenant);
+    const maxWargaLimit = planFeatures.maxWarga;
     return filteredWargaDataCentral.slice(0, maxWargaLimit);
   }, [filteredWargaDataCentral, currentTenant]);
 
@@ -3070,10 +3067,15 @@ export default function App() {
                     {currentTenant?.name || settings?.nama_rt}
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 justify-center">
-                    <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent font-black">SmartRW</span>
-                    <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent font-black drop-shadow-[0_1px_1px_rgba(251,113,133,0.3)] ml-0.5">AI</span>
-                  </span>
+                  <div className="flex flex-col items-center">
+                    <span className="flex items-center gap-1 justify-center">
+                      <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent font-black">SmartRW</span>
+                      <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent font-black drop-shadow-[0_1px_1px_rgba(251,113,133,0.3)] ml-0.5">AI</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-[0.2em] uppercase mt-1 opacity-60">
+                      {getTranslatedLabel("Sistem RT/RW", settings?.themeMode)}
+                    </span>
+                  </div>
                 )}
               </h1>
               {(currentTenant?.name || settings?.nama_rt) && (
@@ -3439,6 +3441,7 @@ export default function App() {
             <OrganisasiView
               currentUser={currentUser}
               currentTenant={currentTenant}
+              settings={settings}
               showNotification={showNotification}
             />
           )}
@@ -3979,7 +3982,7 @@ export default function App() {
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
         tenantId={currentTenant?.id || currentUser?.tenantId || "rw26_berjuang"}
-        tenantName={currentTenant?.nama || "RT/RW Digital"}
+        tenantName={currentTenant?.nama || getTranslatedLabel("Sistem RT/RW", settings?.themeMode)}
       />
       {showFreeTrialModal && (
         <FreeTrialRegistrationModal
@@ -4033,7 +4036,7 @@ export default function App() {
               <span className="text-brand-pink">Telah Hadir!</span>
             </h3>
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
-              Nikmati kemudahan pengelolaan RT/RW dengan teknologi AI terbaru.
+              Nikmati kemudahan pengelolaan {getTranslatedLabel("RT/RW", settings?.themeMode)} dengan teknologi AI terbaru.
               Daftar sekarang dan dapatkan Free Trial 30 hari.
             </p>
             <div className="flex flex-col gap-3">
@@ -7640,6 +7643,12 @@ function PengaturanView({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [previewMode, setPreviewMode] = useState(settings?.themeMode || "rt_rw");
+
+  // Sync previewMode when settings change (e.g. after save)
+  useEffect(() => {
+    if (settings?.themeMode) setPreviewMode(settings.themeMode);
+  }, [settings?.themeMode]);
 
   const handleSaveSettings = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -8643,14 +8652,14 @@ function PengaturanView({
           <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex gap-8 items-center min-w-[250px]">
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                Penggunaan Warga
+                Penggunaan {getTranslatedLabel("Warga", previewMode)}
               </p>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black text-slate-800 leading-none">
                   {wargaData?.length || 0}
                 </span>
                 <span className="text-sm font-bold text-slate-500">
-                  / {currentTenant?.maxWarga || 50} Limit
+                  / {getPlanFeatures(currentTenant).maxWarga} Limit
                 </span>
               </div>
             </div>
@@ -8658,14 +8667,14 @@ function PengaturanView({
               <div
                 className="w-12 h-12 rounded-full overflow-hidden flex"
                 style={{
-                  background: `conic-gradient(#3b82f6 ${((wargaData?.length || 0) / (currentTenant?.maxWarga || 50)) * 100}%, #e2e8f0 0)`,
+                  background: `conic-gradient(#3b82f6 ${((wargaData?.length || 0) / getPlanFeatures(currentTenant).maxWarga) * 100}%, #e2e8f0 0)`,
                 }}
               >
                 <div className="w-9 h-9 m-auto bg-slate-50 rounded-full flex items-center justify-center">
                   <span className="text-[10px] font-bold text-slate-700">
                     {Math.round(
                       ((wargaData?.length || 0) /
-                        (currentTenant?.maxWarga || 50)) *
+                        getPlanFeatures(currentTenant).maxWarga) *
                         100,
                     )}
                     %
@@ -8703,7 +8712,8 @@ function PengaturanView({
                 </label>
                 <select
                   name="themeMode"
-                  defaultValue={settings.themeMode || "rt_rw"}
+                  value={previewMode}
+                  onChange={(e) => setPreviewMode(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-orange-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 transition-all font-bold text-slate-800 shadow-sm"
                 >
                   <option value="rt_rw">Mode Lingkungan (RT/RW - Default)</option>
@@ -8718,23 +8728,23 @@ function PengaturanView({
                 </div>
               </div>
               <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 mt-6">
-                Informasi INSTANSI / RT / RW & Kop Surat
+                Informasi INSTANSI / {getTranslatedLabel("RT/RW", previewMode)} & Kop Surat
               </h4>
               <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 mb-2">
                 <label className="text-[10px] font-black text-blue-600 uppercase mb-2 block tracking-wider">
-                  Nama Organisasi / RT / RW (Muncul di Sidebar & Kop)
+                  Nama Organisasi / {getTranslatedLabel("RT/RW", previewMode)} (Muncul di Sidebar & Kop)
                 </label>
                 <input
                   name="nama_rt"
                   defaultValue={settings.nama_rt}
-                  placeholder="Contoh: PENGURUS RT 04"
+                  placeholder={`Contoh: PENGURUS ${getTranslatedLabel("RT", previewMode)} 04`}
                   className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
                 />
                 <div className="flex items-start gap-2 mt-2">
                   <div className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
                   <p className="text-[10px] text-slate-500 italic leading-tight">
                     Nama ini akan menjadi identitas utama di sidebar menu dan
-                    kop surat dokumen warga.
+                    kop surat dokumen {getTranslatedLabel("Warga", previewMode).toLowerCase()}.
                   </p>
                 </div>
               </div>
@@ -8758,7 +8768,7 @@ function PengaturanView({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
-                    RT
+                    {getTranslatedLabel("RT", previewMode)}
                   </label>
                   <input
                     name="rt"
@@ -8769,7 +8779,7 @@ function PengaturanView({
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
-                    RW
+                    {getTranslatedLabel("RW", previewMode)}
                   </label>
                   <input
                     name="rw"
@@ -8856,7 +8866,7 @@ function PengaturanView({
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
-                  Logo RT/RW (Kop Surat)
+                  {getTranslatedLabel("Logo RT/RW", settings?.themeMode)} (Kop Surat)
                 </label>
                 <div className="flex gap-3 items-center">
                   <input
@@ -8981,10 +8991,10 @@ function PengaturanView({
 
       <div className="bg-red-50 p-6 rounded-xl border border-red-200">
         <h4 className="text-sm font-bold text-red-800 mb-2">
-          Peringatan: Reset Data Warga
+          Peringatan: Reset Data {getTranslatedLabel("Warga", settings?.themeMode)}
         </h4>
         <p className="text-xs text-red-600 mb-4">
-          Fitur ini akan menghapus <strong>SELURUH</strong> data warga di
+          Fitur ini akan menghapus <strong>SELURUH</strong> data {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()} di
           sistem. Data yang sudah dihapus tidak bisa dikembalikan. Gunakan
           dengan sangat hati-hati.
         </p>
@@ -9021,7 +9031,7 @@ function PengaturanView({
           }}
           className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
         >
-          Hapus Semua Data Warga
+          Hapus Semua Data {getTranslatedLabel("Warga", settings?.themeMode)}
         </button>
       </div>
 
@@ -9081,11 +9091,11 @@ function PengaturanView({
           onClick={generateDummyData}
           disabled={
             isGenerating ||
-            (wargaData?.length || 0) + 20 > (currentTenant?.maxWarga || 50)
+            (wargaData?.length || 0) + 20 > getPlanFeatures(currentTenant).maxWarga
           }
           className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-all shadow-md disabled:bg-orange-300 flex items-center gap-2 disabled:cursor-not-allowed"
           title={
-            (wargaData?.length || 0) + 20 > (currentTenant?.maxWarga || 50)
+            (wargaData?.length || 0) + 20 > getPlanFeatures(currentTenant).maxWarga
               ? `Sisa slot paket tidak cukup (Butuh 20 slot)`
               : undefined
           }
@@ -10614,7 +10624,7 @@ function LoginView({
                 ? 'KHUSUS AKUN GOOGLE. Jika ingin masuk pakai NIK & KK, silakan pilih tab "NIK & KK" di atas.'
                 : loginMode === "verifikasi"
                   ? "VERIFIKASI WARGA (Tanpa Google). Gunakan kombinasi: NIK + KK, Nama + KK, atau NIK + HP."
-                  : "Akses khusus pengurus RT/RW yang telah terdaftar."}
+                  : `Akses khusus ${getTranslatedLabel("Pengurus", settings?.themeMode).toLowerCase()} yang telah terdaftar.`}
             </p>
           </div>
           <h2 className="text-xl font-black text-slate-800 mb-6 font-elegant tracking-tight text-center">
@@ -10726,7 +10736,7 @@ function LoginView({
                   </p>
                 </div>
                 <p className="text-xs text-emerald-600 font-medium leading-relaxed">
-                  Gunakan Google Login untuk akses penuh fitur warga: E-LAPAK26,
+                  Gunakan Google Login untuk akses penuh fitur {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()}: E-LAPAK26,
                   Surat Digital, Keuangan, dan Pengaduan.
                 </p>
               </div>
@@ -11412,7 +11422,7 @@ function UsersView({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
-                    Nomor RT/RW
+                    {getTranslatedLabel("Nomor RT/RW", settings?.themeMode)}
                   </label>
                   <input
                     type="text"

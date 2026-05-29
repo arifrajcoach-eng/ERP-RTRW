@@ -25,6 +25,8 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
+import { getTranslatedLabel } from "../lib/langUtils";
+
 interface Member {
   id: string;
   name: string;
@@ -39,6 +41,7 @@ interface Member {
 interface OrganisasiViewProps {
   currentUser: any;
   currentTenant: any;
+  settings?: any;
   showNotification: (msg: string, type: "success" | "error") => void;
 }
 
@@ -51,7 +54,7 @@ const GRADIENT_THEMES = [
   { id: "cyan", name: "Ocean Breeze", classes: "from-cyan-600 via-cyan-500 to-sky-500 bg-cyan-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-400" },
 ];
 
-export function OrganisasiView({ currentUser, currentTenant, showNotification }: OrganisasiViewProps) {
+export function OrganisasiView({ currentUser, currentTenant, settings, showNotification }: OrganisasiViewProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"visual" | "list">("visual");
@@ -177,7 +180,7 @@ export function OrganisasiView({ currentUser, currentTenant, showNotification }:
 
     const success = await saveToFirestore(defaultPreset);
     if (success) {
-      showNotification("Preset Pengurus RT/RW berhasil dimuat!", "success");
+      showNotification(`Preset Pengurus ${getTranslatedLabel("RT/RW", settings?.themeMode)} berhasil dimuat!`, "success");
     }
   };
 
@@ -407,7 +410,7 @@ export function OrganisasiView({ currentUser, currentTenant, showNotification }:
                 </>
               ) : (
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-medium text-slate-400">
-                  ⚠️ Hanya Pengurus (RT/RW/Admin) yang diperbolehkan untuk memuat preset atau mengelola struktur organisasi.
+                  ⚠️ Hanya {getTranslatedLabel("Pengurus", settings?.themeMode)} (Admin) yang diperbolehkan untuk memuat preset atau mengelola struktur organisasi.
                 </div>
               )}
             </div>
@@ -722,7 +725,7 @@ export function OrganisasiView({ currentUser, currentTenant, showNotification }:
                 <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider font-elegant">
                   {editingId ? "Edit Personel Organisasi" : "Tambah Anggota Pengurus"}
                 </h3>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Lengkapi data kepengurusan wilayah RT/RW</p>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Lengkapi data kepengurusan {getTranslatedLabel("Wilayah", settings?.themeMode)}</p>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
