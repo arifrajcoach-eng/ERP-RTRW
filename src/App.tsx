@@ -3851,31 +3851,7 @@ export default function App() {
                 </button>
               </div>
             ))}
-          {activeTab === "cctv" &&
-            (getPlanFeatures(currentTenant).cctv ? (
-              <CCTVView
-                tenantId={currentUser.tenantId}
-                settings={settings}
-                onUpdateSettings={setSettings}
-              />
-            ) : (
-              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Video className="w-8 h-8 text-slate-400" />
-                </div>
-                <h3 className="text-lg font-bold">Integrasi CCTV</h3>
-                <p className="text-slate-500 mt-2">
-                  Pantauan kamera keamanan lingkungan langsung dari dashboard
-                  tersedia di paket PREMIUM.
-                </p>
-                <button
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-[15px] tracking-widest shadow-lg shadow-blue-100"
-                >
-                  Upgrade Paket
-                </button>
-              </div>
-            ))}
+
           {activeTab === "monitoring" &&
             (getPlanFeatures(currentTenant).multiRegion ? (
               <EnterpriseGovDashboard
@@ -4497,7 +4473,6 @@ function AnalyticsPremiumView({
   );
 }
 
-// --- PREMIUM: CCTV VIEW ---
 // --- SHARED: AUDIT LOG HELPER ---
 const logAction = async (
   userId: string,
@@ -4977,176 +4952,7 @@ function EnterpriseGovDashboard({
   );
 }
 
-function CCTVView({ tenantId, settings, onUpdateSettings }: any) {
-  const [links, setLinks] = useState<string[]>(settings?.cctvLinks || []);
-  const [newLink, setNewLink] = useState("");
-  const [showLocalCamera, setShowLocalCamera] = useState(false);
 
-  const addLink = () => {
-    if (!newLink) return;
-    const updated = [...links, newLink];
-    setLinks(updated);
-    setNewLink("");
-  };
-
-  return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="bg-gradient-to-r from-[#008bb5] to-[#014e66] p-10 rounded-[3.5rem] text-white shadow-2xl shadow-[#008bb5]/20 flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:scale-125 transition-transform duration-1000"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl">
-              <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Security Protocol</span>
-          </div>
-          <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">
-            INTEGRASI CCTV <span className="text-white/30">SEMATA</span>
-          </h2>
-          <p className="text-white/70 font-medium text-sm mt-4 max-w-xl leading-relaxed">
-            Sistem pantauan keamanan modern berbasis web. Hubungkan perangkat kamera lokal atau 
-            integrasikan protokol streaming IP dari vendor pihak ketiga melalui input URL.
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 relative z-10 bg-black/10 backdrop-blur-md p-4 rounded-[2.5rem] border border-white/10">
-          <input
-            value={newLink}
-            onChange={(e) => setNewLink(e.target.value)}
-            placeholder="Url Stream (HTTP/HTTPS)..."
-            className="px-6 py-4 bg-white/10 border-none rounded-2xl text-sm w-full lg:w-64 placeholder:text-white/40 text-white outline-none focus:ring-2 ring-white/50 transition-all shadow-inner font-medium"
-          />
-          <button
-            onClick={addLink}
-            className="p-4 bg-white text-[#008bb5] rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.03] active:scale-95 transition-all flex items-center justify-center font-black group/btn shrink-0"
-          >
-            <Plus className="w-6 h-6 group-hover/btn:rotate-90 transition-all duration-500" />
-            <span className="ml-2 mr-1 sm:hidden">Tambah Kamera</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex gap-4">
-        <button
-          onClick={() => setShowLocalCamera(!showLocalCamera)}
-          className={`group px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.25em] transition-all duration-500 shadow-2xl flex items-center gap-4 ${
-            showLocalCamera 
-              ? "bg-gradient-to-r from-red-600 to-red-800 text-white shadow-red-200" 
-              : "bg-gradient-to-r from-slate-900 to-slate-800 text-white hover:shadow-slate-300"
-          }`}
-        >
-          <div className="relative">
-            <div className={`w-3 h-3 rounded-full ${showLocalCamera ? 'bg-white animate-ping' : 'bg-red-500'}`} />
-            <div className={`absolute inset-0 w-3 h-3 rounded-full ${showLocalCamera ? 'bg-white' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] animate-pulse'}`} />
-          </div>
-          {showLocalCamera ? "Hentikan Local Feed" : "Aktifkan Local Feed"}
-        </button>
-      </div>
-
-      {showLocalCamera && (
-        <div className="relative group max-w-2xl">
-          <div className="absolute -inset-2 bg-gradient-to-r from-[#008bb5] via-blue-500 to-indigo-600 rounded-[3.2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-          <div className="relative rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl aspect-video bg-black ring-1 ring-slate-100">
-            <Webcam
-              audio={false}
-              videoConstraints={{ facingMode: "user" }}
-              className="w-full h-full object-cover grayscale brightness-110 group-hover:grayscale-0 transition-all duration-700"
-              mirrored={true}
-              screenshotFormat="image/jpeg"
-              forceScreenshotSourceSize={false}
-              audioConstraints={false}
-              disablePictureInPicture={true}
-              imageSmoothing={true}
-              onUserMedia={() => {}}
-              onUserMediaError={() => {}}
-              screenshotQuality={0.92}
-            />
-            <div className="absolute top-8 left-8 flex items-center gap-3 bg-black/50 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/20">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,1)]" />
-              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">LIVE FEED • DEVICE#01</span>
-            </div>
-            
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
-          </div>
-        </div>
-      )}
-
-      {links.length === 0 && !showLocalCamera ? (
-        <div className="bg-white border border-slate-100 rounded-[4rem] p-24 text-center shadow-sm relative overflow-hidden group">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,139,181,0.02),transparent)] group-hover:scale-150 transition-transform duration-1000"></div>
-          <div className="relative z-10">
-            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-white">
-              <Video className="w-12 h-12 text-slate-200" />
-            </div>
-            <h4 className="text-slate-800 font-black uppercase text-xs tracking-[0.4em] mb-3">No Active Channels</h4>
-            <p className="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
-              Silahkan tambahkan URL transmisi kamera di atas atau aktifkan kamera lokal untuk memulai pemantauan.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {links.map((url, i) => (
-            <div
-              key={i}
-              className="group relative bg-slate-900 aspect-video rounded-[3.5rem] overflow-hidden shadow-2xl ring-1 ring-slate-100 hover:ring-[#008bb5]/50 transition-all duration-700 hover:scale-[1.02]"
-            >
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
-                <div className="flex flex-col items-center gap-5">
-                  <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center animate-pulse border border-white/5">
-                    <Video className="w-10 h-10 text-white/10" />
-                  </div>
-                  <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Connecting Transceiver...</span>
-                </div>
-              </div>
-              
-              <iframe
-                src={url}
-                className="absolute inset-0 w-full h-full border-0 relative z-10 opacity-90 group-hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-1000"
-                title={`Kamera ${i + 1}`}
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-              />
-
-              <div className="absolute top-8 left-8 z-20 flex items-center gap-3 bg-black/60 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/10 group-hover:border-white/30 transition-all">
-                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_12px_rgba(59,130,246,1)]" />
-                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">CHANNEL-0{i + 1}</span>
-              </div>
-
-              <div className="absolute top-8 right-8 z-20 opacity-0 group-hover:opacity-100 transition-all translate-x-10 group-hover:translate-x-0 duration-500">
-                <button
-                  onClick={() => setLinks(links.filter((_, idx) => idx !== i))}
-                  className="p-4 bg-red-500/80 hover:bg-red-600 text-white rounded-2xl backdrop-blur-md shadow-2xl transition-all hover:rotate-12"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="absolute bottom-0 left-0 right-0 z-20 h-32 bg-gradient-to-t from-black to-transparent transform translate-y-full group-hover:translate-y-0 transition-transform duration-700 p-8 flex items-end">
-                 <div className="w-full">
-                    <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Source Address</p>
-                    <p className="text-white/70 text-xs font-medium truncate italic">{url}</p>
-                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl flex items-start gap-4">
-        <div className="p-3 bg-indigo-100 rounded-2xl flex-shrink-0">
-          <Info className="w-6 h-6 text-indigo-600" />
-        </div>
-        <p className="text-sm font-medium text-indigo-900 opacity-80 leading-relaxed">
-          <strong>Catatan Privasi:</strong> Nexapps tidak menyimpan data video
-          di server. Tautan CCTV bersifat langsung (embed) dari penyedia
-          masing-masing. Pastikan link yang Anda masukkan aman dan terproteksi
-          kata sandi.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function SOSOverlay({ 
   emergency, 

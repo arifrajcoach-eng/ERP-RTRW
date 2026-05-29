@@ -466,7 +466,7 @@ export default function DashboardView({
             </h3>
             
             <p className="text-xs text-slate-300 font-medium max-w-2xl leading-relaxed">
-              Tingkatkan status wilayah Anda ke paket premium untuk mengaktifkan modul eksklusif seperti Robot AI WhatsApp, Posyandu Digital, Mading, Bank Sampah Mandiri, ePemilu, Real-time CCTV, dan hilangkan batas kuota warga!
+              Tingkatkan status wilayah Anda ke paket premium untuk mengaktifkan modul eksklusif seperti Robot AI WhatsApp, Posyandu Digital, Mading, Bank Sampah Mandiri, ePemilu, dan hilangkan batas kuota warga!
             </p>
 
             {isStarter && (

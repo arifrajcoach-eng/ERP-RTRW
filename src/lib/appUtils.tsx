@@ -43,7 +43,6 @@ export const getPlanFeatures = (tenantOrStatus: any) => {
   if (addons.includes("posyandu")) features.posyandu = true;
   if (addons.includes("ePemilu")) features.ePemilu = true;
   if (addons.includes("bankSampah")) features.bankSampah = true;
-  if (addons.includes("cctv")) features.cctv = true;
   if (addons.includes("eLapakFull")) features.eLapak = "FULL";
   if (addons.includes("ppob")) features.keuangan = "FULL";
   if (addons.includes("booking")) features.booking = true;
