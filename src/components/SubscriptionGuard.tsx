@@ -24,7 +24,7 @@ const SubscriptionGuard: React.FC<Props> = ({ tenantId, children }) => {
 
   // If no subscription or inactive/expired, show PaymentPage
   if (!subscription || (subscription.status !== 'Active' && subscription.status !== 'Trial') || new Date(subscription.endDate) < new Date()) {
-    return <PaymentPage />;
+    return <PaymentPage tenantId={tenantId} />;
   }
 
   return <>{children}</>;

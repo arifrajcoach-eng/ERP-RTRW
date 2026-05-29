@@ -960,6 +960,14 @@ export default function App() {
       } else {
         await signOut(auth);
       }
+      
+      // Reset tenant-specific database state to prevent leaking previous session data
+      setWargaData(INITIAL_WARGA_DATA);
+      setKasData(INITIAL_KAS_DATA);
+      setSuratData(INITIAL_SURAT_DATA);
+      setIuranData([]);
+      setInventarisData(INITIAL_INVENTARIS_DATA);
+
       setActiveTab("dashboard");
     } catch (err) {
       console.error("Logout error:", err);
@@ -984,73 +992,17 @@ export default function App() {
     return digits ? digits[0].padStart(2, "0") : raw;
   };
 
-  const [wargaData, setWargaData] = useState(() => {
-    const saved = localStorage.getItem("rw26_wargaData");
-    if (saved) {
-      try {
-        let parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          let has05 = false;
-          parsed = parsed.map(w => {
-            const rawRw = String(w.rw || "").trim();
-            if (rawRw.includes("05")) {
-              has05 = true;
-              return { ...w, rw: "26" };
-            }
-            return w;
-          });
-          if (has05) {
-            localStorage.setItem("rw26_wargaData", JSON.stringify(parsed));
-          }
-          return parsed;
-        }
-      } catch(e) {}
-    }
-    return INITIAL_WARGA_DATA;
-  });
+  const [wargaData, setWargaData] = useState<any[]>(INITIAL_WARGA_DATA);
 
-  const [kasData, setKasData] = useState(() => {
-    const saved = localStorage.getItem("rw26_kasData");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Corrupted kasData detected, self-healing memory check run...", e);
-        try { localStorage.removeItem("rw26_kasData"); } catch (_) {}
-      }
-    }
-    return INITIAL_KAS_DATA;
-  });
+  const [kasData, setKasData] = useState<any[]>(INITIAL_KAS_DATA);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
-  const [suratData, setSuratData] = useState(() => {
-    const saved = localStorage.getItem("rw26_suratData");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Corrupted suratData detected, self-healing memory check run...", e);
-        try { localStorage.removeItem("rw26_suratData"); } catch (_) {}
-      }
-    }
-    return INITIAL_SURAT_DATA;
-  });
+  const [suratData, setSuratData] = useState<any[]>(INITIAL_SURAT_DATA);
 
   const [iuranData, setIuranData] = useState<any[]>([]);
   const [ppobData, setPpobData] = useState<any[]>([]);
 
-  const [inventarisData, setInventarisData] = useState(() => {
-    const saved = localStorage.getItem("rw26_inventarisData");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Corrupted inventarisData detected, self-healing memory check run...", e);
-        try { localStorage.removeItem("rw26_inventarisData"); } catch (_) {}
-      }
-    }
-    return INITIAL_INVENTARIS_DATA;
-  });
+  const [inventarisData, setInventarisData] = useState<any[]>(INITIAL_INVENTARIS_DATA);
 
   const [inventarisLogs, setInventarisLogs] = useState<any[]>([]);
   const [inventarisKategori, setInventarisKategori] = useState<any[]>([]);
@@ -2169,19 +2121,114 @@ export default function App() {
     });
   };
 
-  // Effect to sync data to localStorage (keep as secondary backup)
+  // --- TENANT SPECIFIC LOCALSTORAGE PERSISTENCE (SECURE CONTEXT) ---
+  const activeTenantId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
+
+  // Effect to load data from tenant-specific cache when active tenant changing
   useEffect(() => {
-    localStorage.setItem("rw26_wargaData", JSON.stringify(wargaData));
-  }, [wargaData]);
+    if (!activeTenantId) return;
+
+    // Load Warga
+    const savedWarga = localStorage.getItem(`${activeTenantId}_wargaData`);
+    if (savedWarga) {
+      try {
+        setWargaData(JSON.parse(savedWarga));
+      } catch (e) {
+        setWargaData(INITIAL_WARGA_DATA);
+      }
+    } else {
+      setWargaData(INITIAL_WARGA_DATA);
+    }
+
+    // Load Kas
+    const savedKas = localStorage.getItem(`${activeTenantId}_kasData`);
+    if (savedKas) {
+      try {
+        setKasData(JSON.parse(savedKas));
+      } catch (e) {
+        setKasData(INITIAL_KAS_DATA);
+      }
+    } else {
+      setKasData(INITIAL_KAS_DATA);
+    }
+
+    // Load Surat
+    const savedSurat = localStorage.getItem(`${activeTenantId}_suratData`);
+    if (savedSurat) {
+      try {
+        setSuratData(JSON.parse(savedSurat));
+      } catch (e) {
+        setSuratData(INITIAL_SURAT_DATA);
+      }
+    } else {
+      setSuratData(INITIAL_SURAT_DATA);
+    }
+
+    // Load Iuran
+    const savedIuran = localStorage.getItem(`${activeTenantId}_iuranData`);
+    if (savedIuran) {
+      try {
+        setIuranData(JSON.parse(savedIuran));
+      } catch (e) {
+        setIuranData([]);
+      }
+    } else {
+      setIuranData([]);
+    }
+
+    // Load Inventaris
+    const savedInventaris = localStorage.getItem(`${activeTenantId}_inventarisData`);
+    if (savedInventaris) {
+      try {
+        setInventarisData(JSON.parse(savedInventaris));
+      } catch (e) {
+        setInventarisData(INITIAL_INVENTARIS_DATA);
+      }
+    } else {
+      setInventarisData(INITIAL_INVENTARIS_DATA);
+    }
+  }, [activeTenantId]);
+
+  // Effects to sync data to tenant-specific localStorage cache
   useEffect(() => {
-    localStorage.setItem("rw26_kasData", JSON.stringify(kasData));
-  }, [kasData]);
+    if (activeTenantId && wargaData && wargaData !== INITIAL_WARGA_DATA) {
+      localStorage.setItem(`${activeTenantId}_wargaData`, JSON.stringify(wargaData));
+    }
+  }, [wargaData, activeTenantId]);
+
   useEffect(() => {
-    localStorage.setItem("rw26_suratData", JSON.stringify(suratData));
-  }, [suratData]);
+    if (activeTenantId && kasData && kasData !== INITIAL_KAS_DATA) {
+      localStorage.setItem(`${activeTenantId}_kasData`, JSON.stringify(kasData));
+    }
+  }, [kasData, activeTenantId]);
+
   useEffect(() => {
-    localStorage.setItem("rw26_iuranData", JSON.stringify(iuranData));
-  }, [iuranData]);
+    if (activeTenantId && suratData && suratData !== INITIAL_SURAT_DATA) {
+      localStorage.setItem(`${activeTenantId}_suratData`, JSON.stringify(suratData));
+    }
+  }, [suratData, activeTenantId]);
+
+  useEffect(() => {
+    if (activeTenantId && iuranData && iuranData.length > 0) {
+      localStorage.setItem(`${activeTenantId}_iuranData`, JSON.stringify(iuranData));
+    }
+  }, [iuranData, activeTenantId]);
+
+  useEffect(() => {
+    if (activeTenantId && inventarisData && inventarisData !== INITIAL_INVENTARIS_DATA) {
+      localStorage.setItem(`${activeTenantId}_inventarisData`, JSON.stringify(inventarisData));
+    }
+  }, [inventarisData, activeTenantId]);
+
+  // Remove legacy insecure global cache keys
+  useEffect(() => {
+    const legacyKeys = ["rw26_wargaData", "rw26_kasData", "rw26_suratData", "rw26_iuranData", "rw26_inventarisData"];
+    legacyKeys.forEach(k => {
+      try {
+        localStorage.removeItem(k);
+      } catch(e) {}
+    });
+  }, []);
 
   useEffect(() => {
     // DEV AUTO-ACTIVATE: Ensure our main developer has all features enabled
@@ -10075,6 +10122,19 @@ function LoginView({
 
         // B. Query Discovery (as fallback) - Search for all fields that match cleanId or cleanPass
         if (!found) {
+          const searchTenantIds = [tenantId || "rw26_berjuang"];
+          if (settings?.parentId) {
+            searchTenantIds.push(settings.parentId);
+          } else if (tenantId.startsWith("rt") && tenantId.includes("_")) {
+            const parent = tenantId.substring(tenantId.indexOf("_") + 1);
+            if (parent) searchTenantIds.push(parent);
+          }
+          if (tenantId === "rw26_berjuang") {
+            searchTenantIds.push("rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang");
+          } else if (tenantId === "trihprw26") {
+            searchTenantIds.push("rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26", "rt05_trihprw26");
+          }
+
           const tokens = [cleanId, cleanPass].filter((k) => k.length >= 3);
 
           for (const token of tokens) {
@@ -10112,6 +10172,7 @@ function LoginView({
                 const qWarga = query(
                   collection(db, "data_warga"),
                   where(field, "==", value),
+                  where("tenantId", "in", searchTenantIds),
                   limit(10),
                 );
                 const sWarga = await getDocs(qWarga);
@@ -10120,6 +10181,7 @@ function LoginView({
                 const qVerif = query(
                   collection(db, "verifikasi_warga"),
                   where(field, "==", value),
+                  where("tenantId", "in", searchTenantIds),
                   limit(10),
                 );
                 const sVerif = await getDocs(qVerif);
@@ -10128,6 +10190,7 @@ function LoginView({
                 const qSurat = query(
                   collection(db, "surat"),
                   where(field === "nama" ? "pemohon" : field, "==", value),
+                  where("tenantId", "in", searchTenantIds),
                   limit(5),
                 );
                 const sSurat = await getDocs(qSurat);

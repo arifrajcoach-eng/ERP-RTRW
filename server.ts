@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import twilio from "twilio";
 import emailjs from "@emailjs/nodejs";
 import * as dotenv from "dotenv";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -126,6 +127,31 @@ async function startServer() {
   };
 
   // API Routes
+  app.post("/api/tripay/webhook", express.json({ type: 'application/json' }), async (req: express.Request, res: express.Response) => {
+    const signature = req.headers["x-callback-signature"] as string;
+    const body = JSON.stringify(req.body);
+
+    if (!signature || !process.env.TRIPAY_PRIVATE_KEY) {
+      return res.status(403).json({ success: false, message: "Invalid request" });
+    }
+
+    const hash = crypto.createHmac("sha256", process.env.TRIPAY_PRIVATE_KEY).update(body).digest("hex");
+
+    if (hash !== signature) {
+      return res.status(403).json({ success: false, message: "Invalid signature" });
+    }
+
+    // Process notification
+    const event = req.body.event;
+    if (event === "payment_status") {
+      const { reference, status } = req.body;
+      console.log(`Tripay Webhook: Order ${reference} status is ${status}`);
+      // Here you would find the tenant in Firebase and update their status/plan
+    }
+
+    res.json({ success: true });
+  });
+
   app.post("/api/messages/send-whatsapp", async (req, res) => {
     try {
       const { to, body } = req.body;

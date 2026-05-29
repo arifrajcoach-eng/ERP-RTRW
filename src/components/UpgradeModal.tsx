@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Zap, ChevronRight, CreditCard, Check, ShieldCheck, Heart, Sparkles, Plus, Layers } from 'lucide-react';
 import { ADDON_CONFIG } from '../constants';
+import PaymentPage from './PaymentPage';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface UpgradeModalProps {
 const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   if (!isOpen) return null;
 
@@ -41,23 +43,44 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-4 p-0 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, y: 15, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.98 }}
-            className="bg-white rounded-[2.5rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden my-8 border border-slate-100"
+            className={`sm:rounded-[2.5rem] rounded-none ${
+              showCheckout ? 'max-w-4xl bg-[#0a0a0a] border-slate-900/60 p-4 md:p-8' : 'bg-white border-slate-100 p-6 md:p-8 max-w-lg'
+            } w-full h-full sm:h-auto max-h-full sm:max-h-[90vh] overflow-y-auto shadow-2xl relative sm:my-8 border transition-all duration-300`}
           >
-            {/* Background Accent */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
-            <div className="absolute left-0 bottom-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none"></div>
+            {showCheckout ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowCheckout(false)}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors bg-neutral-900/50 hover:bg-neutral-800 p-2 rounded-full z-50 border border-slate-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <PaymentPage 
+                  isEmbedded={true}
+                  initialPlanId={selectedPlan || 'pro'}
+                  onCloseEmbedded={() => {
+                    setShowCheckout(false);
+                    onClose();
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Background Accent */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div className="absolute left-0 bottom-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none"></div>
 
-            <button
-              onClick={onClose}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 transition-colors bg-slate-50 hover:bg-slate-100 p-2 rounded-full"
-            >
-              <X className="w-5 h-5" />
-            </button>
+                <button
+                  onClick={onClose}
+                  className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 transition-colors bg-slate-50 hover:bg-slate-100 p-2 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
 
             <div className="flex flex-col">
               <div className="flex items-center gap-3 mb-4">
@@ -151,24 +174,35 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
                 <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2.5xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
                   <div>
                     <div className="flex items-center gap-1.5 text-cyan-400 font-black uppercase text-[9px] tracking-widest">
-                      <Layers className="w-3 h-3 text-yellow-400" />
+                      <Layers className="w-3.5 h-3.5 text-yellow-400" />
                       <span>Rencana Kustomisasi Anda</span>
                     </div>
-                    <p className="text-xs font-medium text-slate-300 mt-1 max-w-[280px]">
+                    <p className="text-xs font-semibold text-slate-350 mt-1 max-w-[280px]">
                       {selectedPlan ? `Meningkatkan ke Paket ${selectedPlan.toUpperCase()}` : 'Aktivasi Add-on saja'} 
                       {selectedAddons.length > 0 && ` + ${selectedAddons.length} Fitur Tambahan (Add-On)`}
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      const query = getActiveWhatsAppText();
-                      window.open(`https://wa.me/6287726741143?text=${query}`, '_blank');
-                    }}
-                    className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-cyan-400 to-brand-blue hover:from-cyan-300 hover:to-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-brand-blue/30 flex items-center justify-center gap-2 whitespace-nowrap self-stretch sm:self-auto border border-white/10"
-                  >
-                    <span>Hubungi WA</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto self-stretch sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setShowCheckout(true)}
+                      className="px-4 py-2.5 bg-white text-slate-900 hover:bg-slate-100 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-2 whitespace-nowrap border border-slate-200 cursor-pointer"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-indigo-600 stroke-[3]" />
+                      <span>Bayar Online Instan</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const query = getActiveWhatsAppText();
+                        window.open(`https://wa.me/6287726741143?text=${query}`, '_blank');
+                      }}
+                      className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer border border-emerald-450/30"
+                    >
+                      <span>Hubungi WA</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="h-px bg-slate-100 my-2" />
@@ -176,6 +210,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
                 {/* 3. BUTTON PILIHAN */}
                 <div className="flex flex-col gap-2">
                   <button
+                    type="button"
                     onClick={() => {
                       setSelectedPlan(null);
                       setSelectedAddons([]);
@@ -188,6 +223,8 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
             </div>
+          </>
+        )}
           </motion.div>
         </div>
       )}

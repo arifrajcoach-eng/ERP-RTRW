@@ -906,161 +906,289 @@ export function WargaProfileView({
        {/* Modal Update Data Mandiri */}
        <AnimatePresence>
           {isEditing && (
-             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+             <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsEditing(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 flex flex-col max-h-[90vh]">
-                   <div className="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
-                      <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Sinkronisasi Data Mandiri</h2>
-                      <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-6 h-6" /></button>
-                   </div>
-                   <form onSubmit={handleUpdateMandiri} className="p-8 overflow-y-auto space-y-6">
-                      <div className="p-6 bg-blue-50 border border-blue-100 rounded-3xl flex gap-4">
-                         <div className="bg-white p-2 rounded-xl text-blue-600 shadow-sm shrink-0">
-                            <Info className="w-6 h-6" />
-                         </div>
-                         <p className="text-xs font-bold text-blue-800 leading-relaxed uppercase tracking-wider">
-                            Data yang Anda ubah akan ditinjau oleh Admin (RT/RW) sebelum diperbarui di sistem utama. Lampirkan Foto KTP/KK untuk mempercepat proses verifikasi.
-                         </p>
-                      </div>
+                <motion.div 
+                   initial={{ scale: 0.95, opacity: 0 }} 
+                   animate={{ scale: 1, opacity: 1 }} 
+                   exit={{ scale: 0.95, opacity: 0 }} 
+                   className="w-full sm:max-w-2xl bg-white dark:bg-slate-900 sm:rounded-[2.5rem] rounded-none shadow-2xl overflow-hidden relative z-10 flex flex-col h-full sm:h-auto sm:max-h-[90vh] border border-slate-100 dark:border-slate-850"
+                >
+                    <div className="p-5 sm:p-8 bg-slate-50 dark:bg-slate-800/20 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                       <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-sm border border-indigo-105 dark:border-indigo-900/40">
+                             <UserPlus className="w-6 h-6" />
+                          </div>
+                          <div>
+                             <h2 className="text-lg sm:text-xl font-black text-slate-850 dark:text-white uppercase tracking-tight leading-none">Sinkronisasi Data Mandiri</h2>
+                             <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5">Lengkapi data administrasi mandiri</p>
+                          </div>
+                       </div>
+                       <button onClick={() => setIsEditing(false)} className="p-2.5 hover:bg-slate-105 dark:hover:bg-slate-800 rounded-2xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                          <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                       </button>
+                    </div>
+                    <form onSubmit={handleUpdateMandiri} className="flex-1 flex flex-col min-h-0 h-full overflow-hidden bg-white dark:bg-slate-900">
+                       <div className="flex-1 overflow-y-auto p-5 sm:p-10 space-y-8 sm:space-y-10 custom-scrollbar pb-24">
+                          <div className="p-5 sm:p-6 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/70 dark:border-indigo-900/40 rounded-3xl flex gap-4">
+                             <div className="bg-white dark:bg-slate-800 p-2.5 h-11 w-11 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-sm flex items-center justify-center shrink-0 border border-indigo-50 dark:border-slate-705">
+                                <Info className="w-5 h-5" />
+                             </div>
+                             <div className="flex-1 space-y-1">
+                                <h4 className="text-xs font-black text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">Informasi Sinkronisasi</h4>
+                                <p className="text-[11px] font-bold text-indigo-700/80 dark:text-indigo-350 leading-relaxed uppercase tracking-wide">
+                                   Data yang Anda ubah akan ditinjau oleh Admin (RT/RW) sebelum diperbarui di sistem utama. Lampirkan Foto KTP/KK untuk mempercepat proses verifikasi.
+                                </p>
+                             </div>
+                          </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-bold">
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Nama Lengkap</label>
-                            <input type="text" defaultValue={wargaData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Nomor KK</label>
-                            <input type="text" defaultValue={wargaData.kk} onChange={e => setFormData({...formData, kk: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Nomor HP</label>
-                            <input type="text" defaultValue={wargaData.hp} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Email</label>
-                            <input type="email" defaultValue={wargaData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div className="col-span-2">
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Alamat / Blok (Eks: Blok A No 12)</label>
-                            <input type="text" defaultValue={wargaData.blok || wargaData.alamat} onChange={e => setFormData({...formData, blok: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Tempat Lahir</label>
-                            <input type="text" defaultValue={wargaData.tempatLahir} onChange={e => setFormData({...formData, tempatLahir: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Tanggal Lahir</label>
-                            <input type="date" defaultValue={wargaData.tglLahir} onChange={e => setFormData({...formData, tglLahir: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Agama</label>
-                            <select defaultValue={wargaData.agama} onChange={e => setFormData({...formData, agama: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                               <option value="Islam">Islam</option>
-                               <option value="Kristen">Kristen</option>
-                               <option value="Katolik">Katolik</option>
-                               <option value="Hindu">Hindu</option>
-                               <option value="Buddha">Buddha</option>
-                               <option value="Konghucu">Konghucu</option>
-                            </select>
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Posisi Dalam Keluarga</label>
-                            <select defaultValue={wargaData.posisi} onChange={e => setFormData({...formData, posisi: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                               <option value="Kepala Keluarga">Kepala Keluarga</option>
-                               <option value="Suami">Suami</option>
-                               <option value="Istri">Istri</option>
-                               <option value="Anak">Anak</option>
-                            </select>
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Profesi/Pekerjaan</label>
-                            <input type="text" defaultValue={wargaData.profesi} onChange={e => setFormData({...formData, profesi: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Pendidikan Terakhir</label>
-                            <select defaultValue={wargaData.pendidikanTerakhir} onChange={e => setFormData({...formData, pendidikanTerakhir: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                               <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
-                               <option value="SD">SD</option>
-                               <option value="SMP">SMP</option>
-                               <option value="SMA">SMA</option>
-                               <option value="DIPLOMA 1">DIPLOMA 1</option>
-                               <option value="DIPLOMA 2">DIPLOMA 2</option>
-                               <option value="DIPLOMA 3">DIPLOMA 3</option>
-                               <option value="DIPLOMA 4">DIPLOMA 4</option>
-                               <option value="S1">S1</option>
-                               <option value="S2">S2</option>
-                               <option value="S3">S3</option>
-                            </select>
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Status Kawin</label>
-                            <select defaultValue={wargaData.kawin} onChange={e => setFormData({...formData, kawin: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                               <option value="Belum Kawin">Belum Kawin</option>
-                               <option value="Kawin">Kawin</option>
-                            </select>
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Kelurahan</label>
-                            <input type="text" defaultValue={wargaData.kelurahan} onChange={e => setFormData({...formData, kelurahan: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Kecamatan</label>
-                            <input type="text" defaultValue={wargaData.kecamatan} onChange={e => setFormData({...formData, kecamatan: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">Kabupaten/Kota</label>
-                            <input type="text" defaultValue={wargaData.kabupaten} onChange={e => setFormData({...formData, kabupaten: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">WNI/WNA</label>
-                            <select defaultValue={wargaData.kewarganegaraan} onChange={e => setFormData({...formData, kewarganegaraan: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                               <option value="WNI">WNI</option>
-                               <option value="WNA">WNA</option>
-                            </select>
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">RT</label>
-                            <input type="text" defaultValue={wargaData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                         <div>
-                            <label className="text-[10px] text-slate-400 uppercase mb-1.5 block">RW</label>
-                            <input type="text" defaultValue={wargaData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" />
-                         </div>
-                      </div>
+                          {/* 1. Identitas Utama */}
+                          <div className="space-y-6">
+                             <div className="flex items-center gap-4 text-indigo-600 dark:text-indigo-400 drop-shadow-sm">
+                                <User className="w-5 h-5" />
+                                <h4 className="text-[11px] font-black uppercase tracking-[0.3em]">Identitas Utama</h4>
+                                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+                             </div>
 
-                      <div className="grid grid-cols-2 gap-6 font-black uppercase tracking-widest text-[10px]">
-                         <div>
-                            <p className="text-slate-400 mb-3">Foto KTP / Profil</p>
-                            <label className="block w-full cursor-pointer group">
-                               <div className="aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center group-hover:border-indigo-400 group-hover:bg-indigo-50/30 transition-all overflow-hidden relative">
-                                  {files.ktp ? <img src={URL.createObjectURL(files.ktp)} className="w-full h-full object-cover" /> : wargaData.ktpUrl || wargaData.foto ? <img src={wargaData.ktpUrl || wargaData.foto} className="w-full h-full object-cover" /> : <PlusCircle className="w-8 h-8 text-slate-300" />}
-                                  <input type="file" className="hidden" accept="image/*" onChange={e => setFiles({...files, ktp: e.target.files?.[0]})} />
-                               </div>
-                            </label>
-                         </div>
-                         <div>
-                            <p className="text-slate-400 mb-3">Foto Kartu Keluarga</p>
-                            <label className="block w-full cursor-pointer group">
-                               <div className="aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center group-hover:border-indigo-400 group-hover:bg-indigo-50/30 transition-all overflow-hidden relative">
-                                  {files.kk ? <img src={URL.createObjectURL(files.kk)} className="w-full h-full object-cover" /> : wargaData.kkUrl ? <img src={wargaData.kkUrl} className="w-full h-full object-cover" /> : <PlusCircle className="w-8 h-8 text-slate-300" />}
-                                  <input type="file" className="hidden" accept="image/*" onChange={e => setFiles({...files, kk: e.target.files?.[0]})} />
-                               </div>
-                            </label>
-                         </div>
-                      </div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 font-bold text-slate-800 dark:text-slate-100">
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nama Lengkap</label>
+                                   <div className="relative">
+                                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nama Lengkap sesuai KTP" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor KK</label>
+                                   <div className="relative">
+                                      <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.kk} onChange={e => setFormData({...formData, kk: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor KK (16 digit)" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor HP / WhatsApp</label>
+                                   <div className="relative">
+                                      <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.hp} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor HP atau Whatsapp aktif" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Email</label>
+                                   <div className="relative">
+                                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="email" defaultValue={wargaData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Alamat Email" />
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
 
-                      <div className="pt-8 border-t border-slate-100 flex gap-4">
-                         <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-all">Batalkan</button>
-                         <button type="submit" disabled={uploading} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
-                            {uploading ? (
-                               <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                               <CheckCircle className="w-4 h-4" />
-                            )}
-                            Kirim Pengajuan
-                         </button>
-                      </div>
-                   </form>
+                          {/* 2. Alamat & Wilayah */}
+                          <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center gap-4 text-indigo-600 dark:text-indigo-400 drop-shadow-sm">
+                                <MapPin className="w-5 h-5" />
+                                <h4 className="text-[11px] font-black uppercase tracking-[0.3em]">Alamat & Wilayah</h4>
+                                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+                             </div>
+
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 font-bold text-slate-800 dark:text-slate-100">
+                                <div className="sm:col-span-2 space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Alamat / Blok (Eks: Blok A No 12)</label>
+                                   <div className="relative">
+                                      <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.blok || wargaData.alamat} onChange={e => setFormData({...formData, blok: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Contoh: No. 12, RT 01 RW 02" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kelurahan</label>
+                                   <div className="relative">
+                                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.kelurahan} onChange={e => setFormData({...formData, kelurahan: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kecamatan</label>
+                                   <div className="relative">
+                                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.kecamatan} onChange={e => setFormData({...formData, kecamatan: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kabupaten / Kota</label>
+                                   <div className="relative">
+                                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.kabupaten} onChange={e => setFormData({...formData, kabupaten: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kewarganegaraan (WNI/WNA)</label>
+                                   <select defaultValue={wargaData.kewarganegaraan} onChange={e => setFormData({...formData, kewarganegaraan: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                      <option value="WNI">WNI</option>
+                                      <option value="WNA">WNA</option>
+                                   </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">RT</label>
+                                   <div className="relative">
+                                      <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">RW</label>
+                                   <div className="relative">
+                                      <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
+
+                          {/* 3. Profil Demografi & Sosial */}
+                          <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center gap-4 text-indigo-600 dark:text-indigo-400 drop-shadow-sm">
+                                <Heart className="w-5 h-5" />
+                                <h4 className="text-[11px] font-black uppercase tracking-[0.3em]">Profil Demografi & Sosial</h4>
+                                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+                             </div>
+
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 font-bold text-slate-800 dark:text-slate-100">
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tempat Lahir</label>
+                                   <div className="relative">
+                                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.tempatLahir} onChange={e => setFormData({...formData, tempatLahir: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tanggal Lahir</label>
+                                   <div className="relative">
+                                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="date" defaultValue={wargaData.tglLahir} onChange={e => setFormData({...formData, tglLahir: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Agama</label>
+                                   <select defaultValue={wargaData.agama} onChange={e => setFormData({...formData, agama: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                      <option value="Islam">Islam</option>
+                                      <option value="Kristen">Kristen</option>
+                                      <option value="Katolik">Katolik</option>
+                                      <option value="Hindu">Hindu</option>
+                                      <option value="Buddha">Buddha</option>
+                                      <option value="Konghucu">Konghucu</option>
+                                   </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hubungan dalam Keluarga</label>
+                                   <select defaultValue={wargaData.posisi} onChange={e => setFormData({...formData, posisi: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                      <option value="Kepala Keluarga">Kepala Keluarga</option>
+                                      <option value="Suami">Suami</option>
+                                      <option value="Istri">Istri</option>
+                                      <option value="Anak">Anak</option>
+                                   </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Profesi/Pekerjaan</label>
+                                   <div className="relative">
+                                      <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" defaultValue={wargaData.profesi} onChange={e => setFormData({...formData, profesi: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Pekerjaan saat ini" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Pendidikan Terakhir</label>
+                                   <select defaultValue={wargaData.pendidikanTerakhir} onChange={e => setFormData({...formData, pendidikanTerakhir: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                      <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
+                                      <option value="SD">SD</option>
+                                      <option value="SMP">SMP</option>
+                                      <option value="SMA">SMA</option>
+                                      <option value="DIPLOMA 1">DIPLOMA 1</option>
+                                      <option value="DIPLOMA 2">DIPLOMA 2</option>
+                                      <option value="DIPLOMA 3">DIPLOMA 3</option>
+                                      <option value="DIPLOMA 4">DIPLOMA 4</option>
+                                      <option value="S1">S1</option>
+                                      <option value="S2">S2</option>
+                                      <option value="S3">S3</option>
+                                   </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status Pernikahan</label>
+                                   <select defaultValue={wargaData.kawin} onChange={e => setFormData({...formData, kawin: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                      <option value="Belum Kawin">Belum Kawin</option>
+                                      <option value="Kawin">Kawin</option>
+                                   </select>
+                                </div>
+                             </div>
+                          </div>
+
+                          {/* 4. Dokumen Pendukung */}
+                          <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center gap-4 text-indigo-600 dark:text-indigo-400 drop-shadow-sm">
+                                <FileText className="w-5 h-5" />
+                                <h4 className="text-[11px] font-black uppercase tracking-[0.3em]">Dokumen Pendukung</h4>
+                                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+                             </div>
+
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Foto KTP / Profil</span>
+                                   <label className="block w-full cursor-pointer group">
+                                      <div className="aspect-video bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center group-hover:border-indigo-400 dark:group-hover:border-indigo-600 group-hover:bg-indigo-50/20 dark:group-hover:bg-indigo-950/10 transition-all overflow-hidden relative shadow-sm">
+                                         {files.ktp ? (
+                                            <img src={URL.createObjectURL(files.ktp)} className="w-full h-full object-cover" />
+                                         ) : wargaData.ktpUrl || wargaData.foto ? (
+                                            <img src={wargaData.ktpUrl || wargaData.foto} className="w-full h-full object-cover" />
+                                         ) : (
+                                            <div className="flex flex-col items-center gap-2">
+                                               <PlusCircle className="w-8 h-8 text-slate-300 dark:text-slate-650 group-hover:scale-110 transition-transform" />
+                                               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Unggah Foto KTP</span>
+                                            </div>
+                                         )}
+                                         <input type="file" className="hidden" accept="image/*" onChange={e => setFiles({...files, ktp: e.target.files?.[0]})} />
+                                      </div>
+                                   </label>
+                                </div>
+                                <div className="space-y-2">
+                                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Foto Kartu Keluarga</span>
+                                   <label className="block w-full cursor-pointer group">
+                                      <div className="aspect-video bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center group-hover:border-indigo-400 dark:group-hover:border-indigo-600 group-hover:bg-indigo-50/20 dark:group-hover:bg-indigo-950/10 transition-all overflow-hidden relative shadow-sm">
+                                         {files.kk ? (
+                                            <img src={URL.createObjectURL(files.kk)} className="w-full h-full object-cover" />
+                                         ) : wargaData.kkUrl ? (
+                                            <img src={wargaData.kkUrl} className="w-full h-full object-cover" />
+                                         ) : (
+                                            <div className="flex flex-col items-center gap-2">
+                                               <PlusCircle className="w-8 h-8 text-slate-300 dark:text-slate-650 group-hover:scale-110 transition-transform" />
+                                               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Unggah Foto KK</span>
+                                            </div>
+                                         )}
+                                         <input type="file" className="hidden" accept="image/*" onChange={e => setFiles({...files, kk: e.target.files?.[0]})} />
+                                      </div>
+                                   </label>
+                                </div>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="px-5 sm:px-10 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 sticky bottom-0 z-20 flex flex-col gap-4">
+                          <div className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-50/30 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/25 rounded-2xl transition-all">
+                             <div className="w-5 h-5 rounded-lg bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-105 dark:border-blue-900">
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                             </div>
+                             <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Data yang anda masukkan dilindungi enkripsi SSL</span>
+                          </div>
+                          
+                          <div className="flex gap-4">
+                             <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all">Batalkan</button>
+                             <button type="submit" disabled={uploading} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-indigo-100 dark:shadow-none hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
+                                {uploading ? (
+                                   <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                   <CheckCircle className="w-4 h-4" />
+                                )}
+                                Kirim Pengajuan
+                             </button>
+                          </div>
+                       </div>
+                    </form>
                 </motion.div>
              </div>
           )}

@@ -1,9 +1,31 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getTenantId() {
+      return isSignedIn() && 'tenantId' in request.auth.token ? request.auth.token.tenantId : null;
+    }
+
+    // --- Rules for Segregated Tenant Storage ---
+    match /{tenantId}/{allPaths=**} {
+      allow read, write: if isSignedIn() && (
+        tenantId == getTenantId() ||
+        request.auth.token.email == 'arifrajcoach@gmail.com' ||
+        ('firebase' in request.auth.token && 'tenant' in request.auth.token.firebase && request.auth.token.firebase.tenant == tenantId)
+      );
+    }
+
+    // --- Legacy / Global Folders for Fallback ---
+    match /verifikasi/{allPaths=**} {
+      allow read, write: if isSignedIn();
+    }
+    match /warga_docs/{allPaths=**} {
+      allow read, write: if isSignedIn();
     }
   }
 }

@@ -918,14 +918,14 @@ export function SuratView({
 
       <AnimatePresence>
         {showForm && (
-          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-[120] p-4">
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center sm:p-4 p-0 z-[120] overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.9, y: 20 }} 
-              className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2rem] sm:rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col max-h-[95vh] border border-white/20 dark:border-slate-800"
+              className="bg-white dark:bg-slate-900 w-full sm:max-w-2xl sm:rounded-[3rem] rounded-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col h-full sm:h-auto sm:max-h-[95vh] border border-white/20 dark:border-slate-800"
             >
-              <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="p-4 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
                 <div className="flex items-center gap-3 sm:gap-5">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
                     <PlusCircle className="w-6 h-6 sm:w-7 sm:h-7" />
@@ -946,8 +946,9 @@ export function SuratView({
                 </motion.button>
               </div>
               
-              <form onSubmit={handleSaveSurat} ref={formRef} className="p-6 sm:p-10 overflow-y-auto space-y-6 sm:space-y-10 custom-scrollbar">
-                {/* 1. Pemohon Section */}
+              <form onSubmit={handleSaveSurat} ref={formRef} className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-5 sm:p-10 space-y-5 sm:space-y-10 custom-scrollbar pb-24">
+                  {/* 1. Pemohon Section */}
                 <div className="space-y-6">
                   <div className="flex items-center gap-4 text-brand-blue drop-shadow-sm">
                     <User className="w-6 h-6" />
@@ -1237,8 +1238,9 @@ export function SuratView({
                      <span className="text-blue-600 font-bold ml-1">"Sedang Berjalan"</span>.
                    </p>
                 </div>
+              </div>
 
-                <div className="pt-10 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md pb-4">
+              <div className="p-5 sm:px-10 py-4 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-slate-900 shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
                       <ShieldCheck className="w-5 h-5 text-brand-blue" />
@@ -1283,9 +1285,9 @@ export function SuratView({
 
       <AnimatePresence>
         {viewingSurat && (
-          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] p-4">
-             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
-                <div className="p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[110] sm:p-4 p-0 overflow-y-auto">
+             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-slate-900 w-full sm:max-w-lg sm:rounded-3xl rounded-none shadow-2xl overflow-hidden relative flex flex-col h-full sm:h-auto sm:max-h-[90vh] border border-white/10 dark:border-slate-800">
+                <div className="p-5 sm:p-6 overflow-y-auto flex-1">
                    <div className="flex justify-between items-start mb-6">
                       <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
                         <FileText className="w-6 h-6" />
