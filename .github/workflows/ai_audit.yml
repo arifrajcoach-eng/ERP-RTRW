@@ -23,40 +23,40 @@ jobs:
       - name: Install Project Dependencies
         run: npm install
 
-      - name: Set up and Start OpenRouter to Claude API Proxy
+      - name: Start Proxy and Run Claude Code Auditor
         # Clones the popular elusznik/open-claude-router to act as a local proxy
         # translating Claude Code's Anthropic requests into OpenRouter-compatible format.
+        # Spawning and running this in the same step guarantees the background process is kept alive.
         run: |
           git clone https://github.com/elusznik/open-claude-router.git proxy
           cd proxy
           npm install
           
           # Configure secrets and parameters
-          # You can override MODEL_OVERRIDE with "google/gemini-2.5-pro", "meta-llama/llama-3.3-70b-instruct", etc.
-          # We default to "anthropic/claude-3.5-sonnet" (runs via OpenRouter) for best Claude Code compliance.
+          # Using "google/gemini-2.5-flash" via OpenRouter for extremely fast, ultra-low cost, and token-saving audits.
           echo "OPENROUTER_API_KEY=\"${{ secrets.OPENROUTER_API_KEY }}\"" > .dev.vars
-          echo "MODEL_OVERRIDE=\"anthropic/claude-3.5-sonnet\"" >> .dev.vars
+          echo "MODEL_OVERRIDE=\"google/gemini-2.5-flash\"" >> .dev.vars
           
-          # Start local Cloudflare worker proxy in background on port 8787
-          npx wrangler dev --port 8787 --ip 127.0.0.1 &
+          # Start wrangler locally on port 8787 in the background
+          # Using nohup guarantees the process is detached and doesn't capture terminal output
+          nohup npx wrangler dev --port 8787 --ip 127.0.0.1 > wrangler.log 2>&1 &
           
-          # Wait for the proxy to become available
+          # Wait up to 30 seconds for the proxy to become available
           echo "Waiting for local Claude-to-OpenRouter proxy to boot..."
           for i in {1..30}; do
             if curl -s http://127.0.0.1:8787 >/dev/null; then
-              echo "Proxy booted successfully!"
-              exit 0
+              echo "Proxy booted successfully on http://127.0.0.1:8787!"
+              break
             fi
             sleep 1
           done
-          echo "Error: Proxy failed to start on time."
-          exit 1
-
-      - name: Run Claude Code Security Auditor (Non-Interactive)
-        # Point Claude Code to our local OpenRouter proxy instead of direct Anthropic API.
-        # This keeps the execution linear, utilizing OpenRouter budget and free options.
-        run: npx @anthropic-ai/claude-code --once "jalankan audit keamanan sesuai AGENTS.md"
-        env:
-          ANTHROPIC_BASE_URL: "http://127.0.0.1:8787"
-          ANTHROPIC_API_KEY: "dummy-key-to-bypass-sdk-checks"
+          
+          # Move back to project root
+          cd ..
+          
+          # Run Claude Code with the custom base URL pointing to our background proxy
+          # Using the `--once` flag keeps execution linear and prevents CLI from hanging in CI/CD pipeline
+          export ANTHROPIC_BASE_URL="http://127.0.0.1:8787"
+          export ANTHROPIC_API_KEY="dummy-key-to-bypass-sdk-checks"
+          npx @anthropic-ai/claude-code --once "jalankan audit keamanan sesuai AGENTS.md"
 
