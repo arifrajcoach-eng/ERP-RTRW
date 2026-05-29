@@ -156,7 +156,6 @@ import { DaftarPendaftarTrialView } from "./components/DaftarPendaftarTrialView"
 import { FreeTrialRegistrationModal } from "./components/FreeTrialRegistrationModal";
 import { RTRegistrationForm } from "./components/RTRegistrationForm";
 import { PricingSection } from "./components/PricingSection";
-import ChatWargaView from "./components/ChatWargaView";
 import AIChatBot from "./components/AIChatBot";
 import UpgradeModal from "./components/UpgradeModal";
 import LeadManagementView from "./components/LeadManagementView";
@@ -2376,13 +2375,6 @@ export default function App() {
       },
       { id: "organisasi", label: "Struktur Organisasi", icon: Network },
       {
-        id: "chat",
-        label: "Grup Chat",
-        icon: MessageSquare,
-        plan: "chatMode",
-        minPlan: "BASIC",
-      },
-      {
         id: "ai-bot",
         label: "AI Agent",
         icon: Bot,
@@ -3524,14 +3516,6 @@ export default function App() {
                 currentUser={currentUser}
               />
             )
-          )}
-          {activeTab === "chat" && (
-            <ChatWargaView
-              tenantId={currentUser.tenantId || "rw26_berjuang"}
-              currentUser={currentUser}
-              handleFirestoreError={handleFirestoreError}
-              currentTenant={currentTenant}
-            />
           )}
           {activeTab === "ai-bot" && (
             <AIChatBot currentUser={currentUser} plan={currentTenant?.status} />
