@@ -28,6 +28,7 @@ import {
   Star,
   Wallet,
   Plus,
+  Mail,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -112,11 +113,16 @@ export default function BelanjaView({
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
   const [activeMainTab, setActiveMainTab] = useState("Home");
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
+  const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil">("Main");
+  const [localProducts, setLocalProducts] = useState(PRODUCTS);
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", description: "" });
+  const [productImage, setProductImage] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [localOrders, setLocalOrders] = useState([1, 2, 3]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentBanner, setCurrentBanner] = useState(0);
 
-  const filteredProducts = (products.length > 0 ? products : PRODUCTS).filter(p => {
+  const filteredProducts = (products.length > 0 ? products : localProducts).filter(p => {
     const matchesCategory = activeCategory === "Semua" || p.category === activeCategory;
     const matchesSearch = (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
                          (p.description || "").toLowerCase().includes(searchQuery.toLowerCase());
@@ -140,6 +146,7 @@ export default function BelanjaView({
     if (["Home", "Inbox", "Transaksi", "Toko Saya", "Akun", "GoPay & Coins", "Cek Kupon", "Bonus", "Pesan Chat", "Room Chat", "Notifikasi", "Pendaftaran Toko", "Toko Saya Aktif"].includes(label)) {
       setActiveMainTab(label);
       if (label === "Toko Saya Aktif") setTokoSubTab("Main");
+      if (label === "Akun") setAkunSubTab("Main");
       return;
     }
     const messages: Record<string, string> = {
@@ -162,7 +169,7 @@ export default function BelanjaView({
   const handleRecentClick = (item: any) => {
     if (onProductSelect) {
       // Find matching product in list or simulate a detailed view
-      const realProduct = (products.length > 0 ? products : PRODUCTS).find(p => p.id === item.id);
+      const realProduct = (products.length > 0 ? products : localProducts).find(p => p.id === item.id);
       if (realProduct) {
         onProductSelect(realProduct);
       } else {
@@ -696,7 +703,11 @@ export default function BelanjaView({
             {tokoSubTab === "TambahProduk" && (
               <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-4 mb-8">
-                  <button onClick={() => setTokoSubTab("Main")} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+                  <button onClick={() => {
+                    setTokoSubTab("Main");
+                    setNewProduct({ name: "", price: "", description: "" });
+                    setProductImage(null);
+                  }} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
                     <ChevronRight className="rotate-180" size={20} />
                   </button>
                   <div>
@@ -706,32 +717,95 @@ export default function BelanjaView({
                 </div>
 
                 <div className="space-y-6">
-                  <div className="aspect-square w-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-all group mx-auto">
-                    <Plus className="text-slate-300 group-hover:text-emerald-500" size={32} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-600">Foto Produk</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const url = URL.createObjectURL(file);
+                        setProductImage(url);
+                      }
+                    }}
+                  />
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square w-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-all group mx-auto overflow-hidden relative"
+                  >
+                    {productImage ? (
+                      <img src={productImage} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <Plus className="text-slate-300 group-hover:text-emerald-500" size={32} />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-600">Foto Produk</span>
+                      </>
+                    )}
+                    {productImage && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Plus className="text-white rotate-45" size={24} />
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Nama Produk *</label>
-                      <input type="text" placeholder="Masukkan nama barang/jasa" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" />
+                      <input 
+                        type="text" 
+                        placeholder="Masukkan nama barang/jasa" 
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Harga (Rp) *</label>
-                      <input type="number" placeholder="Contoh: 50.000" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" />
+                      <input 
+                        type="number" 
+                        placeholder="Contoh: 50.000" 
+                        value={newProduct.price}
+                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Deskripsi Singkat</label>
-                      <textarea rows={3} placeholder="Ceritakan tentang produk Anda..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none resize-none"></textarea>
+                      <textarea 
+                        rows={3} 
+                        placeholder="Ceritakan tentang produk Anda..." 
+                        value={newProduct.description}
+                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none resize-none"
+                      ></textarea>
                     </div>
                   </div>
 
                   <button 
+                    disabled={!newProduct.name || !newProduct.price}
                     onClick={() => {
+                      const id = Math.random().toString(36).substr(2, 9);
+                      const productToAdd = {
+                        id,
+                        name: newProduct.name,
+                        price: Number(newProduct.price),
+                        description: newProduct.description,
+                        category: "Sembako", // Default category for new products in demo
+                        stock: 10,
+                        image: productImage || 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&q=80&w=400'
+                      };
+                      setLocalProducts([productToAdd, ...localProducts]);
                       showNotification?.("Produk berhasil ditambahkan!", "success");
                       setTokoSubTab("Main");
+                      setNewProduct({ name: "", price: "", description: "" });
+                      setProductImage(null);
                     }}
-                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] uppercase tracking-widest text-sm"
+                    className={`w-full py-4 font-black rounded-2xl shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest text-sm ${
+                      !newProduct.name || !newProduct.price 
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
+                    }`}
                   >
                     Simpan Produk
                   </button>
@@ -871,7 +945,7 @@ export default function BelanjaView({
                   </button>
                   <div className="flex-1">
                     <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Kelola Produk</h2>
-                    <p className="text-xs text-slate-500 font-bold">24 Produk Terdaftar</p>
+                    <p className="text-xs text-slate-500 font-bold">{localProducts.length} Produk Terdaftar</p>
                   </div>
                   <button 
                     onClick={() => setTokoSubTab("TambahProduk")}
@@ -882,18 +956,29 @@ export default function BelanjaView({
                 </div>
 
                 <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="p-4 flex items-center justify-between border-b border-slate-50 last:border-none group hover:bg-slate-50 transition-colors">
+                  {localProducts.map((p) => (
+                    <div key={p.id} className="p-4 flex items-center justify-between border-b border-slate-50 last:border-none group hover:bg-slate-50 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden"></div>
+                        <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden">
+                          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                        </div>
                         <div>
-                          <h4 className="text-sm font-black text-slate-800 uppercase">Produk Contoh #{i}</h4>
-                          <p className="text-xs font-bold text-emerald-600">Rp 45.000</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Stok: 12 • Terjual: 5</p>
+                          <h4 className="text-sm font-black text-slate-800 uppercase truncate max-w-[150px]">{p.name}</h4>
+                          <p className="text-xs font-bold text-emerald-600">Rp {new Intl.NumberFormat('id-ID').format(p.price)}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">Stok: {p.stock} • {p.discount ? `Promo: ${p.discount}` : 'Normal'}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => showNotification?.("Fitur edit produk", "info")} className="p-2 text-slate-400 hover:text-emerald-600 transition-colors">
+                        <button 
+                          onClick={() => {
+                            setLocalProducts(localProducts.filter(item => item.id !== p.id));
+                            showNotification?.("Produk berhasil dihapus!", "success");
+                          }}
+                          className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                        >
+                          <Plus className="rotate-45" size={18} />
+                        </button>
+                        <button onClick={() => showNotification?.("Fitur edit produk", "info")} className="p-2 text-slate-300 hover:text-emerald-600 transition-colors">
                           <LayoutGrid size={18} />
                         </button>
                       </div>
@@ -1009,48 +1094,239 @@ export default function BelanjaView({
 
         {activeMainTab === "Akun" && (
           <div className="flex flex-col space-y-6">
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-2xl font-black shrink-0">
-                <Users size={32} />
-              </div>
-              <div className="flex-1 w-full overflow-hidden">
-                <h2 className="text-lg font-black text-slate-800 uppercase truncate">Profil Pengguna</h2>
-                <p className="text-xs text-slate-500 font-bold truncate">Warga RT 26</p>
-                <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold">
-                  <Star size={10} className="fill-amber-500" /> Member Silver
+            {akunSubTab === "Main" && (
+              <>
+                <div 
+                  onClick={() => setAkunSubTab("EditProfil")}
+                  className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:border-emerald-200 transition-all group"
+                >
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-2xl font-black shrink-0 group-hover:scale-105 transition-transform">
+                    <Users size={32} />
+                  </div>
+                  <div className="flex-1 w-full overflow-hidden">
+                    <h2 className="text-lg font-black text-slate-800 uppercase truncate">Profil Pengguna</h2>
+                    <p className="text-xs text-slate-500 font-bold truncate">Warga RT 26</p>
+                    <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold">
+                      <Star size={10} className="fill-amber-500" /> Member Silver
+                    </div>
+                  </div>
+                  <ChevronRight size={20} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                </div>
+                
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 divide-y divide-slate-50 overflow-hidden">
+                  <div onClick={() => setAkunSubTab("Alamat")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <Package size={20} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                      <span className="text-sm font-bold text-slate-700">Alamat Pengiriman</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-300" />
+                  </div>
+                  <div onClick={() => setAkunSubTab("Dompet")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <Wallet size={20} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                      <span className="text-sm font-bold text-slate-700">Dompet & Pembayaran</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-300" />
+                  </div>
+                  <div onClick={() => setAkunSubTab("Bantuan")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <MessageCircle size={20} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                      <span className="text-sm font-bold text-slate-700">Pusat Bantuan</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-300" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {akunSubTab === "Alamat" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setAkunSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Alamat Pengiriman</h2>
+                    <p className="text-xs text-slate-500 font-bold">Kelola alamat pengiriman anda</p>
+                  </div>
+                  <button 
+                    onClick={() => showNotification?.("Fitur tambah alamat", "info")}
+                    className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
+                  >
+                    <Plus size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-white rounded-[2rem] p-6 shadow-sm border-2 border-emerald-500 relative">
+                    <div className="absolute top-6 right-6 px-2 py-1 bg-emerald-500 text-white text-[8px] font-black uppercase rounded-md tracking-wider">Utama</div>
+                    <h3 className="text-sm font-black text-slate-800 uppercase mb-2">Rumah (Arif)</h3>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-4">Jl. Melati IV No. 12, Blok B/12, RT 026/004, Kelurahan Pusat, Kota Administrasi Jakarta Selatan, 12345</p>
+                    <div className="flex gap-2">
+                       <button onClick={() => showNotification?.("Edit alamat", "info")} className="flex-1 py-2 text-[10px] font-bold text-slate-400 border border-slate-100 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-all uppercase tracking-widest">Ubah</button>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 opacity-60">
+                    <h3 className="text-sm font-black text-slate-800 uppercase mb-2">Kantor</h3>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-4">Gedung Smart City, Lt. 5, Jl. Teknologi Modern No. 8</p>
+                    <div className="flex gap-2">
+                       <button onClick={() => showNotification?.("Jadikan alamat utama", "success")} className="flex-1 py-2 text-[10px] font-bold text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-50 transition-all uppercase tracking-widest">Pilih Utama</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <button 
-                onClick={() => showNotification?.("Edit profil", "info")}
-                className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-colors shrink-0"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-            
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 divide-y divide-slate-50 overflow-hidden">
-              <div onClick={() => showNotification?.("Alamat Pengiriman", "info")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50">
-                <div className="flex items-center gap-3">
-                  <Package size={20} className="text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700">Alamat Pengiriman</span>
+            )}
+
+            {akunSubTab === "Dompet" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setAkunSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Dompet & Bayar</h2>
+                    <p className="text-xs text-slate-500 font-bold">Saldo & metode pembayaran</p>
+                  </div>
                 </div>
-                <ChevronRight size={16} className="text-slate-300" />
-              </div>
-              <div onClick={() => showNotification?.("Dompet & Cicilan", "info")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50">
-                <div className="flex items-center gap-3">
-                  <Wallet size={20} className="text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700">Dompet & Pembayaran</span>
+
+                <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[2rem] p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-2">Saldo Gopay & Coins</p>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <h3 className="text-4xl font-black tracking-tighter">Rp 2.450.000</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => showNotification?.("Fitur Top Up", "info")} className="py-3 bg-white/20 backdrop-blur-md rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/30 transition-all active:scale-95 border border-white/20">Isi Saldo</button>
+                    <button onClick={() => showNotification?.("Fitur Transfer", "info")} className="py-3 bg-white text-indigo-700 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all active:scale-95 shadow-lg shadow-indigo-900/10">Transfer</button>
+                  </div>
                 </div>
-                <ChevronRight size={16} className="text-slate-300" />
-              </div>
-              <div onClick={() => showNotification?.("Pusat Bantuan", "info")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50">
-                <div className="flex items-center gap-3">
-                  <MessageCircle size={20} className="text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700">Pusat Bantuan</span>
+
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Metode Pembayaran</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-xs uppercase tracking-tighter italic">Bank</div>
+                        <div>
+                          <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Bank Mandiri</p>
+                          <p className="text-[10px] text-slate-400 font-bold">**** **** 1234</p>
+                        </div>
+                      </div>
+                      <div className="w-5 h-5 border-2 border-emerald-500 rounded-full flex items-center justify-center">
+                        <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between opacity-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center font-black text-xs uppercase tracking-tighter">Visa</div>
+                        <div>
+                          <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Kartu Kredit</p>
+                          <p className="text-[10px] text-slate-400 font-bold">**** **** 5678</p>
+                        </div>
+                      </div>
+                      <div className="w-5 h-5 border-2 border-slate-200 rounded-full"></div>
+                    </div>
+                  </div>
                 </div>
-                <ChevronRight size={16} className="text-slate-300" />
               </div>
-            </div>
+            )}
+
+            {akunSubTab === "Bantuan" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setAkunSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Pusat Bantuan</h2>
+                    <p className="text-xs text-slate-500 font-bold">Siap membantu anda 24/7</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div onClick={() => showNotification?.("Chat Support", "info")} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group">
+                     <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <MessageCircle size={24} />
+                     </div>
+                     <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Live Chat</span>
+                  </div>
+                  <div onClick={() => showNotification?.("Email Support", "info")} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group">
+                     <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Mail size={24} />
+                     </div>
+                     <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Email</span>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">FAQ Populer</h3>
+                  <div className="space-y-4">
+                    {[
+                      "Bagaimana cara belanja?",
+                      "Kenapa pesanan saya belum sampai?",
+                      "Metode pembayaran apa saja?",
+                      "Cara mendaftar jadi penjual?"
+                    ].map((q, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-none last:pb-0 cursor-pointer group">
+                        <span className="text-xs font-bold text-slate-600 group-hover:text-emerald-600 transition-colors">{q}</span>
+                        <ChevronRight size={14} className="text-slate-300" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {akunSubTab === "EditProfil" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setAkunSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Edit Profil</h2>
+                    <p className="text-xs text-slate-500 font-bold">Perbarui informasi anda</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-6">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center relative group cursor-pointer border-4 border-white shadow-lg">
+                      <Users size={48} />
+                      <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Plus className="text-white" size={24} />
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Ganti Foto Profil</span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nama Lengkap</label>
+                       <input type="text" defaultValue="Arif Rajcoach" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nomor WhatsApp</label>
+                       <input type="tel" defaultValue="+62 812-3456-7890" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email</label>
+                       <input type="email" defaultValue="arif@smartrw.ai" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      showNotification?.("Profil berhasil diperbarui!", "success");
+                      setAkunSubTab("Main");
+                    }}
+                    className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-xs"
+                  >
+                    Simpan Perubahan
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
