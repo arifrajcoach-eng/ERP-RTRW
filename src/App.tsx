@@ -3805,6 +3805,7 @@ export default function App() {
               showNotification={showNotification}
               accessMode={getPlanFeatures(currentTenant).eLapak}
               setShowUpgradeModal={setShowUpgradeModal}
+              onBackToMain={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "analitik" &&
@@ -5450,6 +5451,7 @@ function ETokoView({
   showNotification,
   accessMode,
   setShowUpgradeModal,
+  onBackToMain,
 }: {
   userRole: string;
   tenantId: string;
@@ -5463,6 +5465,7 @@ function ETokoView({
   showNotification: any;
   accessMode?: "LIHAT" | "READ" | "JUAL" | "PRIORITAS" | boolean;
   setShowUpgradeModal: any;
+  onBackToMain?: () => void;
 }) {
   const [view, setView] = useState<"buyer" | "seller">("buyer");
   const [activeTab, setActiveTab] = useState<"shop" | "orders">("shop");
@@ -5866,6 +5869,9 @@ function ETokoView({
               products={products} 
               onAddToCart={addToCart}
               showNotification={showNotification}
+              onBackToMain={() => {
+                if (onBackToMain) onBackToMain();
+              }}
               onProductSelect={(p) => {
                 setSelectedProduct(p);
                 setShowProductModal(true);

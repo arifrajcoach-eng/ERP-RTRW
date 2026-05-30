@@ -24,7 +24,10 @@ import {
   Truck,
   GraduationCap,
   Users,
-  CheckCircle2
+  CheckCircle2,
+  Star,
+  Wallet,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -96,15 +99,18 @@ export default function BelanjaView({
   products = [], 
   onAddToCart,
   showNotification,
-  onProductSelect
+  onProductSelect,
+  onBackToMain
 }: { 
   products?: any[], 
   onAddToCart?: (p: any) => void,
   showNotification?: (msg: string, type?: "success" | "error" | "info" | "warning") => void,
-  onProductSelect?: (p: any) => void
+  onProductSelect?: (p: any) => void,
+  onBackToMain?: () => void
 }) {
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
+  const [activeMainTab, setActiveMainTab] = useState("Home");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentBanner, setCurrentBanner] = useState(0);
 
@@ -125,18 +131,17 @@ export default function BelanjaView({
   });
 
   const handleQuickLink = (label: string) => {
+    if (label === "Modul Utama") {
+      if (onBackToMain) onBackToMain();
+      return;
+    }
+    if (["Home", "Inbox", "Transaksi", "Toko Saya", "Akun", "GoPay & Coins", "Cek Kupon", "Bonus", "Pesan Chat", "Room Chat", "Notifikasi", "Pendaftaran Toko", "Toko Saya Aktif"].includes(label)) {
+      setActiveMainTab(label);
+      return;
+    }
     const messages: Record<string, string> = {
-      'Bonus': 'Bonus Anda sedang dikalkulasi. Cek kembali dalam 24 jam!',
-      'GoPay & Coins': 'Saldo GoPay & 2.450 Coins tersedia untuk transaksi ini.',
-      'Cek Kupon': '3 Kupon Potongan Ongkir & Diskon Hemat tersedia!',
-      'Pesan Chat': 'Membuka pesan chat dengan Penjual...',
       'Notifikasi': 'Memuat 5 notifikasi transaksi terbaru Anda.',
-      'Modul Utama': 'Mengalihkan ke Dashboard Modul Utama Lapak 26...',
-      'Home': 'Kembali ke Beranda Utama Lapak 26.',
-      'Inbox': 'Memeriksa pesan masuk dan penawaran khusus.',
-      'Transaksi': 'Menampilkan riwayat transaksi belanja Anda.',
-      'Toko Saya': 'Masuk ke dashboard pengelolaan toko Anda.',
-      'Akun': 'Membuka pengaturan profil dan alamat pengiriman.'
+      'Modul Utama': 'Mengalihkan ke Dashboard Modul Utama Lapak 26...'
     };
 
     if (showNotification) {
@@ -158,7 +163,17 @@ export default function BelanjaView({
       if (realProduct) {
         onProductSelect(realProduct);
       } else {
-        showNotification?.(`Membuka detail eksklusif: ${item.name}`, "info");
+        // Create a mock product based on the recent check item so it opens the detail view
+        const mockProduct = {
+          id: item.id,
+          name: item.name,
+          category: item.category || 'Lainnya',
+          description: item.label,
+          price: 50000, 
+          stock: 5,
+          image: item.image
+        };
+        onProductSelect(mockProduct);
       }
     } else {
       showNotification?.(`Menampilkan detail: ${item.name}. Produk tersedia di RT 26.`, "info");
@@ -179,11 +194,18 @@ export default function BelanjaView({
       {/* Lapak 26 Premium Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-8 pb-14 rounded-b-[3rem] shadow-lg shadow-emerald-900/10 mb-[-2rem] relative z-20">
          <div className="flex justify-between items-start mb-6">
-            <div>
+            <div onClick={() => handleQuickLink("Home")} className="cursor-pointer hover:opacity-80 transition-opacity">
                <h1 className="text-3xl font-black italic tracking-tighter mb-1 font-elegant">LAPAK 26</h1>
                <p className="text-xs font-bold text-emerald-100/80 uppercase tracking-[0.2em]">Pusat Niaga & UMKM Warga</p>
             </div>
             <div className="flex gap-4">
+              <div 
+                onClick={() => handleQuickLink(activeMainTab === 'Toko Saya Aktif' ? 'Toko Saya Aktif' : 'Toko Saya')}
+                className="hidden md:flex relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors cursor-pointer items-center justify-center gap-2"
+              >
+                <Store size={20} />
+                <span className="text-xs font-bold hidden lg:block">Buka Toko</span>
+              </div>
               <div 
                 onClick={() => handleQuickLink("Pesan Chat")}
                 className="relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors cursor-pointer"
@@ -207,6 +229,9 @@ export default function BelanjaView({
               type="text" 
               placeholder="Cari kebutuhan Anda di RT 26..."
               value={searchQuery}
+              onFocus={() => {
+                if (activeMainTab !== "Home") setActiveMainTab("Home");
+              }}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && showNotification?.("Mencari: " + searchQuery, "info")}
               className="w-full pl-12 pr-4 py-4 bg-white/95 backdrop-blur border-none rounded-2xl text-slate-800 text-sm font-bold shadow-xl shadow-black/10 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all placeholder:text-slate-400"
@@ -222,8 +247,10 @@ export default function BelanjaView({
 
       <div className="max-w-screen-xl mx-auto space-y-8 p-4 pt-10">
         
-        {/* Banner Section - Swipeable */}
-        <div className="relative group overflow-hidden rounded-3xl shadow-xl shadow-emerald-900/5">
+        {activeMainTab === "Home" && (
+          <>
+            {/* Banner Section - Swipeable */}
+            <div className="relative group overflow-hidden rounded-3xl shadow-xl shadow-emerald-900/5">
           <div className="absolute inset-y-0 left-4 z-10 flex items-center">
             <button 
               onClick={prevBanner}
@@ -487,41 +514,534 @@ export default function BelanjaView({
              )}
           </div>
         )}
+        </>
+        )}
+
+        {activeMainTab === "Toko Saya" && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Store size={48} className="text-slate-300 mb-4" />
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Toko Anda Belum Aktif</h2>
+            <p className="text-sm text-slate-500 font-medium mb-6 max-w-xs">Buka toko gratis dan mulai berjualan ke seluruh warga Lapak 26.</p>
+            <button 
+              onClick={() => handleQuickLink("Pendaftaran Toko")}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-600/20 max-w-[250px] mx-auto"
+            >
+              Buka Toko Sekarang
+            </button>
+          </div>
+        )}
+
+        {activeMainTab === "Pendaftaran Toko" && (
+          <div className="flex flex-col space-y-6 max-w-md mx-auto w-full pb-10">
+            <div className="flex items-center gap-4 mb-2">
+              <button onClick={() => handleQuickLink("Toko Saya")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-500 shadow-sm border border-slate-100 hover:bg-slate-50 transition-colors shrink-0">
+                <ChevronRight className="rotate-180" size={20} />
+              </button>
+              <div>
+                <h2 className="text-xl font-black text-slate-800 tracking-tight uppercase">Buka Toko</h2>
+                <p className="text-sm text-slate-500 font-medium">Lengkapi profil toko Anda</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Nama Toko *</label>
+                <input type="text" placeholder="Contoh: Toko Berkah Jaya" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Domain Toko *</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-400 bg-slate-50 border border-slate-200 px-3 py-3 rounded-xl border-r-0 rounded-r-none">lapak26.id/</span>
+                  <input type="text" placeholder="toko-berkah" className="w-full bg-slate-50 border border-slate-200 rounded-xl rounded-l-none px-4 py-3 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all border-l-0" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Kategori Toko</label>
+                <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none cursor-pointer">
+                  <option>Sembako & Makanan</option>
+                  <option>Jasa & Servis</option>
+                  <option>Pakaian & Fashion</option>
+                  <option>Kesehatan & Kecantikan</option>
+                  <option>Pendidikan & Kursus</option>
+                  <option>Lain-lain</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Alamat / Blok *</label>
+                <textarea rows={3} placeholder="Contoh: Jl. Sudirman Blok A No. 15 (Patokan: Depan pos satpam)" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"></textarea>
+              </div>
+              <button 
+                onClick={() => {
+                  if (showNotification) {
+                    showNotification("Toko berhasil dibuat! Selamat datang di Lapak 26.", "success");
+                  }
+                  handleQuickLink("Toko Saya Aktif");
+                }}
+                className="w-full py-4 mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
+              >
+                Simpan & Aktifkan Toko
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeMainTab === "Toko Saya Aktif" && (
+          <div className="flex flex-col space-y-6">
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center font-bold text-2xl shadow-inner border border-emerald-200">
+                  <Store size={32} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-800">Toko Berkah Jaya</h2>
+                  <p className="text-sm text-emerald-600 font-bold mb-1">Online & Aktif</p>
+                  <div className="flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium uppercase tracking-wider w-fit">
+                    <Star size={10} className="fill-amber-400 text-amber-500" /> 4.9 (120 Ulasan)
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => showNotification?.("Membagikan link toko", "info")} className="w-10 h-10 bg-slate-50 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-50 transition-colors">
+                <ChevronRight size={20} className="rotate-90" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div className="flex items-center gap-2 text-slate-500 mb-4">
+                  <Package size={18} />
+                  <span className="text-sm font-bold">Produk</span>
+                </div>
+                <div>
+                  <div className="text-3xl font-black text-slate-800 tracking-tight">24</div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Item Tersedia</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div className="flex items-center gap-2 text-slate-500 mb-4">
+                  <Wallet size={18} />
+                  <span className="text-sm font-bold">Saldo</span>
+                </div>
+                <div>
+                  <div className="text-3xl font-black text-slate-800 tracking-tight">1.2M</div>
+                  <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Siap Tarik</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-100">
+              <div onClick={() => showNotification?.("Fitur Tambah Produk akan segera hadir!", "info")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                    <Plus size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Tambah Produk</h3>
+                    <p className="text-xs text-slate-500 font-medium">Jual barang baru atau jasa</p>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="text-slate-300" />
+              </div>
+              <div onClick={() => showNotification?.("Semua pesanan diproses", "info")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                    <Package size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Daftar Pesanan</h3>
+                    <p className="text-xs text-slate-500 font-medium">Ada 3 pesanan baru masuk</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">3</div>
+                  <ChevronRight size={18} className="text-slate-300" />
+                </div>
+              </div>
+              <div onClick={() => showNotification?.("Fitur Statistik akan segera hadir!", "info")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+                    <Zap size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Statistik Toko</h3>
+                    <p className="text-xs text-slate-500 font-medium">Kunjungan dan performa produk</p>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="text-slate-300" />
+              </div>
+            </div>
+            
+            <button
+               onClick={() => handleQuickLink("Toko Saya")}
+               className="mx-auto block text-xs font-bold text-rose-500 uppercase tracking-widest mt-4 hover:opacity-80"
+            >
+               Nonaktifkan Toko (Demo)
+            </button>
+          </div>
+        )}
+
+        {activeMainTab === "Akun" && (
+          <div className="flex flex-col space-y-6">
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-2xl font-black shrink-0">
+                <Users size={32} />
+              </div>
+              <div className="flex-1 w-full overflow-hidden">
+                <h2 className="text-lg font-black text-slate-800 uppercase truncate">Profil Pengguna</h2>
+                <p className="text-xs text-slate-500 font-bold truncate">Warga RT 26</p>
+                <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold">
+                  <Star size={10} className="fill-amber-500" /> Member Silver
+                </div>
+              </div>
+              <button 
+                onClick={() => showNotification?.("Edit profil", "info")}
+                className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-colors shrink-0"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+            
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 divide-y divide-slate-50 overflow-hidden">
+              <div onClick={() => showNotification?.("Alamat Pengiriman", "info")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50">
+                <div className="flex items-center gap-3">
+                  <Package size={20} className="text-slate-400" />
+                  <span className="text-sm font-bold text-slate-700">Alamat Pengiriman</span>
+                </div>
+                <ChevronRight size={16} className="text-slate-300" />
+              </div>
+              <div onClick={() => showNotification?.("Dompet & Cicilan", "info")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50">
+                <div className="flex items-center gap-3">
+                  <Wallet size={20} className="text-slate-400" />
+                  <span className="text-sm font-bold text-slate-700">Dompet & Pembayaran</span>
+                </div>
+                <ChevronRight size={16} className="text-slate-300" />
+              </div>
+              <div onClick={() => showNotification?.("Pusat Bantuan", "info")} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50">
+                <div className="flex items-center gap-3">
+                  <MessageCircle size={20} className="text-slate-400" />
+                  <span className="text-sm font-bold text-slate-700">Pusat Bantuan</span>
+                </div>
+                <ChevronRight size={16} className="text-slate-300" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeMainTab === "Transaksi" && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Package size={48} className="text-slate-300 mb-4" />
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Belum Terdapat Transaksi</h2>
+            <p className="text-sm text-slate-500 font-medium mb-6 max-w-xs">Lihat daftar pembelian, tagihan dan aktivitas e-lapak anda disini.</p>
+            <button 
+              onClick={() => handleQuickLink("Home")}
+              className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors max-w-[250px] mx-auto"
+            >
+              Mulai Belanja
+            </button>
+          </div>
+        )}
+
+        {activeMainTab === "Inbox" && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Bell size={48} className="text-slate-300 mb-4" />
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Belum Ada Pesan Masuk</h2>
+            <p className="text-sm text-slate-500 font-medium max-w-xs">Pesan dari penjual, promo, dan notifikasi transaksi akan muncul di sini.</p>
+          </div>
+        )}
+
+        {activeMainTab === "GoPay & Coins" && (
+          <div className="flex flex-col space-y-6">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl p-6 shadow-xl shadow-blue-500/20 text-white flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold opacity-90 uppercase tracking-wider mb-1">Saldo GoPay</h2>
+                <div className="text-3xl font-black tracking-tight">Rp 2.450.000</div>
+              </div>
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+                <Smartphone className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-500">
+                  <Star size={24} className="fill-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-500 uppercase">Koin Lapak 26</h3>
+                  <div className="text-xl font-black text-slate-800">4.500 Coins</div>
+                </div>
+              </div>
+              <button className="px-4 py-2 bg-amber-50 text-amber-600 hover:bg-amber-100 font-bold rounded-xl text-sm transition-colors">
+                Tukar Koin
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => handleQuickLink("Home")}
+              className="mt-8 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors mx-auto block max-w-[200px]"
+            >
+              Kembali
+            </button>
+          </div>
+        )}
+
+        {activeMainTab === "Cek Kupon" && (
+          <div className="flex flex-col space-y-4">
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2 px-2">Kupon Tersedia</h2>
+            
+            {[
+              { title: "Diskon Hemat s/d 50%", desc: "Maks. potongan 20rb. Min. belanja 50rb.", code: "HEMATBGT" },
+              { title: "Gratis Ongkir RT/RW", desc: "Berlaku untuk semua pembelian tetangga.", code: "ONGKIRZERO" },
+              { title: "Cashback Koin 10%", desc: "Maks. 500 koin untuk transaksi berikutnya.", code: "CASHBACK10" },
+            ].map((coupon, i) => (
+              <div key={i} className="bg-white rounded-2xl p-5 flex items-center justify-between border-2 border-emerald-100 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 bottom-0 left-0 w-2 bg-emerald-500 rounded-l-2xl"></div>
+                <div className="pl-4">
+                  <h3 className="text-lg font-bold text-slate-800">{coupon.title}</h3>
+                  <p className="text-sm text-slate-500 mb-2">{coupon.desc}</p>
+                  <div className="inline-block px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-mono font-bold tracking-widest uppercase">
+                    {coupon.code}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => showNotification?.("Kupon berhasil disalin!", "success")}
+                  className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-100 transition-colors shrink-0"
+                >
+                  <Tag size={20} />
+                </button>
+              </div>
+            ))}
+            
+            <button 
+              onClick={() => handleQuickLink("Home")}
+              className="mt-6 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors mx-auto block max-w-[200px]"
+            >
+              Kembali
+            </button>
+          </div>
+        )}
+
+        {activeMainTab === "Bonus" && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Gift size={48} className="text-orange-400 mb-4" />
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Bonus Bulanan</h2>
+            <p className="text-sm text-slate-500 font-medium max-w-xs mb-6">Bonus Anda sedang dikalkulasi. Cek kembali besok pagi untuk mendapatkan reward spesial.</p>
+            <button 
+              onClick={() => handleQuickLink("Home")}
+              className="px-6 py-3 bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold rounded-xl transition-colors shadow-sm"
+            >
+              Kembali Belanja
+            </button>
+          </div>
+        )}
+
+        {activeMainTab === "Pesan Chat" && (
+          <div className="flex flex-col space-y-4">
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2 px-2">Pesan Masuk</h2>
+            
+            <div onClick={() => handleQuickLink("Room Chat")} className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors">
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 font-bold shrink-0 relative">
+                <Store size={20} />
+                <div className="absolute top-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-sm font-bold text-slate-800 truncate">Sembako Bu Tejo</h3>
+                  <span className="text-[10px] text-slate-400 font-medium">10:45</span>
+                </div>
+                <p className="text-xs text-slate-500 truncate font-medium text-slate-800 font-bold">Ya pak, beras premium 5kg ready. Bisa diantar sekarang.</p>
+              </div>
+              <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                8
+              </div>
+            </div>
+
+            <div onClick={() => handleQuickLink("Room Chat")} className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold shrink-0">
+                <Store size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-sm font-bold text-slate-800 truncate">Jasa AC Pak Kumis</h3>
+                  <span className="text-[10px] text-slate-400 font-medium">Kemarin</span>
+                </div>
+                <p className="text-xs text-slate-500 truncate font-medium">Sama-sama, jangan lupa review bintang 5 nya ya.</p>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => handleQuickLink("Home")}
+              className="mt-6 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors mx-auto block max-w-[200px] text-center"
+            >
+              Kembali
+            </button>
+          </div>
+        )}
+
+        {activeMainTab === "Room Chat" && (
+          <div className="flex flex-col h-[70vh] bg-slate-50 border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            {/* Header */}
+            <div className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm z-10">
+              <div className="flex items-center gap-3">
+                <button onClick={() => handleQuickLink("Pesan Chat")} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
+                  <ChevronRight size={20} className="rotate-180" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 font-bold shrink-0 relative">
+                    <Store size={18} />
+                    <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800">Sembako Bu Tejo</h3>
+                    <p className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Online</p>
+                  </div>
+                </div>
+              </div>
+              <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
+                <Menu size={20} />
+              </button>
+            </div>
+
+            {/* Chat Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col no-scrollbar bg-slate-50/50">
+              <div className="text-center text-xs font-bold text-slate-400 my-2">Hari ini</div>
+              
+              <div className="self-end bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[80%] shadow-sm">
+                <p className="text-sm font-medium">Bu, beras khusus yang 5kg stoknya masih ada? Saya butuh untuk arisan besok.</p>
+                <span className="text-[10px] text-emerald-100/70 block mt-1 text-right font-bold">10:42 <CheckCircle2 size={12} className="inline ml-1" /></span>
+              </div>
+
+              <div className="self-start bg-white border border-slate-200 text-slate-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] shadow-sm">
+                <p className="text-sm font-medium">Ya pak, beras premium 5kg ready. Bisa diantar sekarang. Langsung lewat Lapak 26 ya transaksinya pak biar gampang saya rekap.</p>
+                <span className="text-[10px] text-slate-400 block mt-1 font-bold">10:45</span>
+              </div>
+            </div>
+
+            {/* Chat Input */}
+            <div className="bg-white p-3 border-t border-slate-200 flex items-center gap-2">
+              <button className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-emerald-600 transition-colors shrink-0">
+                <Heart size={20} />
+              </button>
+              <div className="flex-1 bg-slate-100 rounded-2xl flex items-center px-4 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all border border-slate-200">
+                <input type="text" placeholder="Ketik pesan..." className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium py-3 text-slate-800 placeholder-slate-400" />
+              </div>
+              <button className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center hover:bg-emerald-700 active:scale-95 transition-all shadow-md shrink-0">
+                <MessageCircle size={20} className="fill-white" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeMainTab === "Notifikasi" && (
+          <div className="flex flex-col space-y-4">
+            <div className="flex items-center justify-between px-2 mb-2">
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Notifikasi</h2>
+              <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700">Tandai semua dibaca</button>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-4 shadow-sm border-2 border-emerald-500/20 flex items-start gap-4 cursor-pointer hover:bg-slate-50 transition-colors relative overflow-hidden">
+              <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-emerald-500"></div>
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 shrink-0">
+                <Package size={18} />
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="text-sm font-bold text-slate-800">Pesanan Tiba</h3>
+                  <span className="text-[10px] text-emerald-600 font-bold whitespace-nowrap ml-2">Baru saja</span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium line-clamp-2 mt-1">Pesanan Anda dari <span className="font-bold text-slate-800">Sembako Bu Tejo</span> telah tiba. Mohon periksa pesanan Anda dan selesaikan transaksi.</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex items-start gap-4 cursor-pointer hover:bg-slate-50 transition-colors relative overflow-hidden opacity-75">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+                <Tag size={18} />
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="text-sm font-bold text-slate-800">Promo Khusus Warga RT 02</h3>
+                  <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap ml-2">2 Jam Lalu</span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium line-clamp-2 mt-1">Dapatkan diskon 50% untuk servis AC, khusus hari ini! Klaim sekarang sebelum kehabisan.</p>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex items-start gap-4 cursor-pointer hover:bg-slate-50 transition-colors relative overflow-hidden opacity-75">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 shrink-0">
+                <Star size={18} />
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="text-sm font-bold text-slate-800">Koin Masuk</h3>
+                  <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap ml-2">Kemarin</span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium line-clamp-2 mt-1">Selamat! Anda mendapatkan Cashback koin sebesar 2.500 Coins dari transaksi sebelumnya.</p>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => handleQuickLink("Home")}
+              className="mt-6 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors mx-auto block max-w-[200px] text-center"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Simplified Mobile Bottom Nav (Visual Reference) */}
-      <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-100 flex items-center justify-around py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:hidden">
+      {/* Mobile Bottom Nav (Carousel) */}
+      <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-100 flex items-center justify-start gap-6 px-6 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:hidden overflow-x-auto no-scrollbar pb-[env(safe-area-inset-bottom,0.5rem)]">
+         <div 
+           onClick={() => handleQuickLink("Modul Utama")}
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors text-slate-400 hover:text-emerald-500`}
+         >
+            <LayoutGrid size={22} className="active:scale-95 transition-transform" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">Modul</span>
+         </div>
          <div 
            onClick={() => handleQuickLink("Home")}
-           className="flex flex-col items-center gap-1 group text-emerald-600 cursor-pointer"
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors ${activeMainTab === 'Home' ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
          >
-            <LayoutGrid size={22} className="group-active:scale-95 transition-transform" />
-            <span className="text-[9px] font-black uppercase tracking-tighter">Home</span>
+            <Store size={22} className="active:scale-95 transition-transform" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">Belanja</span>
          </div>
          <div 
            onClick={() => handleQuickLink("Inbox")}
-           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors ${['Inbox', 'Room Chat', 'Pesan Chat', 'Notifikasi'].includes(activeMainTab) ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
          >
-            <Bell size={22} className="group-active:scale-95 transition-transform" />
+            <Bell size={22} className="active:scale-95 transition-transform" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Inbox</span>
          </div>
          <div 
            onClick={() => handleQuickLink("Transaksi")}
-           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors ${activeMainTab === 'Transaksi' ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
          >
-            <Package size={22} className="group-active:scale-95 transition-transform" />
-            <span className="text-[9px] font-black uppercase tracking-tighter">Transaksi</span>
+            <Package size={22} className="active:scale-95 transition-transform" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">Pesanan</span>
          </div>
          <div 
-           onClick={() => handleQuickLink("Toko Saya")}
-           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+           onClick={() => handleQuickLink("GoPay & Coins")}
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors ${activeMainTab === 'GoPay & Coins' ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}
          >
-            <Store size={22} className="group-active:scale-95 transition-transform" />
+            <Wallet size={22} className="active:scale-95 transition-transform" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">GoPay</span>
+         </div>
+         <div 
+           onClick={() => handleQuickLink("Cek Kupon")}
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors ${activeMainTab === 'Cek Kupon' ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
+         >
+            <Tag size={22} className="active:scale-95 transition-transform" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">Kupon</span>
+         </div>
+         <div 
+           onClick={() => handleQuickLink(activeMainTab === 'Toko Saya Aktif' ? 'Toko Saya Aktif' : 'Toko Saya')}
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors ${['Toko Saya', 'Pendaftaran Toko', 'Toko Saya Aktif'].includes(activeMainTab) ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
+         >
+            <Store size={22} className="active:scale-95 transition-transform" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Toko Saya</span>
          </div>
          <div 
            onClick={() => handleQuickLink("Akun")}
-           className="flex flex-col items-center gap-1 group text-slate-400 cursor-pointer"
+           className={`flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer transition-colors ${activeMainTab === 'Akun' ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
          >
             <Users className="w-5.5 h-5.5" />
             <span className="text-[9px] font-black uppercase tracking-tighter">Akun</span>
