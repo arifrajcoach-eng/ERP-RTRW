@@ -588,7 +588,7 @@ export default function DashboardView({
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">System Live</h3>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">GoLive</h3>
                   </div>
                   <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{currentTenant?.name || settings?.nama_rt || 'Digital Environment'}</p>
                 </div>
@@ -911,7 +911,7 @@ export default function DashboardView({
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
                     <QrCode className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Daftar</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Daftar Tamu</span>
                 </button>
                 
                 <button 

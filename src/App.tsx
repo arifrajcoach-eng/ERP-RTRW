@@ -4953,184 +4953,201 @@ function SOSOverlay({
   }, [emergency]);
 
   const [isMuted, setIsMuted] = useState(false);
+  const [sosLoopCount, setSosLoopCount] = useState(0);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sirenIntervalRef = useRef<any>(null);
+  const loopCountRef = useRef(0);
+  const activePlaybackComponentsRef = useRef<any[]>([]);
 
-  useEffect(() => {
-    // Stop all audio/vibration if not emergency or muted
-    if (!emergency || isMuted) {
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        try {
-          navigator.vibrate(0);
-        } catch (e) {}
+  const stopSOSAlarm = () => {
+    if (sirenIntervalRef.current) {
+      clearInterval(sirenIntervalRef.current);
+      sirenIntervalRef.current = null;
+    }
+    activePlaybackComponentsRef.current.forEach((item) => {
+      try {
+        item.osc1.stop();
+      } catch (e) {}
+      try {
+        item.osc1.disconnect();
+      } catch (e) {}
+      try {
+        item.osc2.stop();
+      } catch (e) {}
+      try {
+        item.osc2.disconnect();
+      } catch (e) {}
+      try {
+        item.lfo.stop();
+      } catch (e) {}
+      try {
+        item.lfo.disconnect();
+      } catch (e) {}
+      try {
+        item.mainGain.disconnect();
+      } catch (e) {}
+    });
+    activePlaybackComponentsRef.current = [];
+
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      try {
+        navigator.vibrate(0);
+      } catch (e) {}
+    }
+  };
+
+  const startSOSAlarm = () => {
+    // Avoid double scheduling
+    if (sirenIntervalRef.current) return;
+    if (!emergency || isMuted) return;
+
+    // Ensure Audio Context is initialized
+    if (!audioCtxRef.current) {
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtxRef.current = new AudioContextClass();
       }
-      if (sirenIntervalRef.current) {
-        clearInterval(sirenIntervalRef.current);
-        sirenIntervalRef.current = null;
-      }
-      return;
     }
 
-    const startAudioContext = async () => {
-      try {
-        if (!audioCtxRef.current) {
-          const AudioContextClass =
-            window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContextClass) {
-            audioCtxRef.current = new AudioContextClass();
-          }
-        }
-
-        const audioCtx = audioCtxRef.current;
-        if (!audioCtx) return;
-
-        if (audioCtx.state === "suspended") {
-          try {
-            await audioCtx.resume();
-          } catch (e) {
-            setAudioBlocked(true);
-            return;
-          }
-        }
-        setAudioBlocked(false);
-
-        if (audioCtx.state === "running") {
-          startWarSiren();
-        }
-      } catch (e) {
-        console.warn("SOS Audio Start Error:", e);
+    const ctx = audioCtxRef.current;
+    if (ctx) {
+      if (ctx.state === "suspended") {
+        ctx.resume().catch((e) => console.warn("Could not resume context:", e));
       }
-    };
 
-    let activeOsc1: OscillatorNode | null = null;
-    let activeOsc2: OscillatorNode | null = null;
-    let activeLFO: OscillatorNode | null = null;
-    let activeGain: GainNode | null = null;
-
-    const startWarSiren = () => {
-      if (!audioCtxRef.current || isMuted || !emergency) return;
-
-      const ctx = audioCtxRef.current;
       const now = ctx.currentTime;
+      const cycleDuration = 5.0;
+      const maxCycles = 12;
+      const totalDuration = cycleDuration * maxCycles; // 60 seconds
 
-      // Create primary oscillators (Carriers)
-      // Detuned sawtooth oscillators create a rich, realistic, massive mechanical war siren sound.
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const lfo = ctx.createOscillator();
-      const lfoGain = ctx.createGain();
-      const mainGain = ctx.createGain();
+      try {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        const mainGain = ctx.createGain();
 
-      osc1.type = "sawtooth";
-      osc2.type = "sawtooth"; // Both sawtooth for maximum acoustic pressure / wailing buzz
-      
-      // Setup frequencies
-      osc1.frequency.setValueAtTime(550, now);
-      osc2.frequency.setValueAtTime(550, now);
-      
-      // Detune them slightly to simulate dual physical sirens / mechanical acoustic beats
-      osc1.detune.setValueAtTime(-15, now);
-      osc2.detune.setValueAtTime(15, now);
+        osc1.type = "sawtooth";
+        osc2.type = "sawtooth"; // massive wailing/buzzing acoustic presence
 
-      // LFO (Low Frequency Oscillator) to modulate pitch up and down
-      lfo.type = "triangle";
-      lfo.frequency.setValueAtTime(0.20, now); // 5-second cycle for realistic heavy war siren wail
+        osc1.frequency.setValueAtTime(550, now);
+        osc2.frequency.setValueAtTime(550, now);
 
-      // LFO Gain controls the depth of frequency modulation (+/- 250Hz around 550Hz)
-      // This sweeps the frequencies smoothly between 300Hz (low moan) and 800Hz (high scream)
-      lfoGain.gain.setValueAtTime(250, now);
+        osc1.detune.setValueAtTime(-15, now);
+        osc2.detune.setValueAtTime(15, now);
 
-      // Master volume node
-      mainGain.gain.setValueAtTime(0.01, now);
-      // Realistic siren startup: wind up the rotor and build volume over 2 seconds
-      mainGain.gain.linearRampToValueAtTime(0.85, now + 2.0);
+        lfo.type = "triangle";
+        lfo.frequency.setValueAtTime(0.20, now); // 5-second pitch sweep cycle (1/5Hz)
+        lfoGain.gain.setValueAtTime(250, now); // sweeping range (+/- 250Hz around central 550Hz)
 
-      // Connect LFO modulation to frequencies of both carriers
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc1.frequency);
-      lfoGain.connect(osc2.frequency);
-
-      // Connect audio signal chain
-      osc1.connect(mainGain);
-      osc2.connect(mainGain);
-      mainGain.connect(ctx.destination);
-
-      // Start everything
-      osc1.start(now);
-      osc2.start(now);
-      lfo.start(now);
-
-      // Save references so we can safely stop or modify them on cleanup/mute
-      activeOsc1 = osc1;
-      activeOsc2 = osc2;
-      activeLFO = lfo;
-      activeGain = mainGain;
-
-      // Vibration: synchronized rumble during active alarm
-      const startVibration = () => {
-        if (!emergency || isMuted) return;
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-          // Classic pulsating air raid alert vibration pattern
-          navigator.vibrate([1800, 400, 1800, 400]);
+        // Volume envelope for the entire 60 seconds:
+        // Schedule rises and falls natively to prevent clipping or sudden stops, wailing in tandem
+        mainGain.gain.setValueAtTime(0, now);
+        for (let i = 0; i < maxCycles; i++) {
+          const loopStart = now + (i * cycleDuration);
+          if (i === 0) {
+            mainGain.gain.linearRampToValueAtTime(0.95, loopStart + 1.2); // intense sweep volume rise
+          } else {
+            mainGain.gain.setValueAtTime(0.02, loopStart);
+            mainGain.gain.linearRampToValueAtTime(0.95, loopStart + 1.2); // intense sweep volume rise
+          }
+          mainGain.gain.setValueAtTime(0.95, loopStart + 3.8);
+          mainGain.gain.linearRampToValueAtTime(0.02, loopStart + cycleDuration - 0.1); // sweep volume fall
         }
-      };
-      
-      startVibration();
-      sirenIntervalRef.current = setInterval(startVibration, 4400); // loops to align with siren sweep
-    };
+        mainGain.gain.setValueAtTime(0, now + totalDuration);
 
-    startAudioContext();
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc1.frequency);
+        lfoGain.connect(osc2.frequency);
 
-    // Getaran terpisah (lebih lambat mengikuti irama sirine)
-    const vibInterval = setInterval(() => {
-      if (
-        !isMuted &&
-        typeof navigator !== "undefined" &&
-        "vibrate" in navigator
-      ) {
-        navigator.vibrate([800, 400]);
-      }
-    }, 2000);
+        osc1.connect(mainGain);
+        osc2.connect(mainGain);
+        mainGain.connect(ctx.destination);
 
-    return () => {
-      if (vibInterval) clearInterval(vibInterval);
-      if (activeOsc1) {
-        try {
-          activeOsc1.stop();
-          activeOsc1.disconnect();
-        } catch (e) {}
+        osc1.start(now);
+        osc2.start(now);
+        lfo.start(now);
+
+        osc1.stop(now + totalDuration);
+        osc2.stop(now + totalDuration);
+        lfo.stop(now + totalDuration);
+
+        activePlaybackComponentsRef.current = [{ osc1, osc2, lfo, mainGain }];
+      } catch (e) {
+        console.warn("Sound play attempt blocked or errored during system scheduling:", e);
       }
-      if (activeOsc2) {
-        try {
-          activeOsc2.stop();
-          activeOsc2.disconnect();
-        } catch (e) {}
-      }
-      if (activeLFO) {
-        try {
-          activeLFO.stop();
-          activeLFO.disconnect();
-        } catch (e) {}
-      }
-      if (activeGain) {
-        try {
-          activeGain.disconnect();
-        } catch (e) {}
-      }
-      if (sirenIntervalRef.current) {
-        clearInterval(sirenIntervalRef.current);
-        sirenIntervalRef.current = null;
-      }
+    }
+
+    // Now track visual steps and trigger physical device vibration continuously on each cycle
+    loopCountRef.current = 0;
+    setSosLoopCount(0);
+
+    const triggerVibration = () => {
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
         try {
-          navigator.vibrate(0);
-        } catch (e) {}
+          // Intense rhythmic pulses spanning ~4.5 seconds of the 5.0s cycle
+          // This keeps the phone vibrating strongly even in complete silent/mute mode
+          navigator.vibrate([1000, 250, 1000, 250, 1000, 250, 750]);
+        } catch (err) {
+          console.warn("Haptic vibration skipped/failed:", err);
+        }
       }
+    };
+
+    const playSequenceTick = () => {
+      // Limit to exactly 12 loops
+      if (loopCountRef.current >= 12 || !emergency || isMuted) {
+        stopSOSAlarm();
+        return;
+      }
+
+      // Perform physical device vibration
+      triggerVibration();
+
+      loopCountRef.current += 1;
+      setSosLoopCount(loopCountRef.current);
+    };
+
+    // Initial tick triggered immediately
+    playSequenceTick();
+
+    // Trigger looping sequences every 5.0 seconds
+    sirenIntervalRef.current = setInterval(playSequenceTick, 5000);
+  };
+
+  useEffect(() => {
+    if (emergency && !isMuted) {
+      if (!audioCtxRef.current) {
+        const AudioContextClass =
+          window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtxRef.current = new AudioContextClass();
+        }
+      }
+
+      const ctx = audioCtxRef.current;
+      if (ctx) {
+        if (ctx.state === "suspended") {
+          setAudioBlocked(true);
+        } else {
+          setAudioBlocked(false);
+          startSOSAlarm();
+        }
+      } else {
+        setAudioBlocked(true);
+      }
+    } else {
+      stopSOSAlarm();
+    }
+
+    return () => {
+      stopSOSAlarm();
     };
   }, [isMuted, emergency?.id]);
 
-  // Cleanup audio context on unmount
+  // Clean Audio Context on unmount
   useEffect(() => {
     return () => {
       if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
@@ -5142,7 +5159,15 @@ function SOSOverlay({
   }, []);
 
   const enableAudioManually = async () => {
-    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+    if (!audioCtxRef.current) {
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+    }
+
+    if (audioCtxRef.current) {
       try {
         await audioCtxRef.current.resume();
         setAudioBlocked(false);
@@ -5150,6 +5175,16 @@ function SOSOverlay({
         console.error("Failed to enable audio manually:", e);
       }
     }
+
+    // Explicitly gesture-unlock physical vibration
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      try {
+        navigator.vibrate([200]);
+      } catch (e) {}
+    }
+
+    stopSOSAlarm();
+    startSOSAlarm();
   };
 
   return (
@@ -5175,11 +5210,33 @@ function SOSOverlay({
           <Siren className="w-12 h-12 sm:w-16 sm:h-16 text-white " />
         </motion.div>
 
-        <h1 className="text-4xl sm:text-6xl font-black mb-4 tracking-tighter uppercase italic">
+        <h1 className="text-4xl sm:text-6xl font-black mb-1 tracking-tighter uppercase italic">
           Sinyal Darurat Aktif!
         </h1>
 
-        <div className="bg-white/10  border border-white/20 p-6 sm:p-8 rounded-3xl w-full mb-8 shadow-2xl">
+        <div className="flex flex-col items-center gap-2 mb-6">
+          <span className="bg-white/20 px-4 py-1.5 rounded-full text-xs font-mono font-black border border-white/25 uppercase tracking-wider animate-pulse flex items-center gap-1.5">
+            🚨 Bunyi Loop Ke: {sosLoopCount} / 12
+          </span>
+          {sosLoopCount >= 12 && (
+            <span className="bg-amber-400 text-slate-950 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg animate-bounce">
+              ✓ Limit Bunyi 12 Kali Selesai
+            </span>
+          )}
+        </div>
+
+        <motion.div
+          animate={sosLoopCount < 12 && !isMuted ? {
+            x: [0, -3, 3, -3, 3, -1, 1, -1, 1, 0],
+            y: [0, 2, -2, 2, -2, 1, -1, 1, -1, 0]
+          } : {}}
+          transition={{
+            repeat: Infinity,
+            duration: 0.5,
+            ease: "easeInOut"
+          }}
+          className="bg-white/10 border border-white/20 p-6 sm:p-8 rounded-3xl w-full mb-8 shadow-2xl"
+        >
           <div className="flex flex-col gap-4 text-left">
             <div className="flex items-center gap-4 border-b border-white/10 pb-4">
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden">
@@ -5269,7 +5326,7 @@ function SOSOverlay({
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <p className="text-lg sm:text-xl font-bold mb-8 animate-bounce flex items-center gap-2">
           <LifeBuoy className="w-6 h-6" />

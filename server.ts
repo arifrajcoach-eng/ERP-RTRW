@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import twilio from "twilio";
 import emailjs from "@emailjs/nodejs";
 import * as dotenv from "dotenv";
@@ -554,6 +553,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
