@@ -29,6 +29,7 @@ import {
   Wallet,
   Plus,
   Mail,
+  Send,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -113,7 +114,13 @@ export default function BelanjaView({
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
   const [activeMainTab, setActiveMainTab] = useState("Home");
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
-  const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat">("Main");
+  const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat" | "LiveChat" | "EmailSupport">("Main");
+  const [chatMessages, setChatMessages] = useState<Array<{ id: number; text: string; sender: 'user' | 'agent'; time: string }>>([
+    { id: 1, text: "Halo Bpk. Arif, saya Ratih dari Customer Support E-LAPAK26 (SmartRW AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsTyping, setChatIsTyping] = useState(false);
+  const [supportEmail, setSupportEmail] = useState({ subject: "", category: "Pertanyaan Umum", message: "" });
   const [walletBalance, setWalletBalance] = useState(2450000);
   const [selectedPaymentId, setSelectedPaymentId] = useState(1);
   const [faqSearch, setFaqSearch] = useState("");
@@ -125,6 +132,24 @@ export default function BelanjaView({
   ]);
   const [newAddress, setNewAddress] = useState({ label: "", receiver: "", street: "" });
   const [editingAddress, setEditingAddress] = useState<{ id: number; label: string; receiver: string; phone: string; street: string; district: string; city: string; isMain: boolean } | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState("Arif Rajcoach");
+  const [profilePhone, setProfilePhone] = useState("+62 812-3456-7890");
+  const [profileEmail, setProfileEmail] = useState("arif@smartrw.ai");
+  const profileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePhoto(reader.result as string);
+        showNotification?.("Foto profil berhasil diunggah!", "success");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const [localProducts, setLocalProducts] = useState(PRODUCTS);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", description: "" });
   const [productImage, setProductImage] = useState<string | null>(null);
@@ -132,6 +157,42 @@ export default function BelanjaView({
   const [localOrders, setLocalOrders] = useState([1, 2, 3]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentBanner, setCurrentBanner] = useState(0);
+
+  const handleSendChatMessage = (text: string) => {
+    if (!text.trim()) return;
+    const userMsg = {
+      id: Math.random(),
+      text,
+      sender: 'user' as const,
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput("");
+    setChatIsTyping(true);
+
+    setTimeout(() => {
+      let replyText = "Baik Bpk. Arif, pesan Anda sudah kami terima. Pengurus lapak RT 26 akan segera mengecek dan menanggapi dalam waktu dekat.";
+      const lowerText = text.toLowerCase();
+      if (lowerText.includes("pesanan") || lowerText.includes("status") || lowerText.includes("sore")) {
+        replyText = "Untuk melacak transaksi atau pesanan aktif Bapak, silakan periksa status pengiriman di tab 'Daftar Pesanan' di menu Toko / Lapak Anda.";
+      } else if (lowerText.includes("iuran") || lowerText.includes("bayar")) {
+        replyText = "Setiap iuran bulanan warga RT 26/RW 04 dapat langsung dibayarkan otomatis memotong saldo dompet digital E-LAPAK26 Anda.";
+      } else if (lowerText.includes("saldo") || lowerText.includes("top-up") || lowerText.includes("gopay") || lowerText.includes("isi")) {
+        replyText = "Anda dapat menambah saldo balance Anda secara instan dengan mengklik tombol 'Isi Saldo' di menu Dompet Aktif Anda.";
+      } else if (lowerText.includes("halo") || lowerText.includes("pagi") || lowerText.includes("siang") || lowerText.includes("malam")) {
+        replyText = "Halo juga Bpk. Arif! Ada yang bisa tim admin bantu seputar layanan terpadu warga RT 26 pada hari ini?";
+      }
+
+      const agentMsg = {
+        id: Math.random(),
+        text: replyText,
+        sender: 'agent' as const,
+        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      };
+      setChatMessages(prev => [...prev, agentMsg]);
+      setChatIsTyping(false);
+    }, 1500);
+  };
 
   const filteredProducts = (products.length > 0 ? products : localProducts).filter(p => {
     const matchesCategory = activeCategory === "Semua" || p.category === activeCategory;
@@ -1111,11 +1172,15 @@ export default function BelanjaView({
                   onClick={() => setAkunSubTab("EditProfil")}
                   className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:border-emerald-200 transition-all group"
                 >
-                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-2xl font-black shrink-0 group-hover:scale-105 transition-transform">
-                    <Users size={32} />
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-2xl font-black shrink-0 group-hover:scale-105 transition-transform overflow-hidden">
+                    {profilePhoto ? (
+                      <img src={profilePhoto} alt="Profil" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <Users size={32} />
+                    )}
                   </div>
                   <div className="flex-1 w-full overflow-hidden">
-                    <h2 className="text-lg font-black text-slate-800 uppercase truncate">Profil Pengguna</h2>
+                    <h2 className="text-lg font-black text-slate-800 uppercase truncate">{profileName}</h2>
                     <p className="text-xs text-slate-500 font-bold truncate">Warga RT 26</p>
                     <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold">
                       <Star size={10} className="fill-amber-500" /> Member Silver
@@ -1454,7 +1519,10 @@ export default function BelanjaView({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div 
-                    onClick={() => showNotification?.("Menghubungkan ke Live Chat Support...", "success")} 
+                    onClick={() => {
+                      showNotification?.("Menghubungkan ke Live Chat Support...", "success");
+                      setAkunSubTab("LiveChat");
+                    }} 
                     className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group"
                   >
                      <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1463,7 +1531,9 @@ export default function BelanjaView({
                      <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Live Chat</span>
                   </div>
                   <div 
-                    onClick={() => showNotification?.("Membuka aplikasi Email...", "info")} 
+                    onClick={() => {
+                      setAkunSubTab("EmailSupport");
+                    }} 
                     className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group"
                   >
                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1547,6 +1617,212 @@ export default function BelanjaView({
               </div>
             )}
 
+            {akunSubTab === "LiveChat" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setAkunSubTab("Bantuan")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                      <ChevronRight className="rotate-180" size={20} />
+                    </button>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Live Chat</h2>
+                      <p className="text-xs text-slate-500 font-bold">Terhubung langsung dengan Admin RT 26</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">Online</span>
+                  </div>
+                </div>
+
+                {/* Chat Box */}
+                <div className="bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden flex flex-col h-[480px] shadow-sm relative">
+                  <div className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-100 text-emerald-700 font-black rounded-2xl flex items-center justify-center text-xs shadow-inner">
+                        RT26
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-slate-800 uppercase">Kak Ratih</h4>
+                        <p className="text-[9px] text-slate-400 font-bold">Layanan Warga & Lapak Mandiri</p>
+                      </div>
+                    </div>
+                    <span className="text-[9.5px] font-bold text-slate-400">Respons rate: ~5 menit</span>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {chatMessages.map((msg) => (
+                      <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm text-xs font-medium leading-relaxed ${msg.sender === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
+                          <p>{msg.text}</p>
+                          <span className={`text-[8px] block mt-1.5 font-bold uppercase tracking-wider ${msg.sender === 'user' ? 'text-emerald-200 text-right' : 'text-slate-400'}`}>
+                            {msg.time}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {chatIsTyping && (
+                      <div className="flex justify-start">
+                        <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-none p-4 text-xs text-slate-400 font-bold shadow-sm flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400">Ratih sedang mengetik</span>
+                          <span className="flex gap-1">
+                            <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                            <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                            <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Suggestions */}
+                  <div className="p-3 bg-white border-t border-slate-50 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none">
+                    {[
+                      "Bagaimana status pesanan saya?",
+                      "Kapan iuran bulanan jatuh tempo?",
+                      "Cara top-up saldo E-LAPAK?"
+                    ].map((sug, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          if (chatIsTyping) return;
+                          handleSendChatMessage(sug);
+                        }}
+                        className="inline-block px-3.5 py-2 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-500 font-bold border border-slate-100 hover:border-emerald-200 rounded-full text-[9px] transition-all shrink-0 uppercase tracking-wider"
+                      >
+                        {sug}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Input */}
+                  <div className="p-4 bg-white border-t border-slate-100 flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSendChatMessage(chatInput);
+                        }
+                      }}
+                      placeholder="Tulis pesan Anda disini..."
+                      className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3 text-xs font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSendChatMessage(chatInput)}
+                      disabled={!chatInput.trim() || chatIsTyping}
+                      className={`p-3 rounded-2xl flex items-center justify-center transition-all ${!chatInput.trim() || chatIsTyping ? 'bg-slate-100 text-slate-300' : 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 hover:bg-emerald-700'}`}
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {akunSubTab === "EmailSupport" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setAkunSubTab("Bantuan")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Email Support</h2>
+                    <p className="text-xs text-slate-500 font-bold">Kirim tiket aduan resmi kepengurusan wilayah</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-6">
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Pilih Template Masalah</h4>
+                    <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2 scrollbar-none">
+                      {[
+                        { label: "Saran Lapak", sub: "Masukan usul fitur", cat: "Saran / Kritik" },
+                        { label: "Aduan Saldo", sub: "Masalah top up saldo", cat: "Keuangan / Saldo" },
+                        { label: "Kendala Akun", sub: "Masalah info pengiriman", cat: "Kendala Lapak / Produk" }
+                      ].map((tpl, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setSupportEmail({
+                              category: tpl.cat,
+                              subject: tpl.label + " - Bpk. Arif",
+                              message: `Halo Pengurus RT 26,\n\nSaya ingin melaporkan/memberikan saran terkait hal ini:\n`
+                            });
+                            showNotification?.("Template diaktifkan", "info");
+                          }}
+                          className="p-3 bg-slate-50 hover:bg-emerald-50 text-left border border-slate-100 rounded-2xl flex flex-col gap-1 transition-all shrink-0 cursor-pointer hover:border-emerald-200"
+                        >
+                          <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">{tpl.label}</span>
+                          <span className="text-[9px] text-slate-400 font-bold">{tpl.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Kategori Tiket</label>
+                       <select 
+                         value={supportEmail.category}
+                         onChange={(e) => setSupportEmail({ ...supportEmail, category: e.target.value })}
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                       >
+                         <option value="Keuangan / Saldo">Keuangan / Saldo</option>
+                         <option value="Kendala Lapak / Produk">Kendala Lapak / Produk</option>
+                         <option value="Keamanan / Laporan">Keamanan / Laporan</option>
+                         <option value="Saran / Kritik">Saran / Kritik</option>
+                       </select>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subjek Tiket</label>
+                       <input 
+                         type="text" 
+                         value={supportEmail.subject}
+                         onChange={(e) => setSupportEmail({ ...supportEmail, subject: e.target.value })}
+                         placeholder="Contoh: Masalah Top-Up E-Wallet" 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pesan Detail Anda</label>
+                       <textarea 
+                         rows={4} 
+                         value={supportEmail.message}
+                         onChange={(e) => setSupportEmail({ ...supportEmail, message: e.target.value })}
+                         placeholder="Jelaskan detail kendala Anda agar dapat kami tangani dengan cepat..." 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-xs font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"
+                       ></textarea>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="button"
+                    disabled={!supportEmail.subject.trim() || !supportEmail.message.trim()}
+                    onClick={() => {
+                      showNotification?.("Tiket Email berhasil dikirimkan! ID Tiket: #RW26-" + Math.floor(1000 + Math.random() * 9000), "success");
+                      setSupportEmail({ subject: "", category: "Keuangan / Saldo", message: "" });
+                      setAkunSubTab("Bantuan");
+                    }}
+                    className={`w-full py-5 font-black rounded-2xl transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-xs ${
+                      !supportEmail.subject.trim() || !supportEmail.message.trim()
+                      ? 'bg-slate-100 text-slate-300'
+                      : 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700'
+                    }`}
+                  >
+                    Kirim Tiket Resmi
+                  </button>
+                </div>
+              </div>
+            )}
+
             {akunSubTab === "EditProfil" && (
               <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-4">
@@ -1561,27 +1837,62 @@ export default function BelanjaView({
 
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-6">
                   <div className="flex flex-col items-center gap-4">
-                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center relative group cursor-pointer border-4 border-white shadow-lg">
-                      <Users size={48} />
+                    <input 
+                      type="file" 
+                      ref={profileInputRef} 
+                      className="hidden" 
+                      accept="image/*" 
+                      onChange={handleProfilePhotoChange} 
+                    />
+                    <div 
+                      onClick={() => profileInputRef.current?.click()}
+                      className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center relative group cursor-pointer border-4 border-white shadow-lg overflow-hidden"
+                    >
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt="Profil" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <Users size={48} />
+                      )}
                       <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <Plus className="text-white" size={24} />
                       </div>
                     </div>
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Ganti Foto Profil</span>
+                    <button 
+                      type="button"
+                      onClick={() => profileInputRef.current?.click()}
+                      className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] hover:underline"
+                    >
+                      Ganti Foto Profil
+                    </button>
                   </div>
 
                   <div className="space-y-4">
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nama Lengkap</label>
-                       <input type="text" defaultValue="Arif Rajcoach" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" />
+                       <input 
+                         type="text" 
+                         value={profileName} 
+                         onChange={(e) => setProfileName(e.target.value)} 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nomor WhatsApp</label>
-                       <input type="tel" defaultValue="+62 812-3456-7890" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" />
+                       <input 
+                         type="tel" 
+                         value={profilePhone} 
+                         onChange={(e) => setProfilePhone(e.target.value)} 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email</label>
-                       <input type="email" defaultValue="arif@smartrw.ai" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" />
+                       <input 
+                         type="email" 
+                         value={profileEmail} 
+                         onChange={(e) => setProfileEmail(e.target.value)} 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
                     </div>
                   </div>
 
