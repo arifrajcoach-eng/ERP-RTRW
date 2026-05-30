@@ -27,7 +27,7 @@ import {
   CheckCircle2,
   Star,
   Wallet,
-  Plus
+  Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -111,6 +111,8 @@ export default function BelanjaView({
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
   const [activeMainTab, setActiveMainTab] = useState("Home");
+  const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
+  const [localOrders, setLocalOrders] = useState([1, 2, 3]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentBanner, setCurrentBanner] = useState(0);
 
@@ -137,6 +139,7 @@ export default function BelanjaView({
     }
     if (["Home", "Inbox", "Transaksi", "Toko Saya", "Akun", "GoPay & Coins", "Cek Kupon", "Bonus", "Pesan Chat", "Room Chat", "Notifikasi", "Pendaftaran Toko", "Toko Saya Aktif"].includes(label)) {
       setActiveMainTab(label);
+      if (label === "Toko Saya Aktif") setTokoSubTab("Main");
       return;
     }
     const messages: Record<string, string> = {
@@ -587,95 +590,420 @@ export default function BelanjaView({
 
         {activeMainTab === "Toko Saya Aktif" && (
           <div className="flex flex-col space-y-6">
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center font-bold text-2xl shadow-inner border border-emerald-200">
-                  <Store size={32} />
+            {tokoSubTab === "Main" && (
+              <>
+                <div 
+                  onClick={() => setTokoSubTab("Pengaturan")}
+                  className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between cursor-pointer hover:border-emerald-200 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center font-bold text-2xl shadow-inner border border-emerald-200 group-hover:scale-105 transition-transform">
+                      <Store size={32} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black text-slate-800">Toko Berkah Jaya</h2>
+                      <p className="text-sm text-emerald-600 font-bold mb-1">Online & Aktif</p>
+                      <div className="flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium uppercase tracking-wider w-fit">
+                        <Star size={10} className="fill-amber-400 text-amber-500" /> 4.9 (120 Ulasan)
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={20} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
                 </div>
-                <div>
-                  <h2 className="text-lg font-black text-slate-800">Toko Berkah Jaya</h2>
-                  <p className="text-sm text-emerald-600 font-bold mb-1">Online & Aktif</p>
-                  <div className="flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium uppercase tracking-wider w-fit">
-                    <Star size={10} className="fill-amber-400 text-amber-500" /> 4.9 (120 Ulasan)
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div 
+                    onClick={() => setTokoSubTab("ManageProduk")}
+                    className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between cursor-pointer hover:border-emerald-200 transition-all group"
+                  >
+                    <div className="flex items-center gap-2 text-slate-500 mb-4">
+                      <Package size={18} className="group-hover:text-emerald-500" />
+                      <span className="text-sm font-bold">Produk</span>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-black text-slate-800 tracking-tight">24</div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Item Tersedia</p>
+                    </div>
+                  </div>
+                  <div 
+                    onClick={() => setTokoSubTab("Keuangan")}
+                    className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between cursor-pointer hover:border-emerald-200 transition-all group"
+                  >
+                    <div className="flex items-center gap-2 text-slate-500 mb-4">
+                      <Wallet size={18} className="group-hover:text-emerald-500" />
+                      <span className="text-sm font-bold">Saldo</span>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-black text-slate-800 tracking-tight">1.2M</div>
+                      <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Siap Tarik</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-100">
+                  <div onClick={() => setTokoSubTab("TambahProduk")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                        <Plus size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800">Tambah Produk</h3>
+                        <p className="text-xs text-slate-500 font-medium">Jual barang baru atau jasa</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="text-slate-300" />
+                  </div>
+                  <div onClick={() => setTokoSubTab("DaftarPesanan")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                        <Package size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800">Daftar Pesanan</h3>
+                        <p className="text-xs text-slate-500 font-medium">Ada {localOrders.length} pesanan baru masuk</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {localOrders.length > 0 && (
+                        <div className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{localOrders.length}</div>
+                      )}
+                      <ChevronRight size={18} className="text-slate-300" />
+                    </div>
+                  </div>
+                  <div onClick={() => setTokoSubTab("Statistik")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+                        <Zap size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800">Statistik Toko</h3>
+                        <p className="text-xs text-slate-500 font-medium">Kunjungan dan performa produk</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="text-slate-300" />
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => handleQuickLink("Toko Saya")}
+                  className="mx-auto block text-xs font-bold text-rose-500 uppercase tracking-widest mt-4 hover:opacity-80"
+                >
+                  Nonaktifkan Toko (Demo)
+                </button>
+              </>
+            )}
+
+            {tokoSubTab === "TambahProduk" && (
+              <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4 mb-8">
+                  <button onClick={() => setTokoSubTab("Main")} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Tambah Produk</h2>
+                    <p className="text-xs text-slate-500 font-bold">Produk atau Jasa Baru</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="aspect-square w-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-all group mx-auto">
+                    <Plus className="text-slate-300 group-hover:text-emerald-500" size={32} />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-600">Foto Produk</span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Nama Produk *</label>
+                      <input type="text" placeholder="Masukkan nama barang/jasa" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Harga (Rp) *</label>
+                      <input type="number" placeholder="Contoh: 50.000" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Deskripsi Singkat</label>
+                      <textarea rows={3} placeholder="Ceritakan tentang produk Anda..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none resize-none"></textarea>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      showNotification?.("Produk berhasil ditambahkan!", "success");
+                      setTokoSubTab("Main");
+                    }}
+                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] uppercase tracking-widest text-sm"
+                  >
+                    Simpan Produk
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tokoSubTab === "DaftarPesanan" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setTokoSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Daftar Pesanan</h2>
+                    <p className="text-xs text-slate-500 font-bold">{localOrders.length} Pesanan Menunggu Proses</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {localOrders.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-10 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
+                      <Package size={48} className="text-slate-200 mb-4" />
+                      <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Tidak ada pesanan baru</p>
+                    </div>
+                  ) : (
+                    localOrders.map((id) => (
+                      <div key={id} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-slate-100 rounded-xl"></div>
+                            <div>
+                              <h4 className="text-sm font-black text-slate-800 uppercase">Pesanan #2024-0{id}</h4>
+                              <p className="text-[10px] text-slate-400 font-bold">2 jam yang lalu</p>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black uppercase rounded-md tracking-wider">Baru</span>
+                        </div>
+                        <div className="py-2 border-y border-slate-50 space-y-2">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-slate-400">Buyer:</span>
+                            <span className="text-slate-800">{id === 1 ? 'Arif' : id === 2 ? 'Budi' : 'Citra'} (Blok B/{id}2)</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-slate-400">Total:</span>
+                            <span className="text-emerald-600 font-black">Rp {85000 + id * 15000}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => {
+                              setLocalOrders(prev => prev.filter(item => item !== id));
+                              showNotification?.("Pesanan ditolak", "warning");
+                            }} 
+                            className="flex-1 py-2 rounded-xl text-[10px] font-bold text-rose-500 border border-rose-100 hover:bg-rose-50 transition-colors uppercase tracking-widest"
+                          >
+                            Tolak
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setLocalOrders(prev => prev.filter(item => item !== id));
+                              showNotification?.("Pesanan dikonfirmasi!", "success");
+                            }} 
+                            className="flex-1 py-2 rounded-xl bg-emerald-600 text-[10px] font-bold text-white shadow-lg shadow-emerald-500/10 hover:bg-emerald-700 transition-colors uppercase tracking-widest"
+                          >
+                            Proses
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {tokoSubTab === "Statistik" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setTokoSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Statistik Toko</h2>
+                    <p className="text-xs text-slate-500 font-bold">Performa Minggu Ini</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                  <div className="h-40 flex items-end justify-between gap-2 px-2">
+                    {[35, 60, 45, 80, 55, 90, 70].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <div 
+                          className="w-full bg-emerald-500 rounded-t-lg transition-all duration-1000" 
+                          style={{ height: `${h}%` }}
+                        ></div>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Day {i+1}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-8 grid grid-cols-2 gap-4 border-t border-slate-50 pt-6">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Pengunjung</p>
+                      <p className="text-2xl font-black text-slate-800">1.240</p>
+                      <p className="text-[10px] text-emerald-500 font-black">+12% vs mgg lalu</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Transaksi</p>
+                      <p className="text-2xl font-black text-slate-800">342</p>
+                      <p className="text-[10px] text-emerald-500 font-black">+8% vs mgg lalu</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Produk Terlaris</h3>
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-slate-300">#{i}</span>
+                          <div className="w-8 h-8 bg-slate-50 rounded-lg"></div>
+                          <span className="text-xs font-bold text-slate-700">Produk Kece Unggulan</span>
+                        </div>
+                        <span className="text-xs font-black text-emerald-600">{100 - i * 15} Terjual</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-              <button onClick={() => showNotification?.("Membagikan link toko", "info")} className="w-10 h-10 bg-slate-50 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-50 transition-colors">
-                <ChevronRight size={20} className="rotate-90" />
-              </button>
-            </div>
+            )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
-                <div className="flex items-center gap-2 text-slate-500 mb-4">
-                  <Package size={18} />
-                  <span className="text-sm font-bold">Produk</span>
-                </div>
-                <div>
-                  <div className="text-3xl font-black text-slate-800 tracking-tight">24</div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Item Tersedia</p>
-                </div>
-              </div>
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
-                <div className="flex items-center gap-2 text-slate-500 mb-4">
-                  <Wallet size={18} />
-                  <span className="text-sm font-bold">Saldo</span>
-                </div>
-                <div>
-                  <div className="text-3xl font-black text-slate-800 tracking-tight">1.2M</div>
-                  <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Siap Tarik</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-100">
-              <div onClick={() => showNotification?.("Fitur Tambah Produk akan segera hadir!", "info")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+            {tokoSubTab === "ManageProduk" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                  <button onClick={() => setTokoSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Kelola Produk</h2>
+                    <p className="text-xs text-slate-500 font-bold">24 Produk Terdaftar</p>
+                  </div>
+                  <button 
+                    onClick={() => setTokoSubTab("TambahProduk")}
+                    className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
+                  >
                     <Plus size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-800">Tambah Produk</h3>
-                    <p className="text-xs text-slate-500 font-medium">Jual barang baru atau jasa</p>
-                  </div>
+                  </button>
                 </div>
-                <ChevronRight size={18} className="text-slate-300" />
+
+                <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="p-4 flex items-center justify-between border-b border-slate-50 last:border-none group hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden"></div>
+                        <div>
+                          <h4 className="text-sm font-black text-slate-800 uppercase">Produk Contoh #{i}</h4>
+                          <p className="text-xs font-bold text-emerald-600">Rp 45.000</p>
+                          <p className="text-[10px] text-slate-400 font-medium">Stok: 12 • Terjual: 5</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => showNotification?.("Fitur edit produk", "info")} className="p-2 text-slate-400 hover:text-emerald-600 transition-colors">
+                          <LayoutGrid size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div onClick={() => showNotification?.("Semua pesanan diproses", "info")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+            )}
+
+            {tokoSubTab === "Keuangan" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                    <Package size={20} />
-                  </div>
+                  <button onClick={() => setTokoSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">Daftar Pesanan</h3>
-                    <p className="text-xs text-slate-500 font-medium">Ada 3 pesanan baru masuk</p>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Keuangan</h2>
+                    <p className="text-xs text-slate-500 font-bold">Ringkasan Saldo & Pencairan</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">3</div>
-                  <ChevronRight size={18} className="text-slate-300" />
+
+                <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[2rem] p-8 text-white shadow-xl shadow-emerald-900/20 relative overflow-hidden">
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-2">Total Saldo Tersedia</p>
+                  <h3 className="text-4xl font-black mb-6 tracking-tighter">Rp 1.250.000</h3>
+                  <button 
+                    onClick={() => showNotification?.("Permintaan pencairan saldo dikirim!", "success")}
+                    className="w-full py-4 bg-white text-emerald-700 font-black rounded-2xl hover:bg-emerald-50 transition-all active:scale-95 uppercase tracking-widest shadow-lg"
+                  >
+                    Tarik Saldo Ke Wallet
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Riwayat Transaksi</h3>
+                  <div className="space-y-6">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-start justify-between pb-4 border-b border-slate-50 last:border-none last:pb-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                            <Plus size={20} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-800 uppercase">Pesanan #2024-0{i}</p>
+                            <p className="text-[10px] text-slate-400 font-bold">30 Mei 2026 • 12:45</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-black text-emerald-600 tracking-tight">+Rp 45.000</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div onClick={() => showNotification?.("Fitur Statistik akan segera hadir!", "info")} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+            )}
+
+            {tokoSubTab === "Pengaturan" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
-                    <Zap size={20} />
-                  </div>
+                  <button onClick={() => setTokoSubTab("Main")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">Statistik Toko</h3>
-                    <p className="text-xs text-slate-500 font-medium">Kunjungan dan performa produk</p>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Pengaturan Toko</h2>
+                    <p className="text-xs text-slate-500 font-bold">Kelola Identitas & Status</p>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-slate-300" />
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-6">
+                  <div className="flex flex-col items-center gap-4 py-4">
+                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-[2rem] flex items-center justify-center relative group cursor-pointer border-2 border-dashed border-emerald-300">
+                      <Store size={40} />
+                      <div className="absolute inset-0 bg-black/20 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Plus className="text-white" size={24} />
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Ubah Logo Toko</span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nama Toko</label>
+                       <input type="text" defaultValue="Toko Berkah Jaya" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Deskripsi Singkat</label>
+                       <textarea rows={2} defaultValue="Pusat sembako murah dan berkualitas di RT 26" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"></textarea>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl">
+                      <div>
+                        <p className="text-xs font-black text-emerald-800 uppercase">Status Operasional</p>
+                        <p className="text-[10px] text-emerald-600 font-bold">Toko sedang terlihat oleh warga</p>
+                      </div>
+                      <div className="w-12 h-6 bg-emerald-500 rounded-full relative cursor-pointer shadow-inner">
+                        <div className="absolute right-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      showNotification?.("Pengaturan berhasil disimpan!", "success");
+                      setTokoSubTab("Main");
+                    }}
+                    className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-xs"
+                  >
+                    Simpan Perubahan
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            <button
-               onClick={() => handleQuickLink("Toko Saya")}
-               className="mx-auto block text-xs font-bold text-rose-500 uppercase tracking-widest mt-4 hover:opacity-80"
-            >
-               Nonaktifkan Toko (Demo)
-            </button>
+            )}
           </div>
         )}
 
