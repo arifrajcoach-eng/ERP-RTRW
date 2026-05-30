@@ -113,7 +113,18 @@ export default function BelanjaView({
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
   const [activeMainTab, setActiveMainTab] = useState("Home");
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
-  const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil">("Main");
+  const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat">("Main");
+  const [walletBalance, setWalletBalance] = useState(2450000);
+  const [selectedPaymentId, setSelectedPaymentId] = useState(1);
+  const [faqSearch, setFaqSearch] = useState("");
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [helpForm, setHelpForm] = useState({ category: "", message: "" });
+  const [localAddresses, setLocalAddresses] = useState([
+    { id: 1, label: "Rumah", receiver: "Arif", phone: "+62 812-3456-7890", street: "Jl. Melati IV No. 12, Blok B/12, RT 026/004", district: "Kelurahan Pusat", city: "Jakarta Selatan", isMain: true },
+    { id: 2, label: "Kantor", receiver: "Arif (Kerja)", phone: "+62 812-3456-7890", street: "Gedung Smart City, Lt. 5, Jl. Teknologi Modern No. 8", district: "Kelurahan Maju", city: "Jakarta Pusat", isMain: false }
+  ]);
+  const [newAddress, setNewAddress] = useState({ label: "", receiver: "", street: "" });
+  const [editingAddress, setEditingAddress] = useState<{ id: number; label: string; receiver: string; phone: string; street: string; district: string; city: string; isMain: boolean } | null>(null);
   const [localProducts, setLocalProducts] = useState(PRODUCTS);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", description: "" });
   const [productImage, setProductImage] = useState<string | null>(null);
@@ -1150,7 +1161,10 @@ export default function BelanjaView({
                     <p className="text-xs text-slate-500 font-bold">Kelola alamat pengiriman anda</p>
                   </div>
                   <button 
-                    onClick={() => showNotification?.("Fitur tambah alamat", "info")}
+                    onClick={() => {
+                      setNewAddress({ label: "", receiver: "", street: "" });
+                      setAkunSubTab("TambahAlamat");
+                    }}
                     className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
                   >
                     <Plus size={20} />
@@ -1158,21 +1172,177 @@ export default function BelanjaView({
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white rounded-[2rem] p-6 shadow-sm border-2 border-emerald-500 relative">
-                    <div className="absolute top-6 right-6 px-2 py-1 bg-emerald-500 text-white text-[8px] font-black uppercase rounded-md tracking-wider">Utama</div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase mb-2">Rumah (Arif)</h3>
-                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-4">Jl. Melati IV No. 12, Blok B/12, RT 026/004, Kelurahan Pusat, Kota Administrasi Jakarta Selatan, 12345</p>
-                    <div className="flex gap-2">
-                       <button onClick={() => showNotification?.("Edit alamat", "info")} className="flex-1 py-2 text-[10px] font-bold text-slate-400 border border-slate-100 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-all uppercase tracking-widest">Ubah</button>
+                  {localAddresses.map((addr) => (
+                    <div key={addr.id} className={`bg-white rounded-[2rem] p-6 shadow-sm border-2 transition-all ${addr.isMain ? 'border-emerald-500' : 'border-slate-100 hover:border-emerald-200'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-black text-slate-800 uppercase">{addr.label} ({addr.receiver})</h3>
+                        {addr.isMain && <span className="px-2 py-1 bg-emerald-500 text-white text-[8px] font-black uppercase rounded-md tracking-wider">Utama</span>}
+                      </div>
+                      <p className="text-xs text-slate-500 font-bold leading-relaxed mb-4">{addr.street}, {addr.district}, {addr.city}</p>
+                      <div className="flex gap-2">
+                        {!addr.isMain && (
+                          <button 
+                            onClick={() => {
+                              setLocalAddresses(localAddresses.map(a => ({ ...a, isMain: a.id === addr.id })));
+                              showNotification?.("Alamat utama berhasil diubah!", "success");
+                            }}
+                            className="flex-1 py-2 text-[10px] font-bold text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-50 transition-all uppercase tracking-widest"
+                          >
+                            Pilih Utama
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setEditingAddress(addr);
+                            setAkunSubTab("EditAlamat");
+                          }} 
+                          className="flex-1 py-2 text-[10px] font-bold text-slate-400 border border-slate-100 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-all uppercase tracking-widest"
+                        >
+                          Ubah
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {akunSubTab === "TambahAlamat" && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setAkunSubTab("Alamat")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Tambah Alamat</h2>
+                    <p className="text-xs text-slate-500 font-bold">Lengkapi detail lokasi anda</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Label Alamat (ex: Rumah, Kantor)</label>
+                       <input 
+                         type="text" 
+                         value={newAddress.label}
+                         onChange={(e) => setNewAddress({ ...newAddress, label: e.target.value })}
+                         placeholder="Contoh: Rumah" 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nama Penerima</label>
+                       <input 
+                         type="text" 
+                         value={newAddress.receiver}
+                         onChange={(e) => setNewAddress({ ...newAddress, receiver: e.target.value })}
+                         placeholder="Nama lengkap" 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Alamat Lengkap</label>
+                       <textarea 
+                         rows={3} 
+                         value={newAddress.street}
+                         onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
+                         placeholder="Nama jalan, nomor rumah, RT/RW, dsb" 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"
+                       ></textarea>
                     </div>
                   </div>
-                  <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 opacity-60">
-                    <h3 className="text-sm font-black text-slate-800 uppercase mb-2">Kantor</h3>
-                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-4">Gedung Smart City, Lt. 5, Jl. Teknologi Modern No. 8</p>
-                    <div className="flex gap-2">
-                       <button onClick={() => showNotification?.("Jadikan alamat utama", "success")} className="flex-1 py-2 text-[10px] font-bold text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-50 transition-all uppercase tracking-widest">Pilih Utama</button>
+
+                  <button 
+                    disabled={!newAddress.label || !newAddress.receiver || !newAddress.street}
+                    onClick={() => {
+                      const id = Math.random();
+                      setLocalAddresses([...localAddresses, {
+                        id,
+                        label: newAddress.label,
+                        receiver: newAddress.receiver,
+                        phone: "+62 812-xxxx-xxxx",
+                        street: newAddress.street,
+                        district: "Kelurahan Pusat",
+                        city: "Jakarta",
+                        isMain: false
+                      }]);
+                      showNotification?.("Alamat berhasil ditambahkan!", "success");
+                      setAkunSubTab("Alamat");
+                    }}
+                    className={`w-full py-5 font-black rounded-2xl transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-xs ${
+                      !newAddress.label || !newAddress.receiver || !newAddress.street
+                      ? 'bg-slate-100 text-slate-300'
+                      : 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700'
+                    }`}
+                  >
+                    Simpan Alamat
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {akunSubTab === "EditAlamat" && editingAddress && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setAkunSubTab("Alamat")} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-emerald-600 shadow-sm border border-slate-100 transition-all">
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Ubah Alamat</h2>
+                    <p className="text-xs text-slate-500 font-bold">Ubah detail lokasi pengiriman anda</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Label Alamat (ex: Rumah, Kantor)</label>
+                       <input 
+                         type="text" 
+                         value={editingAddress.label}
+                         onChange={(e) => setEditingAddress({ ...editingAddress, label: e.target.value })}
+                         placeholder="Contoh: Rumah" 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nama Penerima</label>
+                       <input 
+                         type="text" 
+                         value={editingAddress.receiver}
+                         onChange={(e) => setEditingAddress({ ...editingAddress, receiver: e.target.value })}
+                         placeholder="Nama lengkap" 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Alamat Lengkap</label>
+                       <textarea 
+                         rows={3} 
+                         value={editingAddress.street || ""}
+                         onChange={(e) => setEditingAddress({ ...editingAddress, street: e.target.value })}
+                         placeholder="Nama jalan, nomor rumah, RT/RW, dsb" 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"
+                       ></textarea>
                     </div>
                   </div>
+
+                  <button 
+                    disabled={!editingAddress.label || !editingAddress.receiver || !editingAddress.street}
+                    onClick={() => {
+                      setLocalAddresses(localAddresses.map(addr => addr.id === editingAddress.id ? editingAddress : addr));
+                      showNotification?.("Alamat berhasil diperbarui!", "success");
+                      setAkunSubTab("Alamat");
+                    }}
+                    className={`w-full py-5 font-black rounded-2xl transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-xs ${
+                      !editingAddress.label || !editingAddress.receiver || !editingAddress.street
+                      ? 'bg-slate-100 text-slate-300'
+                      : 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700'
+                    }`}
+                  >
+                    Simpan Perubahan
+                  </button>
                 </div>
               </div>
             )}
@@ -1193,18 +1363,41 @@ export default function BelanjaView({
                   <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-2">Saldo Gopay & Coins</p>
                   <div className="flex items-baseline gap-2 mb-6">
-                    <h3 className="text-4xl font-black tracking-tighter">Rp 2.450.000</h3>
+                    <h3 className="text-4xl font-black tracking-tighter">Rp {new Intl.NumberFormat('id-ID').format(walletBalance)}</h3>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => showNotification?.("Fitur Top Up", "info")} className="py-3 bg-white/20 backdrop-blur-md rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/30 transition-all active:scale-95 border border-white/20">Isi Saldo</button>
-                    <button onClick={() => showNotification?.("Fitur Transfer", "info")} className="py-3 bg-white text-indigo-700 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all active:scale-95 shadow-lg shadow-indigo-900/10">Transfer</button>
+                    <button 
+                      onClick={() => {
+                        setWalletBalance(walletBalance + 50000);
+                        showNotification?.("Top up Rp 50.000 berhasil!", "success");
+                      }} 
+                      className="py-3 bg-white/20 backdrop-blur-md rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/30 transition-all active:scale-95 border border-white/20"
+                    >
+                      Isi Saldo
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (walletBalance >= 10000) {
+                          setWalletBalance(walletBalance - 10000);
+                          showNotification?.("Transfer Rp 10.000 berhasil!", "info");
+                        } else {
+                          showNotification?.("Saldo tidak cukup", "error");
+                        }
+                      }} 
+                      className="py-3 bg-white text-indigo-700 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all active:scale-95 shadow-lg shadow-indigo-900/10"
+                    >
+                      Transfer
+                    </button>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">Metode Pembayaran</h3>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div 
+                      onClick={() => setSelectedPaymentId(1)}
+                      className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer ${selectedPaymentId === 1 ? 'bg-emerald-50 border-2 border-emerald-500' : 'hover:bg-slate-50 border-2 border-transparent'}`}
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-xs uppercase tracking-tighter italic">Bank</div>
                         <div>
@@ -1212,11 +1405,14 @@ export default function BelanjaView({
                           <p className="text-[10px] text-slate-400 font-bold">**** **** 1234</p>
                         </div>
                       </div>
-                      <div className="w-5 h-5 border-2 border-emerald-500 rounded-full flex items-center justify-center">
-                        <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                      <div className={`w-5 h-5 border-2 rounded-full flex items-center justify-center ${selectedPaymentId === 1 ? 'border-emerald-500' : 'border-slate-200'}`}>
+                        {selectedPaymentId === 1 && <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between opacity-50">
+                    <div 
+                      onClick={() => setSelectedPaymentId(2)}
+                      className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer ${selectedPaymentId === 2 ? 'bg-rose-50 border-2 border-rose-500' : 'hover:bg-slate-50 border-2 border-transparent'}`}
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center font-black text-xs uppercase tracking-tighter">Visa</div>
                         <div>
@@ -1224,7 +1420,9 @@ export default function BelanjaView({
                           <p className="text-[10px] text-slate-400 font-bold">**** **** 5678</p>
                         </div>
                       </div>
-                      <div className="w-5 h-5 border-2 border-slate-200 rounded-full"></div>
+                      <div className={`w-5 h-5 border-2 rounded-full flex items-center justify-center ${selectedPaymentId === 2 ? 'border-rose-500' : 'border-slate-200'}`}>
+                        {selectedPaymentId === 2 && <div className="w-2.5 h-2.5 bg-rose-500 rounded-full"></div>}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1243,35 +1441,107 @@ export default function BelanjaView({
                   </div>
                 </div>
 
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Cari solusi atau FAQ..." 
+                    value={faqSearch}
+                    onChange={(e) => setFaqSearch(e.target.value)}
+                    className="w-full bg-white border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-300"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
-                  <div onClick={() => showNotification?.("Chat Support", "info")} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group">
+                  <div 
+                    onClick={() => showNotification?.("Menghubungkan ke Live Chat Support...", "success")} 
+                    className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group"
+                  >
                      <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                         <MessageCircle size={24} />
                      </div>
                      <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Live Chat</span>
                   </div>
-                  <div onClick={() => showNotification?.("Email Support", "info")} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group">
+                  <div 
+                    onClick={() => showNotification?.("Membuka aplikasi Email...", "info")} 
+                    className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-200 transition-all group"
+                  >
                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Mail size={24} />
                      </div>
-                     <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Email</span>
+                     <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Email Support</span>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-4">FAQ Populer</h3>
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {[
-                      "Bagaimana cara belanja?",
-                      "Kenapa pesanan saya belum sampai?",
-                      "Metode pembayaran apa saja?",
-                      "Cara mendaftar jadi penjual?"
-                    ].map((q, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-none last:pb-0 cursor-pointer group">
-                        <span className="text-xs font-bold text-slate-600 group-hover:text-emerald-600 transition-colors">{q}</span>
-                        <ChevronRight size={14} className="text-slate-300" />
+                      { q: "Bagaimana cara belanja?", a: "Pilih produk yang Anda inginkan, masukkan ke keranjang, lalu klik bayar. Gunakan saldo GoPay untuk transaksi instan!" },
+                      { q: "Kenapa pesanan saya belum sampai?", a: "Lacak status pesanan di tab 'Transaksi'. Jika sudah lebih dari 24 jam belum diproses, silakan hubungi penjual via chat." },
+                      { q: "Metode pembayaran apa saja?", a: "Kami mendukung GoPay, Coins, dan Transfer Bank Mandiri untuk saat ini." },
+                      { q: "Cara mendaftar jadi penjual?", a: "Buka tab 'Akun' lalu pilih 'Pendaftaran Toko' untuk mulai berjualan produk Anda sendiri!" }
+                    ].filter(item => item.q.toLowerCase().includes(faqSearch.toLowerCase())).map((faq, i) => (
+                      <div key={i} className="border-b border-slate-50 last:border-none">
+                        <div 
+                          onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
+                          className="flex items-center justify-between py-4 cursor-pointer group"
+                        >
+                          <span className={`text-xs font-bold transition-colors ${expandedFaq === i ? 'text-emerald-600' : 'text-slate-600 group-hover:text-emerald-600'}`}>
+                            {faq.q}
+                          </span>
+                          <ChevronRight size={14} className={`text-slate-300 transition-transform duration-300 ${expandedFaq === i ? 'rotate-90 text-emerald-500' : ''}`} />
+                        </div>
+                        <AnimatePresence>
+                          {expandedFaq === i && (
+                            <motion.div 
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <p className="text-[11px] text-slate-500 font-medium pb-4 leading-relaxed">
+                                {faq.a}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Kirim Pesan Langsung</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      {["Pesanan", "Pembayaran", "Akun", "Lainnya"].map((cat) => (
+                        <button 
+                          key={cat}
+                          onClick={() => setHelpForm({ ...helpForm, category: cat })}
+                          className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${helpForm.category === cat ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea 
+                      rows={3} 
+                      value={helpForm.message}
+                      onChange={(e) => setHelpForm({ ...helpForm, message: e.target.value })}
+                      placeholder="Jelaskan detail kendala atau pertanyaan Anda..." 
+                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-xs font-bold text-slate-800 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all resize-none placeholder:text-slate-300"
+                    ></textarea>
+                    <button 
+                      disabled={!helpForm.category || !helpForm.message}
+                      onClick={() => {
+                        showNotification?.("Laporan berhasil dikirim! Tim kami akan segera menghubungi Anda.", "success");
+                        setHelpForm({ category: "", message: "" });
+                      }}
+                      className={`w-full py-4 font-black rounded-2xl transition-all active:scale-[0.95] uppercase tracking-widest text-[10px] ${!helpForm.category || !helpForm.message ? 'bg-slate-100 text-slate-300' : 'bg-slate-900 text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800'}`}
+                    >
+                      Kirim Bantuan
+                    </button>
                   </div>
                 </div>
               </div>
