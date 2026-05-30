@@ -608,7 +608,7 @@ export default function DashboardView({
             <LayoutGrid className="w-5 h-5 text-brand-blue" />
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase">Fitur Klik</h3>
           </div>
-          <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
             {allowedMenuItems.filter(item => !['dashboard', 'pengaturan', 'super-admin', 'users', 'kop-template'].includes(item.id)).map((item) => (
               <button
                 key={item.id}
@@ -619,16 +619,16 @@ export default function DashboardView({
                     setActiveTab(item.id);
                   }
                 }}
-                className={`flex flex-col items-center justify-center p-4 sm:p-6 rounded-3xl border transition-all duration-300 gap-3 ${
+                className={`flex flex-col items-center justify-center p-5 sm:p-6 rounded-3xl border transition-all duration-300 gap-3 min-h-[144px] ${
                   item.isLocked
                     ? "bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-800 opacity-60 cursor-not-allowed"
                     : "bg-slate-50 border-transparent hover:border-brand-blue/30 hover:shadow-lg hover:shadow-brand-blue/10 dark:bg-slate-800/50 dark:border-transparent dark:hover:border-brand-blue/30 group"
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform ${item.isLocked ? "bg-slate-200 dark:bg-slate-800 text-slate-400" : "bg-brand-blue/10 text-brand-blue group-hover:scale-110 group-hover:bg-brand-blue/20"}`}>
-                  <item.icon className="w-5 h-5" />
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform shrink-0 ${item.isLocked ? "bg-slate-200 dark:bg-slate-800 text-slate-400" : "bg-brand-blue/10 text-brand-blue group-hover:scale-110 group-hover:bg-brand-blue/20"}`}>
+                  <item.icon className="w-6 h-6" />
                 </div>
-                <span className={`text-[9px] font-black uppercase text-center tracking-tighter w-full line-clamp-1 ${item.isLocked ? 'text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                <span className={`text-[11px] sm:text-xs font-bold sm:font-black uppercase text-center tracking-wide w-full line-clamp-2 leading-snug break-words ${item.isLocked ? 'text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
                   {item.label}
                 </span>
               </button>

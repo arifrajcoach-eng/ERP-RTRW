@@ -1055,7 +1055,11 @@ export default function App() {
   } | null>(null);
   const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("theme") || "light";
+      const stored = localStorage.getItem("theme");
+      if (stored && ["light", "dark", "oceanic", "pink-baby"].includes(stored)) {
+        return stored;
+      }
+      return "light";
     }
     return "light";
   });
@@ -1070,6 +1074,7 @@ export default function App() {
       "forest",
       "sunset",
       "pink-baby",
+      "dark-prime"
     );
     document.documentElement.classList.add(theme);
     localStorage.setItem("theme", theme);
@@ -1080,15 +1085,14 @@ export default function App() {
       "light",
       "dark",
       "oceanic",
-      "forest",
-      "sunset",
       "pink-baby",
     ];
     const currentIndex = themes.indexOf(theme);
     const nextTheme = themes[(currentIndex + 1) % themes.length];
     setTheme(nextTheme);
+    const displayName = nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1);
     setNotification({
-      message: `Tema diubah ke ${nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1)}`,
+      message: `Tema diubah ke ${displayName}`,
       type: "info",
     });
     setTimeout(() => setNotification(null), 2000);

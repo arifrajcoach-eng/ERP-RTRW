@@ -98,15 +98,6 @@
     @apply text-slate-800 bg-slate-50;
   }
 
-  /* Forest */
-  .forest body {
-    @apply text-slate-800 bg-slate-50;
-  }
-
-  /* Sunset */
-  .sunset body {
-    @apply text-slate-800 bg-slate-50;
-  }
 
   /* Pink Baby */
   .pink-baby body {
@@ -135,35 +126,7 @@
   --color-slate-950: #082f49;
 }
 
-/* Theme Overrides for Forest */
-:root.forest {
-  --color-slate-50: #f0fdf4;
-  --color-slate-100: #dcfce7;
-  --color-slate-200: #bbf7d0;
-  --color-slate-300: #86efac;
-  --color-slate-400: #4ade80;
-  --color-slate-500: #22c55e;
-  --color-slate-600: #16a34a;
-  --color-slate-700: #15803d;
-  --color-slate-800: #166534;
-  --color-slate-900: #14532d;
-  --color-slate-950: #052e16;
-}
 
-/* Theme Overrides for Sunset */
-:root.sunset {
-  --color-slate-50: #fffbeb;
-  --color-slate-100: #fef3c7;
-  --color-slate-200: #fde68a;
-  --color-slate-300: #fcd34d;
-  --color-slate-400: #fbbf24;
-  --color-slate-500: #f59e0b;
-  --color-slate-600: #d97706;
-  --color-slate-700: #b45309;
-  --color-slate-800: #92400e;
-  --color-slate-900: #78350f;
-  --color-slate-950: #451a03;
-}
 
 /* Theme Overrides for Pink Baby (Soft Pastel Glassmorphism) */
 :root.pink-baby {
@@ -179,6 +142,8 @@
   --color-slate-900: #500724;
   --color-slate-950: #3e051b;
 }
+
+
 
 .font-elegant {
   font-family: var(--font-serif);
