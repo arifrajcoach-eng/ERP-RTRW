@@ -142,6 +142,7 @@ async function startServer() {
     }
 
     // Process notification
+    // Process notification
     const event = req.body.event;
     if (event === "payment_status") {
       const { reference, status } = req.body;
@@ -150,6 +151,135 @@ async function startServer() {
     }
 
     res.json({ success: true });
+  });
+
+  // --- DIGIFLAZZ PPOB INTEGRATION ROUTE SYSTEM ---
+  const getDigiflazzSign = (additional: string) => {
+    const username = process.env.DIGIFLAZZ_USERNAME || "";
+    const apiKey = process.env.DIGIFLAZZ_API_KEY || "";
+    return crypto.createHash("md5").update(username + apiKey + additional).digest("hex");
+  };
+
+  app.get("/api/ppob/balance", async (req, res) => {
+    try {
+      const username = process.env.DIGIFLAZZ_USERNAME;
+      const apiKey = process.env.DIGIFLAZZ_API_KEY;
+      if (!username || !apiKey) {
+        return res.json({ 
+          success: true, 
+          isDemo: true,
+          balance: 10000000, 
+          message: "Mode Simulasi Aktif. Lengkapi kredensial DIGIFLAZZ_USERNAME & DIGIFLAZZ_API_KEY di .env untuk integrasi real." 
+        });
+      }
+
+      const sign = getDigiflazzSign("depo");
+      const response = await fetch("https://api.digiflazz.com/v1/cek-saldo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cmd: "depo",
+          username,
+          sign
+        })
+      });
+      const data = await response.json();
+      if (data && data.data) {
+        res.json({ success: true, balance: data.data.deposit });
+      } else {
+        res.json({ success: false, error: data?.data?.rc || "Gagal mengambil saldo dari Digiflazz" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/ppob/pricelist", async (req, res) => {
+    try {
+      const username = process.env.DIGIFLAZZ_USERNAME;
+      const apiKey = process.env.DIGIFLAZZ_API_KEY;
+      if (!username || !apiKey) {
+        return res.json({
+          success: true,
+          isDemo: true,
+          pricelist: [
+            { buyer_sku_code: "S10", product_name: "Pulsa Telkomsel 10.000", price: 10050, category: "Pulsa", brand: "Telkomsel", seller_name: "Digiflazz Simulator" },
+            { buyer_sku_code: "S50", product_name: "Pulsa Telkomsel 50.000", price: 50050, category: "Pulsa", brand: "Telkomsel", seller_name: "Digiflazz Simulator" },
+            { buyer_sku_code: "S100", product_name: "Pulsa Telkomsel 100.000", price: 99050, category: "Pulsa", brand: "Telkomsel", seller_name: "Digiflazz Simulator" },
+            { buyer_sku_code: "PLN20", product_name: "Token PLN 20.000", price: 20100, category: "PLN", brand: "PLN", seller_name: "Digiflazz Simulator" },
+            { buyer_sku_code: "PLN50", product_name: "Token PLN 50.000", price: 50100, category: "PLN", brand: "PLN", seller_name: "Digiflazz Simulator" }
+          ]
+        });
+      }
+
+      const sign = getDigiflazzSign("pricelist");
+      const response = await fetch("https://api.digiflazz.com/v1/price-list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cmd: "prepaid",
+          username,
+          sign
+        })
+      });
+      const data = await response.json();
+      if (data && data.data) {
+        res.json({ success: true, pricelist: data.data });
+      } else {
+        res.json({ success: false, error: "Gagal mengambil daftar harga" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/ppob/transaction", async (req, res) => {
+    try {
+      const username = process.env.DIGIFLAZZ_USERNAME;
+      const apiKey = process.env.DIGIFLAZZ_API_KEY;
+      const { ref_id, buyer_sku_code, customer_no } = req.body;
+
+      if (!ref_id || !buyer_sku_code || !customer_no) {
+        return res.status(400).json({ success: false, error: "Missing required parameters: ref_id, buyer_sku_code, customer_no" });
+      }
+
+      if (!username || !apiKey) {
+        // Mock success in simulator mode
+        return res.json({
+          success: true,
+          isDemo: true,
+          data: {
+            ref_id,
+            buyer_sku_code,
+            customer_no,
+            status: "Sukses",
+            sn: "998273617182",
+            message: "Simulasi transaksi digital sukses!"
+          }
+        });
+      }
+
+      const sign = getDigiflazzSign(ref_id);
+      const response = await fetch("https://api.digiflazz.com/v1/transaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          ref_id,
+          buyer_sku_code,
+          customer_no,
+          sign
+        })
+      });
+      const data = await response.json();
+      if (data && data.data) {
+        res.json({ success: true, data: data.data });
+      } else {
+        res.json({ success: false, error: data?.data?.message || "Transaksi PPOB gagal di sirkuit utama" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
   });
 
   app.post("/api/messages/send-whatsapp", async (req, res) => {
