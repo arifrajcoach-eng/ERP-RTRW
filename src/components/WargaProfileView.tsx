@@ -106,6 +106,12 @@ export function WargaProfileView({
   const [suratToDelete, setSuratToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
+  const handleCloseModal = () => {
+    setIsEditing(false);
+    setFormData({});
+    setFiles({});
+  };
+
   const handleDeleteSurat = async () => {
     if (!suratToDelete) return;
     setIsDeleting(true);
@@ -122,6 +128,7 @@ export function WargaProfileView({
   };
 
   const activeSubmission = verifikasiData.find(v => v.nik === wargaData.nik) || verifikasiData.find(v => v.authUid === wargaData.authUid);
+  const currentData = activeSubmission || wargaData;
   const familyNiks = wargaData.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
   const mySurat = suratData.filter(s => s.nik === wargaData.nik || (s.nik && familyNiks.includes(s.nik)));
 
@@ -138,8 +145,8 @@ export function WargaProfileView({
     e.preventDefault();
     setUploading(true);
     try {
-      let ktpUrl = formData.ktpUrl || wargaData.ktpUrl || "";
-      let kkUrl = formData.kkUrl || wargaData.kkUrl || "";
+      let ktpUrl = formData.ktpUrl || currentData.ktpUrl || "";
+      let kkUrl = formData.kkUrl || currentData.kkUrl || "";
 
       if (files.ktp) {
         ktpUrl = await handleFileUpload(files.ktp, 'verifikasi_ktp');
@@ -153,26 +160,26 @@ export function WargaProfileView({
         id: submissionId,
         tenantId,
         nik: wargaData.nik,
-        nama: formData.nama || wargaData.nama,
-        kk: formData.kk || wargaData.kk || "",
-        hp: formData.hp || wargaData.hp || "",
-        blok: formData.blok || wargaData.blok || "",
-        alamat: formData.alamat || wargaData.alamat || "",
-        rt: formData.rt || wargaData.rt || "01",
-        rw: formData.rw || wargaData.rw || "26",
-        agama: formData.agama || wargaData.agama || "Islam",
-        jk: formData.jk || wargaData.jk || "",
-        tempatLahir: formData.tempatLahir || wargaData.tempatLahir || "",
-        tglLahir: formData.tglLahir || wargaData.tglLahir || "",
-        profesi: formData.profesi || wargaData.profesi || "",
-        pendidikanTerakhir: formData.pendidikanTerakhir || wargaData.pendidikanTerakhir || "",
-        kawin: formData.kawin || wargaData.kawin || "",
-        posisi: formData.posisi || wargaData.posisi || "",
-        kewarganegaraan: formData.kewarganegaraan || wargaData.kewarganegaraan || "WNI",
-        email: formData.email || wargaData.email || "",
-        kelurahan: formData.kelurahan || wargaData.kelurahan || "",
-        kecamatan: formData.kecamatan || wargaData.kecamatan || "",
-        kabupaten: formData.kabupaten || wargaData.kabupaten || "",
+        nama: formData.nama || currentData.nama,
+        kk: formData.kk || currentData.kk || "",
+        hp: formData.hp || currentData.hp || "",
+        blok: formData.blok || currentData.blok || "",
+        alamat: formData.alamat || currentData.alamat || "",
+        rt: formData.rt || currentData.rt || "01",
+        rw: formData.rw || currentData.rw || "26",
+        agama: formData.agama || currentData.agama || "Islam",
+        jk: formData.jk || currentData.jk || "",
+        tempatLahir: formData.tempatLahir || currentData.tempatLahir || "",
+        tglLahir: formData.tglLahir || currentData.tglLahir || "",
+        profesi: formData.profesi || currentData.profesi || "",
+        pendidikanTerakhir: formData.pendidikanTerakhir || currentData.pendidikanTerakhir || "",
+        kawin: formData.kawin || currentData.kawin || "",
+        posisi: formData.posisi || currentData.posisi || "",
+        kewarganegaraan: formData.kewarganegaraan || currentData.kewarganegaraan || "WNI",
+        email: formData.email || currentData.email || "",
+        kelurahan: formData.kelurahan || currentData.kelurahan || "",
+        kecamatan: formData.kecamatan || currentData.kecamatan || "",
+        kabupaten: formData.kabupaten || currentData.kabupaten || "",
         ktpUrl,
         kkUrl,
         submittedAt: new Date().toISOString(),
@@ -181,6 +188,7 @@ export function WargaProfileView({
 
       await setDoc(doc(db, 'verifikasi_warga', submissionId), payload);
       showNotification("Pengajuan pembaruan data berhasil dikirim. Menunggu verifikasi admin.", "success");
+      setFormData({});
       setIsEditing(false);
     } catch (err) {
       handleFirestoreError(err, 'create', 'verifikasi_warga');
@@ -318,8 +326,8 @@ export function WargaProfileView({
          <div className="p-10 pb-6 flex flex-col items-center text-center relative z-10">
             <div className="relative mb-8 group/avatar">
                <div className="w-32 h-32 rounded-[3.5rem] bg-slate-50 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-3">
-                  {wargaData.ktpUrl || wargaData.foto ? (
-                     <img src={wargaData.ktpUrl || wargaData.foto} className="w-full h-full object-cover" />
+                  {currentData.ktpUrl || currentData.foto ? (
+                     <img src={currentData.ktpUrl || currentData.foto} className="w-full h-full object-cover" />
                   ) : (
                      <User className="w-12 h-12 text-slate-300 dark:text-slate-600" />
                   )}
@@ -907,7 +915,7 @@ export function WargaProfileView({
        <AnimatePresence>
           {isEditing && (
              <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsEditing(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleCloseModal} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
                 <motion.div 
                    initial={{ scale: 0.95, opacity: 0 }} 
                    animate={{ scale: 1, opacity: 1 }} 
@@ -924,7 +932,7 @@ export function WargaProfileView({
                              <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5">Lengkapi data administrasi mandiri</p>
                           </div>
                        </div>
-                       <button onClick={() => setIsEditing(false)} className="p-2.5 hover:bg-slate-105 dark:hover:bg-slate-800 rounded-2xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                       <button onClick={handleCloseModal} className="p-2.5 hover:bg-slate-105 dark:hover:bg-slate-800 rounded-2xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                           <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                        </button>
                     </div>
@@ -955,28 +963,28 @@ export function WargaProfileView({
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nama Lengkap</label>
                                    <div className="relative">
                                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nama Lengkap sesuai KTP" />
+                                      <input type="text" defaultValue={currentData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nama Lengkap sesuai KTP" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor KK</label>
                                    <div className="relative">
                                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.kk} onChange={e => setFormData({...formData, kk: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor KK (16 digit)" />
+                                      <input type="text" defaultValue={currentData.kk} onChange={e => setFormData({...formData, kk: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor KK (16 digit)" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor HP / WhatsApp</label>
                                    <div className="relative">
                                       <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.hp} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor HP atau Whatsapp aktif" />
+                                      <input type="text" defaultValue={currentData.hp} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor HP atau Whatsapp aktif" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Email</label>
                                    <div className="relative">
                                       <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="email" defaultValue={wargaData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Alamat Email" />
+                                      <input type="email" defaultValue={currentData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Alamat Email" />
                                    </div>
                                 </div>
                              </div>
@@ -995,33 +1003,33 @@ export function WargaProfileView({
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Alamat / Blok (Eks: Blok A No 12)</label>
                                    <div className="relative">
                                       <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.blok || wargaData.alamat} onChange={e => setFormData({...formData, blok: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Contoh: No. 12, RT 01 RW 02" />
+                                      <input type="text" defaultValue={currentData.blok || wargaData.alamat} onChange={e => setFormData({...formData, blok: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Contoh: No. 12, RT 01 RW 02" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kelurahan</label>
                                    <div className="relative">
                                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.kelurahan} onChange={e => setFormData({...formData, kelurahan: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <input type="text" defaultValue={currentData.kelurahan} onChange={e => setFormData({...formData, kelurahan: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kecamatan</label>
                                    <div className="relative">
                                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.kecamatan} onChange={e => setFormData({...formData, kecamatan: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <input type="text" defaultValue={currentData.kecamatan} onChange={e => setFormData({...formData, kecamatan: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kabupaten / Kota</label>
                                    <div className="relative">
                                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.kabupaten} onChange={e => setFormData({...formData, kabupaten: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <input type="text" defaultValue={currentData.kabupaten} onChange={e => setFormData({...formData, kabupaten: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kewarganegaraan (WNI/WNA)</label>
-                                   <select defaultValue={wargaData.kewarganegaraan} onChange={e => setFormData({...formData, kewarganegaraan: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                   <select defaultValue={currentData.kewarganegaraan} onChange={e => setFormData({...formData, kewarganegaraan: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
                                       <option value="WNI">WNI</option>
                                       <option value="WNA">WNA</option>
                                    </select>
@@ -1030,14 +1038,14 @@ export function WargaProfileView({
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">RT</label>
                                    <div className="relative">
                                       <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <input type="text" defaultValue={currentData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">RW</label>
                                    <div className="relative">
                                       <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <input type="text" defaultValue={currentData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
                                    </div>
                                 </div>
                              </div>
@@ -1056,19 +1064,19 @@ export function WargaProfileView({
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tempat Lahir</label>
                                    <div className="relative">
                                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.tempatLahir} onChange={e => setFormData({...formData, tempatLahir: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <input type="text" defaultValue={currentData.tempatLahir} onChange={e => setFormData({...formData, tempatLahir: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tanggal Lahir</label>
                                    <div className="relative">
                                       <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="date" defaultValue={wargaData.tglLahir} onChange={e => setFormData({...formData, tglLahir: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <input type="date" defaultValue={currentData.tglLahir} onChange={e => setFormData({...formData, tglLahir: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Agama</label>
-                                   <select defaultValue={wargaData.agama} onChange={e => setFormData({...formData, agama: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                   <select defaultValue={currentData.agama} onChange={e => setFormData({...formData, agama: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
                                       <option value="Islam">Islam</option>
                                       <option value="Kristen">Kristen</option>
                                       <option value="Katolik">Katolik</option>
@@ -1079,7 +1087,7 @@ export function WargaProfileView({
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hubungan dalam Keluarga</label>
-                                   <select defaultValue={wargaData.posisi} onChange={e => setFormData({...formData, posisi: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                   <select defaultValue={currentData.posisi} onChange={e => setFormData({...formData, posisi: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
                                       <option value="Kepala Keluarga">Kepala Keluarga</option>
                                       <option value="Suami">Suami</option>
                                       <option value="Istri">Istri</option>
@@ -1090,12 +1098,12 @@ export function WargaProfileView({
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Profesi/Pekerjaan</label>
                                    <div className="relative">
                                       <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" defaultValue={wargaData.profesi} onChange={e => setFormData({...formData, profesi: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Pekerjaan saat ini" />
+                                      <input type="text" defaultValue={currentData.profesi} onChange={e => setFormData({...formData, profesi: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Pekerjaan saat ini" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Pendidikan Terakhir</label>
-                                   <select defaultValue={wargaData.pendidikanTerakhir} onChange={e => setFormData({...formData, pendidikanTerakhir: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                   <select defaultValue={currentData.pendidikanTerakhir} onChange={e => setFormData({...formData, pendidikanTerakhir: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
                                       <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
                                       <option value="SD">SD</option>
                                       <option value="SMP">SMP</option>
@@ -1111,7 +1119,7 @@ export function WargaProfileView({
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status Pernikahan</label>
-                                   <select defaultValue={wargaData.kawin} onChange={e => setFormData({...formData, kawin: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                   <select defaultValue={currentData.kawin} onChange={e => setFormData({...formData, kawin: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
                                       <option value="Belum Kawin">Belum Kawin</option>
                                       <option value="Kawin">Kawin</option>
                                    </select>
@@ -1134,8 +1142,8 @@ export function WargaProfileView({
                                       <div className="aspect-video bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center group-hover:border-indigo-400 dark:group-hover:border-indigo-600 group-hover:bg-indigo-50/20 dark:group-hover:bg-indigo-950/10 transition-all overflow-hidden relative shadow-sm">
                                          {files.ktp ? (
                                             <img src={URL.createObjectURL(files.ktp)} className="w-full h-full object-cover" />
-                                         ) : wargaData.ktpUrl || wargaData.foto ? (
-                                            <img src={wargaData.ktpUrl || wargaData.foto} className="w-full h-full object-cover" />
+                                         ) : currentData.ktpUrl || currentData.foto ? (
+                                            <img src={currentData.ktpUrl || currentData.foto} className="w-full h-full object-cover" />
                                          ) : (
                                             <div className="flex flex-col items-center gap-2">
                                                <PlusCircle className="w-8 h-8 text-slate-300 dark:text-slate-650 group-hover:scale-110 transition-transform" />
@@ -1152,8 +1160,8 @@ export function WargaProfileView({
                                       <div className="aspect-video bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center group-hover:border-indigo-400 dark:group-hover:border-indigo-600 group-hover:bg-indigo-50/20 dark:group-hover:bg-indigo-950/10 transition-all overflow-hidden relative shadow-sm">
                                          {files.kk ? (
                                             <img src={URL.createObjectURL(files.kk)} className="w-full h-full object-cover" />
-                                         ) : wargaData.kkUrl ? (
-                                            <img src={wargaData.kkUrl} className="w-full h-full object-cover" />
+                                         ) : currentData.kkUrl ? (
+                                            <img src={currentData.kkUrl} className="w-full h-full object-cover" />
                                          ) : (
                                             <div className="flex flex-col items-center gap-2">
                                                <PlusCircle className="w-8 h-8 text-slate-300 dark:text-slate-650 group-hover:scale-110 transition-transform" />
@@ -1177,7 +1185,7 @@ export function WargaProfileView({
                           </div>
                           
                           <div className="flex gap-4">
-                             <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all">Batalkan</button>
+                             <button type="button" onClick={handleCloseModal} className="flex-1 py-4 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all">Batalkan</button>
                              <button type="submit" disabled={uploading} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-indigo-100 dark:shadow-none hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
                                 {uploading ? (
                                    <RefreshCw className="w-4 h-4 animate-spin" />

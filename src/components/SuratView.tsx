@@ -338,7 +338,7 @@ export function SuratView({
             .footer-section { display: flex; justify-content: space-between; padding: 0 40px; margin-top: 10px; }
             .footer-column { text-align: center; width: 220px; }
             .signature-space { height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
-            .signature-img { max-height: 80px; max-width: 150px; object-fit: contain; position: absolute; pointer-events: none; }
+            .signature-img { height: 80px; width: 150px; object-fit: contain; position: absolute; pointer-events: none; }
             .signature-name { font-weight: bold; text-decoration: underline; }
             
             .verif-box-grid { margin-top: 50px; border-top: 1.5px solid #000; padding-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 10px; }
