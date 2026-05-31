@@ -66,3 +66,49 @@ Gunakan instruksi ini saat memanggil Claude Code di terminal (misal: `claude "ja
    - Gagalnya satu komponen kecil di dalam halaman (misal: visualisasi chart data yang null) tidak boleh menyebabkan satu layar gantung/putih (*blank screen*). Isolasi bagian tersebut menggunakan ErrorBoundary lokal atau berikan fallback UI yang bersih.
 2. **Sanitasi Data Inputs:**
    - Lakukan penanganan *try-catch* yang solid saat memproses parsing data mentah dari LocalStorage atau response API pihak ketiga, untuk mencegah app crash saat startup akibat data korup.
+
+---
+
+## 🎨 ATURAN EMAS 4: Panduan Desain Premium ("The $10K Checklist")
+Untuk memisahkan standar desain aplikasi dari sekadar *template* biasa, patuhi delapan prinsip desain tingkat tinggi berikut ketika membangun/merevisi antarmuka:
+
+1. **Point of view, not a template:** Komitmen pada arah desain tertentu (brutalist, editorial, dark-luxury, dll.) secara konsisten — jangan terlihat generik.
+2. **Typography that does work:** Gunakan tipografi ganda (display + body) yang dipikirkan matang, hindari sekadar default (seperti murni Inter atau Roboto). Hierarchy diciptakan melalui rasio skala dan bobot huruf.
+3. **A restrained color system:** Gunakan warna secara terbatas (3-5 palet yang konsisten). Jangan gunakan efek *rainbow*. Kualitas premium terlihat pada penahanan (*restraint*), bukan dekorasi berlebih.
+4. **Hierarchy that breathes:** Manfaatkan *whitespace* (ruang negatif), kontras, dan skala agar mata pengguna tertuju dengan alami pada primary, secondary, dan tertiary konten. Jangan menumpuk teks tanpa ruang.
+5. **Imagery with intent:** Hanya gunakan foto/gambar kustom atau generasi aset sesuai arahan desain; kurasi gambar secara ketat agar tampak berkelas, hindari stok dasar Unsplash.
+6. **Motion that whispers:** Gunakan *micro-interactions* dan transisi/hover yang terasa mulus dan diciptakan spesifik (hand-crafted) — hindari animasi memudar yang berlebihan atau terlihat murah.
+7. **Mobile that's designed, not shrunk:** Buat keputusan *layout* khusus untuk versi mobile (phone-size), jangan hanya memperkecil dan menekan versi desktop.
+8. **The invisible expensive stuff:** Waktu muat cepat, navigasi berbasis *keyboard*, format HTML *semantic*, kontras standar *WCAG AA*, dan tag-meta nyata. Keunggulan tersembunyi yang membuat "*website ini terasa mahal dan cepat*".
+
+---
+
+## 💎 ATURAN EMAS 5: Advanced Frontend Aesthetics & Design Thinking (Anthropic Target)
+Berdasarkan standar Anthropic `frontend-design` skill, setiap komponen UI yang dibangun wajib mematuhi aturan berikut untuk menghindari *generic "AI slop" aesthetics*:
+
+1. **Commit to a Bold Aesthetic Direction:** Tentukan *purpose* (tujuan), *tone* (minimalis brutal, retro-modern, dark-luxury, dll.), dan *constraints*. Jangan mendesain secara abu-abu; jadikan aplikasi memiliki karakter spesifik yang tidak terlupakan (unforgettable).
+2. **Typography Beyond Defaults:** Jangan pernah menggunakan font generik atau system fonts (Arial, Roboto, Inter) jika desain membutuhkan identitas visual. Pilih font *display* yang berkarakter dan pasangkan dengan font *body* yang elegan.
+3. **Motion that Creates Delight:** Eksploitasi fitur CSS atau *library* seperti `framer-motion` / `motion`. Fokus pada *high-impact moments* (misal: *staggered reveals* dengan delay saat page load) daripada ribuan *micro-interaction* acak.
+4. **Spatial Composition & Grids:** Ciptakan layout asimetris, ruang negatif yang lega (whitespace), tumpang tindih elemen (overlap), atau alur diagonal. Berhentilah mengandalkan pola grid atau komponen standar yang membosankan.
+5. **Atmosphere Backgrounds & Visual Depth:** Jangan gunakan warna solid datar, melainkan buat atmosfer UI melalui tekstur *noise*, *grain overlays*, gradient meshes, *layered transparencies*, atau bayangan dramatis (shadows). 
+6. **No "Cookie-Cutter" Templates:** Setiap request dari pengguna wajib dieksekusi dengan *creative details* unik yang sesuai konteks. Selalu variasikan tema antara kreasi, hidari tampilan yang terasa persis dengan template *framework* bawaan.
+
+---
+
+## 🚀 ATURAN EMAS 6: UI/UX Pro Max Intelligence Skill
+Sistem telah dilengkapi dengan kapabilitas desain UI/UX tingkat tinggi dari `nextlevelbuilder/ui-ux-pro-max-skill` yang terinstall di `.agent/skills/ui-ux-pro-max`. Agen AI diwajibkan untuk mengadopsi standar praktis berikut saat membangun/merevisi komponen visual:
+
+1. **Penggunaan Database Desain Secara Mandiri (`data/*.csv`):**
+   - Sebelum memulai desain halaman baru (Landing, SaaS Dashboard, E-Commerce, dll), AI **DIWAJIBKAN** merujuk pada standar dan pola yang telah disepakati dari folder skill, atau memformulasikan estetikanya berdasarkan "Product Category" (misal: "SaaS", "E-commerce Luxury").
+
+2. **Pre-Delivery Checklist Khusus UI/UX (Pro Max Rules):**
+   - **Icons Visual:** Dilarang keras menggunakan Emojis sebagai UI Icons. Hanya gunakan SVG (Heroicons/Lucide).
+   - **Stable Hover:** Properti `hover` harus mengubah warna, opacity, border, atau box-shadow *tanpa* menggeser tata letak (layout shift).
+   - **Smooth Interaction:** Selalu sediakan `cursor-pointer` di elemen interaktif, dan hindari perubahan instan; gunakan komposer transisi seperti `transition-all duration-300`.
+   - **Kontras Light/Dark Mode Kuat:** Hindari teks yang terlalu redup (`#94A3B8` di slate-400 pada light mode sangat tidak diizinkan; minimal text-slate-600 untuk mute text). Jangan pakai batas bingkai putih transparan (`border-white/10`) untuk latar belakang putih cerah.
+   - **Responsive & Spacing:** Seluruh layout navigasi yang mengambang (`fixed`) harus memberikan ruang di sekitarnya dan bukan tertempel mati, serta konten di bawahnya tidak boleh bersembunyi.
+   
+3. **Misi Penghilang "AI Slop":**
+   - Hasil akhir harus memisahkan standar desain $10K (memiliki "taste", tipografi tegas) dibandingkan boilerplate murahan (seperti gradien ungu AI default yang berulang).
+
+
