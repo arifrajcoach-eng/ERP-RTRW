@@ -1075,7 +1075,8 @@ export default function App() {
       "sunset",
       "pink-baby",
       "dark-prime",
-      "pro-max"
+      "pro-max",
+      "navy-luxury"
     );
     document.documentElement.classList.add(theme);
     localStorage.setItem("theme", theme);
@@ -1088,6 +1089,7 @@ export default function App() {
       "oceanic",
       "pink-baby",
       "pro-max",
+      "navy-luxury",
     ];
     const currentIndex = themes.indexOf(theme);
     const nextTheme = themes[(currentIndex + 1) % themes.length];
