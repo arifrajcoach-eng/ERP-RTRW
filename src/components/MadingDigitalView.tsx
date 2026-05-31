@@ -280,11 +280,30 @@ export default function MadingDigitalView({
       // Try parsing month from item.date or its stored properties
       const itemMonth = item.month || (item.date && item.date.toLowerCase().includes("mei") ? 5 : undefined);
       
-      const isMatch = (item.year === selectedYear && item.month === selectedMonth) ||
-                      (!item.year && selectedYear === 2026 && selectedMonth === 5 && item.id === `${tId}_slot_${item.slot}`);
+      const isExactMatch = itemYear === selectedYear && itemMonth === selectedMonth;
+      const isLegacyMatch = !item.year && selectedYear === 2026 && selectedMonth === 5 && item.id === `${tId}_slot_${item.slot}`;
 
-      if (isMatch && item.slot >= 1 && item.slot <= 5) {
-        itemsMap[item.slot] = item;
+      if ((isExactMatch || isLegacyMatch) && item.slot >= 1 && item.slot <= 5) {
+        const existing = itemsMap[item.slot];
+        if (!existing) {
+          itemsMap[item.slot] = item;
+        } else {
+          // If we already have an existing item for this slot, we need to compare priorities or recency
+          const existingIsExact = (existing.year === selectedYear && existing.month === selectedMonth) ||
+                                 (existing.year === undefined && existing.date && existing.date.includes("2026") && selectedYear === 2026 && existing.date.toLowerCase().includes("mei") && selectedMonth === 5);
+          
+          if (isExactMatch && !existingIsExact) {
+            // Exact match trumps legacy match
+            itemsMap[item.slot] = item;
+          } else if ((isExactMatch && existingIsExact) || (isLegacyMatch && !existingIsExact)) {
+            // If both are exact matches, or both are legacy matches, pick the newest one based on updatedAt
+            const existingTime = new Date(existing.updatedAt || 0).getTime();
+            const newTime = new Date(item.updatedAt || 0).getTime();
+            if (newTime > existingTime) {
+              itemsMap[item.slot] = item;
+            }
+          }
+        }
       }
     });
 
@@ -549,6 +568,7 @@ export default function MadingDigitalView({
         {/* Slot 1: BIG Column - Left (Span 7 col, full rows) */}
         <div className="md:col-span-12 lg:col-span-7 h-[300px] lg:h-full relative group overflow-hidden rounded-[2rem] border border-slate-100 dark:border-slate-800/80 shadow-md bg-slate-100 dark:bg-slate-850">
           <img 
+            key={`${item1.id}-${item1.updatedAt}`}
             src={item1.imageUrl} 
             alt={item1.title} 
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 duration-700 transition-transform origin-center animate-fade-in"
@@ -591,6 +611,7 @@ export default function MadingDigitalView({
           {/* Slot 2 */}
           <div className="h-[220px] lg:h-full relative group overflow-hidden rounded-[1.75rem] border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col bg-slate-100 dark:bg-slate-850">
             <img 
+              key={`${item2.id}-${item2.updatedAt}`}
               src={item2.imageUrl} 
               alt={item2.title} 
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 duration-700 transition-transform"
@@ -627,6 +648,7 @@ export default function MadingDigitalView({
           {/* Slot 3 */}
           <div className="h-[220px] lg:h-full relative group overflow-hidden rounded-[1.75rem] border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col bg-slate-100 dark:bg-slate-850">
             <img 
+              key={`${item3.id}-${item3.updatedAt}`}
               src={item3.imageUrl} 
               alt={item3.title} 
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 duration-700 transition-transform"
@@ -661,6 +683,7 @@ export default function MadingDigitalView({
           {/* Slot 4 */}
           <div className="h-[220px] lg:h-full relative group overflow-hidden rounded-[1.75rem] border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col bg-slate-100 dark:bg-slate-850">
             <img 
+              key={`${item4.id}-${item4.updatedAt}`}
               src={item4.imageUrl} 
               alt={item4.title} 
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 duration-700 transition-transform"
@@ -695,6 +718,7 @@ export default function MadingDigitalView({
           {/* Slot 5 */}
           <div className="h-[220px] lg:h-full relative group overflow-hidden rounded-[1.75rem] border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col bg-slate-100 dark:bg-slate-850">
             <img 
+              key={`${item5.id}-${item5.updatedAt}`}
               src={item5.imageUrl} 
               alt={item5.title} 
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 duration-700 transition-transform"
