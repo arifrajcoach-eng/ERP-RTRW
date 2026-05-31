@@ -2773,7 +2773,10 @@ export default function App() {
           verifikasiWargaData={verifikasiWargaData}
           isLoadingDB={isLoadingDB}
           onSelfRegister={() => setIsSelfRegistering(true)}
-          onShowFreeTrial={() => setShowFreeTrialModal(true)}
+          onShowFreeTrial={(planId) => {
+            setSelectedPlan(planId || 'TRIAL');
+            setShowFreeTrialModal(true);
+          }}
           onShowPricing={() => setShowPricingModal(true)}
           settings={settings}
           tenantId={currentUser?.tenantId || "rw26_berjuang"}
@@ -9795,7 +9798,7 @@ function LoginView({
   verifikasiWargaData: any[];
   isLoadingDB: boolean;
   onSelfRegister: () => void;
-  onShowFreeTrial: () => void;
+  onShowFreeTrial: (planId?: string) => void;
   onShowPricing: () => void;
   settings?: any;
   tenantId: string;
@@ -10797,7 +10800,7 @@ function LoginView({
               className="w-full max-w-sm"
             >
               <button
-                onClick={onShowFreeTrial}
+                onClick={() => onShowFreeTrial()}
                 className="w-full group relative overflow-hidden bg-gradient-to-br from-white to-slate-50 border-2 border-brand-pink/30 p-6 rounded-[2.5rem] transition-all hover:bg-white hover:border-brand-pink shadow-2xl shadow-brand-pink/10 hover:shadow-brand-pink/20 text-left"
               >
                 {/* Decorative background light */}

@@ -482,7 +482,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl my-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-xl font-black text-slate-900">{initialPlan === 'TRIAL' ? 'Mulai Gratis' : `Paket ${initialPlan}`}</h2>
+            <h2 className="text-xl font-black text-slate-900 capitalize">{initialPlan === 'TRIAL' ? 'Mulai Gratis' : `Paket ${String(initialPlan).toLowerCase()}`}</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Self-Service Onboarding</p>
           </div>
           <button onClick={onClose} className="p-2 bg-slate-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
