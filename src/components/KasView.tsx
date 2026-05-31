@@ -23,9 +23,12 @@ import {
   Loader2,
   Camera,
   MapPin,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { logAuditEvent } from "../services/auditLogService";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { jsPDF } from "jspdf";
@@ -114,7 +117,14 @@ export function KasView({
   const [isSavingKas, setIsSavingKas] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isPengurus = (userRole?.toLowerCase() === 'admin' || 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedMonth, selectedYear, searchQuery]);
+
+  const isPengurus = (userRole?.toLowerCase() === "admin" ||
                       userRole?.toLowerCase() === 'rw' || 
                       userRole?.toLowerCase() === 'rt' || 
                       userRole?.toLowerCase() === 'bendahara' || 
@@ -394,6 +404,8 @@ export function KasView({
         );
       }
 
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "DELETE_KAS", "kas", `Menghapus transaksi: ${kasToDelete.keterangan}`, tenantId);
+
       setKasData((prev: any[]) => prev.filter((t) => t.id !== kasToDelete.id));
       setKasToDelete(null);
       showNotification("Catatan kas berhasil dihapus.", "success");
@@ -471,6 +483,7 @@ export function KasView({
           prev.map((t) => (t.id === editingKas.id ? newTrx : t)),
         );
         showNotification("Transaksi kas berhasil diperbarui", "success");
+        await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "UPDATE_KAS", "kas", `Edit transaksi: ${keterangan}`, tenantId);
       } else {
         await setDoc(doc(db, "kas", newId), newTrx);
         setKasData((prev: any[]) => {
@@ -480,6 +493,7 @@ export function KasView({
           return [newTrx, ...prev];
         });
         showNotification("Transaksi kas berhasil ditambahkan", "success");
+        await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_KAS", "kas", `Tambah transaksi: ${keterangan}`, tenantId);
       }
       setShowMasukForm(false);
       setEditingKas(null);
@@ -512,6 +526,14 @@ export function KasView({
       t.keterangan?.toLowerCase().includes(query)
     );
   });
+
+  const totalItems = currentMonthTransactions.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const displayedTransactions = currentMonthTransactions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 
   const totalMasuk = currentMonthTransactions.reduce(
     (acc, t) => acc + (t.debit || 0),
@@ -693,7 +715,7 @@ export function KasView({
                   </td>
                 </tr>
               ) : (
-                currentMonthTransactions.map((trx: any, idx: number) => (
+                displayedTransactions.map((trx: any, idx: number) => (
                   <motion.tr 
                     key={`kas-trx-${trx.id || idx}-${idx}`}
                     initial={{ opacity: 0, y: 10 }}
@@ -746,6 +768,80 @@ export function KasView({
             </tbody>
           </table>
         </div>
+
+        {/* SHARED PAGINATION CONTROLS */}
+        {totalItems > 0 && (
+          <div className="p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/20 rounded-b-3xl">
+            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+              <div className="text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                Menampilkan {totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} -{" "}
+                {Math.min(currentPage * itemsPerPage, totalItems)} Dari {totalItems} Transaksi
+              </div>
+              <div className="hidden sm:flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                  Batas Tampilan:
+                </span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 py-1 px-2.5 rounded-xl text-[11px] font-black text-slate-700 dark:text-slate-300 outline-none cursor-pointer hover:border-brand-blue/50 transition-all shadow-sm"
+                >
+                  <option value={10}>10 Baris</option>
+                  <option value={20}>20 Baris</option>
+                  <option value={50}>50 Baris</option>
+                  <option value={100}>100 Baris</option>
+                  <option value={999999}>Semua</option>
+                </select>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all"
+                  title="Halaman Sebelumnya"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto max-w-[150px] sm:max-w-xs scrollbar-hide">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
+                    if (totalPages > 5 && Math.abs(pg - currentPage) > 1 && pg !== 1 && pg !== totalPages) {
+                      return null;
+                    }
+                    return (
+                      <button
+                        key={`pg-btn-${pg}`}
+                        onClick={() => setCurrentPage(pg)}
+                        className={`w-9 h-9 shrink-0 rounded-xl text-[11px] font-black transition-all ${
+                          currentPage === pg
+                            ? "bg-gradient-to-tr from-brand-blue to-blue-600 text-white shadow-md shadow-brand-blue/25 scale-110"
+                            : "bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        {pg}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all"
+                  title="Halaman Selanjutnya"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Form Modal */}

@@ -10,6 +10,7 @@ import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query, collection, where } from 'firebase/firestore';                
 import { db } from '../firebase';
+import { logAuditEvent } from '../services/auditLogService';
 import { getTranslatedLabel } from '../lib/langUtils';
 import { getPlanFeatures } from '../lib/appUtils';
 
@@ -710,6 +711,7 @@ function WargaView(props: WargaViewProps) {
     setIsDeletingWarga(true);
     try {
       await deleteDoc(doc(db, 'data_warga', wargaToDelete.docId || wargaToDelete.id || wargaToDelete.nik));
+      await logAuditEvent(currentUser?.uid || 'system', currentUser?.name || 'Aplikasi', 'DELETE_WARGA', 'data_warga', `Menghapus warga: ${wargaToDelete.nama || wargaToDelete.nik}`, tenantId);
       setWargaToDelete(null);
       showNotification("Data warga berhasil dihapus");
     } catch (error: any) {
@@ -1348,10 +1350,12 @@ function WargaView(props: WargaViewProps) {
                           await updateDoc(doc(db, 'data_warga', targetId), finalData);
                           setWargaData(wargaData.map((w: any) => (w.docId || w.id || `${tenantId}_${w.nik}`) === targetId ? { ...w, ...finalData } : w));
                           showNotification('Data warga berhasil diubah', 'success');
+                          await logAuditEvent(currentUser?.uid || 'system', currentUser?.name || 'Aplikasi', 'UPDATE_WARGA', 'data_warga', `Mengubah data warga: ${finalData.nama}`, tenantId);
                         } else {
                           await setDoc(doc(db, 'data_warga', docId), finalData);
                           setWargaData([...wargaData, finalData]);
                           showNotification('Warga baru berhasil ditambahkan', 'success');
+                          await logAuditEvent(currentUser?.uid || 'system', currentUser?.name || 'Aplikasi', 'CREATE_WARGA', 'data_warga', `Menambahkan warga: ${finalData.nama}`, tenantId);
                         }
                         setShowAddForm(false);
                         setShowEditForm(false);

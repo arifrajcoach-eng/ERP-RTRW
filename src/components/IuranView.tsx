@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { logAuditEvent } from '../services/auditLogService';
 
 import { getTranslatedLabel } from '../lib/langUtils';
 
@@ -173,6 +174,8 @@ export function IuranView({
           setKasData(prev => prev.filter(k => k.id !== relatedKas.id));
         }
       }
+
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "DELETE_IURAN", "iuran", `Menghapus iuran: ${trxToDelete.namaPenyetor || id}`, tenantId);
 
       showNotification('Transaksi dan catatan kas terkait berhasil dihapus', 'success');
       setTrxToDelete(null);
@@ -382,6 +385,7 @@ export function IuranView({
         }
       }
       
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", editingTrx ? "UPDATE_IURAN" : "CREATE_IURAN", "iuran", `${editingTrx ? "Edit" : "Catat"} Iuran: RP ${payload.nominal} - ${payload.namaPenyetor}`, tenantId);
       showNotification(editingTrx ? 'Pembayaran berhasil diperbarui' : 'Pembayaran berhasil dicatat', 'success');
       setShowForm(false);
       setEditingTrx(null);
@@ -505,6 +509,8 @@ export function IuranView({
         if (prev.some((k: any) => k.id === kasId)) return prev;
         return [kasPayload, ...prev];
       });
+      
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_IURAN_ONLINE", "iuran", `Iuran Online: RP ${payload.nominal} - ${payload.namaPenyetor}`, tenantId);
       
       showNotification('Pembayaran Online Berhasil!', 'success');
       setShowPgModal(false);
