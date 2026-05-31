@@ -322,7 +322,7 @@ export function BukuTamuView({
                   <td className="px-10 py-6">
                     <div className="flex items-center gap-5">
                       <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden shrink-0 group-hover:scale-110 transition-transform">
-                        {tamu.foto ? <img src={tamu.foto} className="w-full h-full object-cover" /> : <span className="text-xl font-elegant">{tamu.nama?.substring(0,1).toUpperCase()}</span>}
+                        {tamu.foto ? <img src={tamu.foto} className="w-full h-full object-cover" /> : <span className="text-xl font-elegant" style={{ marginLeft: '0px', marginRight: '0px', marginBottom: '-28px' }}>{tamu.nama?.substring(0,1).toUpperCase()}</span>}
                       </div>
                       <div>
                         <div className="font-black text-[15px] text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant leading-none">{tamu.nama}</div>

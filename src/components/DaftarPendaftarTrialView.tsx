@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { Mail, Phone, Users, UserPlus, CheckCircle2, Trash2, X, Send, AlertTriangle, Loader2, FileText, Check, ArrowRight } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { Mail, Phone, Users, UserPlus, CheckCircle2, Trash2, X, Send, AlertTriangle, Loader2, FileText, Check, ArrowRight, Clock, CreditCard, ShieldCheck, Eye, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const EMAIL_TEMPLATES = [
@@ -81,6 +81,10 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
   const [selectedRegForDelete, setSelectedRegForDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Manual ATM Verification state
+  const [selectedRegForProof, setSelectedRegForProof] = useState<any | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     const q = query(collection(db, 'tenants'), orderBy('createdAt', 'desc'));
@@ -89,6 +93,9 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
       const trialTenants = data.filter((t: any) => 
         t.id.startsWith('TRIAL_') || 
         t.status === 'TRIAL' || 
+        t.status === 'PENDING_PAYMENT_APPROVAL' ||
+        t.paymentStatus === 'PENDING_MANUAL_PROOF' || 
+        t.paymentStatus === 'PAID_MANUALLY_VERIFIED' ||
         t.plan === 'TRIAL' || 
         t.registrationType === 'AUTOMATED_SELF_SERVICE'
       );
@@ -202,6 +209,80 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
     }
   };
 
+  // Verify manual ATM transfer payments & Activate subscription
+  const handleApprovePayment = async (reg: any) => {
+    if (!reg) return;
+    setActionLoading(true);
+    try {
+      const nextBilling = new Date();
+      nextBilling.setDate(nextBilling.getDate() + 30);
+
+      const batchOp = writeBatch(db);
+      
+      // Update tenant status & activate
+      batchOp.update(doc(db, 'tenants', reg.id), {
+        isActive: true,
+        status: 'ACTIVE',
+        paymentStatus: 'PAID_MANUALLY_VERIFIED'
+      });
+
+      // Update / Create active subscription record
+      batchOp.set(doc(db, 'subscriptions', reg.id), {
+        plan: (reg.plan || 'pro').toLowerCase(),
+        status: 'Active',
+        startDate: new Date().toISOString(),
+        endDate: nextBilling.toISOString(),
+        paymentDetails: {
+          fullName: reg.namaPIC || reg.name || 'Tenant Admin',
+          country: 'Indonesia',
+          cycle: 'monthly',
+          paymentMethod: 'MANUAL_ATM',
+          senderName: reg.paymentProofSenderName || reg.name || '',
+          senderBank: reg.paymentProofSenderBank || '',
+          fileName: reg.paymentProofFileName || '',
+          verifiedAt: new Date().toISOString(),
+          status: 'PAID'
+        }
+      }, { merge: true });
+
+      await batchOp.commit();
+      
+      if (showNotification) {
+        showNotification(`Pembayaran tenant "${reg.name}" berhasil diverifikasi. Portal tenant telah aktif sepenuhnya!`, 'success');
+      }
+      setSelectedRegForProof(null);
+    } catch (err: any) {
+      console.error('Error verifying payment:', err);
+      if (showNotification) {
+        showNotification('Gagal memverifikasi pembayaran: ' + (err.message || err), 'error');
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectPayment = async (reg: any) => {
+    if (!reg) return;
+    setActionLoading(true);
+    try {
+      await updateDoc(doc(db, 'tenants', reg.id), {
+        paymentStatus: 'PENDING_MANUAL_PROOF_REJECTED'
+      });
+
+      if (showNotification) {
+        showNotification(`Bukti pembayaran untuk "${reg.name}" ditolak. Status dikembalikan ke pemohon.`, 'info');
+      }
+      setSelectedRegForProof(null);
+    } catch (err: any) {
+      console.error('Error rejecting payment proof:', err);
+      if (showNotification) {
+        showNotification('Gagal menolak bukti transfer.', 'error');
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto" id="trial-tenants-view">
       {/* Header section styled to match professional dashboards */}
@@ -238,114 +319,159 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse" id="trial-tenants-table">
-              <thead className="bg-slate-55 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[9px] font-black tracking-widest">
+              <thead className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[9px] font-black tracking-widest">
                 <tr>
-                  <th className="p-4 pl-6">Tenant Name</th>
-                  <th className="p-4">Admin Info</th>
-                  <th className="p-4">Created At</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-center pr-6">Actions</th>
+                  <th className="p-4 pl-6">Nama Wilayah / Tenant</th>
+                  <th className="p-4">Informasi Admin</th>
+                  <th className="p-4">Metode & Status Pembayaran</th>
+                  <th className="p-4">Tanggal Pendaftaran</th>
+                  <th className="p-4 text-center pr-6">Tindakan Admin</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {registrants.map((reg) => (
-                  <tr 
-                    key={reg.id} 
-                    id={`row-${reg.id}`}
-                    className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${
-                      reg.followUpStatus === 'NEW' 
-                        ? 'bg-blue-50/25 dark:bg-blue-900/10' 
-                        : ''
-                    }`}
-                  >
-                    <td className="p-4 pl-6">
-                      <div className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{reg.name}</div>
-                      <div className="text-[9px] font-mono text-slate-400 mt-0.5">{reg.id}</div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          <Mail size={12} className="text-slate-400 shrink-0" />
-                          <span>{reg.adminEmail}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          <Phone size={12} className="text-slate-400 shrink-0" />
-                          <span>{reg.adminPhone || 'Belum diisi'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      {reg.createdAt 
-                        ? new Date(reg.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : '-'
-                      }
-                    </td>
-                    <td className="p-4">
-                      {reg.followUpStatus === 'NEW' ? (
-                        <div className="inline-flex items-center">
-                          <span className="px-2.5 py-1 bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-[8px] font-black uppercase rounded-lg border border-red-200 dark:border-red-900/50 tracking-wide animate-pulse">
-                            New Beta
+                {registrants.map((reg) => {
+                  const isPendingATM = reg.paymentStatus === 'PENDING_MANUAL_PROOF' || reg.status === 'PENDING_PAYMENT_APPROVAL';
+                  const isVerifiedATM = reg.paymentStatus === 'PAID_MANUALLY_VERIFIED';
+                  const isPaidAutomated = reg.paymentStatus === 'PAID_AUTOMATED';
+                  
+                  return (
+                    <tr 
+                      key={reg.id} 
+                      id={`row-${reg.id}`}
+                      className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${
+                        isPendingATM 
+                          ? 'bg-amber-50/30 dark:bg-amber-955/10 border-l-4 border-amber-500' 
+                          : reg.followUpStatus === 'NEW'
+                            ? 'bg-blue-50/25 dark:bg-blue-900/10'
+                            : ''
+                      }`}
+                    >
+                      <td className="p-4 pl-6">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{reg.name}</span>
+                          <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md ${
+                            (reg.plan || 'TRIAL') === 'TRIAL' 
+                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-905/30'
+                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-905/30'
+                          }`}>
+                            {reg.plan || 'TRIAL'}
                           </span>
                         </div>
-                      ) : (
-                        <div className="inline-flex items-center">
-                          <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 text-[8px] font-black uppercase rounded-lg border border-slate-200 dark:border-slate-700/50 tracking-wide">
-                            Followed Up
-                          </span>
+                        <div className="text-[9px] font-mono text-slate-400 mt-1">ID: {reg.id}</div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            <Mail size={12} className="text-slate-400 shrink-0" />
+                            <span>{reg.adminEmail}</span>
+                          </div>
+                          {reg.adminPhone && (
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                              <Phone size={12} className="text-slate-400 shrink-0" />
+                              <span>{reg.adminPhone}</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </td>
-                    <td className="p-4 pr-6">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* Custom Dialog Trigger for Send Email instead of raw mailto address */}
-                        <button
-                          id={`btn-email-${reg.id}`}
-                          onClick={() => handleOpenEmailModal(reg)}
-                          className="p-2 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-105 active:scale-95 transition-all shadow-sm border border-blue-100 dark:border-blue-900/30 cursor-pointer"
-                          title="Kirim Email Follow-Up"
-                        >
-                          <Mail size={14} />
-                        </button>
-                        
-                        {/* WhatsApp External integration */}
-                        {reg.adminPhone && (
-                          <a
-                            id={`btn-wa-${reg.id}`}
-                            href={`https://wa.me/${reg.adminPhone.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-110 active:scale-95 transition-all shadow-sm border border-emerald-100 dark:border-emerald-900/30 cursor-pointer flex items-center justify-center"
-                            title="Buka WhatsApp Chat"
-                          >
-                            <Phone size={14} />
-                          </a>
+                      </td>
+                      <td className="p-4">
+                        {isPendingATM ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-110 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 text-[8px] font-black uppercase rounded-lg border border-amber-200 dark:border-amber-900/50 tracking-wide animate-pulse">
+                              <Clock size={10} className="stroke-[3]" />
+                              Menunggu Verifikasi ATM
+                            </span>
+                            {reg.paymentProofSenderName && (
+                              <span className="text-[9px] text-slate-400 font-bold ml-1">
+                                Oleh: {reg.paymentProofSenderName} ({reg.paymentProofSenderBank})
+                              </span>
+                            )}
+                          </div>
+                        ) : isVerifiedATM ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 text-[8px] font-black uppercase rounded-lg border border-emerald-200 dark:border-emerald-900/50 tracking-wide">
+                            <ShieldCheck size={10} className="stroke-[3]" />
+                            Terverifikasi Manual
+                          </span>
+                        ) : isPaidAutomated ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-400 text-[8px] font-black uppercase rounded-lg border border-indigo-200 dark:border-indigo-900/50 tracking-wide">
+                            <CreditCard size={10} />
+                            Kartu Kredit Otomatis
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 dark:bg-slate-800/80 dark:text-slate-400 text-[8px] font-black uppercase rounded-lg border border-slate-200 dark:border-slate-700/50 tracking-wide">
+                            Uji Coba 14 Hari
+                          </span>
                         )}
+                      </td>
+                      <td className="p-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        {reg.createdAt 
+                          ? new Date(reg.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '-'
+                        }
+                      </td>
+                      <td className="p-4 pr-6">
+                        <div className="flex items-center justify-center gap-2">
+                          
+                          {/* Eye / Verify button if pending ATM */}
+                          {isPendingATM && (
+                            <button
+                              id={`btn-verify-proof-${reg.id}`}
+                              onClick={() => setSelectedRegForProof(reg)}
+                              className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl active:scale-95 transition-all shadow-sm border border-amber-500/20 cursor-pointer flex items-center justify-center"
+                              title="Tinjau Bukti Pembayaran ATM"
+                            >
+                              <Eye size={14} className="stroke-[3.5]" />
+                            </button>
+                          )}
 
-                        {/* Quick Action to mark as followed up manually */}
-                        {reg.followUpStatus === 'NEW' && (
-                          <button 
-                            id={`btn-contacted-${reg.id}`}
-                            onClick={() => handleMarkAsContacted(reg.id)}
-                            className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-105 active:scale-95 transition-all shadow-sm border border-indigo-100 dark:border-indigo-900/30 cursor-pointer"
-                            title="Tandai Sudah Dihubungi"
+                          <button
+                            id={`btn-email-${reg.id}`}
+                            onClick={() => handleOpenEmailModal(reg)}
+                            className="p-2 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-105 active:scale-95 transition-all shadow-sm border border-blue-100 dark:border-blue-900/30 cursor-pointer"
+                            title="Kirim Email Follow-Up"
                           >
-                            <CheckCircle2 size={14} />
+                            <Mail size={14} />
                           </button>
-                        )}
+                          
+                          {/* WhatsApp External integration */}
+                          {reg.adminPhone && (
+                            <a
+                              id={`btn-wa-${reg.id}`}
+                              href={`https://wa.me/${reg.adminPhone.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-110 active:scale-95 transition-all shadow-sm border border-emerald-100 dark:border-emerald-900/30 cursor-pointer flex items-center justify-center"
+                              title="Buka WhatsApp Chat"
+                            >
+                              <Phone size={14} />
+                            </a>
+                          )}
 
-                        {/* Safe dialog trigger for deleting instead of window.confirm */}
-                        <button 
-                          id={`btn-delete-${reg.id}`}
-                          onClick={() => setSelectedRegForDelete(reg)}
-                          className="p-2 bg-red-50 dark:bg-red-950/50 text-red-500 dark:text-red-450 rounded-xl hover:bg-red-105 hover:text-red-700 dark:hover:text-red-300 transition-all shadow-sm border border-red-100 dark:border-red-900/30 cursor-pointer"
-                          title="Hapus Record"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {/* Quick Action to mark as followed up manually */}
+                          {reg.followUpStatus === 'NEW' && !isPendingATM && (
+                            <button 
+                              id={`btn-contacted-${reg.id}`}
+                              onClick={() => handleMarkAsContacted(reg.id)}
+                              className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-105 active:scale-95 transition-all shadow-sm border border-indigo-100 dark:border-indigo-900/30 cursor-pointer"
+                              title="Tandai Sudah Dihubungi"
+                            >
+                              <CheckCircle2 size={14} />
+                            </button>
+                          )}
+
+                          {/* Safe dialog trigger for deleting instead of window.confirm */}
+                          <button 
+                            id={`btn-delete-${reg.id}`}
+                            onClick={() => setSelectedRegForDelete(reg)}
+                            className="p-2 bg-red-50 dark:bg-red-950/50 text-red-500 dark:text-red-450 rounded-xl hover:bg-red-105 hover:text-red-700 dark:hover:text-red-300 transition-all shadow-sm border border-red-100 dark:border-red-900/30 cursor-pointer"
+                            title="Hapus Record"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -511,7 +637,7 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
 
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Hapus Tenant Trial?</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                Anda akan menghapus record uji coba untuk <strong className="text-slate-700 dark:text-slate-200">"{selectedRegForDelete.name}"</strong> secara permanen. Pengguna tidak akan dapat mengakses portal ini lagi.
+                Anda akan menghapus record uji coba untuk <strong className="text-slate-700 dark:text-slate-200 font-bold">"{selectedRegForDelete.name}"</strong> secara permanen. Pengguna tidak akan dapat mengakses portal ini lagi.
               </p>
 
               {/* Confirm Actions */}
@@ -520,7 +646,7 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
                   type="button"
                   onClick={() => setSelectedRegForDelete(null)}
                   disabled={isDeleting}
-                  className="py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer disabled:opacity-50"
+                  className="py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer disabled:opacity-50 select-none"
                 >
                   Batal
                 </button>
@@ -528,7 +654,7 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
                   type="button"
                   onClick={handleConfirmDelete}
                   disabled={isDeleting}
-                  className="py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md shadow-red-500/10 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md shadow-red-500/10 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 select-none"
                 >
                   {isDeleting ? (
                     <>
@@ -540,6 +666,167 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
                   )}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* HIGHLY POLISHED MANUAL ATM PROOF VERIFICATION MODAL */}
+        {selectedRegForProof && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop with elegant blur */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { if (!actionLoading) setSelectedRegForProof(null); }}
+              className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
+            />
+            
+            {/* Modal Container */}
+            <motion.div 
+              initial={{ scale: 0.94, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 15 }}
+              className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative z-10 max-h-[90vh]"
+              id="verify-atm-proof-modal"
+            >
+              {/* Header Box */}
+              <div className="p-6 bg-slate-950/50 border-b border-slate-800/80 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <Clock className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-1.5">Verifikasi Bukti Transfer</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Lakukan audit bukti setoran iuran berlangganan</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedRegForProof(null)}
+                  disabled={actionLoading}
+                  className="p-2 bg-slate-800 text-slate-400 rounded-full hover:bg-slate-700 hover:text-white transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Main Content Area */}
+              <div className="p-6 space-y-6 overflow-y-auto">
+                
+                {/* Meta details */}
+                <div className="grid grid-cols-2 gap-4 bg-slate-950/40 border border-slate-800 p-4 rounded-2xl text-xs">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">ID Tenant Klien:</span>
+                    <strong className="text-white font-mono text-xs block mt-1 tracking-widest">{selectedRegForProof.id}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Paket & Siklus:</span>
+                    <strong className="text-amber-500 font-semibold text-xs block mt-1">
+                      {String(selectedRegForProof.plan || 'PRO').toUpperCase()} / Bulanan
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Simulated Bank M-Transfer Slip Graphic */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block font-sans">Lampiran Visual Bukti Transfer (Pengecekan Sistem):</label>
+                  
+                  <div className="bg-slate-950 rounded-2xl border border-slate-850 p-5 font-mono shadow-inner relative overflow-hidden flex flex-col">
+                    {/* Bank Header decor */}
+                    <div className="flex justify-between items-center text-[10px] text-slate-500 border-b border-slate-900 pb-3 mb-3">
+                      <span className="font-sans font-black tracking-wider text-slate-400">M-BANKING RECEIPT</span>
+                      <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-sans font-black tracking-widest">SUCCESS</span>
+                    </div>
+
+                    {/* Slip Details */}
+                    <div className="space-y-2 text-[11px] leading-relaxed">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-bold uppercase tracking-wider">No. Transaksi</span>
+                        <span className="text-slate-300 font-bold">TX_ATM_{Math.floor(1002384 + Math.random() * 8920942)}_IN</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-bold uppercase tracking-wider">Rek. Pengirim</span>
+                        <span className="text-slate-300 font-bold uppercase tracking-wide">{selectedRegForProof.paymentProofSenderName || 'Sesuai Rekening ATM'}</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-bold uppercase tracking-wider">Bank Asal</span>
+                        <span className="text-amber-500 font-bold uppercase tracking-wide">{selectedRegForProof.paymentProofSenderBank || 'BANK PENGIRIM'}</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-bold uppercase tracking-wider">Bank Penerima</span>
+                        <span className="text-slate-300 font-bold">BSI / INDONESIA</span>
+                      </div>
+
+                      <div className="h-px bg-slate-900 my-2" />
+
+                      <div className="flex justify-between items-center bg-slate-900/50 p-2.5 rounded-xl border border-slate-900">
+                        <span className="text-slate-500 text-[10px] uppercase font-black">Jumlah Nominal</span>
+                        <span className="text-emerald-400 text-xs font-black tracking-widest">
+                          {(() => {
+                            switch(String(selectedRegForProof.plan || 'pro').toLowerCase()) {
+                              case 'flash': return 'Rp 149.000';
+                              case 'pro': return 'Rp 299.000';
+                              case 'premium': return 'Rp 599.000';
+                              case 'enterprise': return 'Rp 1.499.000';
+                              default: return 'Rp 299.000';
+                            }
+                          })()}
+                        </span>
+                      </div>
+
+                      <div className="text-[9px] text-slate-600 mt-2 leading-tight">
+                        Dokumen: {selectedRegForProof.paymentProofFileName || 'bukti_setor_atm.jpg'}<br />
+                        Note: {selectedRegForProof.paymentProofNote || 'Transfer Berhasil dilakukan via Mobile ATM'}
+                      </div>
+                    </div>
+
+                    {/* Watermark decors */}
+                    <div className="absolute opacity-5 -bottom-4 -right-4 font-sans text-white text-5xl font-black select-none pointer-events-none tracking-widest rotate-12">
+                      SMART_RW_AI
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-500 font-sans leading-relaxed flex items-center gap-1 mt-1 font-bold">
+                    <AlertCircle size={12} className="text-indigo-400 flex-shrink-0" />
+                    <span>Konfirmasikan kecocokan mutasi rekening perusahaan sebelum memberikan aktivasi.</span>
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Action Buttons box */}
+              <div className="p-6 bg-slate-950 border-t border-slate-850 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => handleRejectPayment(selectedRegForProof)}
+                  className="py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer disabled:opacity-50 active:scale-95 transition-all select-none"
+                >
+                  Tolak Bukti ATM
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => handleApprovePayment(selectedRegForProof)}
+                  className="py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 select-none"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                      <span>Mengaktifkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                      <span>Verifikasi & Aktifkan</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}

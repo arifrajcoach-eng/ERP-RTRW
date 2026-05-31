@@ -951,7 +951,7 @@ function WargaView(props: WargaViewProps) {
                                {w.foto ? (
                                  <img src={w.foto} className="w-full h-full object-cover" />
                                ) : (
-                                 <span className="text-2xl uppercase font-elegant">{w.nama.charAt(0)}</span>
+                                 <span className="text-2xl uppercase font-elegant" style={{ marginLeft: '0px', marginRight: '0px', marginBottom: '-28px' }}>{w.nama.charAt(0)}</span>
                                )}
                             </div>
                             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
@@ -1114,7 +1114,7 @@ function WargaView(props: WargaViewProps) {
                              {w.foto ? (
                                <img src={w.foto} className="w-full h-full object-cover" />
                              ) : (
-                               <span className="text-xl uppercase font-elegant">{w.nama ? w.nama.charAt(0) : "W"}</span>
+                               <span className="text-xl uppercase font-elegant" style={{ marginLeft: '0px', marginRight: '0px', marginBottom: '-28px' }}>{w.nama ? w.nama.charAt(0) : "W"}</span>
                              )}
                           </div>
                           <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
