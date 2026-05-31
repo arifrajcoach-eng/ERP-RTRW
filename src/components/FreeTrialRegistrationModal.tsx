@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
 import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { X, User, Mail, Phone, Tag, ShieldCheck, Store, CreditCard, CheckCircle2, Clock, Upload } from 'lucide-react';
+import { X, User, Mail, Phone, Tag, ShieldCheck, Store, CreditCard, Check, CheckCircle2, Clock, Upload } from 'lucide-react';
+import { PLAN_CONFIG } from '../constants';
 
 export function FreeTrialRegistrationModal({ onClose, showNotification, onSuccess, initialPlan = 'TRIAL' }: any) {
   const [formData, setFormData] = useState({ 
@@ -293,35 +294,52 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
   if (step === 2) {
     const isFormIncomplete = paymentMethod === 'MANUAL_ATM' && (!senderName || !senderBank || !paymentProofFileName);
     
+    // Dynamically query price of selected plan
+    const planKey = String(initialPlan).toUpperCase();
+    const planConfigObj = (PLAN_CONFIG as any)[planKey] || (PLAN_CONFIG as any)[Object.keys(PLAN_CONFIG).find(k => k.toLowerCase() === planKey.toLowerCase()) || 'PRO'];
+    const priceAmount = planConfigObj ? planConfigObj.priceMonthly : 0;
+    
+    const formatRupiah = (val: number) => {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(val);
+    };
+
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-y-auto">
-        <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl my-8">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-y-auto animate-fade-in">
+        <div className="bg-white rounded-[2.5rem] w-full max-w-sm p-6 shadow-2xl my-8 border border-slate-100">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-xl font-black text-slate-900">Pembayaran Paket</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sistem Lisensi SmartRW AI</p>
+              <h2 className="text-xl font-black text-slate-900 leading-none">Pembayaran Paket</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Lisensi SmartRW AI</p>
             </div>
-            <button onClick={() => setStep(1)} className="p-2 bg-slate-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+            <button onClick={() => setStep(1)} className="p-2.5 bg-slate-50 text-slate-400 hover:text-red-500 rounded-2xl transition-all hover:bg-red-550 hover:rotate-90"><X className="w-5 h-5" /></button>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase">Paket Dipilih</span>
-              <span className="text-xs font-black text-indigo-600 uppercase">{initialPlan}</span>
-            </div>
+          <div className="p-5 bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl border border-slate-200/60 mb-5 space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-slate-400 uppercase">Total Tagihan</span>
-              <span className="text-sm font-black text-slate-800 tracking-tight">Otomatis Terbayar</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Paket Dipilih</span>
+              <span className="text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full uppercase">{initialPlan}</span>
+            </div>
+            <div className="h-px bg-slate-200/65" />
+            <div className="flex justify-between items-baseline">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Tagihan</span>
+              <span className="text-sm font-black text-slate-800 tracking-tight">
+                {priceAmount === 0 ? 'GRATIS / TRIAL' : formatRupiah(priceAmount)}
+              </span>
             </div>
           </div>
 
           <div className="space-y-4">
              {/* Payment Method Tabs */}
-             <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+             <div className="grid grid-cols-2 gap-2 bg-slate-105 p-1.5 rounded-2xl">
                <button 
                  type="button"
                  onClick={() => setPaymentMethod('ONLINE')}
-                 className={`py-2 rounded-lg text-center flex items-center justify-center gap-1 transition-all text-[10px] font-extrabold uppercase ${paymentMethod === 'ONLINE' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                 className={`py-2.5 rounded-xl text-center flex items-center justify-center gap-1.5 transition-all text-[10px] font-black uppercase lg:cursor-pointer ${paymentMethod === 'ONLINE' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-650'}`}
                >
                  <CreditCard className="w-3.5 h-3.5" />
                  <span>Online Auto</span>
@@ -329,7 +347,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
                <button 
                  type="button"
                  onClick={() => setPaymentMethod('MANUAL_ATM')}
-                 className={`py-2 rounded-lg text-center flex items-center justify-center gap-1 transition-all text-[10px] font-extrabold uppercase ${paymentMethod === 'MANUAL_ATM' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                 className={`py-2.5 rounded-xl text-center flex items-center justify-center gap-1.5 transition-all text-[10px] font-black uppercase lg:cursor-pointer ${paymentMethod === 'MANUAL_ATM' ? 'bg-[#c2410c] text-white shadow-sm' : 'text-slate-400 hover:text-slate-650'}`}
                >
                  <Upload className="w-3.5 h-3.5" />
                  <span>ATM / Transfer</span>
@@ -337,20 +355,20 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
              </div>
 
              {paymentMethod === 'ONLINE' ? (
-               <div className="space-y-4">
-                 <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
-                    <ShieldCheck className="text-emerald-500 shrink-0" size={24} />
-                    <p className="text-[10px] font-bold text-emerald-700 leading-tight">Sistem akan memproses aktivasi instan otomatis tanpa verifikasi manual.</p>
+               <div className="space-y-4 animate-fade-in">
+                 <div className="p-4 bg-emerald-50 border border-emerald-100/80 rounded-2xl flex items-start gap-3">
+                    <ShieldCheck className="text-emerald-500 shrink-0 mt-0.5" size={20} />
+                    <p className="text-[10px] font-bold text-emerald-800 leading-normal">Sistem akan memproses aktivasi instan otomatis secara real-time tanpa memerlukan verifikasi admin manual.</p>
                  </div>
                  
                  <div className="space-y-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pilih Metode Pembayaran</label>
                     <div className="grid grid-cols-2 gap-2">
-                       <button type="button" className="p-3 border-2 border-blue-600 bg-blue-50 rounded-xl flex flex-col items-center gap-1">
+                       <button type="button" className="p-3 border-2 border-blue-600 bg-blue-50 rounded-xl flex flex-col items-center gap-1.5">
                           <CreditCard className="text-blue-600" size={16} />
                           <span className="text-[8px] font-black uppercase">Qris / Transfer</span>
                        </button>
-                       <button type="button" className="p-3 border border-slate-100 bg-slate-50 rounded-xl flex flex-col items-center gap-1 opacity-50 grayscale">
+                       <button type="button" className="p-3 border border-slate-100 bg-slate-50 rounded-xl flex flex-col items-center gap-1.5 opacity-50 grayscale">
                           <Store className="text-slate-400" size={16} />
                           <span className="text-[8px] font-black uppercase">Gerai Retail</span>
                        </button>
@@ -358,53 +376,80 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
                  </div>
                </div>
              ) : (
-               <div className="space-y-3 p-4 bg-amber-50/50 border border-amber-200 rounded-2xl text-left scale-98 transition-all">
+               <div className="space-y-3.5 p-4 bg-amber-50/50 border border-amber-200 rounded-3xl text-left scale-98 transition-all animate-fade-in">
                   <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Panduan Transfer Bank / ATM:</p>
                   <p className="text-[10px] text-slate-600 leading-normal">
-                    Silakan lakukan transfer ke rekening Admin:<br/>
-                    <strong className="text-slate-900 font-mono bg-amber-100/60 px-1 rounded block mt-1 py-0.5 border-b border-dashed border-amber-200">MANDIRI 131-00-2626262-6 a.n. SmartRW AI</strong>
-                    Biaya Aktifkan: <strong className="text-indigo-600">Sesuai Tagihan</strong>
+                    Silakan lakukan transfer ke rekening resmi SmartRW AI berikut:<br/>
+                    <strong className="block text-xs font-black text-amber-650 font-mono bg-[#141415] border border-slate-900 px-3 py-2 rounded-xl mt-2 tracking-wider text-center border-dashed">MANDIRI 131-05-26052026-6</strong>
+                    <div className="flex justify-between font-semibold font-sans mt-2 text-[10px] text-slate-500">
+                      <span>Atas Nama pemilik:</span>
+                      <span className="text-slate-850 font-bold">PT. SmartRW Solusi Indonesia</span>
+                    </div>
                   </p>
                   
-                  <div className="space-y-2 mt-2 pt-2 border-t border-amber-200/50">
+                  <div className="space-y-3.5 mt-2 pt-3 border-t border-amber-200/50">
                     <div>
-                      <label className="block text-[8px] font-black uppercase text-slate-400 ml-1">Nama Rekening Pengirim:</label>
+                      <label className="block text-[8px] font-black uppercase text-slate-400 ml-1 mb-1">Nama Pemilik Rekening Pengirim (Sesuai ATM / M-Banking):</label>
                       <input 
                         required 
                         type="text" 
                         value={senderName} 
                         onChange={e => setSenderName(e.target.value)}
-                        placeholder="Nama Pemilik Rekening"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none border focus:border-amber-500"
+                        placeholder="Contoh: Sukarno Hadi"
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/5 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-[8px] font-black uppercase text-slate-400 ml-1">Bank Pengirim:</label>
+                      <label className="block text-[8px] font-black uppercase text-slate-400 ml-1 mb-1">Nama Bank Pengirim:</label>
                       <input 
                         required 
                         type="text" 
                         value={senderBank} 
                         onChange={e => setSenderBank(e.target.value)}
-                        placeholder="Contoh: BCA, Mandiri, BRI"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none border focus:border-amber-500"
+                        placeholder="Contoh: BCA, Mandiri, BRI, BNI"
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/5 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-[8px] font-black uppercase text-slate-400 ml-1">Foto Bukti Transfer ATM:</label>
+                      <label className="block text-[8px] font-black uppercase text-slate-400 ml-1 mb-1">Unggah Foto Bukti Transfer ATM:</label>
                       <div className="mt-1">
-                        <label className="flex items-center justify-center border-2 border-dashed border-slate-200 bg-white hover:bg-slate-50 p-2.5 rounded-xl cursor-pointer select-none transition-colors">
-                          <span className="text-[10px] font-bold text-slate-500 truncate">{paymentProofFileName || 'Pilih Bukti Foto / SS'}</span>
+                        <div 
+                          onClick={() => {
+                            const simulatedName = `bukti_transfer_${Math.floor(1000 + Math.random() * 9000)}.jpg`;
+                            setPaymentProofFileName(simulatedName);
+                            showNotification('Simulasi bukti transfer berhasil dilekatkan!', 'info');
+                          }}
+                          className="w-full bg-white border-2 border-dashed border-slate-205 hover:border-amber-500 hover:bg-amber-50/10 rounded-2xl p-4 text-center cursor-pointer transition-all"
+                        >
+                          <div className="w-8 h-8 bg-slate-150 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-1.5">
+                            <Upload className="w-4 h-4" />
+                          </div>
+                          {paymentProofFileName ? (
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
+                                <Check className="w-3 h-3 stroke-[3]" /> Berhasil Dilekatkan:
+                              </p>
+                              <p className="text-xs font-mono text-slate-700 tracking-wider truncate px-2">{paymentProofFileName}</p>
+                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">Klik lagi untuk simulasi ulang</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <p className="text-[10px] text-slate-500 font-bold">Pilih foto atau file bukti transfer ATM</p>
+                              <p className="text-[9px] text-slate-400 font-medium">Klik di sini untuk mengisi demo file otomatis</p>
+                            </div>
+                          )}
+                          
                           <input 
-                            required
                             type="file" 
                             accept="image/*" 
                             className="hidden" 
+                            onClick={(e) => e.stopPropagation()}
                             onChange={e => {
                               const file = e.target.files?.[0];
                               if (file) setPaymentProofFileName(file.name);
                             }}
                           />
-                        </label>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -416,7 +461,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
             type="button"
             onClick={handleSubmit} 
             disabled={loading || isFormIncomplete}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/10 hover:scale-[1.01] active:scale-99 transition-all mt-6 disabled:opacity-50 disabled:pointer-events-none uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/10 hover:scale-[1.01] active:scale-99 transition-all mt-6 disabled:opacity-50 disabled:pointer-events-none uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
               <div className="flex items-center gap-2">
