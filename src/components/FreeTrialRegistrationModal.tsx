@@ -96,7 +96,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
 
       if (initialPlan !== 'TRIAL') {
         setIsProcessingPayment(true);
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate payment/upload delay
+        // Removed simulated payment delay to ensure fast UI response
         setIsProcessingPayment(false);
       }
 
@@ -203,7 +203,8 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       sessionStorage.removeItem(`user_profile_${auth.currentUser?.uid}`);
       
       try {
-        await fetch('/api/messages/welcome', {
+        // Fire and forget welcome message to prevent blocking the UI
+        fetch('/api/messages/welcome', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -213,7 +214,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
             phone: formData.hp,
             plan: initialPlan
           })
-        });
+        }).catch(err => console.warn('Welcome message failed in background:', err));
       } catch (err) {
         console.warn('Welcome message failed (non-critical):', err);
       }
