@@ -178,6 +178,7 @@ import { StyledButton } from "./components/StyledButton";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
 import { MessageSquare, Bot } from "lucide-react";
 import { getTranslatedLabel } from "./lib/langUtils";
+import CommandPalette from "./components/CommandPalette";
 import { checkFeatureAccess } from "./services/subscriptionService";
 import {
   generateAIReport,
@@ -629,6 +630,7 @@ export default function App() {
   const [showInfoPopup, setShowInfoPopup] = useState(true); // Default show for announcement
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const alertedSOSRef = useRef<Set<string>>(new Set());
   const appStartTime = useRef(Date.now());
 
@@ -3314,6 +3316,17 @@ export default function App() {
 
               <div className="h-5 w-px bg-slate-200 dark:bg-slate-800"></div>
 
+              <button 
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700 group text-slate-500 shadow-sm"
+              >
+                <Search className="w-3.5 h-3.5 group-hover:text-brand-blue" />
+                <span className="text-xs font-medium mr-1 dark:text-slate-400">Search</span>
+                <kbd className="text-[10px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-1.5 py-0.5 rounded shadow-sm text-slate-400 font-sans">⌘ K</kbd>
+              </button>
+
+              <div className="h-5 w-px bg-slate-200 dark:bg-slate-800"></div>
+
               <div
                 style={{ color: '#0fcb82' }}
                 className={`flex items-center gap-2.5 px-4 py-1 rounded-full border transition-all duration-500 
@@ -3996,6 +4009,15 @@ export default function App() {
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
+      />
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        setIsOpen={setIsCommandPaletteOpen}
+        onNavigate={(tab) => {
+          setActiveTab(tab);
+          setIsSidebarOpen(false);
+        }}
+        themeMode={settings?.themeMode}
       />
       <RegistrationQRModal
         isOpen={showQRModal}
