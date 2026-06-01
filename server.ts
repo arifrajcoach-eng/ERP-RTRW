@@ -418,16 +418,48 @@ Suaramu harus terdengar alami (human-like), merdu, luwes, dan penuh rasa hormat.
 Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berbicara langsung mendampingi Ketua.
 `;
 
+  const getErrorString = (error: any): string => {
+    if (!error) return "";
+    if (typeof error === 'string') return error;
+    
+    // Safely collect information from error object
+    const parts = [
+      error.message,
+      error.status,
+      error.code,
+      error.error ? (typeof error.error === 'string' ? error.error : JSON.stringify(error.error)) : ""
+    ];
+    
+    return parts.filter(Boolean).join(" ");
+  };
+
   const isQuotaExhaustedErrorServer = (error: any): boolean => {
     if (!error) return false;
-    const errorStr = typeof error === 'string' ? error : JSON.stringify(error) + " " + (error.message || "");
+    
+    if (error.code === 429 || error.status === "RESOURCE_EXHAUSTED") return true;
+
+    const errorStr = getErrorString(error).toLowerCase();
     return (
       errorStr.includes("429") ||
-      errorStr.includes("RESOURCE_EXHAUSTED") ||
-      errorStr.includes("Quota exceeded") ||
+      errorStr.includes("resource_exhausted") ||
+      errorStr.includes("quota exceeded") ||
       errorStr.includes("quota") ||
-      errorStr.includes("limit") ||
-      errorStr.includes("exceeded your current quota")
+      errorStr.includes("limit")
+    );
+  };
+
+  const isTransientErrorServer = (error: any): boolean => {
+    if (!error) return false;
+    
+    if (error.code === 503 || error.status === "Service Unavailable" || error.code === 504 || error.status === "Gateway Timeout") return true;
+
+    const errorStr = getErrorString(error).toLowerCase();
+    return (
+      isQuotaExhaustedErrorServer(error) ||
+      errorStr.includes("503") ||
+      errorStr.includes("service unavailable") ||
+      errorStr.includes("504") ||
+      errorStr.includes("gateway timeout")
     );
   };
 
@@ -499,6 +531,11 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
           res.write(`data: ${JSON.stringify({ text: fallbackText })}\n`);
           res.write("data: [DONE]\n");
           res.end();
+        } else if (isTransientErrorServer(apiError)) {
+          const fallbackText = `Mohon maaf Kak, sistem AI saat ini sedang sangat sibuk (High Demand). Silakan coba lagi beberapa detik lagi. Terima kasih atas kesabarannya! 😊✨`;
+          res.write(`data: ${JSON.stringify({ text: fallbackText })}\n`);
+          res.write("data: [DONE]\n");
+          res.end();
         } else {
           res.write(`data: ${JSON.stringify({ text: `Maaf, ada kendala koneksi dengan model AI: ${apiError.message || apiError}` })}\n`);
           res.write("data: [DONE]\n");
@@ -549,6 +586,8 @@ Tapi tenang aja, Kak! Ini adalah ringkasan kas manual dari data yang ada di sist
 **✨ SOLUSI PREMIUM :**
 Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otomatis, Prediksi Keuangan, serta cetak surat tanpa batas bebas dari limit kuota harian harian, silakan klik banner **"SmartRW AI"** di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium sekarang juga! 😉⚡`;
         res.json({ text: offlineReport });
+      } else if (isTransientErrorServer(error)) {
+        res.json({ text: "Mohon maaf, AI sedang sibuk (High Demand). Silakan coba lagi beberapa detik lagi." });
       } else {
         res.status(500).json({ message: error.message || "Failed to generate report" });
       }
@@ -583,6 +622,8 @@ Mohon maaf sebesar-besarnya Bapak/Ibu Pimpinan Kelurahan. 🫣 Kuota panggilan A
 **✨ AKTIVASI PREMIUM :**
 Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, rekomendasi taktis, serta integrasi pemantauan penuh, silakan klik banner **"SmartRW AI"** di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium wilayah Rukun Tetangga/Warga Anda! 😉⚡`;
         res.json({ text: offlineInsight });
+      } else if (isTransientErrorServer(error)) {
+        res.json({ text: "Mohon maaf, AI sedang sibuk (High Demand). Silakan coba lagi beberapa detik lagi." });
       } else {
         res.status(500).json({ message: error.message || "Failed to generate regional insight" });
       }
@@ -618,6 +659,8 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       console.error("AI Scan Receipt Server Error:", error);
       if (isQuotaExhaustedErrorServer(error)) {
         res.status(429).json({ message: "QUOTA_EXHAUSTED" });
+      } else if (isTransientErrorServer(error)) {
+        res.status(503).json({ message: "SERVICE_UNAVAILABLE" });
       } else {
         res.status(500).json({ message: error.message || "Failed to scan receipt" });
       }
