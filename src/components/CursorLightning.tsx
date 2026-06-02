@@ -15,7 +15,7 @@ const CursorLightning: React.FC = () => {
     canvas.height = window.innerHeight;
 
     const handleMouseMove = (e: MouseEvent) => {
-      // Spawn lightning effect
+      // Spawn more chaotic lightning
       const bolt: { x: number, y: number, life: number, path: { x: number, y: number }[] } = {
         x: e.clientX,
         y: e.clientY,
@@ -25,9 +25,9 @@ const CursorLightning: React.FC = () => {
       
       let currX = e.clientX;
       let currY = e.clientY;
-      for (let i = 0; i < 5; i++) {
-        currX += (Math.random() - 0.5) * 40;
-        currY += Math.random() * 20;
+      for (let i = 0; i < 8; i++) {
+        currX += (Math.random() - 0.5) * 60;
+        currY += (Math.random() - 0.5) * 40 + 10;
         bolt.path.push({ x: currX, y: currY });
       }
       particles.current.push(bolt);
@@ -37,21 +37,26 @@ const CursorLightning: React.FC = () => {
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = 'screen';
       
       particles.current.forEach((p, index) => {
-        p.life -= 0.05;
+        p.life -= 0.04;
 
         if (p.life <= 0) {
           particles.current.splice(index, 1);
         } else {
           ctx.beginPath();
-          ctx.strokeStyle = `rgba(100, 200, 255, ${p.life})`;
-          ctx.lineWidth = 2;
+          ctx.strokeStyle = `rgba(180, 230, 255, ${p.life})`;
+          ctx.lineWidth = 1 + p.life * 2;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
           ctx.moveTo(p.x, p.y);
           p.path.forEach(pt => ctx.lineTo(pt.x, pt.y));
           ctx.stroke();
+          ctx.shadowBlur = 0; // Reset shadow
         }
       });
+      ctx.globalCompositeOperation = 'source-over';
       requestAnimationFrame(animate);
     };
 
