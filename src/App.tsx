@@ -122,6 +122,7 @@ import {
 } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import { db } from "./firebase";
+import { safeLocalStorage, safeSessionStorage } from "./lib/safeStorage";
 import {
   collection,
   getDocs,
@@ -202,7 +203,6 @@ import {
 // } from "./data/initialData";
 import { getPlanFeatures, generateSuratHTML, canCreate, canUpdate, canDelete, canView } from "./lib/appUtils";
 import { PLAN_FEATURES, PLAN_ALIASES, ADDON_CONFIG } from "./constants";
-import CursorControls from "./components/CursorControls";
 
 const APP_LOGO = "/logo_rw.png";
 
@@ -630,7 +630,7 @@ export default function App() {
   const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
   const [impersonatedTenantId, setImpersonatedTenantId] = useState<
     string | null
-  >(localStorage.getItem("impersonatedTenantId"));
+  >(safeLocalStorage.getItem("impersonatedTenantId"));
   const [showQRModal, setShowQRModal] = useState(false);
   const [showFreeTrialModal, setShowFreeTrialModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>("TRIAL");
@@ -734,7 +734,7 @@ export default function App() {
       if (user) {
         try {
           // Check session cache first to prevent redundant quota usage
-          const cachedProfile = sessionStorage.getItem(`user_profile_${user.uid}`);
+          const cachedProfile = safeSessionStorage.getItem(`user_profile_${user.uid}`);
           if (cachedProfile) {
             try {
               const parsed = JSON.parse(cachedProfile);
@@ -744,7 +744,7 @@ export default function App() {
               // To be safe and save quota, we'll return here if we have a cache
               return;
             } catch (e) {
-              sessionStorage.removeItem(`user_profile_${user.uid}`);
+              safeSessionStorage.removeItem(`user_profile_${user.uid}`);
             }
           }
 
@@ -826,7 +826,7 @@ export default function App() {
             }
             
             // Cache the final profile
-            sessionStorage.setItem(`user_profile_${user.uid}`, JSON.stringify(userData));
+            safeSessionStorage.setItem(`user_profile_${user.uid}`, JSON.stringify(userData));
             setCurrentUser({ uid: user.uid, ...userData });
           } else if (user.isAnonymous) {
             // Anonymous Citizen Bypass for Super Admin
@@ -1066,7 +1066,7 @@ export default function App() {
   } | null>(null);
   const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("theme");
+      const stored = safeLocalStorage.getItem("theme");
       if (stored && ["light", "dark", "oceanic", "pink-baby"].includes(stored)) {
         return stored;
       }
@@ -1090,7 +1090,7 @@ export default function App() {
       "navy-luxury"
     );
     document.documentElement.classList.add(theme);
-    localStorage.setItem("theme", theme);
+    safeLocalStorage.setItem("theme", theme);
   }, [theme]);
 
   const cycleTheme = () => {
@@ -1330,9 +1330,15 @@ export default function App() {
     
     addChildren(tId);
 
-    // Give children context for their parent
+    // Give children context for their parent safely with loop detection
     let current = tenantsData.find(t => t.id === tId);
+    const visitedParents = new Set<string>();
     while (current && current.parentId) {
+      if (visitedParents.has(current.id)) {
+        console.warn("[App] Loop detected in tenant parenthood structure for tId:", tId);
+        break; // Guard against infinite iteration
+      }
+      visitedParents.add(current.id);
       if (!list.has(current.parentId)) {
         list.add(current.parentId);
       }
@@ -2153,7 +2159,7 @@ export default function App() {
     if (!activeTenantId) return;
 
     // Load Warga
-    const savedWarga = localStorage.getItem(`${activeTenantId}_wargaData`);
+    const savedWarga = safeLocalStorage.getItem(`${activeTenantId}_wargaData`);
     if (savedWarga) {
       try {
         setWargaData(JSON.parse(savedWarga));
@@ -2165,7 +2171,7 @@ export default function App() {
     }
 
     // Load Kas
-    const savedKas = localStorage.getItem(`${activeTenantId}_kasData`);
+    const savedKas = safeLocalStorage.getItem(`${activeTenantId}_kasData`);
     if (savedKas) {
       try {
         setKasData(JSON.parse(savedKas));
@@ -2177,7 +2183,7 @@ export default function App() {
     }
 
     // Load Surat
-    const savedSurat = localStorage.getItem(`${activeTenantId}_suratData`);
+    const savedSurat = safeLocalStorage.getItem(`${activeTenantId}_suratData`);
     if (savedSurat) {
       try {
         setSuratData(JSON.parse(savedSurat));
@@ -2189,7 +2195,7 @@ export default function App() {
     }
 
     // Load Iuran
-    const savedIuran = localStorage.getItem(`${activeTenantId}_iuranData`);
+    const savedIuran = safeLocalStorage.getItem(`${activeTenantId}_iuranData`);
     if (savedIuran) {
       try {
         setIuranData(JSON.parse(savedIuran));
@@ -2201,7 +2207,7 @@ export default function App() {
     }
 
     // Load Inventaris
-    const savedInventaris = localStorage.getItem(`${activeTenantId}_inventarisData`);
+    const savedInventaris = safeLocalStorage.getItem(`${activeTenantId}_inventarisData`);
     if (savedInventaris) {
       try {
         setInventarisData(JSON.parse(savedInventaris));
@@ -2216,31 +2222,31 @@ export default function App() {
   // Effects to sync data to tenant-specific localStorage cache
   useEffect(() => {
     if (activeTenantId && wargaData && wargaData !== INITIAL_WARGA_DATA) {
-      localStorage.setItem(`${activeTenantId}_wargaData`, JSON.stringify(wargaData));
+      safeLocalStorage.setItem(`${activeTenantId}_wargaData`, JSON.stringify(wargaData));
     }
   }, [wargaData, activeTenantId]);
 
   useEffect(() => {
     if (activeTenantId && kasData && kasData !== INITIAL_KAS_DATA) {
-      localStorage.setItem(`${activeTenantId}_kasData`, JSON.stringify(kasData));
+      safeLocalStorage.setItem(`${activeTenantId}_kasData`, JSON.stringify(kasData));
     }
   }, [kasData, activeTenantId]);
 
   useEffect(() => {
     if (activeTenantId && suratData && suratData !== INITIAL_SURAT_DATA) {
-      localStorage.setItem(`${activeTenantId}_suratData`, JSON.stringify(suratData));
+      safeLocalStorage.setItem(`${activeTenantId}_suratData`, JSON.stringify(suratData));
     }
   }, [suratData, activeTenantId]);
 
   useEffect(() => {
     if (activeTenantId && iuranData && iuranData.length > 0) {
-      localStorage.setItem(`${activeTenantId}_iuranData`, JSON.stringify(iuranData));
+      safeLocalStorage.setItem(`${activeTenantId}_iuranData`, JSON.stringify(iuranData));
     }
   }, [iuranData, activeTenantId]);
 
   useEffect(() => {
     if (activeTenantId && inventarisData && inventarisData !== INITIAL_INVENTARIS_DATA) {
-      localStorage.setItem(`${activeTenantId}_inventarisData`, JSON.stringify(inventarisData));
+      safeLocalStorage.setItem(`${activeTenantId}_inventarisData`, JSON.stringify(inventarisData));
     }
   }, [inventarisData, activeTenantId]);
 
@@ -2249,7 +2255,7 @@ export default function App() {
     const legacyKeys = ["rw26_wargaData", "rw26_kasData", "rw26_suratData", "rw26_iuranData", "rw26_inventarisData"];
     legacyKeys.forEach(k => {
       try {
-        localStorage.removeItem(k);
+        safeLocalStorage.removeItem(k);
       } catch(e) {}
     });
   }, []);
@@ -3100,7 +3106,7 @@ export default function App() {
                   <Moon className="w-5 h-5 text-indigo-600" />
                 )}
               </button>
-               <CursorControls />
+              <div className="w-10 h-10 md:hidden"></div>
             </div>
 
             <div className="relative group/logo mb-6 cursor-pointer">

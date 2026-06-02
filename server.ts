@@ -24,7 +24,6 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
 }
 
 async function startServer() {
-  console.log("Starting server, NODE_ENV:", process.env.NODE_ENV);
   const app = express();
   const PORT = 3000;
 
@@ -748,6 +747,23 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    // Serve transformed index.html for all non-API paths in dev mode
+    app.get("*", async (req, res, next) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/assets")) {
+        return next();
+      }
+      try {
+        const fs = await import("fs");
+        let html = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
+        // Apply Vite HTML transformations (e.g. inject dev client and load scripts)
+        html = await vite.transformIndexHtml(req.url, html);
+        res.status(200).set({ "Content-Type": "text/html" }).end(html);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));

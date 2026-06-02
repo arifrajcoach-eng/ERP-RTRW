@@ -1,5 +1,6 @@
 import React from "react";
 import { AlertOctagon, RefreshCw, ChevronDown, ChevronUp, MessageSquare, ShieldAlert, FileText } from "lucide-react";
+import { safeLocalStorage, safeSessionStorage } from "../lib/safeStorage";
 
 interface Props {
   children: React.ReactNode;
@@ -51,20 +52,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
         "parentTenant",
         "firebaseLocalStorageDb"
       ];
-      const keys = Object.keys(localStorage);
+      const keys = safeLocalStorage.getKeys();
       
       keys.forEach((key) => {
         if (!keysToKeep.some(k => key.includes(k))) {
-          localStorage.removeItem(key);
+          safeLocalStorage.removeItem(key);
         }
       });
       
-      sessionStorage.clear();
+      safeSessionStorage.clear();
       window.location.reload();
     } catch (e) {
       console.error("Failed to perform auto-healing clear:", e);
-      localStorage.clear();
-      sessionStorage.clear();
+      safeLocalStorage.clear();
+      safeSessionStorage.clear();
       window.location.reload();
     }
   };

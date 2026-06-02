@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
+import { safeSessionStorage } from '../lib/safeStorage';
 import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { X, User, Mail, Phone, Tag, ShieldCheck, Store, CreditCard, Check, CheckCircle2, Clock, Upload } from 'lucide-react';
@@ -200,7 +201,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       }
 
       await batchOp.commit();
-      sessionStorage.removeItem(`user_profile_${auth.currentUser?.uid}`);
+      safeSessionStorage.removeItem(`user_profile_${auth.currentUser?.uid}`);
       
       try {
         // Fire and forget welcome message to prevent blocking the UI

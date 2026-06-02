@@ -12,8 +12,22 @@ export default defineConfig(({mode}) => {
     },
     build: {
       outDir: 'dist',
-      emptyOutDir: false,
+      emptyOutDir: true,
       chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              // Combine react and generic vendor to avoid circular dependencies
+              if (id.includes('firebase')) return 'vendor-firebase';
+              if (id.includes('lucide') || id.includes('motion')) return 'vendor-ui';
+              if (id.includes('recharts') || id.includes('d3')) return 'vendor-charts';
+              if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('xlsx')) return 'vendor-docs';
+              return 'vendor';
+            }
+          }
+        }
+      }
     },
     resolve: {
       alias: {

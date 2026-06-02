@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { safeLocalStorage } from '../lib/safeStorage';
 import { 
   CreditCard, 
   ShieldCheck, 
@@ -34,7 +35,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
   // Try to load tenant ID from state, or fallback to saved localStorage if not provided via guard
   const activeTenantId = tenantId || (() => {
     try {
-      const stored = localStorage.getItem('currentTenant');
+      const stored = safeLocalStorage.getItem('currentTenant');
       if (stored) {
         const parsed = JSON.parse(stored);
         return parsed.id || '';
