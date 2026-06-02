@@ -24,6 +24,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
 }
 
 async function startServer() {
+  console.log("Starting server, NODE_ENV:", process.env.NODE_ENV);
   const app = express();
   const PORT = 3000;
 

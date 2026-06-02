@@ -480,8 +480,8 @@ export default function MadingDigitalView({
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant uppercase flex items-center gap-2">
-                Mading Digital Warga
-                <span className="text-[9px] bg-brand-blue text-white px-2.5 py-1 rounded-full font-sans font-bold tracking-widest uppercase align-middle">KOLASE FOTO</span>
+                Mading Warga
+                <span className="text-[9px] bg-brand-blue text-white px-2.5 py-1 rounded-full font-sans font-bold tracking-widest uppercase align-middle">KOLASE</span>
               </h2>
               <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.25em] mt-1">Informasi & Kegiatan Bulanan Pengurus RT/RW</p>
             </div>
