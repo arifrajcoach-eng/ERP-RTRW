@@ -369,8 +369,8 @@ export function VerifikasiAdminView({
           />
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-gradient-to-r from-slate-50/80 to-transparent">
                 <th className="px-8 py-7">Informasi Warga</th>

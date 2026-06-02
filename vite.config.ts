@@ -12,7 +12,7 @@ export default defineConfig(({mode}) => {
     },
     build: {
       outDir: 'dist',
-      emptyOutDir: true,
+      emptyOutDir: false,
       chunkSizeWarningLimit: 2000,
     },
     resolve: {
