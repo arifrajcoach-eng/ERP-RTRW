@@ -202,7 +202,7 @@ import {
 // } from "./data/initialData";
 import { getPlanFeatures, generateSuratHTML, canCreate, canUpdate, canDelete, canView } from "./lib/appUtils";
 import { PLAN_FEATURES, PLAN_ALIASES, ADDON_CONFIG } from "./constants";
-import CursorVapor from "./components/CursorVapor";
+import CursorControls from "./components/CursorControls";
 
 const APP_LOGO = "/logo_rw.png";
 
@@ -3100,7 +3100,7 @@ export default function App() {
                   <Moon className="w-5 h-5 text-indigo-600" />
                 )}
               </button>
-              <div className="w-10 h-10 md:hidden"></div>
+               <CursorControls />
             </div>
 
             <div className="relative group/logo mb-6 cursor-pointer">
