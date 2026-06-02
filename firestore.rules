@@ -232,7 +232,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && (resource.data.customerId == request.auth.uid || isTenantMemberStatic(resource.data.tenantId));
       allow get: if isSignedIn() && (resource.data.customerId == request.auth.uid || isTenantMember(resource.data.tenantId));
       allow create: if isSignedIn();
-      allow update: if isPengurus() && isTenantMember(resource.data.tenantId);
+      allow update: if (isSignedIn() && resource.data.customerId == request.auth.uid) || (isPengurus() && isTenantMember(resource.data.tenantId));
       allow delete: if isAdmin();
     }
 

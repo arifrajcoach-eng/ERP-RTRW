@@ -266,6 +266,19 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
       setIsListening(false);
+      
+      let errorHelpMsg = "Maaf, terjadi kesalahan koneksi atau konfigurasi pada speech recognition mikrofon.";
+      if (event.error === 'not-allowed') {
+        errorHelpMsg = "Izin mikrofon terblokir secara otomatis oleh browser atau iframe. Silakan berikan izin mikrofon pada peramban/browser Kakak di bar atas, atau buka aplikasi SmartRW AI langsung di tab baru (klik tombol panah keluar di kanan atas preview) untuk mengaktifkan mikrofon secara penuh! 😊🎤";
+      } else if (event.error === 'no-speech') {
+        errorHelpMsg = "Suara Kakak kurang terdengar atau tidak terdeteksi nih. Yuk coba bicara lagi lebih dekat ke mikrofon ya! 😉🎙️";
+      } else if (event.error === 'network') {
+        errorHelpMsg = "Gagal memproses suara karena masalah jaringan. Mohon coba beberapa saat lagi ya Kak! ⚡";
+      } else if (event.error === 'aborted') {
+        errorHelpMsg = "Perekaman suara dibatalkan.";
+      }
+      
+      setMessages(prev => [...prev, { role: 'bot', text: errorHelpMsg }]);
     };
 
     recognition.onend = () => {

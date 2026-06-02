@@ -202,6 +202,7 @@ import {
 // } from "./data/initialData";
 import { getPlanFeatures, generateSuratHTML, canCreate, canUpdate, canDelete, canView } from "./lib/appUtils";
 import { PLAN_FEATURES, PLAN_ALIASES, ADDON_CONFIG } from "./constants";
+import CursorVapor from "./components/CursorVapor";
 
 const APP_LOGO = "/logo_rw.png";
 
@@ -1859,6 +1860,7 @@ export default function App() {
     if (activeTab === "etoko") {
        unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", tIds)), snap => setTokoProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
        unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", tIds)), snap => setTokoOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+       unsubs.push(onSnapshot(query(collection(db, "toko_reviews"), where("tenantId", "in", tIds)), snap => setTokoReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
     }
 
     return () => unsubs.forEach(u => u());

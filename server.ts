@@ -422,12 +422,24 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
     if (!error) return "";
     if (typeof error === 'string') return error;
     
-    // Safely collect information from error object
+    let nestedErrorStr = "";
+    if (error.error) {
+      if (typeof error.error === 'string') {
+        nestedErrorStr = error.error;
+      } else {
+        try {
+          nestedErrorStr = JSON.stringify(error.error);
+        } catch (e) {
+          nestedErrorStr = String(error.error);
+        }
+      }
+    }
+
     const parts = [
       error.message,
       error.status,
       error.code,
-      error.error ? (typeof error.error === 'string' ? error.error : JSON.stringify(error.error)) : ""
+      nestedErrorStr
     ];
     
     return parts.filter(Boolean).join(" ");
@@ -437,6 +449,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
     if (!error) return false;
     
     if (error.code === 429 || error.status === "RESOURCE_EXHAUSTED") return true;
+    if (error.error?.code === 429 || error.error?.status === "RESOURCE_EXHAUSTED") return true;
 
     const errorStr = getErrorString(error).toLowerCase();
     return (
@@ -452,6 +465,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
     if (!error) return false;
     
     if (error.code === 503 || error.status === "Service Unavailable" || error.code === 504 || error.status === "Gateway Timeout") return true;
+    if (error.error?.code === 503 || error.error?.code === 504 || error.error?.status === "UNAVAILABLE" || error.error?.status === "Service Unavailable") return true;
 
     const errorStr = getErrorString(error).toLowerCase();
     return (
@@ -459,7 +473,8 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
       errorStr.includes("503") ||
       errorStr.includes("service unavailable") ||
       errorStr.includes("504") ||
-      errorStr.includes("gateway timeout")
+      errorStr.includes("gateway timeout") ||
+      errorStr.includes("unavailable")
     );
   };
 
@@ -509,7 +524,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
 
       try {
         const stream = await aiClient.models.generateContentStream({
-          model: "gemini-flash-latest",
+          model: "gemini-3.5-flash",
           config: {
             systemInstruction: isPrivileged ? ARYA_SYSTEM_INSTRUCTION : AISYAH_SYSTEM_INSTRUCTION,
             temperature: 0.8
@@ -560,7 +575,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
 
       const aiClient = new GoogleGenAI({ apiKey });
       const response = await aiClient.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
         Laporan harus mencakup: 
         1. Ringkasan Keuangan (Saldo Akhir). 
@@ -608,7 +623,7 @@ Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otoma
       Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
       const response = await aiClient.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: prompt
       });
       res.json({ text: response.text || "" });
@@ -641,7 +656,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       const aiClient = new GoogleGenAI({ apiKey });
       const dataPart = base64.includes(',') ? base64.split(',')[1] : base64;
       const response = await aiClient.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: {
           parts: [
             { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi (bisa berupa gambar atau PDF). Ekstrak informasi dari file struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: \\n        {\\n          "tanggal": "2023-10-05",\\n          "nominal": 150000, \\n          "transaksi": "Konsumsi",\\n          "keterangan": "Beli semen",\\n          "tipe": "Keluar",\\n          "nama": "Toko Bangunan XYZ"\\n        }\\n        Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat).\\n        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Return HANYA JSON block.` },

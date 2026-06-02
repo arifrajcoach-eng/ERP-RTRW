@@ -761,7 +761,7 @@ function WargaView(props: WargaViewProps) {
               <Users className="w-8 h-8 text-brand-blue" />
             </div>
             <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">
-              Kelola {getTranslatedLabel("Warga", settings?.themeMode)}
+              DATA WARGA
             </h2>
           </div>
           <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">

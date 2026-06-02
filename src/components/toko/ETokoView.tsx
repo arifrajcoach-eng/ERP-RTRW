@@ -993,6 +993,46 @@ export default function ETokoView({
             </motion.div>
           </div>
         )}
+
+        {/* Review Modal */}
+        {showReviewModal && targetOrderForReview && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 z-[130]"
+            >
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-4">Beri Ulasan</h3>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-8">Produk: {targetOrderForReview.items?.[0]?.name || "Produk"}</p>
+              
+              <div className="flex justify-center gap-2 mb-8">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button key={s} onClick={() => setReviewRating(s)}>
+                    <Star className={`w-8 h-8 ${s <= reviewRating ? "text-yellow-400 fill-yellow-400" : "text-slate-200"}`} />
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                className="w-full h-32 p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold resize-none mb-8 text-sm"
+                placeholder="Ceritakan pengalaman belanja Anda..."
+              />
+
+              <div className="flex gap-4">
+                <button onClick={() => setShowReviewModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs">Batal</button>
+                <button 
+                  onClick={handleSaveReview}
+                  className="flex-[2] py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs shadow-xl shadow-blue-200 animate-pulse hover:animate-none"
+                >
+                  Kirim Ulasan
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );

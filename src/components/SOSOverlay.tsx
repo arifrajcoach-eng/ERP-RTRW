@@ -93,81 +93,7 @@ export default function SOSOverlay({
       }
     }
 
-    const ctx = audioCtxRef.current;
-    if (ctx) {
-      if (ctx.state === "suspended") {
-        ctx.resume().catch((e) => console.warn("Could not resume context:", e));
-      }
-
-      const now = ctx.currentTime;
-      const cycleDuration = 5.0;
-      const maxCycles = 12;
-      const totalDuration = cycleDuration * maxCycles; // 60 seconds
-
-      try {
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const lfo = ctx.createOscillator();
-        const lfoGain = ctx.createGain();
-        const mainGain = ctx.createGain();
-
-        osc1.type = "sawtooth";
-        osc2.type = "sawtooth"; // massive wailing/buzzing acoustic presence
-
-        osc1.frequency.setValueAtTime(550, now);
-        osc2.frequency.setValueAtTime(550, now);
-
-        osc1.detune.setValueAtTime(-15, now);
-        osc2.detune.setValueAtTime(15, now);
-
-        lfo.type = "triangle";
-        lfo.frequency.setValueAtTime(0.2, now); // 5-second pitch sweep cycle (1/5Hz)
-        lfoGain.gain.setValueAtTime(250, now); // sweeping range (+/- 250Hz around central 550Hz)
-
-        // Volume envelope for the entire 60 seconds:
-        mainGain.gain.setValueAtTime(0, now);
-        for (let i = 0; i < maxCycles; i++) {
-          const loopStart = now + i * cycleDuration;
-          if (i === 0) {
-            mainGain.gain.linearRampToValueAtTime(0.95, loopStart + 1.2); // intense sweep volume rise
-          } else {
-            mainGain.gain.setValueAtTime(0.02, loopStart);
-            mainGain.gain.linearRampToValueAtTime(0.95, loopStart + 1.2); // intense sweep volume rise
-          }
-          mainGain.gain.setValueAtTime(0.95, loopStart + 3.8);
-          mainGain.gain.linearRampToValueAtTime(
-            0.02,
-            loopStart + cycleDuration - 0.1,
-          ); // sweep volume fall
-        }
-        mainGain.gain.setValueAtTime(0, now + totalDuration);
-
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc1.frequency);
-        lfoGain.connect(osc2.frequency);
-
-        osc1.connect(mainGain);
-        osc2.connect(mainGain);
-        mainGain.connect(ctx.destination);
-
-        osc1.start(now);
-        osc2.start(now);
-        lfo.start(now);
-
-        osc1.stop(now + totalDuration);
-        osc2.stop(now + totalDuration);
-        lfo.stop(now + totalDuration);
-
-        activePlaybackComponentsRef.current = [{ osc1, osc2, lfo, mainGain }];
-      } catch (e) {
-        console.warn(
-          "Sound play attempt blocked or errored during system scheduling:",
-          e,
-        );
-      }
-    }
-
-    // Now track visual steps and trigger physical device vibration continuously on each cycle
+    // Track visual steps and trigger physical device vibration continuously on each cycle
     loopCountRef.current = 0;
     setSosLoopCount(0);
 
@@ -191,6 +117,66 @@ export default function SOSOverlay({
 
       // Perform physical device vibration
       triggerVibration();
+
+      // Play robust 4.8s siren wail sound for this cycle iteration
+      const ctx = audioCtxRef.current;
+      if (ctx) {
+        if (ctx.state === "suspended") {
+          ctx.resume().catch((e) => console.warn("Could not resume context:", e));
+        }
+
+        if (ctx.state !== "suspended") {
+          try {
+            const now = ctx.currentTime;
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            const mainGain = ctx.createGain();
+
+            osc1.type = "sawtooth";
+            osc2.type = "sawtooth"; // mass wailing presence
+
+            osc1.frequency.setValueAtTime(550, now);
+            osc2.frequency.setValueAtTime(550, now);
+
+            osc1.detune.setValueAtTime(-15, now);
+            osc2.detune.setValueAtTime(15, now);
+
+            lfo.type = "triangle";
+            lfo.frequency.setValueAtTime(0.2, now); // 5-second pitch sweep cycle (1/5Hz)
+            lfoGain.gain.setValueAtTime(250, now); // sweeping range (+/- 250Hz around central 550Hz)
+
+            // Volume envelope for this 4.8-second cycle duration:
+            mainGain.gain.setValueAtTime(0, now);
+            mainGain.gain.linearRampToValueAtTime(0.95, now + 1.2); // intensive sweep volume rise
+            mainGain.gain.setValueAtTime(0.95, now + 3.8);
+            mainGain.gain.linearRampToValueAtTime(0.01, now + 4.8); // sweep volume fall
+            mainGain.gain.setValueAtTime(0, now + 4.9);
+
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc1.frequency);
+            lfoGain.connect(osc2.frequency);
+
+            osc1.connect(mainGain);
+            osc2.connect(mainGain);
+            mainGain.connect(ctx.destination);
+
+            osc1.start(now);
+            osc2.start(now);
+            lfo.start(now);
+
+            osc1.stop(now + 4.9);
+            osc2.stop(now + 4.9);
+            lfo.stop(now + 4.9);
+
+            // Maintain only the current active sweep components to stop instantly if muted
+            activePlaybackComponentsRef.current = [{ osc1, osc2, lfo, mainGain }];
+          } catch (e) {
+            console.warn("Sound play attempt blocked or errored during system scheduling:", e);
+          }
+        }
+      }
 
       loopCountRef.current += 1;
       setSosLoopCount(loopCountRef.current);
