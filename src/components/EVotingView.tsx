@@ -37,6 +37,13 @@ export function EVotingView({
   const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState<any | null>(null);
+  const [localTitle, setLocalTitle] = useState("🗳️ E-DEMOKRASI 26");
+
+  React.useEffect(() => {
+    if (config?.title) {
+      setLocalTitle(config.title);
+    }
+  }, [config?.title]);
 
   const roleUpper = userRole?.toUpperCase() || "";
   const isAdmin =
@@ -66,7 +73,7 @@ export function EVotingView({
     setIsLoading(true);
     try {
       const voteId = `VOTE-${voterId}-${Date.now()}`;
-      await setDoc(doc(db, "evoting_votes", voteId), {
+      await setDoc(doc(db, "voting_votes", voteId), {
         id: voteId,
         voterId,
         candidateId: cand.id,
@@ -76,14 +83,14 @@ export function EVotingView({
       });
 
       // Simple implementation: update candidate local count (demo only)
-      await updateDoc(doc(db, "evoting_candidates", cand.id), {
+      await updateDoc(doc(db, "voting_candidates", cand.id), {
         votes: (cand.votes || 0) + 1,
       });
 
       showNotification("Terima kasih! Suara Anda telah terekam.", "success");
       setShowConfirm(null);
     } catch (err) {
-      handleFirestoreError(err, "vote", "evoting_votes");
+      handleFirestoreError(err, "vote", "voting_votes");
     } finally {
       setIsLoading(false);
     }
@@ -95,9 +102,31 @@ export function EVotingView({
     <div className="max-w-6xl mx-auto pb-20">
       <div className="flex justify-between items-center mb-10">
         <div>
-          <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase italic">
-            🗳️ E-DEMOKRASI 26
-          </h2>
+          {activeView === "admin" && isAdmin ? (
+             <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="text"
+                  className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tighter uppercase italic bg-transparent border-b-2 border-slate-200 outline-none focus:border-brand-blue w-full"
+                  value={localTitle}
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    setLocalTitle(newTitle);
+                    // Debounced update to avoid too many writes
+                    clearTimeout((window as any).titleTimeout);
+                    (window as any).titleTimeout = setTimeout(async () => {
+                      if (!isAdmin) return;
+                      try {
+                        await setDoc(doc(db, "voting_config", config?.id || tenantId), { title: newTitle }, { merge: true });
+                      } catch (err) {}
+                    }, 500);
+                  }}
+                />
+             </div>
+          ) : (
+             <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase italic">
+               {config?.title || "🗳️ E-DEMOKRASI 26"}
+             </h2>
+          )}
           <div className="flex items-center gap-3 mt-1">
             <span
               className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${config?.status === "OPEN" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}
@@ -216,11 +245,43 @@ export function EVotingView({
           ) : (
             <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between mb-10">
-                <h3 className="text-xl font-black text-slate-800 uppercase italic">
+                <h3 className="text-xl font-black text-slate-800 uppercase italic flex-1 mr-4">
                   Manajemen Pemilihan
                 </h3>
+                  <button
+                    onClick={async () => {
+                      if (!isAdmin) return;
+                      const newStatus = config?.status === "OPEN" ? "CLOSED" : "OPEN";
+                      try {
+                        await setDoc(doc(db, "voting_config", config?.id || tenantId), { status: newStatus }, { merge: true });
+                        showNotification(newStatus === "OPEN" ? "Bilik suara dibuka." : "Bilik suara ditutup.", "success");
+                      } catch(e) {
+                         showNotification("Gagal mengubah status", "error");
+                      }
+                    }}
+                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mr-2 ${config?.status === "OPEN" ? "bg-red-500 hover:bg-red-600 text-white shadow-xl shadow-red-200" : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-200"}`}
+                  >
+                    {config?.status === "OPEN" ? "Tutup Voting" : "Buka Voting"}
+                  </button>
                 <button
-                  className="bg-brand-blue text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all"
+                  onClick={() => {
+                    const csvRows = [];
+                    csvRows.push("Kandidat,Nomor Urut,Total Suara,Persentase");
+                    const totalVotes = candidates.reduce((acc, c) => acc + (c.votes || 0), 0);
+                    candidates.forEach(c => {
+                      const pct = totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(1) + "%" : "0%";
+                      csvRows.push(`"${c.name}",${c.number},${c.votes || 0},${pct}`);
+                    });
+                    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", `Hasil_Pemilihan_${config?.title || 'E-Demokrasi'}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="bg-brand-blue text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-blue-200"
                 >
                   Download Hasil Real-time
                 </button>

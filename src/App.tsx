@@ -1889,6 +1889,11 @@ export default function App() {
     if (activeTab === "voting") {
        unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", tIds)), snap => setVotingCandidates(snap.docs.map(d => ({ ...d.data() })))));
        unsubs.push(onSnapshot(doc(db, "voting_config", currentUser?.tenantId || "rw26_berjuang"), snap => snap.exists() && setVotingConfig(snap.data())));
+       if (["ADMIN", "SUPER_ADMIN", "RT", "RW"].includes(currentUser?.role?.toUpperCase())) {
+         unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", tIds)), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+       } else {
+         unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser?.id || "guest")), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+       }
     }
 
     // Booking
@@ -3136,7 +3141,7 @@ export default function App() {
             <div className="text-center px-2">
               <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant leading-none">
                 {currentTenant?.name || settings?.nama_rt ? (
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-blue to-brand-pink uppercase">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-blue to-brand-pink uppercase font-bold">
                     {currentTenant?.name || settings?.nama_rt}
                   </span>
                 ) : (
