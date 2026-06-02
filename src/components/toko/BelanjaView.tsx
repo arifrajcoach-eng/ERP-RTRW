@@ -113,6 +113,8 @@ export default function BelanjaView({
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
   const [activeMainTab, setActiveMainTab] = useState("Home");
+  const [unreadChatsCount, setUnreadChatsCount] = useState(8);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(3);
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
   const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat" | "LiveChat" | "EmailSupport">("Main");
   const [chatMessages, setChatMessages] = useState<Array<{ id: number; text: string; sender: 'user' | 'agent'; time: string }>>([
@@ -215,6 +217,12 @@ export default function BelanjaView({
       if (onBackToMain) onBackToMain();
       return;
     }
+    if (label === "Pesan Chat" || label === "Room Chat") {
+      setUnreadChatsCount(0);
+    }
+    if (label === "Notifikasi") {
+      setUnreadNotifsCount(0);
+    }
     if (["Home", "Inbox", "Transaksi", "Toko Saya", "Akun", "GoPay & Coins", "Cek Kupon", "Bonus", "Pesan Chat", "Room Chat", "Notifikasi", "Pendaftaran Toko", "Toko Saya Aktif"].includes(label)) {
       setActiveMainTab(label);
       if (label === "Toko Saya Aktif") setTokoSubTab("Main");
@@ -293,14 +301,22 @@ export default function BelanjaView({
                 className="relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors cursor-pointer"
               >
                 <MessageCircle size={20} />
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-emerald-600">8</div>
+                {unreadChatsCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-emerald-600">
+                    {unreadChatsCount}
+                  </div>
+                )}
               </div>
               <div 
                 onClick={() => handleQuickLink("Notifikasi")}
                 className="relative p-2 bg-white/10 backdrop-blur-md rounded-xl hover:bg-white/20 transition-colors cursor-pointer"
               >
                 <Bell size={20} />
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-emerald-600">3</div>
+                {unreadNotifsCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-emerald-600">
+                    {unreadNotifsCount}
+                  </div>
+                )}
               </div>
             </div>
          </div>
@@ -2035,9 +2051,11 @@ export default function BelanjaView({
                 </div>
                 <p className="text-xs text-slate-500 truncate font-medium text-slate-800 font-bold">Ya pak, beras premium 5kg ready. Bisa diantar sekarang.</p>
               </div>
-              <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-                8
-              </div>
+              {unreadChatsCount > 0 && (
+                <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                  {unreadChatsCount}
+                </div>
+              )}
             </div>
 
             <div onClick={() => handleQuickLink("Room Chat")} className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors">
@@ -2120,7 +2138,17 @@ export default function BelanjaView({
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between px-2 mb-2">
               <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Notifikasi</h2>
-              <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700">Tandai semua dibaca</button>
+              <button 
+                onClick={() => {
+                  setUnreadNotifsCount(0);
+                  if (showNotification) {
+                    showNotification("Semua notifikasi telah ditandai dibaca.", "success");
+                  }
+                }}
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
+              >
+                Tandai semua dibaca
+              </button>
             </div>
             
             <div className="bg-white rounded-3xl p-4 shadow-sm border-2 border-emerald-500/20 flex items-start gap-4 cursor-pointer hover:bg-slate-50 transition-colors relative overflow-hidden">
