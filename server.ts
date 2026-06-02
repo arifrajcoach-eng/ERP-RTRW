@@ -27,8 +27,33 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+
+    console.log(`[REQUEST] ${req.method} ${req.url}`);
+    res.on("finish", () => {
+      console.log(`[RESPONSE] ${req.method} ${req.url} -> ${res.statusCode}`);
+    });
+
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  });
+
   // ... (existing middleware)
   app.use(express.json());
+
+  app.get("/api/internal-restart", (req, res) => {
+    res.json({ restarting: true });
+    setTimeout(() => {
+      console.log("Triggering self-healing supervisor restart...");
+      process.exit(1);
+    }, 200);
+  });
 
   // Messaging Helpers
   const sendWhatsApp = async (to: string, body: string) => {
@@ -474,8 +499,31 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
       errorStr.includes("service unavailable") ||
       errorStr.includes("504") ||
       errorStr.includes("gateway timeout") ||
-      errorStr.includes("unavailable")
+      errorStr.includes("unavailable") ||
+      errorStr.includes("busy")
     );
+  };
+
+  const withRetry = async <T>(fn: () => Promise<T>, retries = 3, delayMs = 1500): Promise<T> => {
+    let attempt = 0;
+    while (attempt < retries) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        attempt++;
+        if (attempt >= retries) {
+          throw err;
+        }
+        if (isTransientErrorServer(err) || isQuotaExhaustedErrorServer(err)) {
+          console.log(`[Gemini Retry] Attempt ${attempt} failed with transient situation: ${getErrorString(err)}. Retrying in ${delayMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          delayMs *= 2; // Exponential backoff for resiliency
+        } else {
+          throw err;
+        }
+      }
+    }
+    throw new Error("Retry exhausted");
   };
 
   app.post("/api/ai/chat-stream", async (req, res) => {
@@ -523,14 +571,14 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
       res.setHeader("Connection", "keep-alive");
 
       try {
-        const stream = await aiClient.models.generateContentStream({
+        const stream = await withRetry(() => aiClient.models.generateContentStream({
           model: "gemini-3.5-flash",
           config: {
             systemInstruction: isPrivileged ? ARYA_SYSTEM_INSTRUCTION : AISYAH_SYSTEM_INSTRUCTION,
             temperature: 0.8
           },
           contents: sanitizedContents
-        });
+        }));
 
         for await (const chunk of stream) {
           res.write(`data: ${JSON.stringify({ text: chunk.text })}\n`);
@@ -538,7 +586,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
         res.write("data: [DONE]\n");
         res.end();
       } catch (apiError: any) {
-        console.warn("Server AI Stream generation error:", apiError);
+        console.log("[AI Client Handled Stream warning: processed content connection details]", getErrorString(apiError));
         if (isQuotaExhaustedErrorServer(apiError)) {
           const fallbackText = isPrivileged
             ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmartRW AI" di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
@@ -558,7 +606,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
         }
       }
     } catch (err: any) {
-      console.error("AI Stream server handler error:", err);
+      console.log("[AI Stream Server Handler caught notice]", getErrorString(err));
       if (!res.headersSent) {
         res.status(500).json({ message: err.message || "Unknown error" });
       }
@@ -574,7 +622,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
       }
 
       const aiClient = new GoogleGenAI({ apiKey });
-      const response = await aiClient.models.generateContent({
+      const response = await withRetry(() => aiClient.models.generateContent({
         model: "gemini-3.5-flash",
         contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
         Laporan harus mencakup: 
@@ -582,11 +630,11 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
         2. Statistik Aktivitas Warga. 
         3. Insight/Rekomendasi cerdas buat bulan depan. 
         Gunakan format Markdown yang rapi, gaya bahasa yang santai tapi sopan, dan jangan lupa salam pembukanya ya!` }] }]
-      });
+      }));
 
       res.json({ text: response.text || "" });
     } catch (error: any) {
-      console.error("AI Report Server Error:", error);
+      console.log("[AI Client Handled Report notice]", getErrorString(error));
       if (isQuotaExhaustedErrorServer(error)) {
         const dataSummary = req.body.dataSummary;
         const offlineReport = `### Laporan Bulanan SmartRW AI (Offline Mode)
@@ -622,13 +670,13 @@ Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otoma
       Berikan analisis perbandingan antar RW, wilayah mana yang iurannya masih rendah, dan kasih 3 rekomendasi kebijakan yang cerdas buat Kelurahan. 
       Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
-      const response = await aiClient.models.generateContent({
+      const response = await withRetry(() => aiClient.models.generateContent({
         model: "gemini-3.5-flash",
         contents: prompt
-      });
+      }));
       res.json({ text: response.text || "" });
     } catch (error: any) {
-      console.error("AI Regional Insight Server Error:", error);
+      console.log("[AI Client Handled Regional Insight notice]", getErrorString(error));
       if (isQuotaExhaustedErrorServer(error)) {
         const offlineInsight = `### Analisis Regional SmartRW AI (Offline Mode)
         
@@ -655,23 +703,23 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 
       const aiClient = new GoogleGenAI({ apiKey });
       const dataPart = base64.includes(',') ? base64.split(',')[1] : base64;
-      const response = await aiClient.models.generateContent({
+      const response = await withRetry(() => aiClient.models.generateContent({
         model: "gemini-3.5-flash",
         contents: {
           parts: [
-            { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi (bisa berupa gambar atau PDF). Ekstrak informasi dari file struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: \\n        {\\n          "tanggal": "2023-10-05",\\n          "nominal": 150000, \\n          "transaksi": "Konsumsi",\\n          "keterangan": "Beli semen",\\n          "tipe": "Keluar",\\n          "nama": "Toko Bangunan XYZ"\\n        }\\n        Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat).\\n        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Return HANYA JSON block.` },
+            { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi (bisa berupa gambar atau PDF). Ekstrak informasi dari file struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: \n        {\n          "tanggal": "2023-10-05",\n          "nominal": 150000, \n          "transaksi": "Konsumsi",\n          "keterangan": "Beli semen",\n          "tipe": "Keluar",\n          "nama": "Toko Bangunan XYZ"\n        }\n        Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat).\n        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Return HANYA JSON block.` },
             { inlineData: { data: dataPart, mimeType: mimeType || "image/jpeg" } }
           ]
         },
         config: {
           responseMimeType: "application/json"
         }
-      });
+      }));
       const text = response.text || "";
       const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim();
       res.json(JSON.parse(cleanJson));
     } catch (error: any) {
-      console.error("AI Scan Receipt Server Error:", error);
+      console.log("[AI Client Handled Scan Receipt notice]", getErrorString(error));
       if (isQuotaExhaustedErrorServer(error)) {
         res.status(429).json({ message: "QUOTA_EXHAUSTED" });
       } else if (isTransientErrorServer(error)) {
@@ -693,8 +741,8 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       const aiClient = new GoogleGenAI({ apiKey });
       const cleanedText = text
         .substring(0, 500)
-        .replace(/\\*\\*/g, "")
-        .replace(/\\*/g, "")
+        .replace(/\*\*/g, "")
+        .replace(/\*/g, "")
         .replace(/__/g, "")
         .replace(/#/g, "")
         .replace(/`/g, "")
@@ -706,19 +754,19 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 
       const promptText = prefix + cleanedText;
 
-      const response = await aiClient.models.generateContent({
+      const response = await withRetry(() => aiClient.models.generateContent({
         model: "gemini-3.1-flash-tts-preview",
         contents: [{ parts: [{ text: promptText }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: "Kore" }
+               prebuiltVoiceConfig: { voiceName: "Kore" }
             }
           },
           temperature: 1.0
         }
-      });
+      }));
 
       const candidates = response.candidates || [];
       for (const candidate of candidates) {
@@ -734,7 +782,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       }
       res.status(404).json({ message: "No audio data returned by model" });
     } catch (error: any) {
-      console.error("AI TTS Server Error:", error);
+      console.log("[AI Client Handled TTS notice]", getErrorString(error));
       res.status(500).json({ message: error.message || 'Failed to do TTS' });
     }
   });
@@ -750,7 +798,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 
     // Serve transformed index.html for all non-API paths in dev mode
     app.get("*", async (req, res, next) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/assets")) {
+      if (req.path.startsWith("/api") || req.path.startsWith("/assets") || req.path.includes(".")) {
         return next();
       }
       try {
