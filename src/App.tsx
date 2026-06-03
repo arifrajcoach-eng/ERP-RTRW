@@ -1842,12 +1842,21 @@ export default function App() {
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     const tIds = activeTenantIds;
+    // Chunk array to max 10 items for firestore 'in' queries
+    const chunkArray = (arr: any[], size: number) => {
+      return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+        arr.slice(i * size, i * size + size)
+      );
+    };
+    const tIdsChunks = chunkArray(tIds, 10);
     const unsubs: (() => void)[] = [];
 
     // Inventaris
     if (activeTab === "inventaris") {
-      unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", tIds)), (snap) => setInventarisData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
-      unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", tIds)), (snap) => setInventarisLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+      tIdsChunks.forEach(tIds => {
+         unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", tIds)), (snap) => setInventarisData(prev => [...prev.filter(p => !tIds.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))] )));
+         unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", tIds)), (snap) => setInventarisLogs(prev => [...prev.filter(p => !tIds.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))] )));
+      });
     }
 
     // Bank Sampah

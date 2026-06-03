@@ -37,13 +37,19 @@ export function EVotingView({
   const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState<any | null>(null);
-  const [localTitle, setLocalTitle] = useState("🗳️ E-DEMOKRASI 26");
+  const [localTitle, setLocalTitle] = useState("🗳️ E-PEMILU");
+  const [now, setNow] = useState(new Date().getTime());
 
   React.useEffect(() => {
     if (config?.title) {
       setLocalTitle(config.title);
     }
   }, [config?.title]);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date().getTime()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const roleUpper = userRole?.toUpperCase() || "";
   const isAdmin =
@@ -56,6 +62,37 @@ export function EVotingView({
   const voterId = wargaAuth?.nik || currentUser?.uid;
   const userVote = userVotes.find((v) => v.voterId === voterId);
 
+  const isVotingClosed = () => {
+    if (config?.status !== "OPEN") return true;
+    if (config?.closeTime) {
+      if (now > new Date(config.closeTime).getTime()) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const calculateTimeLeftText = () => {
+    if (isVotingClosed()) return "Waktu Habis";
+    if (!config?.closeTime) return "Tak Terbatas";
+    
+    const diff = new Date(config.closeTime).getTime() - now;
+    if (diff <= 0 || isNaN(diff)) return "Waktu Habis";
+    
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff / (1000 * 60)) % 60);
+    return `${h} Jam : ${m} Menit`;
+  };
+
+  const calculateTimeLeftPercentage = () => {
+    if (isVotingClosed() || !config?.closeTime || !config?.openTime) return 0;
+    const total = new Date(config.closeTime).getTime() - new Date(config.openTime).getTime();
+    const current = now - new Date(config.openTime).getTime();
+    if (total <= 0 || isNaN(total) || isNaN(current)) return 0;
+    const pct = ((total - current) / total) * 100;
+    return Math.max(0, Math.min(100, pct));
+  };
+  
   const handleVote = async (cand: any) => {
     if (!voterId) {
       showNotification("Sistem Identitas Error. Silakan Login Ulang.", "error");
@@ -65,8 +102,8 @@ export function EVotingView({
       showNotification("Anda sudah memberikan suara di pemilihan ini.", "error");
       return;
     }
-    if (config?.status !== "OPEN") {
-      showNotification("Pemilihan belum dibuka atau sudah berakhir.", "error");
+    if (isVotingClosed()) {
+      showNotification("Pemilihan belum dibuka atau sudah berkahir.", "error");
       return;
     }
 
@@ -124,17 +161,17 @@ export function EVotingView({
              </div>
           ) : (
              <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase italic">
-               {config?.title || "🗳️ E-DEMOKRASI 26"}
+               {config?.title || "🗳️ E-PEMILU"}
              </h2>
           )}
           <div className="flex items-center gap-3 mt-1">
             <span
-              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${config?.status === "OPEN" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}
+              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${!isVotingClosed() ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}
             >
-              {config?.status === "OPEN" ? "● Voting Dibuka" : "● Voting Selesai"}
+              {!isVotingClosed() ? "● Voting Dibuka" : "● Voting Selesai"}
             </span>
             <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">
-              Digital Secure Voting System
+              Digital Voting
             </span>
           </div>
         </div>
@@ -231,7 +268,7 @@ export function EVotingView({
 
                         <button
                           onClick={() => setShowConfirm(cand)}
-                          disabled={config?.status !== "OPEN"}
+                          disabled={isVotingClosed()}
                           className="w-full py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-600 transition-all flex items-center justify-center gap-2 group active:scale-95 disabled:grayscale"
                         >
                           Pilih Kandidat <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -244,47 +281,67 @@ export function EVotingView({
             </>
           ) : (
             <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
-              <div className="flex items-center justify-between mb-10">
-                <h3 className="text-xl font-black text-slate-800 uppercase italic flex-1 mr-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+                <h3 className="text-xl font-black text-slate-800 uppercase italic flex-1">
                   Manajemen Pemilihan
                 </h3>
-                  <button
-                    onClick={async () => {
-                      if (!isAdmin) return;
-                      const newStatus = config?.status === "OPEN" ? "CLOSED" : "OPEN";
-                      try {
-                        await setDoc(doc(db, "voting_config", config?.id || tenantId), { status: newStatus }, { merge: true });
-                        showNotification(newStatus === "OPEN" ? "Bilik suara dibuka." : "Bilik suara ditutup.", "success");
-                      } catch(e) {
-                         showNotification("Gagal mengubah status", "error");
-                      }
-                    }}
-                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mr-2 ${config?.status === "OPEN" ? "bg-red-500 hover:bg-red-600 text-white shadow-xl shadow-red-200" : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-200"}`}
-                  >
-                    {config?.status === "OPEN" ? "Tutup Voting" : "Buka Voting"}
-                  </button>
-                <button
-                  onClick={() => {
-                    const csvRows = [];
-                    csvRows.push("Kandidat,Nomor Urut,Total Suara,Persentase");
-                    const totalVotes = candidates.reduce((acc, c) => acc + (c.votes || 0), 0);
-                    candidates.forEach(c => {
-                      const pct = totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(1) + "%" : "0%";
-                      csvRows.push(`"${c.name}",${c.number},${c.votes || 0},${pct}`);
-                    });
-                    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-                    const encodedUri = encodeURI(csvContent);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", `Hasil_Pemilihan_${config?.title || 'E-Demokrasi'}.csv`);
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  className="bg-brand-blue text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-blue-200"
-                >
-                  Download Hasil Real-time
-                </button>
+                <div className="flex flex-col items-end gap-2 text-right">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="datetime-local"
+                      className="px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:border-brand-blue"
+                      value={config?.closeTime || ""}
+                      onChange={async (e) => {
+                        try {
+                           await setDoc(doc(db, "voting_config", config?.id || tenantId), { closeTime: e.target.value }, { merge: true });
+                           showNotification("Waktu tutup otomatis diperbarui", "success");
+                        } catch(err) {}
+                      }}
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!isAdmin) return;
+                        const newStatus = config?.status === "OPEN" ? "CLOSED" : "OPEN";
+                        const updateData: any = { status: newStatus };
+                        if (newStatus === "OPEN") {
+                          updateData.openTime = new Date().toISOString();
+                        }
+                        try {
+                          await setDoc(doc(db, "voting_config", config?.id || tenantId), updateData, { merge: true });
+                          showNotification(newStatus === "OPEN" ? "Bilik suara dibuka." : "Bilik suara ditutup.", "success");
+                        } catch(e) {
+                          showNotification("Gagal mengubah status", "error");
+                        }
+                      }}
+                      className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${config?.status === "OPEN" ? "bg-red-500 hover:bg-red-600 text-white shadow-xl shadow-red-200" : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-200"}`}
+                    >
+                      {config?.status === "OPEN" ? "Tutup Voting" : "Buka Voting"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const csvRows = [];
+                        csvRows.push("Kandidat,Nomor Urut,Total Suara,Persentase");
+                        const totalVotes = candidates.reduce((acc, c) => acc + (c.votes || 0), 0);
+                        candidates.forEach(c => {
+                          const pct = totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(1) + "%" : "0%";
+                          csvRows.push(`"${c.name}",${c.number},${c.votes || 0},${pct}`);
+                        });
+                        const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+                        const encodedUri = encodeURI(csvContent);
+                        const link = document.createElement("a");
+                        link.setAttribute("href", encodedUri);
+                        link.setAttribute("download", `Hasil_Pemilihan_${config?.title || 'E-PEMILU'}.csv`);
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="bg-brand-blue text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-blue-200"
+                    >
+                      Download Hasil Real-time
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Atur waktu tutup otomatis</span>
+                </div>
               </div>
 
               <div className="space-y-6">
@@ -362,10 +419,10 @@ export function EVotingView({
                 <div>
                   <div className="flex justify-between text-[10px] font-black uppercase mb-2">
                     <span className="opacity-50">Waktu Tersisa</span>
-                    <span className="text-red-400">24 Jam : 12 Menit</span>
+                    <span className="text-red-400">{calculateTimeLeftText()}</span>
                   </div>
                   <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-red-400 w-[40%]"></div>
+                    <div className="h-full bg-red-400" style={{ width: `${calculateTimeLeftPercentage()}%` }}></div>
                   </div>
                 </div>
               </div>
