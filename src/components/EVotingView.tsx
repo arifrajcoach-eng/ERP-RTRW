@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { CandidateManagementView } from "./CandidateManagementView";
 
 export function EVotingView({
   userRole,
@@ -34,6 +35,7 @@ export function EVotingView({
   showNotification: any;
 }) {
   const [activeView, setActiveView] = useState<"vote" | "admin">("vote");
+  const [activeAdminTab, setActiveAdminTab] = useState<"stats" | "candidates" | "settings">("stats");
   const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState<any | null>(null);
@@ -47,7 +49,7 @@ export function EVotingView({
   }, [config?.title]);
 
   React.useEffect(() => {
-    const timer = setInterval(() => setNow(new Date().getTime()), 60000);
+    const timer = setInterval(() => setNow(new Date().getTime()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -58,6 +60,20 @@ export function EVotingView({
     roleUpper === "OWNER" ||
     roleUpper === "RW" ||
     roleUpper === "RT";
+
+  React.useEffect(() => {
+    if (isAdmin && config?.status === "OPEN" && config?.closeTime) {
+      if (now > new Date(config.closeTime).getTime()) {
+        const updateAutoClose = async () => {
+          try {
+            await setDoc(doc(db, "voting_config", config?.id || tenantId), { status: "CLOSED" }, { merge: true });
+            if (showNotification) showNotification("Voting otomatis ditutup sesuai batas waktu", "success");
+          } catch(e) {}
+        };
+        updateAutoClose();
+      }
+    }
+  }, [now, config?.status, config?.closeTime, config?.id, isAdmin, tenantId, showNotification]);
 
   const voterId = wargaAuth?.nik || currentUser?.uid;
   const userVote = userVotes.find((v) => v.voterId === voterId);
@@ -281,68 +297,126 @@ export function EVotingView({
             </>
           ) : (
             <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-                <h3 className="text-xl font-black text-slate-800 uppercase italic flex-1">
-                  Manajemen Pemilihan
-                </h3>
-                <div className="flex flex-col items-end gap-2 text-right">
-                  <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-6">
+                <button
+                  onClick={() => setActiveAdminTab("stats")}
+                  className={`px-4 py-2 rounded-lg text-xs font-black ${
+                    activeAdminTab === "stats" ? "bg-slate-200" : "hover:bg-slate-100"
+                  }`}
+                >
+                  Statistik
+                </button>
+                <button
+                  onClick={() => setActiveAdminTab("candidates")}
+                  className={`px-4 py-2 rounded-lg text-xs font-black ${
+                    activeAdminTab === "candidates" ? "bg-slate-200" : "hover:bg-slate-100"
+                  }`}
+                >
+                  Manajemen Kandidat
+                </button>
+                <button
+                  onClick={() => setActiveAdminTab("settings")}
+                  className={`px-4 py-2 rounded-lg text-xs font-black ${
+                    activeAdminTab === "settings" ? "bg-slate-200" : "hover:bg-slate-100"
+                  }`}
+                >
+                  Pengaturan
+                </button>
+              </div>
+
+              {activeAdminTab === "candidates" ? (
+                <CandidateManagementView
+                  tenantId={tenantId}
+                  candidates={candidates}
+                  showNotification={showNotification}
+                  handleFileUpload={handleFileUpload}
+                />
+              ) : activeAdminTab === "settings" ? (
+                <div className="space-y-6">
+                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Judul Pemilihan</label>
                     <input
-                      type="datetime-local"
-                      className="px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:border-brand-blue"
-                      value={config?.closeTime || ""}
-                      onChange={async (e) => {
-                        try {
-                           await setDoc(doc(db, "voting_config", config?.id || tenantId), { closeTime: e.target.value }, { merge: true });
-                           showNotification("Waktu tutup otomatis diperbarui", "success");
-                        } catch(err) {}
+                      type="text"
+                      className="w-full p-3 text-lg font-bold text-slate-800 border border-slate-200 rounded-lg outline-none focus:border-brand-blue"
+                      value={localTitle}
+                      onChange={(e) => {
+                        setLocalTitle(e.target.value);
+                        clearTimeout((window as any).titleTimeout);
+                        (window as any).titleTimeout = setTimeout(async () => {
+                          try { await setDoc(doc(db, "voting_config", config?.id || tenantId), { title: e.target.value }, { merge: true }); } catch (err) {}
+                        }, 500);
                       }}
                     />
-                    <button
-                      onClick={async () => {
-                        if (!isAdmin) return;
-                        const newStatus = config?.status === "OPEN" ? "CLOSED" : "OPEN";
-                        const updateData: any = { status: newStatus };
-                        if (newStatus === "OPEN") {
-                          updateData.openTime = new Date().toISOString();
-                        }
-                        try {
-                          await setDoc(doc(db, "voting_config", config?.id || tenantId), updateData, { merge: true });
-                          showNotification(newStatus === "OPEN" ? "Bilik suara dibuka." : "Bilik suara ditutup.", "success");
-                        } catch(e) {
-                          showNotification("Gagal mengubah status", "error");
-                        }
-                      }}
-                      className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${config?.status === "OPEN" ? "bg-red-500 hover:bg-red-600 text-white shadow-xl shadow-red-200" : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-200"}`}
-                    >
-                      {config?.status === "OPEN" ? "Tutup Voting" : "Buka Voting"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        const csvRows = [];
-                        csvRows.push("Kandidat,Nomor Urut,Total Suara,Persentase");
-                        const totalVotes = candidates.reduce((acc, c) => acc + (c.votes || 0), 0);
-                        candidates.forEach(c => {
-                          const pct = totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(1) + "%" : "0%";
-                          csvRows.push(`"${c.name}",${c.number},${c.votes || 0},${pct}`);
-                        });
-                        const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-                        const encodedUri = encodeURI(csvContent);
-                        const link = document.createElement("a");
-                        link.setAttribute("href", encodedUri);
-                        link.setAttribute("download", `Hasil_Pemilihan_${config?.title || 'E-PEMILU'}.csv`);
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                      }}
-                      className="bg-brand-blue text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-blue-200"
-                    >
-                      Download Hasil Real-time
-                    </button>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Atur waktu tutup otomatis</span>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Deadline (Waktu Tutup)</label>
+                      <input
+                        type="datetime-local"
+                        className="w-full p-3 text-xs border border-slate-200 rounded-lg outline-none focus:border-brand-blue"
+                        value={config?.closeTime || ""}
+                        onChange={async (e) => {
+                          try {
+                             await setDoc(doc(db, "voting_config", config?.id || tenantId), { closeTime: e.target.value }, { merge: true });
+                             showNotification("Waktu tutup otomatis diperbarui", "success");
+                          } catch(err) {}
+                        }}
+                      />
+                    </div>
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-center">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Status Bilik</label>
+                      <button
+                        onClick={async () => {
+                          const newStatus = config?.status === "OPEN" ? "CLOSED" : "OPEN";
+                          const updateData: any = { status: newStatus };
+                          if (newStatus === "OPEN") {
+                            updateData.openTime = new Date().toISOString();
+                          }
+                          try {
+                            await setDoc(doc(db, "voting_config", config?.id || tenantId), updateData, { merge: true });
+                            showNotification(newStatus === "OPEN" ? "Bilik suara dibuka." : "Bilik suara ditutup.", "success");
+                          } catch(e) {
+                            showNotification("Gagal mengubah status", "error");
+                          }
+                        }}
+                        className={`w-full p-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${config?.status === "OPEN" ? "bg-red-500 hover:bg-red-600 text-white" : "bg-emerald-500 hover:bg-emerald-600 text-white"}`}
+                      >
+                        {config?.status === "OPEN" ? "Tutup Voting" : "Buka Voting"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const csvRows = [];
+                      csvRows.push("Kandidat,Nomor Urut,Total Suara,Persentase");
+                      const totalVotes = candidates.reduce((acc, c) => acc + (c.votes || 0), 0);
+                      candidates.forEach(c => {
+                        const pct = totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(1) + "%" : "0%";
+                        csvRows.push(`"${c.name}",${c.number},${c.votes || 0},${pct}`);
+                      });
+                      const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+                      const encodedUri = encodeURI(csvContent);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", encodedUri);
+                      link.setAttribute("download", `Hasil_Pemilihan_${config?.title || 'E-PEMILU'}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="w-full bg-brand-blue text-white px-6 py-4 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all font-bold"
+                  >
+                    Download Hasil CSV
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+                    <h3 className="text-xl font-black text-slate-800 uppercase italic flex-1">
+                      Statistik Perolehan Suara
+                    </h3>
+                  </div>
 
               <div className="space-y-6">
                 {candidates.map((cand) => (
@@ -386,6 +460,8 @@ export function EVotingView({
                   </div>
                 ))}
               </div>
+              </>
+              )}
             </div>
           )}
         </div>

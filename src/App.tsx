@@ -104,6 +104,7 @@ import SOSOverlay from "./components/SOSOverlay";
 import PengaturanView from "./components/PengaturanView";
 import ETokoView from "./components/toko/ETokoView";
 import { EVotingView } from "./components/EVotingView";
+import { DualVotingView } from "./components/DualVotingView";
 import Webcam from "react-webcam";
 import {
   BarChart,
@@ -810,6 +811,13 @@ export default function App() {
                 userData.name = "Bpk. Arif (Super Admin)";
               }
               if (isAdminStatusWrong) needsUpdate = true;
+              
+              // Force Enterprise Plan for Super Admin
+              try {
+                await updateDoc(doc(db, "tenants", "MASTER"), { status: "ENTERPRISE" });
+              } catch (e) {
+                console.warn("Could not force Enterprise plan for Master tenant.", e);
+              }
             }
 
             if (needsUpdate) {
@@ -3816,20 +3824,40 @@ export default function App() {
               setActiveTab={setActiveTab}
             />
           )}
-          {activeTab === "voting" &&
-            (getPlanFeatures(currentTenant).ePemilu ? (
-              <EVotingView
-                userRole={currentUser.role}
-                tenantId={currentUser.tenantId || "rw26_berjuang"}
-                candidates={votingCandidates}
-                config={votingConfig}
-                userVotes={userVotes}
-                currentUser={currentUser}
-                wargaAuth={wargaAuth}
-                handleFirestoreError={handleFirestoreError}
-                handleFileUpload={handleFileUpload}
-                showNotification={showNotification}
-              />
+          {activeTab === "voting" && (
+            isLoadingDB ? (
+              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                Memuat...
+              </div>
+            ) : getPlanFeatures(currentTenant || {}).ePemilu ? (
+              (tenantsData.find(t => t.id === currentTenant?.id)?.parentId || currentTenant?.parentId) ? (
+                <DualVotingView
+                  userRole={currentUser.role}
+                  tenantId={currentUser.tenantId || "rw26_berjuang"}
+                  candidates={votingCandidates}
+                  config={votingConfig}
+                  userVotes={userVotes}
+                  currentUser={currentUser}
+                  wargaAuth={wargaAuth}
+                  handleFirestoreError={handleFirestoreError}
+                  handleFileUpload={handleFileUpload}
+                  showNotification={showNotification}
+                  tenantsData={tenantsData}
+                />
+              ) : (
+                <EVotingView
+                  userRole={currentUser.role}
+                  tenantId={currentUser.tenantId || "rw26_berjuang"}
+                  candidates={votingCandidates}
+                  config={votingConfig}
+                  userVotes={userVotes}
+                  currentUser={currentUser}
+                  wargaAuth={wargaAuth}
+                  handleFirestoreError={handleFirestoreError}
+                  handleFileUpload={handleFileUpload}
+                  showNotification={showNotification}
+                />
+              )
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -3849,7 +3877,8 @@ export default function App() {
                   Upgrade Paket
                 </button>
               </div>
-            ))}
+            )
+          )}
           {activeTab === "etoko" && (
             <ETokoView
               userRole={currentUser.role}
