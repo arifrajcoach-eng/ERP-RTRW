@@ -240,7 +240,7 @@ export function IuranView({
             <div class="status" style="color: ${trx.status === 'Lunas' ? '#10b981' : '#f59e0b'}">${trx.status}</div>
           </div>
           <div class="footer">
-            <p>Terima kasih telah melakukan pembayaran tepat waktu.<br/>Dokumen ini sah dihasilkan secara elektronik oleh Sistem SmartRW.</p>
+            <p>Terima kasih telah melakukan pembayaran tepat waktu.<br/>Dokumen ini sah dihasilkan secara elektronik oleh Sistem SmaRtRw.</p>
           </div>
           <script>window.onload = () => { window.print(); window.close(); }</script>
         </body>

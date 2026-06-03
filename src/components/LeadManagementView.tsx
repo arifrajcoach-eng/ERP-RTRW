@@ -227,7 +227,7 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `Tulis pesan WhatsApp follow-up profesional dan ramah untuk calon klien aplikasi SmartRW. PIC bernama ${lead.namaPIC} dari area ${lead.name} (${lead.city || 'Indonesia'}). Dia baru saja mendaftar Paket Gratis/Trial. Tujuannya adalah menanyakan kabar, apakah ada kesulitan saat mencoba, dan menawarkan bantuan demo fitur premium. Gunakan bahasa Indonesia yang sopan namun akrab.`
+          prompt: `Tulis pesan WhatsApp follow-up profesional dan ramah untuk calon klien aplikasi SmaRtRw. PIC bernama ${lead.namaPIC} dari area ${lead.name} (${lead.city || 'Indonesia'}). Dia baru saja mendaftar Paket Gratis/Trial. Tujuannya adalah menanyakan kabar, apakah ada kesulitan saat mencoba, dan menawarkan bantuan demo fitur premium. Gunakan bahasa Indonesia yang sopan namun akrab.`
         })
       });
       
@@ -236,7 +236,7 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
       setSelectedLead(lead);
     } catch (err) {
       console.error(err);
-      setAiMessage("Halo Pak/Bu " + lead.namaPIC + ", saya dari SmartRW AI ingin menanyakan bagaimana pengalaman Bapak/Ibu menggunakan SmartRW di " + lead.name + "? Apakah ada yang bisa kami bantu?");
+      setAiMessage("Halo Pak/Bu " + lead.namaPIC + ", saya dari SmaRtRw AI ingin menanyakan bagaimana pengalaman Bapak/Ibu menggunakan SmaRtRw di " + lead.name + "? Apakah ada yang bisa kami bantu?");
       setSelectedLead(lead);
     } finally {
       setIsGenerating(false);

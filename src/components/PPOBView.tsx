@@ -123,7 +123,7 @@ export function PPOBView({
         status: 'Lunas',
         createdAt: new Date().toISOString(),
         userId: payload.userId,
-        buktiUrl: 'Sistem PPOB SmartRW',
+        buktiUrl: 'Sistem PPOB SmaRtRw',
         method: 'Saldo Digital'
       };
       await setDoc(doc(db, 'keuangan', keuanganId), keuanganPayload);

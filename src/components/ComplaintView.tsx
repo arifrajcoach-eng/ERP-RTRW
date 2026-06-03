@@ -108,7 +108,7 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
             </div>
             
             <div class="mt-12 text-[8px] text-slate-400 text-center border-t pt-4">
-              Dokumen ini dicetak secara digital melalui Sistem SmartRW dan sah sebagai bukti administrasi internal.
+              Dokumen ini dicetak secara digital melalui Sistem SmaRtRw dan sah sebagai bukti administrasi internal.
             </div>
           </div>
           <script>

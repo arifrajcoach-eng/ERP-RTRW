@@ -332,7 +332,7 @@ export function KasView({
 
     // Header
     doc.setFontSize(16);
-    doc.text(settings.nama_organisasi || "SmartRW AI", 105, 20, {
+    doc.text(settings.nama_organisasi || "SmaRtRw AI", 105, 20, {
       align: "center",
     });
     doc.setFontSize(10);

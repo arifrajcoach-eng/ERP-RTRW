@@ -142,7 +142,7 @@ export default function CommandPalette({ onNavigate, isOpen, setIsOpen, themeMod
                   <span className="flex items-center gap-1.5"><kbd className="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-700 dark:text-slate-300 font-sans">↑</kbd> <kbd className="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-700 dark:text-slate-300 font-sans">↓</kbd> Navigasi navigasi</span>
                   <span className="flex items-center gap-1.5"><kbd className="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-700 dark:text-slate-300 font-sans">esc</kbd> Tutup</span>
                 </div>
-                <span className="flex items-center text-brand-blue opacity-80"><Shield className="w-3.5 h-3.5 mr-1" /> SmartRW Pro Max Engine</span>
+                <span className="flex items-center text-brand-blue opacity-80"><Shield className="w-3.5 h-3.5 mr-1" /> SmaRtRw Pro Max Engine</span>
               </div>
             </motion.div>
           </div>

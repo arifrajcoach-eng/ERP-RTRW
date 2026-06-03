@@ -218,7 +218,7 @@ export function RekomendasiHargaView({
         format: "a4",
       });
 
-      const namaOrganisasi = getSetting("nama_organisasi") || "SmartRW AI";
+      const namaOrganisasi = getSetting("nama_organisasi") || "SmaRtRw AI";
       const alamat = getSetting("alamat") || "Wilayah Pengurus RT / RW";
 
       // Design color palette

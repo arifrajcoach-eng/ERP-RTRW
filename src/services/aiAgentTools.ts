@@ -234,13 +234,36 @@ export async function getWargaActivitySummary(tenantId: string) {
 }
 
 // 11. ACTIONS (FOR AI TOOL CALLING)
-export async function createSurat(data: { tenantId: string, pemohon: string, nik: string, noKK: string, keperluan: string, jenisSurat?: string, nomorHp?: string }) {
+export async function createSurat(data: { 
+  tenantId: string, 
+  pemohon: string, 
+  nik: string, 
+  noKK: string, 
+  kk?: string,
+  keperluan: string, 
+  jenisSurat?: string, 
+  jenis?: string,
+  nomorHp?: string,
+  userId?: string | null,
+  authUid?: string | null,
+  rt?: string,
+  rw?: string
+}) {
   try {
+    const finalRt = data.rt || '01';
+    const finalRw = data.rw || '26';
     const docRef = await addDoc(collection(db, 'surat'), {
       ...data,
+      rt: finalRt,
+      rw: finalRw,
+      jenis: data.jenisSurat || 'Pengantar',
       jenisSurat: data.jenisSurat || 'Pengantar',
-      status: 'PENDING',
-      createdAt: new Date()
+      keperluan: data.keperluan,
+      keterangan: data.keperluan,
+      status: 'Menunggu Persetujuan RT',
+      tanggal: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      nomorSurat: `${Math.floor(Math.random() * 999).toString().padStart(3, '0')}/RT.${finalRt}/RW.${finalRw}/${new Date().getFullYear()}`
     });
     return { success: true, id: docRef.id };
   } catch (e) {

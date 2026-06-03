@@ -361,7 +361,7 @@ export default function TenantsView({
               Manajemen Tenant (Client RW/RT)
             </h3>
             <p className="text-sm text-slate-500">
-              Ekosistem Multi-Tenant SmartRW AI System.
+              Ekosistem Multi-Tenant SmaRtRw AI System.
             </p>
           </div>
         </div>

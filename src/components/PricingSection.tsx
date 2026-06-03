@@ -31,7 +31,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, hi
             Promo Terbatas
           </div>
           <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-2 font-['Georgia']">
-            Pilih Paket <span className="bg-gradient-to-r from-sky-500 via-blue-700 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span> <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)]">AI</span>
+            Pilih Paket <span className="bg-gradient-to-r from-sky-500 via-blue-700 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmaRtRw</span> <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)]">AI</span>
           </h2>
           <p className="text-slate-500 text-sm max-w-lg mx-auto leading-relaxed">
             Solusi digitalisasi RT/RW tercanggih di Indonesia. <br className="hidden md:block" />
@@ -135,7 +135,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, hi
                     if (onSelectPlan) {
                       onSelectPlan(plan.id);
                     } else {
-                      window.open(`https://wa.me/087726741143?text=Halo%20Admin,%20saya%20tertarik%20dengan%20Paket%20${plan.name}%20SmartRW%20AI`, '_blank');
+                      window.open(`https://wa.me/087726741143?text=Halo%20Admin,%20saya%20tertarik%20dengan%20Paket%20${plan.name}%20SmaRtRw%20AI`, '_blank');
                     }
                   }}
                   className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -165,7 +165,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, hi
             </div>
           </div>
           <button 
-            onClick={() => window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20konsultasi%20mengenai%20SmartRW%20AI', '_blank')}
+            onClick={() => window.open('https://wa.me/087726741143?text=Halo%20Admin,%20saya%20ingin%20konsultasi%20mengenai%20SmaRtRw%20AI', '_blank')}
             className="px-8 py-4 bg-brand-blue text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-brand-blue/20 hover:scale-105 transition-all"
           >
             Konsultasi Admin

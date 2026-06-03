@@ -206,7 +206,7 @@ export function SuratView({
                           s.id?.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (activeSubTab === 'berjalan') {
-      return matchesSearch && (s.status === 'Draft' || s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan RW' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan');
+      return matchesSearch && (s.status === 'Draft' || s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan RW' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan' || s.status === 'PENDING' || s.status === 'Pending' || s.status === 'Pending_RT' || s.status === 'PENDING_RT');
     } else {
       return matchesSearch && (s.status === 'Selesai' || s.status === 'Ditolak');
     }
@@ -1233,7 +1233,7 @@ export function SuratView({
                    </div>
                    <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic">
                      Seluruh data yang Anda masukkan harus benar dan sesuai dengan dokumen asli. 
-                     Data akan diproses secara otomatis oleh sistem SmartRW dan diteruskan ke Ketua RT/RW 
+                     Data akan diproses secara otomatis oleh sistem SmaRtRw dan diteruskan ke Ketua RT/RW 
                      untuk verifikasi dan tanda tangan digital. Status dapat dipantau pada menu 
                      <span className="text-blue-600 font-bold ml-1">"Sedang Berjalan"</span>.
                    </p>

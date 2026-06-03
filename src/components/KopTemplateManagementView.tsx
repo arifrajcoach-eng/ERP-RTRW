@@ -153,7 +153,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     printWindow.document.write(`
       <html>
         <head>
-          <title>Uji Coba Cetak Branding - ${formData.nama_rt || 'SmartRW AI'}</title>
+          <title>Uji Coba Cetak Branding - ${formData.nama_rt || 'SmaRtRw AI'}</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');

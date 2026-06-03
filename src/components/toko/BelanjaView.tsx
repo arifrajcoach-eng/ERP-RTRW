@@ -118,7 +118,7 @@ export default function BelanjaView({
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
   const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat" | "LiveChat" | "EmailSupport">("Main");
   const [chatMessages, setChatMessages] = useState<Array<{ id: number; text: string; sender: 'user' | 'agent'; time: string }>>([
-    { id: 1, text: "Halo Bpk. Arif, saya Ratih dari Customer Support E-LAPAK26 (SmartRW AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
+    { id: 1, text: "Halo Bpk. Arif, saya Ratih dari Customer Support E-LAPAK26 (SmaRtRw AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatIsTyping, setChatIsTyping] = useState(false);

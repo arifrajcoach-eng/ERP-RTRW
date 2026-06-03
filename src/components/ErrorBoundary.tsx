@@ -83,7 +83,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       const waNumber = "6287726741143";
       const errorMsg = this.state.error?.message || "Unknown Runtime Error";
       const waText = encodeURIComponent(
-        `Halo Admin SmartRW AI, aplikasi kami mengalami gangguan tak terduga.\n\n` +
+        `Halo Admin SmaRtRw AI, aplikasi kami mengalami gangguan tak terduga.\n\n` +
         `ID Tenant / Nama Wilayah: (Masukkan Nama/ID Anda)\n` +
         `Eror Terdeteksi: ${errorMsg}\n\n` +
         `Mohon dibantu pemeriksaan QC.`
@@ -108,7 +108,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </div>
 
             <p className="text-slate-400 text-sm leading-relaxed mb-8">
-              Terjadi eror tak terduga yang menyebabkan sistem terhenti sementara. Don't worry! Data Anda tetap tersimpan dengan aman di server utama SmartRW AI. Anda dapat memulihkan aplikasi secara mandiri menggunakan langkah di bawah:
+              Terjadi eror tak terduga yang menyebabkan sistem terhenti sementara. Don't worry! Data Anda tetap tersimpan dengan aman di server utama SmaRtRw AI. Anda dapat memulihkan aplikasi secara mandiri menggunakan langkah di bawah:
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mb-8">

@@ -918,7 +918,9 @@ function WargaView(props: WargaViewProps) {
                       </div>
                     </th>
                     <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Profil Identitas</th>
-                    <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Lokasi Rumah</th>
+                    <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Alamat Rumah</th>
+                    <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">RT</th>
+                    <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">RW</th>
                     <th className="py-8 px-6 font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Status & Profesi</th>
                     <th className="py-8 px-8 text-center font-black uppercase text-[11px] text-slate-400 dark:text-slate-500 tracking-widest">Opsi Kelola</th>
                   </tr>
@@ -968,13 +970,24 @@ function WargaView(props: WargaViewProps) {
                       </div>
                     </td>
                     <td className="py-8 px-6">
-                       <div className="flex flex-col gap-2">
-                         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-blue/5 dark:bg-brand-blue/10 text-brand-blue rounded-xl text-[11px] font-black tracking-widest w-fit border border-brand-blue/10">
-                           <MapPin className="w-4 h-4" />
-                           RT {w.rt || '00'} / RW {w.rw || '00'}
+                       <div className="flex flex-col gap-1">
+                         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                           <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                           <p className="text-[12px] font-bold uppercase tracking-wider truncate max-w-[180px]" title={w.alamat || '-'}>
+                             {w.alamat || w.blok || 'LOKASI TIDAK TERIDENTIFIKASI'}
+                           </p>
                          </div>
-                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 max-w-[200px] truncate">{w.alamat || 'LOKASI TIDAK TERIDENTIFIKASI'}</p>
                        </div>
+                    </td>
+                    <td className="py-8 px-6">
+                       <span className="inline-flex items-center justify-center px-4 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-[11px] font-black tracking-wider border border-indigo-100 dark:border-indigo-900/30">
+                         RT {w.rt || '00'}
+                       </span>
+                    </td>
+                    <td className="py-8 px-6">
+                       <span className="inline-flex items-center justify-center px-4 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl text-[11px] font-black tracking-wider border border-blue-100 dark:border-blue-900/30">
+                         RW {w.rw || '00'}
+                       </span>
                     </td>
                     <td className="py-8 px-6">
                        <div className="flex flex-col gap-2.5">
@@ -1132,14 +1145,19 @@ function WargaView(props: WargaViewProps) {
                         </div>
                       </div>
 
-                      {/* Bottom: House Location, Status, Pekerjaan */}
+                      {/* Bottom: House Location, RT, RW, Status, Pekerjaan */}
                       <div className="mt-4 pt-4 border-t border-slate-50 dark:border-slate-800/80 space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Rumah:</span>
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-blue/5 dark:bg-brand-blue/10 text-brand-blue rounded-xl text-[10px] font-black tracking-widest border border-brand-blue/10">
-                            <MapPin className="w-3 h-3" />
-                            RT {w.rt || '00'} / RW {w.rw || '00'}
-                          </div>
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Alamat:</span>
+                          <span className="text-[11px] font-bold text-slate-700 dark:text-slate-305 truncate max-w-[140px] uppercase">{w.alamat || w.blok || '-'}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">RT:</span>
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 rounded-lg text-[10px] font-black tracking-wider border border-indigo-100/30">RT {w.rt || '00'}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">RW:</span>
+                          <span className="px-3 py-1 bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 rounded-lg text-[10px] font-black tracking-wider border border-blue-100/30">RW {w.rw || '00'}</span>
                         </div>
                         
                         <div className="flex items-center justify-between gap-2">

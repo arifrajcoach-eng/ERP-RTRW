@@ -8,10 +8,10 @@ const EMAIL_TEMPLATES = [
   {
     id: 'welcome',
     name: 'Setup & Selamat Datang',
-    subject: 'Selamat Datang di SmartRW - Langkah Awal Aktivasi Portal Anda 🚀',
+    subject: 'Selamat Datang di SmaRtRw - Langkah Awal Aktivasi Portal Anda 🚀',
     body: (name: string, email: string) => `Yth. Pengelola ${name},
 
-Terima kasih telah melakukan registrasi versi Trial Mandiri di portal SmartRW App.
+Terima kasih telah melakukan registrasi versi Trial Mandiri di portal SmaRtRw App.
 
 Akun Administrator Anda telah berhasil diaktifkan:
 - Tenant Portal ID: ${name.toLowerCase().replace(/\s+/g, '-')}
@@ -19,22 +19,22 @@ Akun Administrator Anda telah berhasil diaktifkan:
 - Wilayah Integrasi: Seluruh RT dan RW Anggota
 
 Langkah Selanjutnya:
-1. Masuk ke halaman Dashboard SmartRW Anda.
+1. Masuk ke halaman Dashboard SmaRtRw Anda.
 2. Tambahkan data warga perdana Anda pada menu "Manage Warga".
 3. Ajukan template KOP Surat RT/RW pada menu KOP & Template.
 
 Silakan balas email ini jika Anda memiliki pertanyaan atau kendala selama masa uji coba 14 hari gratis ini.
 
 Salam Hangat,
-Arif Coach - SmartRW Support Team`
+Arif Coach - SmaRtRw Support Team`
   },
   {
     id: 'demo',
     name: 'Undangan Demo Fitur',
-    subject: 'Optimalkan Administrasi Kelurahan Anda dengan SmartRW (Demo Personal) 🎯',
+    subject: 'Optimalkan Administrasi Kelurahan Anda dengan SmaRtRw (Demo Personal) 🎯',
     body: (name: string, email: string) => `Yth. Pengurus ${name},
 
-Kami melihat Anda baru saja menguji coba portal SmartRW untuk mempermudah layanan warga secara digital.
+Kami melihat Anda baru saja menguji coba portal SmaRtRw untuk mempermudah layanan warga secara digital.
 
 Bagaimana impresi awal Anda? Kami ingin mengundang Anda dalam sesi Live Demo singkat (15 menit) lewat Google Meet untuk menunjukkan beberapa fitur unggulan:
 - Integrasi Surat Pengantar Otomatis mandiri oleh Warga
@@ -44,15 +44,15 @@ Bagaimana impresi awal Anda? Kami ingin mengundang Anda dalam sesi Live Demo sin
 Beri tahu kami waktu luang Anda untuk menjadwalkan demo eksklusif ini!
 
 Hormat Kami,
-Tim Hubungan Komunitas - SmartRW`
+Tim Hubungan Komunitas - SmaRtRw`
   },
   {
     id: 'upgrade',
     name: 'Penawaran Upgrade Premium',
-    subject: 'Masa Trial Segera Selesai - Lanjutkan Transformasi Digital SmartRW Premium 💎',
+    subject: 'Masa Trial Segera Selesai - Lanjutkan Transformasi Digital SmaRtRw Premium 💎',
     body: (name: string, email: string) => `Yth. Ketua RW / Admin Pengelola ${name},
 
-Masa uji coba gratis (Trial) portal SmartRW di wilayah Anda akan segera berakhir dalam waktu dekat.
+Masa uji coba gratis (Trial) portal SmaRtRw di wilayah Anda akan segera berakhir dalam waktu dekat.
 
 Agar seluruh data warga, arsip surat menyurat, dan laporan keuangan kas tetap tersimpan aman tanpa gangguan, kami menawarkan opsi Upgrade Paket Pro / Enterprise dengan keunggulan:
 - Kuota Warga Tanpa Batas (Unlimited)
@@ -62,7 +62,7 @@ Agar seluruh data warga, arsip surat menyurat, dan laporan keuangan kas tetap te
 Hubungi WhatsApp Official kami untuk aktivasi kupon diskon 15% perdana Anda.
 
 Terima Kasih,
-SmartRW Enterprise Partnership`
+SmaRtRw Enterprise Partnership`
   }
 ];
 

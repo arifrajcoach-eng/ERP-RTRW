@@ -129,7 +129,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
         rtTarget: 1,
         rwTarget: 26,
         registrationType: 'AUTOMATED_SELF_SERVICE',
-        platformSource: 'SmartRW_WebApp',
+        platformSource: 'SmaRtRw_WebApp',
         onboardingCompleted: false,
         lastAutoFollowUpAt: null,
         autoFollowedUpAfterTwoMonths: false,
@@ -316,7 +316,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-xl font-black text-slate-900 leading-none">Pembayaran Paket</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Lisensi SmartRW AI</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Lisensi SmaRtRw AI</p>
             </div>
             <button onClick={() => setStep(1)} className="p-2.5 bg-slate-50 text-slate-400 hover:text-red-500 rounded-2xl transition-all hover:bg-red-550 hover:rotate-90"><X className="w-5 h-5" /></button>
           </div>
@@ -381,11 +381,11 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
                <div className="space-y-3.5 p-4 bg-amber-50/50 border border-amber-200 rounded-3xl text-left scale-98 transition-all animate-fade-in">
                   <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Panduan Transfer Bank / ATM:</p>
                   <p className="text-[10px] text-slate-600 leading-normal">
-                    Silakan lakukan transfer ke rekening resmi SmartRW AI berikut:<br/>
+                    Silakan lakukan transfer ke rekening resmi SmaRtRw AI berikut:<br/>
                     <strong className="block text-xs font-black text-amber-650 font-mono bg-[#141415] border border-slate-900 px-3 py-2 rounded-xl mt-2 tracking-wider text-center border-dashed">MANDIRI 131-05-26052026-6</strong>
                     <div className="flex justify-between font-semibold font-sans mt-2 text-[10px] text-slate-500">
                       <span>Atas Nama pemilik:</span>
-                      <span className="text-slate-850 font-bold">PT. SmartRW Solusi Indonesia</span>
+                      <span className="text-slate-850 font-bold">PT. SmaRtRw Solusi Indonesia</span>
                     </div>
                   </p>
                   

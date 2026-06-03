@@ -269,7 +269,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       
       let errorHelpMsg = "Maaf, terjadi kesalahan koneksi atau konfigurasi pada speech recognition mikrofon.";
       if (event.error === 'not-allowed') {
-        errorHelpMsg = "Izin mikrofon terblokir secara otomatis oleh browser atau iframe. Silakan berikan izin mikrofon pada peramban/browser Kakak di bar atas, atau buka aplikasi SmartRW AI langsung di tab baru (klik tombol panah keluar di kanan atas preview) untuk mengaktifkan mikrofon secara penuh! 😊🎤";
+        errorHelpMsg = "Izin mikrofon terblokir secara otomatis oleh browser atau iframe. Silakan berikan izin mikrofon pada peramban/browser Kakak di bar atas, atau buka aplikasi SmaRtRw AI langsung di tab baru (klik tombol panah keluar di kanan atas preview) untuk mengaktifkan mikrofon secara penuh! 😊🎤";
       } else if (event.error === 'no-speech') {
         errorHelpMsg = "Suara Kakak kurang terdengar atau tidak terdeteksi nih. Yuk coba bicara lagi lebih dekat ke mikrofon ya! 😉🎙️";
       } else if (event.error === 'network') {
@@ -308,7 +308,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     if (!textToSend.trim() || isLoading) return;
 
     if (usageCount >= weeklyLimit) {
-      setMessages(prev => [...prev, { role: 'bot', text: `Aduh maaf sekali Kakak/Pimpinan! 🫣 Kuota Chat AI Mingguan (${weeklyLimit}x per minggu) untuk Paket ${baseKey === 'TRIAL' ? 'STARTER' : baseKey} Anda sudah habis.\n\nSupaya Kakak/Pimpinan bisa bebas chatingan dengan Chaty tanpa hambatan batas mingguan, silakan lakukan Upgrade Paket dengan klik banner "SmartRW AI" di dashboard utama atau hubungi Tim Support kami via wa.me/6287726741143 ya! Terima kasih banyak atas pengertiannya! 😉✨` }]);
+      setMessages(prev => [...prev, { role: 'bot', text: `Aduh maaf sekali Kakak/Pimpinan! 🫣 Kuota Chat AI Mingguan (${weeklyLimit}x per minggu) untuk Paket ${baseKey === 'TRIAL' ? 'STARTER' : baseKey} Anda sudah habis.\n\nSupaya Kakak/Pimpinan bisa bebas chatingan dengan Chaty tanpa hambatan batas mingguan, silakan lakukan Upgrade Paket dengan klik banner "SmaRtRw AI" di dashboard utama atau hubungi Tim Support kami via wa.me/6287726741143 ya! Terima kasih banyak atas pengertiannya! 😉✨` }]);
       return;
     }
 
@@ -338,16 +338,28 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
 
       const isSensitiveDataAllowed = isPrivileged;
       
-      const filteredContext = isSensitiveDataAllowed ? dataContext : {
-        financial: { total: dataContext?.financial?.total }, // Keep only summary, hide details
-        health: dataContext?.health,
-        activity: dataContext?.activity,
-        wasteBank: dataContext?.wasteBank,
-        guestBook: dataContext?.guestBook,
-        letters: dataContext?.letters,
-        eLapak: dataContext?.eLapak,
-        election: dataContext?.election,
-        // Excluded: inventory, registrations, sensitive financial details
+      const filteredContext = {
+        ...(isSensitiveDataAllowed ? dataContext : {
+          financial: { total: dataContext?.financial?.total }, // Keep only summary, hide details
+          health: dataContext?.health,
+          activity: dataContext?.activity,
+          wasteBank: dataContext?.wasteBank,
+          guestBook: dataContext?.guestBook,
+          letters: dataContext?.letters,
+          eLapak: dataContext?.eLapak,
+          election: dataContext?.election,
+          // Excluded: inventory, registrations, sensitive financial details
+        }),
+        currentUserProfile: {
+          nama: currentUser?.nama || currentUser?.name || 'Warga',
+          nik: currentUser?.nik || currentUser?.nikMapping || '-',
+          kk: currentUser?.kk || currentUser?.noKK || '-',
+          alamat: currentUser?.alamat || '-',
+          rt: currentUser?.rt || '01',
+          rw: currentUser?.rw || '26',
+          role: currentUser?.role || 'Warga',
+          terverifikasi: currentUser?.terverifikasi || false
+        }
       };
 
       const stream = await chatWithAI({
@@ -402,8 +414,23 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
             const cleanText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
             const jsonAction = JSON.parse(cleanText);
             if (jsonAction.action === 'createSurat') {
-              const res = await createSurat({ ...jsonAction.params, tenantId });
-              const msg = res.success ? (jsonAction.text || `Alhamdulillah kak, ${jsonAction.params?.jenisSurat || 'surat'} berhasil dibuat (ID: ${res.id}).`) : 'Maaf kak, ada kendala saat membuat surat.';
+              const params = jsonAction.params || {};
+              const res = await createSurat({ 
+                pemohon: params.pemohon || currentUser?.nama || currentUser?.name || 'Warga',
+                nik: params.nik || currentUser?.nik || '-',
+                noKK: params.noKK || params.nokk || params.kk || currentUser?.kk || currentUser?.noKK || '-',
+                kk: params.noKK || params.nokk || params.kk || currentUser?.kk || currentUser?.noKK || '-',
+                keperluan: params.keperluan || 'Dokumen Administrasi',
+                jenisSurat: params.jenisSurat || 'Pengantar',
+                jenis: params.jenisSurat || params.jenis || 'Pengantar',
+                nomorHp: params.nomorHp || params.phone || currentUser?.phone || currentUser?.nomorHp || '-',
+                tenantId,
+                userId: currentUser?.uid || currentUser?.id_user || currentUser?.id || null,
+                authUid: currentUser?.uid || currentUser?.id_user || currentUser?.id || null,
+                rt: params.rt || currentUser?.rt || '01',
+                rw: params.rw || currentUser?.rw || '26'
+              });
+              const msg = res.success ? (jsonAction.text || `Alhamdulillah kak, ${params.jenisSurat || 'surat'} berhasil dibuat (ID: ${res.id}).`) : 'Maaf kak, ada kendala saat membuat surat.';
               setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
               handleSpeak(msg);
             } else if (jsonAction.action === 'registerELapak') {
@@ -446,8 +473,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
           JSON.stringify(error).includes('RESOURCE_EXHAUSTED')
         ) {
           errorMsg = isPrivileged
-            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmartRW AI" di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
-            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmartRW AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
+            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmaRtRw AI" di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
+            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmaRtRw AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
         }
 
         setMessages(prev => [...prev, { role: 'bot', text: errorMsg }]);

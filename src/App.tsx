@@ -1896,7 +1896,7 @@ export default function App() {
     const unsubs: (() => void)[] = [];
 
     // Surat
-    if (activeTab === "surat" || activeTab === "dashboard") {
+    if (activeTab === "surat" || activeTab === "dashboard" || activeTab === "ai-bot") {
        unsubs.push(onSnapshot(query(collection(db, "surat"), where("tenantId", "in", tIds), limit(500)), snap => {
           setSuratData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
        }));
@@ -1914,12 +1914,12 @@ export default function App() {
     }
 
     // Booking
-    if (activeTab === "booking" || activeTab === "dashboard") {
+    if (activeTab === "booking" || activeTab === "dashboard" || activeTab === "ai-bot") {
        unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", tIds)), snap => setBookingsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
     }
 
     // Complaints
-    if (activeTab === "complaint" || activeTab === "dashboard") {
+    if (activeTab === "complaint" || activeTab === "dashboard" || activeTab === "ai-bot") {
        unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", tIds)), snap => setComplaintsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
     }
 
@@ -2773,7 +2773,7 @@ export default function App() {
           />
         </div>
         <h2 className="text-xl font-black text-slate-800 tracking-tight font-['Georgia'] mb-2">
-          <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+          <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmaRtRw</span>
           {' '}
           <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
         </h2>
@@ -2893,7 +2893,7 @@ export default function App() {
             </div>
 
             <p className="text-slate-400 text-sm leading-relaxed mb-8">
-              Uji coba wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah melewati tenggat 60 hari. Sesuai dengan kebijakan privasi dan pembersihan data berkala SmartRW AI, database wilayah Anda <strong>telah dihapus secara permanen</strong> dari server kami.
+              Uji coba wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah melewati tenggat 60 hari. Sesuai dengan kebijakan privasi dan pembersihan data berkala SmaRtRw AI, database wilayah Anda <strong>telah dihapus secara permanen</strong> dari server kami.
             </p>
 
             <div className="w-full bg-slate-950/40 border border-slate-800/60 p-5 rounded-2xl mb-8 text-left space-y-2">
@@ -2910,7 +2910,7 @@ export default function App() {
             {/* Action Button */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               <button
-                onClick={() => window.open(`https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20terbawa%20penghapusan%20data%20karena%20telat%20upgrade%20untuk%20tenant%20${currentTenant.id}.%20Apakah%20kami%20bisa%20daftar%20baru?`, "_blank")}
+                onClick={() => window.open(`https://wa.me/6287726741143?text=Halo%20Admin%20SmaRtRw%20AI,%20kami%20terbawa%20penghapusan%20data%20karena%20telat%20upgrade%20untuk%20tenant%20${currentTenant.id}.%20Apakah%20kami%20bisa%20daftar%20baru?`, "_blank")}
                 className="flex-1 px-6 py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-700 active:scale-95 shadow-xl shadow-rose-600/20 transition-all flex items-center justify-center gap-2"
               >
                 Hubungi Admin WA 💬
@@ -2968,7 +2968,7 @@ export default function App() {
             {/* Action Button */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               <button
-                onClick={() => window.open(`https://wa.me/6287726741143?text=Halo%20Admin%20SmartRW%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmartRW%20AI%20premium%20untuk%20wilayah%20kami%20${currentTenant.id}.%20Saat%20ini%20status%20kami%20Free%20Trial%20Frozen.`, "_blank")}
+                onClick={() => window.open(`https://wa.me/6287726741143?text=Halo%20Admin%20SmaRtRw%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmaRtRw%20AI%20premium%20untuk%20wilayah%20kami%20${currentTenant.id}.%20Saat%20ini%20status%20kami%20Free%20Trial%20Frozen.`, "_blank")}
                 className="flex-1 px-6 py-4 bg-brand-pink text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-pink/90 active:scale-95 shadow-xl shadow-brand-pink/20 transition-all flex items-center justify-center gap-2"
               >
                 <Zap className="w-4 h-4 animate-bounce" />
@@ -3080,7 +3080,7 @@ export default function App() {
           </div>
           <h2 className="font-black text-slate-800 dark:text-slate-100 tracking-tighter mb-1 font-elegant transition-colors" style={{ fontSize: "29px" }}>
             <span className="font-bold flex items-center justify-center gap-1">
-              <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+              <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmaRtRw</span>
               <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
             </span>
           </h2>
@@ -3164,7 +3164,7 @@ export default function App() {
                 ) : (
                   <div className="flex flex-col items-center">
                     <span className="flex items-center gap-1 justify-center">
-                      <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent font-black">SmartRW</span>
+                      <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent font-black">SmaRtRw</span>
                       <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent font-black drop-shadow-[0_1px_1px_rgba(251,113,133,0.3)] ml-0.5">AI</span>
                     </span>
                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-[0.2em] uppercase mt-1 opacity-60">
@@ -3585,7 +3585,12 @@ export default function App() {
             )
           )}
           {activeTab === "ai-bot" && (
-            <AIChatBot currentUser={currentUser} plan={currentTenant?.status} />
+            <AIChatBot currentUser={{
+              ...currentUser,
+              ...mergedWargaProfile,
+              uid: currentUser?.uid || mergedWargaProfile?.uid || mergedWargaProfile?.nik || null,
+              id: currentUser?.uid || mergedWargaProfile?.uid || mergedWargaProfile?.nik || null
+            }} plan={currentTenant?.status} />
           )}
           {activeTab === "keuangan" && (
             <FinansialDashboardView
@@ -4136,7 +4141,7 @@ export default function App() {
               <Sparkles className="w-10 h-10 text-brand-pink" />
             </div>
             <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-3">
-              <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>{" "}
+              <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmaRtRw</span>{" "}
               <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span> <br />
               <span className="text-brand-pink">Telah Hadir!</span>
             </h3>
@@ -5773,7 +5778,7 @@ function LoginView({
     } else {
       setTimeout(() => {
         setError(
-          'Data tidak ditemukan! Jika Anda adalah warga baru atau belum terdaftar di sistem SmartRW AI, silakan klik tombol "DAFTAR MANDIRI" di bawah untuk mendaftarkan data Anda.',
+          'Data tidak ditemukan! Jika Anda adalah warga baru atau belum terdaftar di sistem SmaRtRw AI, silakan klik tombol "DAFTAR MANDIRI" di bawah untuk mendaftarkan data Anda.',
         );
         setIsLoading(false);
       }, 500);
@@ -6079,7 +6084,7 @@ function LoginView({
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-800 leading-none mb-2 font-elegant">
             <span className="font-bold flex items-center justify-center gap-1">
-            <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+            <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmaRtRw</span>
             <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
           </span>
           </h1>
@@ -6418,7 +6423,7 @@ function LoginView({
                     </div>
                     <h3 className="text-[19px] font-black text-slate-800 leading-tight tracking-tight">
                       Gunakan{" "}
-                    <span className="font-['Georgia'] bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmartRW</span>
+                    <span className="font-['Georgia'] bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmaRtRw</span>
                     {' '}
                     <span className="font-['Georgia'] bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
                     </h3>
@@ -6498,7 +6503,7 @@ function LoginView({
                  </div>
                  <div>
                     <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Pilih Paket & List Fitur</h2>
-                    <p className="text-[10px] text-slate-400 font-bold tracking-[0.3em] uppercase mt-1">SmartRW AI nexapps intelligent ecosystem</p>
+                    <p className="text-[10px] text-slate-400 font-bold tracking-[0.3em] uppercase mt-1">SmaRtRw AI nexapps intelligent ecosystem</p>
                  </div>
               </div>
               <div className="flex items-center gap-2 px-6 py-2 bg-brand-pink text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-brand-pink/20 whitespace-nowrap">

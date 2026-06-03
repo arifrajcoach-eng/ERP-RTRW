@@ -1,5 +1,5 @@
 /**
- * Dynamic White-Labeling Utility for SmartRW AI.
+ * Dynamic White-Labeling Utility for SmaRtRw AI.
  * Translate terms based on the current tenant's active themeMode:
  * - 'rt_rw': Lingkungan Rukun Tetangga (RT) / Rukun Warga (RW)
  * - 'cluster': Cluster / Perumahan Mandiri (Blok / Cluster)

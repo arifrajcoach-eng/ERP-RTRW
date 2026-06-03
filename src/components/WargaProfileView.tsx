@@ -503,12 +503,16 @@ export function WargaProfileView({
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Alamat / ID Blok</label>
                                 <p className="text-lg font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{wargaData.blok || wargaData.alamat || '-'}</p>
                              </div>
-                             <div className="grid grid-cols-2 gap-8">
+                             <div className="grid grid-cols-3 gap-8">
                                 <div>
-                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Node RW/RT</label>
-                                   <p className="text-sm font-black text-slate-700 dark:text-slate-300">RT {wargaData.rt || '-'} / RW {wargaData.rw || '-'}</p>
-                                 </div>
-                                 <div>
+                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Rukun Tetangga (RT)</label>
+                                   <p className="text-sm font-black text-slate-700 dark:text-slate-300">RT {wargaData.rt || '-'}</p>
+                                </div>
+                                <div>
+                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Rukun Warga (RW)</label>
+                                   <p className="text-sm font-black text-slate-700 dark:text-slate-300">RW {wargaData.rw || '-'}</p>
+                                </div>
+                                <div>
                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">GSM Protocol</label>
                                    <p className="text-sm font-black text-slate-700 dark:text-slate-300 tabular-nums">{wargaData.hp || '-'}</p>
                                 </div>
@@ -782,8 +786,12 @@ export function WargaProfileView({
                                 <span>{wargaData.blok || wargaData.alamat || "-"}</span>
                              </div>
                              <div>
-                                <span className="text-[10px] text-slate-400 block mb-0.5 uppercase">RT / RW</span>
-                                <span>RT {wargaData.rt || '01'} / RW {wargaData.rw || '26'}</span>
+                                <span className="text-[10px] text-slate-400 block mb-0.5 uppercase">RT</span>
+                                <span>RT {wargaData.rt || '01'}</span>
+                             </div>
+                             <div>
+                                <span className="text-[10px] text-slate-400 block mb-0.5 uppercase">RW</span>
+                                <span>RW {wargaData.rw || '26'}</span>
                              </div>
                           </div>
                           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">

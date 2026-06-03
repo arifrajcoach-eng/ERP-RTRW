@@ -46,7 +46,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
     return '';
   })();
 
-  const [tenantName, setTenantName] = useState('Admin SmartRW');
+  const [tenantName, setTenantName] = useState('Admin SmaRtRw');
   const [tenantEmail, setTenantEmail] = useState('');
   const [loadingTenant, setLoadingTenant] = useState(true);
 
@@ -94,7 +94,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setTenantName(data.name || data.id || 'Admin SmartRW');
+          setTenantName(data.name || data.id || 'Admin SmaRtRw');
           setFullName(data.name || '');
           setTenantEmail(data.email || 'admin@smartrw.ai');
           setTenantData(data);
@@ -412,7 +412,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
 
           <div className="flex items-center justify-center gap-2 text-slate-500 text-xs mt-4">
             <Coins className="w-4 h-4 animate-spin" />
-            <span>Mengarahkan kembali & mengaktifkan penuh modul SmartRW...</span>
+            <span>Mengarahkan kembali & mengaktifkan penuh modul SmaRtRw...</span>
           </div>
         </div>
       </div>
@@ -425,7 +425,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
     const pProofFile = tenantData.paymentProofFileName || 'bukti_transfer.jpg';
     
     // Pre-filled WhatsApp message
-    const waText = `Halo Admin SmartRW, mohon bantuan untuk memverifikasi Wilayah:
+    const waText = `Halo Admin SmaRtRw, mohon bantuan untuk memverifikasi Wilayah:
 - ID Tenant: ${activeTenantId}
 - Nama Wilayah: ${tenantName}
 - Paket: ${tenantData.plan || 'PRO'}
@@ -497,7 +497,7 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
           </div>
 
           <div className="text-slate-400 text-xs leading-relaxed font-semibold">
-            Tim keuangan SmartRW Pusat sedang memeriksa laporan bukti transfer ATM di atas. Akun kependudukan Anda akan aktif otomatis setelah disetujui Admin. 
+            Tim keuangan SmaRtRw Pusat sedang memeriksa laporan bukti transfer ATM di atas. Akun kependudukan Anda akan aktif otomatis setelah disetujui Admin. 
             Biasanya proses ini memakan waktu beberapa menit hingga maksimal 1x24 jam.
           </div>
 
@@ -573,7 +573,7 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-[#a3a3a3] mb-1">Rincian Paket Anda</p>
                 <h2 className="text-3xl font-black text-white tracking-tight flex items-baseline gap-2">
-                  <span>SmartRW AI</span> 
+                  <span>SmaRtRw AI</span> 
                   <span className="text-xs px-2.5 py-1 bg-brand-blue/10 text-brand-blue border border-brand-blue/20 rounded-full font-black uppercase tracking-widest">{selectedPlanObj.name}</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">{selectedPlanObj.focus}</p>
@@ -915,7 +915,7 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
                         className="mt-1 rounded text-emerald-600 bg-slate-900 border-slate-800 w-4 h-4 focus:ring-emerald-500 cursor-pointer"
                       />
                       <span className="text-[11px] text-slate-400 font-bold leading-relaxed hover:text-[#d1d5db] transition-colors select-none">
-                        Anda menyatakan menyetujui bahwa <span className="text-white">SmartRW AI (atau mitra finansial berlisensi Kami)</span> berhak melakukan pemotongan dan penagihan berulang otomatis pada saldo kartu kredit milik Anda sesuai dengan rincian biaya {formattedIDR(pricePaid)} per bulan. Pembatalan masa berlangganan kapan pun bisa Anda lakukan secara langsung melalui bilah Setelan Akun Anda.
+                        Anda menyatakan menyetujui bahwa <span className="text-white">SmaRtRw AI (atau mitra finansial berlisensi Kami)</span> berhak melakukan pemotongan dan penagihan berulang otomatis pada saldo kartu kredit milik Anda sesuai dengan rincian biaya {formattedIDR(pricePaid)} per bulan. Pembatalan masa berlangganan kapan pun bisa Anda lakukan secara langsung melalui bilah Setelan Akun Anda.
                       </span>
                     </label>
                   </div>
@@ -926,7 +926,7 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
                   
                   {/* Mandiri Transfer Guidelines */}
                   <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-900 text-xs leading-relaxed space-y-2 pb-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[#a3a3a3]">Rekening Tujuan Pembayaran SmartRW:</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[#a3a3a3]">Rekening Tujuan Pembayaran SmaRtRw:</p>
                     
                     <div className="flex justify-between font-semibold font-sans">
                       <span className="text-slate-405">Nama Bank:</span>
@@ -940,7 +940,7 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
 
                     <div className="flex justify-between font-semibold font-sans">
                       <span className="text-slate-405">Atas Nama pemilik:</span>
-                      <span className="text-white font-bold text-xs">PT. SmartRW Solusi Indonesia</span>
+                      <span className="text-white font-bold text-xs">PT. SmaRtRw Solusi Indonesia</span>
                     </div>
                     
                     <div className="h-px bg-slate-900 my-2" />

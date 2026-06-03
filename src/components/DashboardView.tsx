@@ -150,7 +150,7 @@ export default function DashboardView({
     const totalWarga = wargaData.length;
     const uniqueKK = new Set(wargaData.map((w: any) => w.kk || w.kodeKeluarga).filter(kk => kk)).size;
     const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
-    const suratPending = suratData.filter(s => s.status === 'Diajukan' || s.status.includes('Menunggu')).length;
+    const suratPending = suratData.filter(s => s.status && (s.status === 'Diajukan' || s.status.includes('Menunggu') || s.status.toUpperCase() === 'PENDING')).length;
     
     return {
       totalWarga,
@@ -303,7 +303,7 @@ export default function DashboardView({
         isPersonal: s.nik === currentUser?.nik || s.namaNasabah === currentUser?.name
       })),
       ...userVotes.map(v => ({
-        title: settings?.themeMode === "apartemen" ? "Voting Penghuni" : settings?.themeMode === "cluster" ? "Voting Cluster" : "E-Pemilu SmartRW",
+        title: settings?.themeMode === "apartemen" ? "Voting Penghuni" : settings?.themeMode === "cluster" ? "Voting Cluster" : "E-Pemilu SmaRtRw",
         desc: `${v.voterName} telah memberikan suara`,
         date: v.timestamp ? new Date(v.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-',
         status: 'Suara Masuk',
@@ -461,7 +461,7 @@ export default function DashboardView({
             </div>
 
             <h3 className="text-xl md:text-2xl font-black font-elegant tracking-tight leading-tight text-white flex flex-wrap items-center gap-2">
-              Upgrade Paket SmartRW AI Selengkapnya!
+              Upgrade Paket SmaRtRw AI Selengkapnya!
               <span className="text-[10px] bg-gradient-to-r from-amber-500 to-rose-500 text-white font-extrabold uppercase px-2.5 py-1 rounded-full">FLASH / PRO / PREMIUM</span>
             </h3>
             
@@ -552,7 +552,7 @@ export default function DashboardView({
                  <div className="w-1.5 h-8 bg-cyan-400 rounded-full"></div>
                  <h2 className="text-[27px] font-black font-elegant tracking-tight">Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</h2>
               </div>
-              <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmartRW AI Dashboard</p>
+              <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmaRtRw AI Dashboard</p>
               
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[

@@ -95,7 +95,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
             </div>
             
             <div class="mt-16 text-[8px] text-slate-400 text-center border-t pt-4">
-              Dokumen ini dicetak otomatis melalui Layanan SmartRW dan sah secara hukum sebagai izin internal pemakaian fasilitas warga.
+              Dokumen ini dicetak otomatis melalui Layanan SmaRtRw dan sah secara hukum sebagai izin internal pemakaian fasilitas warga.
             </div>
           </div>
           <script>

@@ -113,7 +113,7 @@ async function startServer() {
         if (diff > sixtyDaysInMs && !tenant.autoFollowedUpAfterTwoMonths) {
           console.log(`Sending auto follow-up to tenant: ${tenant.name}`);
           
-          const message = `Halo ${tenant.name}, kami perhatikan masa aktif SmartRW AI Anda telah berakhir. Ada yang bisa kami bantu untuk proses perpanjangan?`;
+          const message = `Halo ${tenant.name}, kami perhatikan masa aktif SmaRtRw AI Anda telah berakhir. Ada yang bisa kami bantu untuk proses perpanjangan?`;
           
           try {
             // Try WhatsApp first, then fallback to email log
@@ -122,7 +122,7 @@ async function startServer() {
             }
             
             if (tenant.adminEmail) {
-              await sendEmail(tenant.adminEmail, tenant.name, "SmartRW AI: Masa Aktif Berakhir", message);
+              await sendEmail(tenant.adminEmail, tenant.name, "SmaRtRw AI: Masa Aktif Berakhir", message);
             }
 
             await doc.ref.update({
@@ -330,7 +330,7 @@ async function startServer() {
   app.post("/api/messages/welcome", async (req, res) => {
     try {
       const { email, name, clientId, phone } = req.body;
-      const welcomeMsg = `Selamat Datang di SmartRW AI, ${name}! Akun Anda dengan ID: ${clientId} telah aktif.`;
+      const welcomeMsg = `Selamat Datang di SmaRtRw AI, ${name}! Akun Anda dengan ID: ${clientId} telah aktif.`;
       
       let waStatus = "skipped";
       if (phone && process.env.TWILIO_PHONE_NUMBER) {
@@ -343,7 +343,7 @@ async function startServer() {
       }
 
       try {
-        await sendEmail(email, name, "Selamat Datang di SmartRW AI", welcomeMsg);
+        await sendEmail(email, name, "Selamat Datang di SmaRtRw AI", welcomeMsg);
       } catch (e) {}
 
       res.json({ success: true, waStatus, emailStatus: "sent" });
@@ -552,6 +552,14 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
           role: 'user',
           parts: [{ text: `DATA RW TERKINI (Gunakan sebagai konteks jawabanmu): ${JSON.stringify(dataSummary)}` }]
         });
+        
+        if (dataSummary.currentUserProfile && dataSummary.currentUserProfile.nama && dataSummary.currentUserProfile.nama !== 'Warga') {
+          const up = dataSummary.currentUserProfile;
+          sanitizedContents.push({
+            role: 'user',
+            parts: [{ text: `INFO WARGA YANG SEDANG CHATTING (PENTING!): Nama Beliau adalah "${up.nama}", NIK: "${up.nik || '-'}", No KK: "${up.kk || '-'}", RT: "${up.rt || '01'}", RW: "${up.rw || '26'}", Alamat: "${up.alamat || '-'}". Beliau sudah login secara aman di sistem. JANGAN menanyakan lagi data Nama, NIK, No KK, atau wilayah RT/RW jika sudah ada di sini. Kamu bisa langsung menghasilkan JSON action "createSurat" dengan parameter yang terisi otomatis menggunakan data di atas agar warga tidak perlu mengisi formulir ulang!` }]
+          });
+        }
       }
 
       let lastRole: string | null = null;
@@ -589,8 +597,8 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
         console.log("[AI Client Handled Stream warning: processed content connection details]", getErrorString(apiError));
         if (isQuotaExhaustedErrorServer(apiError)) {
           const fallbackText = isPrivileged
-            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmartRW AI" di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
-            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmartRW AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
+            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmaRtRw AI" di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
+            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmaRtRw AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
           res.write(`data: ${JSON.stringify({ text: fallbackText })}\n`);
           res.write("data: [DONE]\n");
           res.end();
@@ -637,7 +645,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
       console.log("[AI Client Handled Report notice]", getErrorString(error));
       if (isQuotaExhaustedErrorServer(error)) {
         const dataSummary = req.body.dataSummary;
-        const offlineReport = `### Laporan Bulanan SmartRW AI (Offline Mode)
+        const offlineReport = `### Laporan Bulanan SmaRtRw AI (Offline Mode)
         
 Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Layanan AI kami untuk membuat laporan saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).
 
@@ -647,7 +655,7 @@ Tapi tenang aja, Kak! Ini adalah ringkasan kas manual dari data yang ada di sist
 - **Jumlah Data Iuran**: ${dataSummary?.iuran?.length || 0} rekaman iuran.
 
 **✨ SOLUSI PREMIUM :**
-Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otomatis, Prediksi Keuangan, serta cetak surat tanpa batas bebas dari limit kuota harian harian, silakan klik banner **"SmartRW AI"** di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium sekarang juga! 😉⚡`;
+Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otomatis, Prediksi Keuangan, serta cetak surat tanpa batas bebas dari limit kuota harian harian, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium sekarang juga! 😉⚡`;
         res.json({ text: offlineReport });
       } else if (isTransientErrorServer(error)) {
         res.json({ text: "Mohon maaf, AI sedang sibuk (High Demand). Silakan coba lagi beberapa detik lagi." });
@@ -678,12 +686,12 @@ Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otoma
     } catch (error: any) {
       console.log("[AI Client Handled Regional Insight notice]", getErrorString(error));
       if (isQuotaExhaustedErrorServer(error)) {
-        const offlineInsight = `### Analisis Regional SmartRW AI (Offline Mode)
+        const offlineInsight = `### Analisis Regional SmaRtRw AI (Offline Mode)
         
 Mohon maaf sebesar-besarnya Bapak/Ibu Pimpinan Kelurahan. 🫣 Kuota panggilan AI harian untuk analisis wilayah saat ini sedang mencapai batas limit (Error 429: Resource Exhausted).
 
 **✨ AKTIVASI PREMIUM :**
-Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, rekomendasi taktis, serta integrasi pemantauan penuh, silakan klik banner **"SmartRW AI"** di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium wilayah Rukun Tetangga/Warga Anda! 😉⚡`;
+Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, rekomendasi taktis, serta integrasi pemantauan penuh, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium wilayah Rukun Tetangga/Warga Anda! 😉⚡`;
         res.json({ text: offlineInsight });
       } else if (isTransientErrorServer(error)) {
         res.json({ text: "Mohon maaf, AI sedang sibuk (High Demand). Silakan coba lagi beberapa detik lagi." });

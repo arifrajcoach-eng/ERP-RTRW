@@ -74,8 +74,8 @@ export async function* chatWithAI(params: {
     console.error("Client AI Stream error:", error);
     if (isQuotaExhaustedError(error)) {
       const fallbackText = params.isPrivileged
-        ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmartRW AI" di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
-        : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmartRW AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
+        ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmaRtRw AI" di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
+        : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmaRtRw AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
       yield* createFallbackStream(fallbackText);
     } else {
       throw error;
@@ -99,7 +99,7 @@ export async function generateAIReport(dataSummary: any) {
   } catch (error: any) {
     console.error("Client report generating error:", error);
     if (isQuotaExhaustedError(error)) {
-      return `### Laporan Bulanan SmartRW AI (Offline Mode)
+      return `### Laporan Bulanan SmaRtRw AI (Offline Mode)
       
 Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Layanan AI kami untuk membuat laporan saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).
 
@@ -109,7 +109,7 @@ Tapi tenang aja, Kak! Ini adalah ringkasan kas manual dari data yang ada di sist
 - **Jumlah Data Iuran**: ${dataSummary?.iuran?.length || 0} rekaman iuran.
 
 **✨ SOLUSI PREMIUM :**
-Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otomatis, Prediksi Keuangan, serta cetak surat tanpa batas bebas dari limit kuota harian harian, silakan klik banner **"SmartRW AI"** di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium sekarang juga! 😉⚡`;
+Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otomatis, Prediksi Keuangan, serta cetak surat tanpa batas bebas dari limit kuota harian harian, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium sekarang juga! 😉⚡`;
     }
     throw error;
   }
@@ -131,12 +131,12 @@ export async function generateRegionalInsight(regionsData: any) {
   } catch (error: any) {
     console.error("Client regional insight generating error:", error);
     if (isQuotaExhaustedError(error)) {
-      return `### Analisis Regional SmartRW AI (Offline Mode)
+      return `### Analisis Regional SmaRtRw AI (Offline Mode)
       
 Mohon maaf sebesar-besarnya Bapak/Ibu Pimpinan Kelurahan. 🫣 Kuota panggilan AI harian untuk analisis wilayah saat ini sedang mencapai batas limit (Error 429: Resource Exhausted).
 
 **✨ AKTIVASI PREMIUM :**
-Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, rekomendasi taktis, serta integrasi pemantauan penuh, silakan klik banner **"SmartRW AI"** di Dashboard utama atau hubungi WhatsApp Admin SmartRW AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium wilayah Rukun Tetangga/Warga Anda! 😉⚡`;
+Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, rekomendasi taktis, serta integrasi pemantauan penuh, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium wilayah Rukun Tetangga/Warga Anda! 😉⚡`;
     }
     throw error;
   }
@@ -160,9 +160,9 @@ export async function scanReceiptAI(base64: string, mimeType: string = "image/jp
   } catch (error: any) {
     console.error("Client Scan Receipt Error:", error);
     if (isQuotaExhaustedError(error) || error.message === "QUOTA_EXHAUSTED") {
-      throw new Error(`Aduh maaf Kak! Kuota harian AI SmartRW untuk memindai struk saat ini sedang penuh (Error 429: Resource Exhausted). 
+      throw new Error(`Aduh maaf Kak! Kuota harian AI SmaRtRw untuk memindai struk saat ini sedang penuh (Error 429: Resource Exhausted). 
 
-Silakan isi rincian transaksi keuangan secara manual dahulu yaa, atau klik banner "SmartRW AI" di Dashboard utama / hubungi WhatsApp Admin SmartRW AI (0877-2674-1143) untuk melakukan Aktivasi Premium agar bebas memindai struk tanpa batas kuota!`);
+Silakan isi rincian transaksi keuangan secara manual dahulu yaa, atau klik banner "SmaRtRw AI" di Dashboard utama / hubungi WhatsApp Admin SmaRtRw AI (0877-2674-1143) untuk melakukan Aktivasi Premium agar bebas memindai struk tanpa batas kuota!`);
     }
     throw error;
   }
