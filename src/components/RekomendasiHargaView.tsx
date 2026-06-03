@@ -218,8 +218,10 @@ export function RekomendasiHargaView({
         format: "a4",
       });
 
-      const namaOrganisasi = getSetting("nama_organisasi") || "SmaRtRw AI";
-      const alamat = getSetting("alamat") || "Wilayah Pengurus RT / RW";
+      const kopSettings = getSetting("KOP_SURAT") || {};
+      const namaOrganisasi = kopSettings.nama_rt || kopSettings.nama_organisasi || getSetting("nama_organisasi") || "SmaRtRw AI";
+      const tagline = kopSettings.tagline || getSetting("tagline") || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+      const alamat = kopSettings.alamat || getSetting("alamat") || "Wilayah Pengurus RT / RW";
 
       // Design color palette
       const primaryColor = [15, 23, 42]; // Slate 900
@@ -245,15 +247,19 @@ export function RekomendasiHargaView({
       doc.setFontSize(11);
       doc.text(namaOrganisasi.toUpperCase(), 105, 28, { align: "center" });
 
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8.5);
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.text(tagline, 105, 33, { align: "center" });
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-      doc.text(alamat, 105, 33, { align: "center" });
+      doc.text(alamat, 105, 37, { align: "center" });
 
       // Solid dividing line
       doc.setDrawColor(203, 213, 225); // Slate 300
       doc.setLineWidth(0.75);
-      doc.line(15, 38, 195, 38);
+      doc.line(15, 41, 195, 41);
 
       // Subtitle
       doc.setFont("helvetica", "bold");
@@ -410,6 +416,7 @@ export function RekomendasiHargaView({
       doc.setFont("helvetica", "italic");
       doc.text("Laporan ini diterbitkan otomatis sebagai instrumen transparansi tata kelola keuangan lingkungan.", 15, y);
       doc.text("Hasil analisis direkomendasikan untuk menjadi bahan pertimbangan Musyawarah Warga.", 15, y + 4.5);
+      doc.text('"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."', 15, y + 9);
 
       y += 20;
       doc.setFont("helvetica", "normal");
@@ -425,8 +432,10 @@ export function RekomendasiHargaView({
       doc.text("Ketua RT / RW", 145, y + 4.5);
       doc.line(135, y + 26, 185, y + 26);
 
-      // Save PDF
-      doc.save(`Analisis_HPP_Tarif_${namaOrganisasi.replace(/\s+/g, '_')}.pdf`);
+      // Save PDF with custom title according to tenant details and tagline
+      const cleanOrg = namaOrganisasi.replace(/[^a-zA-Z0-9]/g, "_");
+      const cleanTag = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+      doc.save(`Analisis_HPP_Tarif_${cleanOrg}_${cleanTag}.pdf`);
       showNotification("Laporan HPP & Rekomendasi Tarif berhasil diterbitkan!", "success");
     } catch (err) {
       console.error(err);

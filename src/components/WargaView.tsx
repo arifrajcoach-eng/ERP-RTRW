@@ -1609,8 +1609,12 @@ function WargaView(props: WargaViewProps) {
                         <span className="text-sm font-black text-slate-700 font-mono">{viewWarga.telepon || viewWarga.phone || viewWarga.hp || viewWarga.noHp || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RT / RW</span>
-                        <span className="text-sm font-black text-slate-700">RT {viewWarga.rt || '-'} / RW {viewWarga.rw || '-'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RT</span>
+                        <span className="text-sm font-black text-slate-700">RT {viewWarga.rt || '-'}</span>
+                      </div>
+                      <div className="flex flex-col py-2 border-b border-slate-50">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RW</span>
+                         <span className="text-sm font-black text-slate-700">RW {viewWarga.rw || '-'}</span>
                      </div>
                      <div className="flex flex-col py-2 border-b border-slate-50">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">WNI / WNA</span>

@@ -282,10 +282,13 @@ export function SuratView({
       ? `Sekretariat : ${kop.alamat} ${kop.email ? ' | Email: ' + kop.email : ''} ${kop.instagram ? ' | Instagram: ' + kop.instagram : ''}`
       : "Sekretariat : Jl. Katala 3 Blok K3 No. 1 RT 02 / RW 26 | Email: kebalenrw26@gmail.com | Instagram: @kebalenrw26";
 
+    const tenantName = kop.nama_rt || kop.nama_organisasi || settings?.nama_rt || settings?.namaLayout || orgName || "SmaRtRw AI";
+    const tagline = kop.tagline || settings?.tagline || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
     const content = `
       <html>
         <head>
-          <title>Cetak ${surat.jenis}</title>
+          <title>${tenantName} - ${tagline} - Cetak ${surat.jenis}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
             body { font-family: 'Times New Roman', serif; padding: 40px; margin: 0; color: #000; background: #fff; line-height: 1.4; }
@@ -414,6 +417,10 @@ export function SuratView({
               </div>
             </div>
             
+            <div style="text-align: center; font-style: italic; font-size: 11px; margin-top: 30px; margin-bottom: 5px; color: #374151; font-family: 'Times New Roman', serif;">
+              "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
+            </div>
+
             <div class="verif-box-grid">
                <div class="verif-item">
                  <span>Tl. Berkas / Surat No :</span>

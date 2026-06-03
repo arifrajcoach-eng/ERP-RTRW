@@ -3638,6 +3638,7 @@ export default function App() {
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
+                getSetting={getSetting}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -3670,6 +3671,7 @@ export default function App() {
                 tenantId={currentUser.tenantId || "rw26_berjuang"}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
+                getSetting={getSetting}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -6546,6 +6548,7 @@ function PosyanduView({
   setIsLoadingDB,
   handleFirestoreError,
   showNotification,
+  getSetting,
 }: any) {
   const roleUpper = currentUser?.role?.toUpperCase() || "";
   const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpper);
@@ -6740,11 +6743,29 @@ function PosyanduView({
 
   const exportPosyanduPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("LAPORAN BULANAN POSYANDU", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Tenant: ${tenantId}`, 14, 30);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("LAPORAN BULANAN POSYANDU", 14, 34);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Tenant: ${tenantId}`, 14, 39);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 44);
 
     // Balita Table
     const tableData = balitaData.map((b: any) => [
@@ -6756,23 +6777,55 @@ function PosyanduView({
     ]);
 
     autoTable(doc, {
-      startY: 45,
+      startY: 49,
       head: [["Nama Balita", "JK", "Usia", "Wali", "Status Gizi"]],
       body: tableData,
       theme: "grid",
       headStyles: { fillColor: [236, 72, 153], textColor: [255, 255, 255] },
     });
 
-    doc.save(`Laporan_Posyandu_${new Date().toISOString().split("T")[0]}.pdf`);
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+    doc.save(`Laporan_Posyandu_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`);
     showNotification("Laporan PDF berhasil diunduh!");
   };
 
   const exportKegiatanPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("JADWAL & AGENDA POSYANDU", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 30);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("JADWAL & AGENDA POSYANDU", 14, 34);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 39);
 
     const tableData = posyanduKegiatanData.map((k: any) => [
       formatTgl(k.tanggal),
@@ -6782,14 +6835,28 @@ function PosyanduView({
     ]);
 
     autoTable(doc, {
-      startY: 40,
+      startY: 44,
       head: [["Tanggal", "Lokasi", "Keterangan", "Petugas"]],
       body: tableData,
       theme: "grid",
       headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255] },
     });
 
-    doc.save(`Jadwal_Posyandu_${new Date().toISOString().split("T")[0]}.pdf`);
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+    doc.save(`Jadwal_Posyandu_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`);
     showNotification("Jadwal PDF berhasil diunduh!");
   };
 
@@ -6833,20 +6900,38 @@ function PosyanduView({
 
   const exportBalitaKardPDF = (balita: any) => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("KARTU KESEHATAN ANAK (BALITA)", 14, 22);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
 
-    doc.setFontSize(11);
-    doc.text(`Nama Anak: ${balita.nama}`, 14, 32);
-    doc.text(`NIK: ${balita.nik || "-"}`, 14, 38);
-    doc.text(`Jenis Kelamin: ${balita.jk}`, 14, 44);
-    doc.text(`Tanggal Lahir: ${formatTgl(balita.tglLahir)}`, 14, 50);
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("KARTU KESEHATAN ANAK (BALITA)", 14, 34);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Nama Anak: ${balita.nama}`, 14, 42);
+    doc.text(`NIK: ${balita.nik || "-"}`, 14, 47);
+    doc.text(`Jenis Kelamin: ${balita.jk}`, 14, 52);
+    doc.text(`Tanggal Lahir: ${formatTgl(balita.tglLahir)}`, 14, 57);
     doc.text(
       `Nama Ibu: ${balita.namaIbu || balita.namaOrangTua || "-"}`,
       14,
-      56,
+      62,
     );
-    doc.text(`Status Gizi: ${balita.statusStunting || "Normal"}`, 14, 62);
+    doc.text(`Status Gizi: ${balita.statusStunting || "Normal"}`, 14, 67);
 
     const history = [
       ...pemeriksaanBalitaData
@@ -6868,31 +6953,63 @@ function PosyanduView({
     ].sort((a: any, b: any) => b[0].localeCompare(a[0]));
 
     autoTable(doc, {
-      startY: 70,
+      startY: 72,
       head: [["Tanggal", "Tipe", "Keterangan", "Petugas"]],
       body: history,
       theme: "grid",
       headStyles: { fillColor: [236, 72, 153], textColor: [255, 255, 255] },
     });
 
-    doc.save(`Kartu_Kesehatan_${balita.nama}.pdf`);
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 120;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+    doc.save(`Kartu_Kesehatan_${balita.nama}_${cleanTenantName}_${cleanTagline}.pdf`);
     showNotification("Kartu Kesehatan berhasil diunduh!");
   };
 
   const exportIbuHamilKardPDF = (mil: any) => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("KARTU KESEHATAN IBU HAMIL", 14, 22);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
 
-    doc.setFontSize(11);
-    doc.text(`Nama Ibu: ${mil.nama}`, 14, 32);
-    doc.text(`NIK: ${mil.nik}`, 14, 38);
-    doc.text(`Usia Kehamilan: ${mil.usiaKehamilan} Minggu`, 14, 44);
-    doc.text(`Estimasi HPL: ${formatTgl(mil.tglHPL)}`, 14, 50);
-    doc.text(`Catatan: ${mil.riwayatKesehatan || "-"}`, 14, 56);
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("KARTU KESEHATAN IBU HAMIL", 14, 34);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Nama Ibu: ${mil.nama}`, 14, 42);
+    doc.text(`NIK: ${mil.nik}`, 14, 47);
+    doc.text(`Usia Kehamilan: ${mil.usiaKehamilan} Minggu`, 14, 52);
+    doc.text(`Estimasi HPL: ${formatTgl(mil.tglHPL)}`, 14, 57);
+    doc.text(`Catatan: ${mil.riwayatKesehatan || "-"}`, 14, 62);
 
     autoTable(doc, {
-      startY: 65,
+      startY: 67,
       head: [["Keterangan", "Detail"]],
       body: [
         ["Nama Ibu", mil.nama],
@@ -6905,7 +7022,21 @@ function PosyanduView({
       headStyles: { fillColor: [219, 39, 119], textColor: [255, 255, 255] },
     });
 
-    doc.save(`Kesehatan_IbuHamil_${mil.nama}.pdf`);
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 120;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+    doc.save(`Kesehatan_IbuHamil_${mil.nama}_${cleanTenantName}_${cleanTagline}.pdf`);
     showNotification("Kartu Kesehatan berhasil diunduh!");
   };
 
@@ -7200,11 +7331,29 @@ function PosyanduView({
 
   const exportIbuHamilPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("MONITOR IBU HAMIL", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Tenant: ${tenantId}`, 14, 30);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi and Bergotong Royong";
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("MONITOR IBU HAMIL", 14, 34);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Tenant: ${tenantId}`, 14, 39);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 44);
 
     const tableData = filteredIbuHamil.map((mil: any) => [
       mil.nama,
@@ -7215,14 +7364,28 @@ function PosyanduView({
     ]);
 
     autoTable(doc, {
-      startY: 45,
+      startY: 49,
       head: [["Nama", "NIK", "Usia Hamil", "HPL", "Kesehatan"]],
       body: tableData,
       theme: "grid",
       headStyles: { fillColor: [219, 39, 119], textColor: [255, 255, 255] },
     });
 
-    doc.save(`Monitor_Ibu_Hamil_${new Date().toISOString().split("T")[0]}.pdf`);
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+    doc.save(`Monitor_Ibu_Hamil_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`);
     showNotification("Laporan PDF berhasil diunduh!");
   };
 
@@ -7249,11 +7412,29 @@ function PosyanduView({
 
   const exportBalitaPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("DATA BALITA POSYANDU", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Tenant: ${tenantId}`, 14, 30);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("DATA BALITA POSYANDU", 14, 34);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Tenant: ${tenantId}`, 14, 39);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 44);
 
     const tableData = filteredBalita.map((b: any) => [
       b.nama,
@@ -7263,14 +7444,28 @@ function PosyanduView({
     ]);
 
     autoTable(doc, {
-      startY: 45,
+      startY: 49,
       head: [["Nama Balita", "Usia", "Orang Tua", "Status Gizi"]],
       body: tableData,
       theme: "grid",
       headStyles: { fillColor: [219, 39, 119], textColor: [255, 255, 255] },
     });
 
-    doc.save(`Data_Balita_${new Date().toISOString().split("T")[0]}.pdf`);
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+    doc.save(`Data_Balita_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`);
     showNotification("Laporan PDF Balita berhasil diunduh!");
   };
 
@@ -7635,18 +7830,55 @@ function PosyanduView({
                     <button
                       onClick={() => {
                         const doc = new jsPDF();
-                        doc.text("Laporan Posbindu", 10, 10);
+                        const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+                        const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+                        const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
+                        // Header
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(14);
+                        doc.text(tenantName.toUpperCase(), 14, 18);
+                        doc.setFont("helvetica", "italic");
+                        doc.setFontSize(9);
+                        doc.setTextColor(71, 85, 105);
+                        doc.text(tagline, 14, 23);
+                        doc.setDrawColor(203, 213, 225);
+                        doc.line(14, 26, 196, 26);
+
+                        doc.setTextColor(15, 23, 42);
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(12);
+                        doc.text("LAPORAN POSBINDU", 14, 34);
+
                         autoTable(doc, {
-                          head: [["NIK", "Nama", "TD", "GDS"]],
+                          startY: 40,
+                          head: [["NIK", "Nama", "TD (Tensi)", "GDS (Gula Darah)"]],
                           body: pemeriksaanPosbinduData.map((p) => [
                             p.nik,
                             p.nama,
-                            p.tekananDarah,
-                            p.gulaDarah,
+                            p.tekananDarah || p.tensi || "-",
+                            p.gulaDarah || "-",
                           ]),
+                          theme: "grid",
+                          headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255] },
                         });
+
+                        // Closing Quote
+                        const finalY = (doc as any).lastAutoTable.finalY || 100;
+                        doc.setFont("helvetica", "italic");
+                        doc.setFontSize(9.5);
+                        doc.setTextColor(30, 41, 59);
+                        doc.text(
+                          '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+                          105,
+                          finalY + 15,
+                          { align: "center", maxWidth: 180 }
+                        );
+
+                        const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+                        const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
                         doc.save(
-                          `Laporan_Posbindu_${new Date().toISOString().split("T")[0]}.pdf`,
+                          `Laporan_Posbindu_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`,
                         );
                       }}
                       className="p-2.5 bg-white border border-slate-200 rounded-xl text-brand-pink hover:bg-pink-50 shadow-sm transition-all active:scale-90"
@@ -9042,6 +9274,7 @@ function BankSampahView({
   tenantId,
   handleFirestoreError,
   showNotification,
+  getSetting,
 }: any) {
   const [activeSubTab, setActiveSubTab] = useState<
     | "dashboard"
@@ -9445,11 +9678,29 @@ function BankSampahView({
 
   const exportAllSetoranPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("LAPORAN SETORAN BANK SAMPAH", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Tenant: ${tenantId}`, 14, 30);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("LAPORAN SETORAN BANK SAMPAH", 14, 34);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Tenant: ${tenantId}`, 14, 39);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 44);
 
     const tableData = sampahSetoranData.map((s: any) => [
       s.namaNasabah,
@@ -9460,28 +9711,60 @@ function BankSampahView({
     ]);
 
     autoTable(doc, {
-      startY: 45,
+      startY: 49,
       head: [["Nasabah", "Kategori", "Berat", "Total", "Tanggal"]],
       body: tableData,
       theme: "grid",
       headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255] },
     });
 
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
     doc.save(
-      `Laporan_Setoran_Sampah_${new Date().toISOString().split("T")[0]}.pdf`,
+      `Laporan_Setoran_Sampah_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`,
     );
     showNotification("Eksport PDF Berhasil!");
   };
 
   const exportBukuTabunganPDF = (nasabah: any) => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("BUKU TABUNGAN BANK SAMPAH", 14, 22);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
 
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text(`Nama Nasabah: ${nasabah.nama}`, 14, 32);
-    doc.text(`NIK: ${nasabah.nik}`, 14, 38);
-    doc.text(`Blok/RT: ${nasabah.blok} / ${nasabah.rt}`, 14, 44);
+    doc.text("BUKU TABUNGAN BANK SAMPAH", 14, 34);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Nama Nasabah: ${nasabah.nama}`, 14, 42);
+    doc.text(`NIK: ${nasabah.nik}`, 14, 47);
+    doc.text(`Blok/RT: ${nasabah.blok} / ${nasabah.rt}`, 14, 52);
 
     const transactions = [
       ...sampahSetoranData
@@ -9509,15 +9792,29 @@ function BankSampahView({
     });
 
     autoTable(doc, {
-      startY: 55,
+      startY: 57,
       head: [["Tanggal", "Jenis", "Item", "Berat", "Masuk", "Keluar", "Saldo"]],
       body: tableData,
       theme: "grid",
       headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255] },
     });
 
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
     doc.save(
-      `Buku_Tabungan_${nasabah.nama}_${new Date().toISOString().split("T")[0]}.pdf`,
+      `Buku_Tabungan_${nasabah.nama}_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`,
     );
     showNotification(`Buku Tabungan ${nasabah.nama} berhasil diunduh!`);
   };
@@ -9587,11 +9884,29 @@ function BankSampahView({
 
   const exportNasabahSummaryPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("RINGKASAN SALDO NASABAH BANK SAMPAH", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Tenant: ${tenantId}`, 14, 30);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 35);
+    const kop = (getSetting && getSetting("KOP_SURAT")) || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || (getSetting && getSetting("nama_organisasi")) || "SmaRtRw AI";
+    const tagline = kop.tagline || (getSetting && getSetting("tagline")) || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(tenantName.toUpperCase(), 14, 18);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(tagline, 14, 23);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 26, 196, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("RINGKASAN SALDO NASABAH BANK SAMPAH", 14, 34);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Tenant: ${tenantId}`, 14, 39);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 44);
 
     const tableData = nasabahSummary.map((n: any) => {
       const totalDitarik = sampahTarikSaldoData
@@ -9610,7 +9925,7 @@ function BankSampahView({
     });
 
     autoTable(doc, {
-      startY: 45,
+      startY: 49,
       head: [
         ["Nama Nasabah", "NIK", "Total Tabungan", "Tarik Saldo", "Saldo Sisa"],
       ],
@@ -9619,8 +9934,22 @@ function BankSampahView({
       headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255] },
     });
 
+    // Closing Quote
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      finalY + 15,
+      { align: "center", maxWidth: 180 }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
     doc.save(
-      `Ringkasan_Nasabah_Sampah_${new Date().toISOString().split("T")[0]}.pdf`,
+      `Ringkasan_Nasabah_Sampah_${cleanTenantName}_${cleanTagline}_${new Date().toISOString().split("T")[0]}.pdf`,
     );
     showNotification("Eksport Ringkasan Nasabah PDF Berhasil!");
   };

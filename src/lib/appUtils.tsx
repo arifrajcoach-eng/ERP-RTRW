@@ -62,12 +62,14 @@ export const getPlanFeatures = (tenantOrStatus: any) => {
 export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
   const displayRT = surat.rt || kop.rt || "...";
   const displayRW = surat.rw || kop.rw || "...";
+  const tenantName = kop.nama_rt || kop.nama_organisasi || settings?.nama_rt || settings?.namaLayout || "SmaRtRw AI";
+  const tagline = kop.tagline || settings?.tagline || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
 
   return `
     <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Cetak Surat - ${surat.nomor_surat || surat.id}</title>
+        <title>${tenantName} - ${tagline} - Cetak Surat - ${surat.nomor_surat || surat.id}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
@@ -154,6 +156,9 @@ export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
           </div>
 
           <div class="mt-12 border-t border-black pt-2 text-[10px] text-gray-800">
+               <div style="text-align: center; font-style: italic; font-size: 11px; margin-bottom: 15px; color: #374151; font-family: 'Times New Roman', serif;">
+                 "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
+               </div>
                <div class="font-mono">
                   <div class="grid grid-cols-3 gap-2 w-full">
                     <!-- Kiri: TL. Berkas, Berkas Sesuai -->

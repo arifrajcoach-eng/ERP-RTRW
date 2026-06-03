@@ -54,6 +54,7 @@ interface PosyanduViewProps {
   setIsLoadingDB: (loading: boolean) => void;
   handleFirestoreError: (err: any) => void;
   showNotification: (msg: string, type?: "success" | "error" | "info") => void;
+  getSetting?: (key: string) => any;
 }
 
 export default function PosyanduView({
@@ -77,6 +78,7 @@ export default function PosyanduView({
   setIsLoadingDB,
   handleFirestoreError,
   showNotification,
+  getSetting,
 }: PosyanduViewProps) {
   const roleUpper = currentUser?.role?.toUpperCase() || "";
   const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpper);

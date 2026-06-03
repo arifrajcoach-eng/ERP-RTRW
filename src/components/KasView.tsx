@@ -329,28 +329,40 @@ export function KasView({
   const exportSingleTrxPDF = (trx: any) => {
     const doc = new jsPDF();
     const settings = getSetting("KOP_SURAT") || {};
+    const tenantName = settings.nama_rt || settings.nama_organisasi || "SmaRtRw AI";
+    const tagline = settings.tagline || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
 
     // Header
-    doc.setFontSize(16);
-    doc.text(settings.nama_organisasi || "SmaRtRw AI", 105, 20, {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text(tenantName.toUpperCase(), 105, 18, {
       align: "center",
     });
-    doc.setFontSize(10);
-    doc.text(settings.alamat || "Laporan Transaksi", 105, 26, {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105); // slate-600
+    doc.text(tagline, 105, 23, {
       align: "center",
     });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(settings.alamat || "Sekretariat RT/RW", 105, 28, {
+      align: "center",
+    });
+    doc.setDrawColor(148, 163, 184); // slate-400
     doc.line(20, 32, 190, 32);
 
     // Title
-    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
-    doc.text("BUKTI TRANSAKSI", 105, 45, { align: "center" });
+    doc.text("BUKTI TRANSAKSI KEUANGAN", 105, 43, { align: "center" });
 
     // Data
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
 
-    const startY = 60;
+    const startY = 56;
     const lineH = 8;
 
     const data = [
@@ -364,7 +376,9 @@ export function KasView({
     ];
 
     data.forEach((row, i) => {
+      doc.setFont("helvetica", "bold");
       doc.text(row[0], 30, startY + i * lineH);
+      doc.setFont("helvetica", "normal");
       doc.text(": " + row[1], 70, startY + i * lineH);
     });
 
@@ -376,16 +390,33 @@ export function KasView({
     );
 
     // Footer
-    const footerY = 150;
+    const footerY = 145;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
     doc.text(
       "Dicetak pada: " + new Date().toLocaleString("id-ID"),
       20,
       footerY,
     );
+    doc.setFont("helvetica", "bold");
     doc.text("Bendahara,", 150, footerY);
     doc.text("( ____________________ )", 150, footerY + 30);
 
-    doc.save(`Bukti_${trx.id}.pdf`);
+    // Closing neighborhood-harmony sharing invitation quote
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.text(
+      '"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."',
+      105,
+      footerY + 45,
+      { align: "center" }
+    );
+
+    const cleanTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanTagline = tagline.replace(/[^a-zA-Z0-9]/g, "_");
+    doc.save(`${cleanTenantName}_${cleanTagline}_Bukti_${trx.id}.pdf`);
     showNotification("PDF Berhasil diunduh");
   };
 

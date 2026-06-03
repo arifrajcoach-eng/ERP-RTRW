@@ -205,13 +205,17 @@ export function IuranView({
       return;
     }
 
+    const kop = getSetting("KOP_SURAT") || {};
+    const tenantName = kop.nama_rt || kop.nama_organisasi || getSetting("nama_organisasi") || "SmaRtRw AI";
+    const tagline = kop.tagline || getSetting("tagline") || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
+
     const formattedNominal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(trx.nominal);
     const dateStr = new Date(trx.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Bukti Pembayaran - ${trx.id}</title>
+          <title>${tenantName} - ${tagline} - Bukti Pembayaran - ${trx.id}</title>
           <style>
             body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
             .header { text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
@@ -226,8 +230,9 @@ export function IuranView({
         </head>
         <body>
           <div class="header">
-            <h1>SMART RW</h1>
-            <p>Bukti Transaksi Digital Keuangan</p>
+            <h1 style="font-size: 24px; font-weight: bold; margin: 0;">${tenantName}</h1>
+            <p style="font-size: 13px; font-style: italic; color: #64748b; margin: 5px 0 10px 0;">${tagline}</p>
+            <p style="font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #3b82f6; margin: 0;">Bukti Transaksi Digital Keuangan</p>
           </div>
           <div class="content">
             <div class="amount">${formattedNominal}</div>
@@ -240,6 +245,7 @@ export function IuranView({
             <div class="status" style="color: ${trx.status === 'Lunas' ? '#10b981' : '#f59e0b'}">${trx.status}</div>
           </div>
           <div class="footer">
+            <p style="font-size: 13px; font-weight: 500; font-style: italic; color: #475569; margin-bottom: 12px;">"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."</p>
             <p>Terima kasih telah melakukan pembayaran tepat waktu.<br/>Dokumen ini sah dihasilkan secara elektronik oleh Sistem SmaRtRw.</p>
           </div>
           <script>window.onload = () => { window.print(); window.close(); }</script>

@@ -33,13 +33,15 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
 
   const handlePrintBooking = (b: any) => {
     const kop = settings?.KOP_SURAT || {};
+    const tenantName = settings?.nama_rt || settings?.namaLayout || `RUKUN TETANGGA ${currentUser.rt || kop.rt || '...'} / RUKUN WARGA ${currentUser.rw || kop.rw || '...'}`;
+    const tagline = settings?.tagline || kop.tagline || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     const html = `
       <html>
         <head>
-          <title>Bukti Peminjaman Fasilitas - ${b.id}</title>
+          <title>${tenantName} - ${tagline} - Bukti Peminjaman Fasilitas - ${b.id}</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
             @media print {
@@ -53,8 +55,9 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
             <div class="flex items-center border-b-2 border-black pb-4 mb-6">
                ${kop.logo_url ? `<img src="${kop.logo_url}" class="w-16 h-16 object-contain mr-4" />` : ''}
                <div class="flex-1 text-center">
-                 <h1 class="text-xl font-bold uppercase">RUKUN TETANGGA ${currentUser.rt || kop.rt || '...'} / RUKUN WARGA ${currentUser.rw || kop.rw || '...'}</h1>
-                 <p class="text-sm font-bold uppercase">Kelurahan ${kop.kelurahan || '...'} - Kecamatan ${kop.kecamatan || '...'}</p>
+                 <h1 class="text-xl font-bold uppercase">${tenantName}</h1>
+                 <p class="text-xs font-bold uppercase text-slate-500 italic">${tagline}</p>
+                 <p class="text-sm font-bold uppercase mt-1">Kelurahan ${kop.kelurahan || '...'} - Kecamatan ${kop.kecamatan || '...'}</p>
                  <p class="text-[10px] mt-1 italic">${kop.alamat || ''}</p>
                </div>
             </div>
@@ -93,8 +96,12 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
                  <p class="text-[10px] uppercase tracking-widest mt-1">Stempel & TTD Basah</p>
                </div>
             </div>
+
+            <div class="mt-8 text-center text-xs font-semibold text-slate-600 italic block border-t pt-4">
+              "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
+            </div>
             
-            <div class="mt-16 text-[8px] text-slate-400 text-center border-t pt-4">
+            <div class="mt-8 text-[8px] text-slate-400 text-center border-t pt-4">
               Dokumen ini dicetak otomatis melalui Layanan SmaRtRw dan sah secara hukum sebagai izin internal pemakaian fasilitas warga.
             </div>
           </div>

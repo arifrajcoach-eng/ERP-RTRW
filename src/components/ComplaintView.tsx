@@ -44,13 +44,15 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
 
   const handlePrintComplaint = (c: any) => {
     const kop = settings?.KOP_SURAT || {};
+    const tenantName = settings?.nama_rt || settings?.namaLayout || `RUKUN TETANGGA ${currentUser.rt || kop.rt || '...'} / RUKUN WARGA ${currentUser.rw || kop.rw || '...'}`;
+    const tagline = settings?.tagline || kop.tagline || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     const html = `
       <html>
         <head>
-          <title>Bukti Tindak Lanjut Keluhan - ${c.id}</title>
+          <title>${tenantName} - ${tagline} - Bukti Tindak Lanjut Keluhan - ${c.id}</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
             @media print {
@@ -64,8 +66,9 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
             <div class="flex items-center border-b-2 border-black pb-4 mb-6">
                ${kop.logo_url ? `<img src="${kop.logo_url}" class="w-16 h-16 object-contain mr-4" />` : ''}
                <div class="flex-1 text-center">
-                 <h1 class="text-xl font-bold uppercase">RUKUN TETANGGA ${currentUser.rt || kop.rt || '...'} / RUKUN WARGA ${currentUser.rw || kop.rw || '...'}</h1>
-                 <p class="text-sm font-bold uppercase">Kelurahan ${kop.kelurahan || '...'} - Kecamatan ${kop.kecamatan || '...'}</p>
+                 <h1 class="text-xl font-bold uppercase">${tenantName}</h1>
+                 <p class="text-xs font-bold uppercase text-slate-500 italic">${tagline}</p>
+                 <p class="text-sm font-bold uppercase mt-1">Kelurahan ${kop.kelurahan || '...'} - Kecamatan ${kop.kecamatan || '...'}</p>
                  <p class="text-[10px] mt-1 italic">${kop.alamat || ''}</p>
                </div>
             </div>
@@ -90,11 +93,11 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
               <div class="mt-6 border-t border-slate-100 pt-4">
                 <p class="font-bold mb-1 ml-1">Hasil Tindak Lanjut:</p>
                 <div class="flex flex-col gap-2 bg-green-50 p-4 rounded-lg">
-                  <div class="flex items-center gap-2 text-green-700 font-bold">
-                    <span class="px-2 py-1 bg-green-600 text-white rounded text-[10px] uppercase">SELESAI</span>
-                    <span>Telah Selesai Ditangani</span>
-                  </div>
-                  <p class="text-xs text-green-800 italic mt-1 font-medium">"${c.resolutionNote || 'Keluhan telah ditindaklanjuti dan diselesaikan.'}"</p>
+                   <div class="flex items-center gap-2 text-green-700 font-bold">
+                     <span class="px-2 py-1 bg-green-600 text-white rounded text-[10px] uppercase">SELESAI</span>
+                     <span>Telah Selesai Ditangani</span>
+                   </div>
+                   <p class="text-xs text-green-800 italic mt-1 font-medium">"${c.resolutionNote || 'Keluhan telah ditindaklanjuti dan diselesaikan.'}"</p>
                 </div>
               </div>
               
@@ -106,8 +109,12 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
                 </div>
               </div>
             </div>
+
+            <div class="mt-8 text-center text-xs font-semibold text-slate-600 italic block border-t pt-4">
+              "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
+            </div>
             
-            <div class="mt-12 text-[8px] text-slate-400 text-center border-t pt-4">
+            <div class="mt-8 text-[8px] text-slate-400 text-center border-t pt-4">
               Dokumen ini dicetak secara digital melalui Sistem SmaRtRw dan sah sebagai bukti administrasi internal.
             </div>
           </div>
