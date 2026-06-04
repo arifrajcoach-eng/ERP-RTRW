@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import {
   Network,
   Siren,
@@ -1633,6 +1633,13 @@ export default function App() {
     }
   };
 
+  // Utility to chunk array for Firestore 'in' queries (max 10 items)
+  const chunkArray = useCallback((arr: any[], size: number) => {
+    return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+      arr.slice(i * size, i * size + size)
+    );
+  }, []);
+
   // --- FIREBASE SYNC (REAL-TIME CORE DATA) ---
   useEffect(() => {
     if (!currentUser && !wargaAuth) {
@@ -1674,38 +1681,44 @@ export default function App() {
 
     // 3. SOS (Global) - Important for safety
     let isInitialLoad = true;
-    let unsubEmergencies = () => {};
+    let unsubEmergencies: (() => void)[] = [];
     if (tIds.length > 0) {
-      unsubEmergencies = onSnapshot(
-        query(collection(db, "emergencies"), where("tenantId", "in", tIds)),
-        (snap) => {
-          setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-          snap.docChanges().forEach(change => {
-             if (change.type === "added" && change.doc.data().status === "ACTIVE") {
-                const data = change.doc.data();
-                const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
-                
-                const isMine = data.userId === auth.currentUser?.uid;
-                const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
-                
-                if (isMine || isNewSinceAppStart) {
-                   // Reveal ONLY new SOS, don't force-reveal on modifications
-                   setHiddenEmergencyId(null);
-                }
-             }
-          });
-          isInitialLoad = false;
-        },
-        (err) => handleFirestoreError(err, "list", "emergencies")
-      );
+      const chunks = chunkArray(tIds, 10);
+      chunks.forEach(chunk => {
+        unsubEmergencies.push(onSnapshot(
+          query(collection(db, "emergencies"), where("tenantId", "in", chunk)),
+          (snap) => {
+            setEmergenciesData(prev => {
+               const filtered = prev.filter(p => !chunk.includes((p as any).tenantId));
+               return [...filtered, ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))];
+            });
+            snap.docChanges().forEach(change => {
+               if (change.type === "added" && change.doc.data().status === "ACTIVE") {
+                  const data = change.doc.data();
+                  const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
+                  
+                  const isMine = data.userId === auth.currentUser?.uid;
+                  const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
+                  
+                  if (isMine || isNewSinceAppStart) {
+                     // Reveal ONLY new SOS, don't force-reveal on modifications
+                     setHiddenEmergencyId(null);
+                  }
+               }
+            });
+            isInitialLoad = false;
+          },
+          (err) => handleFirestoreError(err, "list", "emergencies")
+        ));
+      });
     }
 
     return () => {
       unsubSettings();
       unsubCurrentTenant();
-      unsubEmergencies();
+      unsubEmergencies.forEach(u => u());
     };
-  }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId]);
+  }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId, chunkArray]);
 
   const [activeParentTenantId, setActiveParentTenantId] = useState<string | null>(null);
 
@@ -1792,34 +1805,48 @@ export default function App() {
     if (activeTab !== "warga" && activeTab !== "dashboard" && activeTab !== "users") return;
 
     const tIds = activeTenantIds;
+    const unsubs: (() => void)[] = [];
     
     // Safety check: Prevent SuperAdmin from viewing all residents across all tenants by default.
     // They must explicitly select a tenant first.
-    let unsubWarga = () => {};
     if (tIds.length > 0 && !(currentUser?.isSuperAdmin && !selectedTenantId)) {
-      const constraints = [where("tenantId", "in", tIds), limit(1000)];
-      if (currentUser?.role === "RT") {
-        constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
-      }
-      unsubWarga = onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
-        setWargaData(snap.docs.map(doc => ({ docId: doc.id, ...doc.data() })));
+      const chunks = chunkArray(tIds, 10);
+      chunks.forEach(chunk => {
+        const constraints = [where("tenantId", "in", chunk), limit(1000)];
+        if (currentUser?.role === "RT") {
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
+        }
+        unsubs.push(onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
+          setWargaData(prev => {
+            const filtered = prev.filter(p => !chunk.includes(p.tenantId));
+            return [...filtered, ...snap.docs.map(doc => ({ docId: doc.id, ...doc.data() } as any))];
+          });
+        }));
       });
     } else {
       setWargaData([]);
     }
 
-    let unsubUsers = () => {};
     if (currentUser?.isSuperAdmin || ["ADMIN", "RW", "RT"].includes(currentUser?.role || "")) {
-      if (currentUser?.isSuperAdmin || tIds.length > 0) {
-        const uq = currentUser?.isSuperAdmin ? query(collection(db, "users")) : query(collection(db, "users"), where("tenantId", "in", tIds));
-        unsubUsers = onSnapshot(query(uq, limit(1000)), (snap) => {
-          setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
+      if (currentUser?.isSuperAdmin) {
+        unsubs.push(onSnapshot(query(collection(db, "users"), limit(1000)), (snap) => {
+          setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
+        }));
+      } else if (tIds.length > 0) {
+        const chunks = chunkArray(tIds, 10);
+        chunks.forEach(chunk => {
+          unsubs.push(onSnapshot(query(collection(db, "users"), where("tenantId", "in", chunk), limit(1000)), (snap) => {
+            setUsersData(prev => {
+              const filtered = prev.filter(p => !chunk.includes(p.tenantId));
+              return [...filtered, ...snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any))];
+            });
+          }));
         });
       }
     }
 
-    return () => { unsubWarga(); unsubUsers(); };
-  }, [activeTab, activeTenantIds, currentUser?.uid]);
+    return () => unsubs.forEach(u => u());
+  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray]);
 
   // 2. Financial Sync (Kas, Iuran, PPOB)
   useEffect(() => {
@@ -1828,24 +1855,26 @@ export default function App() {
 
     const tIds = activeTenantIds;
     const rt = currentUser?.role === "RT" ? getQueryRtNormalized(currentUser.rt) : null;
+    const unsubs: (() => void)[] = [];
     
-    let unsubKas = () => {};
-    if (hasFullAccess && tIds.length > 0) {
-      const kq = rt ? query(collection(db, "kas"), where("tenantId", "in", tIds), where("rt", "==", rt), orderBy("tanggal", "desc"), limit(500)) : query(collection(db, "kas"), where("tenantId", "in", tIds), orderBy("tanggal", "desc"), limit(500));
-      unsubKas = onSnapshot(kq, (snap) => setKasData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-    }
-
-    let unsubIuran = () => {};
     if (tIds.length > 0) {
-      const iuranQ = hasFullAccess ? 
-        (rt ? query(collection(db, "iuran"), where("tenantId", "in", tIds), where("rt", "==", rt)) : query(collection(db, "iuran"), where("tenantId", "in", tIds))) :
-        query(collection(db, "iuran"), where("tenantId", "in", tIds), where("userId", "==", auth.currentUser?.uid || ""));
-      
-      unsubIuran = onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+      const chunks = chunkArray(tIds, 10);
+      chunks.forEach(chunk => {
+        if (hasFullAccess) {
+           const kq = rt ? query(collection(db, "kas"), where("tenantId", "in", chunk), where("rt", "==", rt), orderBy("tanggal", "desc"), limit(500)) : query(collection(db, "kas"), where("tenantId", "in", chunk), orderBy("tanggal", "desc"), limit(500));
+           unsubs.push(onSnapshot(kq, (snap) => setKasData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+        }
+        
+        const iuranQ = hasFullAccess ? 
+          (rt ? query(collection(db, "iuran"), where("tenantId", "in", chunk), where("rt", "==", rt)) : query(collection(db, "iuran"), where("tenantId", "in", chunk))) :
+          query(collection(db, "iuran"), where("tenantId", "in", chunk), where("userId", "==", auth.currentUser?.uid || ""));
+        
+        unsubs.push(onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+      });
     }
 
-    return () => { unsubKas(); unsubIuran(); };
-  }, [activeTab, activeTenantIds, currentUser?.uid, hasFullAccess]);
+    return () => unsubs.forEach(u => u());
+  }, [activeTab, activeTenantIds, currentUser?.uid, hasFullAccess, chunkArray]);
 
   // 3. Posyandu & Health Sync
   useEffect(() => {
@@ -1855,66 +1884,69 @@ export default function App() {
     const tIds = activeTenantIds;
     if (tIds.length === 0) return;
     const collections = ["balita", "ibu_hamil", "posyandu_kegiatan", "posbindu_kegiatan", "pemeriksaan_balita", "pemeriksaan_posbindu", "imunisasi"];
-    const unsubs = collections.map(col => {
-      const q = query(collection(db, col), where("tenantId", "in", tIds), limit(100));
-      return onSnapshot(q, (snap) => {
-        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (col === "balita") setBalitaData(data);
-        else if (col === "ibu_hamil") setIbuHamilData(data);
-        else if (col === "posyandu_kegiatan") setPosyanduKegiatanData(data);
-        else if (col === "posbindu_kegiatan") setPosbinduKegiatanData(data);
-        else if (col === "pemeriksaan_balita") setPemeriksaanBalitaData(data);
-        else if (col === "pemeriksaan_posbindu") setPemeriksaanPosbinduData(data);
-        else if (col === "imunisasi") setImunisasiData(data);
+    const unsubs: (() => void)[] = [];
+    const chunks = chunkArray(tIds, 10);
+    
+    chunks.forEach(chunk => {
+      collections.forEach(col => {
+        const q = query(collection(db, col), where("tenantId", "in", chunk), limit(100));
+        unsubs.push(onSnapshot(q, (snap) => {
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+          if (col === "balita") setBalitaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+          else if (col === "ibu_hamil") setIbuHamilData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+          else if (col === "posyandu_kegiatan") setPosyanduKegiatanData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+          else if (col === "posbindu_kegiatan") setPosbinduKegiatanData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+          else if (col === "pemeriksaan_balita") setPemeriksaanBalitaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+          else if (col === "pemeriksaan_posbindu") setPemeriksaanPosbinduData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+          else if (col === "imunisasi") setImunisasiData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+        }));
       });
     });
 
     return () => unsubs.forEach(unsub => unsub());
-  }, [activeTab, activeTenantIds, currentUser?.uid]);
+  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray]);
 
   // 4. Inventory, Trash Bank, Store & more
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     const tIds = activeTenantIds;
     if (tIds.length === 0) return;
-    // Chunk array to max 10 items for firestore 'in' queries
-    const chunkArray = (arr: any[], size: number) => {
-      return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
-        arr.slice(i * size, i * size + size)
-      );
-    };
     const tIdsChunks = chunkArray(tIds, 10);
     const unsubs: (() => void)[] = [];
 
     // Inventaris
     if (activeTab === "inventaris") {
-      tIdsChunks.forEach(tIds => {
-         unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", tIds)), (snap) => setInventarisData(prev => [...prev.filter(p => !tIds.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))] )));
-         unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", tIds)), (snap) => setInventarisLogs(prev => [...prev.filter(p => !tIds.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))] )));
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", chunk)), (snap) => setInventarisData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))] )));
+         unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", chunk)), (snap) => setInventarisLogs(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))] )));
       });
     }
 
     // Bank Sampah
     if (activeTab === "bank-sampah") {
       ["sampah_kategori", "sampah_setoran", "sampah_tarik_saldo"].forEach(c => {
-         unsubs.push(onSnapshot(query(collection(db, c), where("tenantId", "in", tIds), limit(200)), (snap) => {
-            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (c === "sampah_kategori") setSampahKategoriData(data);
-            else if (c === "sampah_setoran") setSampahSetoranData(data);
-            else setSampahTarikSaldoData(data);
-         }));
+        tIdsChunks.forEach(chunk => {
+           unsubs.push(onSnapshot(query(collection(db, c), where("tenantId", "in", chunk), limit(200)), (snap) => {
+              const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+              if (c === "sampah_kategori") setSampahKategoriData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+              else if (c === "sampah_setoran") setSampahSetoranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+              else setSampahTarikSaldoData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
+           }));
+        });
       });
     }
 
     // Shop/Store
     if (activeTab === "etoko") {
-       unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", tIds)), snap => setTokoProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
-       unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", tIds)), snap => setTokoOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
-       unsubs.push(onSnapshot(query(collection(db, "toko_reviews"), where("tenantId", "in", tIds)), snap => setTokoReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))));
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", chunk)), snap => setTokoProducts(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", chunk)), snap => setTokoOrders(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "toko_reviews"), where("tenantId", "in", chunk)), snap => setTokoReviews(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+      });
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTab, activeTenantIds, currentUser?.uid]);
+  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray]);
 
   // 5. Surat, Voting, Booking & Misc Sync
   useEffect(() => {
@@ -1922,43 +1954,61 @@ export default function App() {
     const tIds = activeTenantIds;
     if (tIds.length === 0) return;
     const unsubs: (() => void)[] = [];
+    const tIdsChunks = chunkArray(tIds, 10);
 
     // Surat
     if (activeTab === "surat" || activeTab === "dashboard" || activeTab === "ai-bot") {
-       unsubs.push(onSnapshot(query(collection(db, "surat"), where("tenantId", "in", tIds), limit(500)), snap => {
-          setSuratData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-       }));
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "surat"), where("tenantId", "in", chunk), limit(500)), snap => {
+            setSuratData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))]);
+         }));
+      });
     }
 
     // Voting
     if (activeTab === "voting") {
-       unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", tIds)), snap => setVotingCandidates(snap.docs.map(d => ({ ...d.data() })))));
-       unsubs.push(onSnapshot(doc(db, "voting_config", currentUser?.tenantId || "rw26_berjuang"), snap => snap.exists() && setVotingConfig(snap.data())));
-       if (["ADMIN", "SUPER_ADMIN", "RT", "RW"].includes(currentUser?.role?.toUpperCase())) {
-         unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", tIds)), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
-       } else {
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", chunk)), snap => setVotingCandidates(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ ...d.data() } as any))])));
+      });
+      unsubs.push(onSnapshot(doc(db, "voting_config", currentUser?.tenantId || "rw26_berjuang"), snap => snap.exists() && setVotingConfig(snap.data())));
+      if (["ADMIN", "SUPER_ADMIN", "RT", "RW"].includes(currentUser?.role?.toUpperCase())) {
+        tIdsChunks.forEach(chunk => {
+           unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", chunk)), snap => setUserVotes(prev => [...prev.filter(p => !chunk.includes((p as any).tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+        });
+      } else {
          unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser?.id || "guest")), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
-       }
+      }
     }
 
     // Booking
     if (activeTab === "booking" || activeTab === "dashboard" || activeTab === "ai-bot") {
-       unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", tIds)), snap => setBookingsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", chunk)), snap => setBookingsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+      });
     }
 
     // Complaints
     if (activeTab === "complaint" || activeTab === "dashboard" || activeTab === "ai-bot") {
-       unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", tIds)), snap => setComplaintsData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", chunk)), snap => setComplaintsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+      });
     }
 
     // Verifikasi
     if (activeTab === "verifikasi" || activeTab === "dashboard") {
-       unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", tIds)), snap => setVerifikasiWargaData(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk)), snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+      });
     }
 
     // Audit Logs
     if (activeTab === "audit") {
-       unsubs.push(onSnapshot(query(collection(db, "audit_logs"), where("tenantId", "in", tIds), orderBy("timestamp", "desc"), limit(100)), snap => setAuditLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "audit_logs"), where("tenantId", "in", chunk), orderBy("timestamp", "desc"), limit(100)), snap => setAuditLogs(prev => {
+            const newDocs = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+            return [...prev.filter(p => !chunk.includes(p.tenantId)), ...newDocs].sort((a,b) => b.timestamp - a.timestamp).slice(0, 100);
+         })));
+      });
     }
 
     return () => unsubs.forEach(u => u());
@@ -11279,6 +11329,10 @@ function InventarisView({
       roleUpper === "RT" ||
       roleUpper === "BENDAHARA" ||
       roleUpper === "SEKRETARIS" ||
+      roleUpper === "PENGURUS" ||
+      roleUpper === "SATPAM" ||
+      roleUpper === "STAF" ||
+      roleUpper === "STAFF" ||
       currentUser?.isSuperAdmin
     );
   }, [userRole, currentUser?.isSuperAdmin]);
@@ -11531,6 +11585,7 @@ function InventarisView({
     setIsLoadingDB(true);
     try {
       await deleteDoc(doc(db, "inventaris", id));
+      setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
       showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
     } catch (error: any) {
       console.error("Firestore Delete Asset Error:", error);
@@ -11565,6 +11620,7 @@ function InventarisView({
     setIsLoadingDB(true);
     try {
       await deleteDoc(doc(db, "inventaris_logs", logId));
+      setInventarisLogs((prev: any) => prev.filter((log: any) => log.id !== logId));
       showNotification("Catatan aktivitas berhasil dihapus.", "success");
     } catch (error: any) {
       console.error("Firestore Delete Log Error:", error);
@@ -12371,6 +12427,15 @@ function InventarisView({
                             <span className="text-[10px] font-mono text-slate-400">
                               {log.tanggal}
                             </span>
+                            {canEdit && (
+                              <button
+                                onClick={() => handleDeleteLog(log.id)}
+                                className="text-red-400 hover:text-red-600 transition-colors p-1"
+                                title="Hapus Riwayat"
+                              >
+                                 <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
 

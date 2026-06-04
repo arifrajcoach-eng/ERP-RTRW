@@ -55,6 +55,10 @@ export default function InventarisView({
       roleUpper === "RT" ||
       roleUpper === "BENDAHARA" ||
       roleUpper === "SEKRETARIS" ||
+      roleUpper === "PENGURUS" ||
+      roleUpper === "SATPAM" ||
+      roleUpper === "STAF" ||
+      roleUpper === "STAFF" ||
       currentUser?.isSuperAdmin
     );
   }, [userRole, currentUser?.isSuperAdmin]);
@@ -313,6 +317,9 @@ export default function InventarisView({
     setIsLoadingDB(true);
     try {
       await deleteDoc(doc(db, "inventaris", id));
+      if (setInventarisData) {
+        setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
+      }
       showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
     } catch (error: any) {
       console.error("Firestore Delete Asset Error:", error);
@@ -347,6 +354,9 @@ export default function InventarisView({
     setIsLoadingDB(true);
     try {
       await deleteDoc(doc(db, "inventaris_logs", logId));
+      if (setInventarisLogs) {
+        setInventarisLogs((prev: any) => prev.filter((log: any) => log.id !== logId));
+      }
       showNotification("Catatan aktivitas berhasil dihapus.", "success");
     } catch (error: any) {
       console.error("Firestore Delete Log Error:", error);
