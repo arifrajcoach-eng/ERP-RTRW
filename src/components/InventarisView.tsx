@@ -322,8 +322,6 @@ export default function InventarisView({
         title: "Konfirmasi Hapus Aset",
         message: `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
         onConfirm: async () => {
-          setConfirmConfig(null);
-          setIsLoadingDB(true);
           try {
             await deleteDoc(doc(db, "inventaris", id));
             if (setInventarisData) {
@@ -334,7 +332,7 @@ export default function InventarisView({
             console.error("Firestore Delete Asset Error:", error);
             handleFirestoreError(error, "delete", `inventaris/${id}`);
           } finally {
-            setIsLoadingDB(false);
+            setConfirmConfig(null);
           }
         },
       });

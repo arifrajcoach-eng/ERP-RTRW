@@ -10081,10 +10081,10 @@ function BankSampahView({
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 ${
                   activeSubTab === tab.id
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-100"
-                    : "text-slate-500 hover:bg-slate-50"
+                    ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30 font-black tracking-wide hover:brightness-105"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -11606,8 +11606,6 @@ function InventarisView({
         title: "Konfirmasi Hapus Aset",
         message: `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
         onConfirm: async () => {
-          setConfirmConfig(null);
-          setIsLoadingDB(true);
           try {
             await deleteDoc(doc(db, "inventaris", id));
             setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
@@ -11616,7 +11614,7 @@ function InventarisView({
             console.error("Firestore Delete Asset Error:", error);
             handleFirestoreError(error, "delete", `inventaris/${id}`);
           } finally {
-            setIsLoadingDB(false);
+            setConfirmConfig(null);
           }
         },
       });
