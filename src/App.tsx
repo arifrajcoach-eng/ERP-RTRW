@@ -12128,7 +12128,7 @@ function InventarisView({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-blue-600 text-white font-black text-[10px] tracking-widest uppercase rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                  className="flex-1 py-3 bg-gradient-to-r from-blue-500 via-indigo-600 to-violet-600 text-white font-black text-[10px] tracking-widest uppercase rounded-xl hover:brightness-105 hover:shadow-indigo-500/30 transition-all duration-300 shadow-lg shadow-indigo-500/20 active:scale-95"
                 >
                   Simpan Aset
                 </button>
@@ -12410,7 +12410,7 @@ function InventarisView({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-green-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-green-700 shadow-lg shadow-green-100"
+                  className="flex-1 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white font-black text-[10px] tracking-widest uppercase rounded-xl hover:brightness-105 transition-all duration-300 shadow-lg shadow-emerald-500/20 active:scale-95"
                 >
                   Simpan Catatan
                 </button>
