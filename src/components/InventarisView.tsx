@@ -327,9 +327,7 @@ export default function InventarisView({
           try {
             await deleteDoc(doc(db, "inventaris", id));
             if (setInventarisData) {
-              setInventarisData((prev: any) =>
-                prev.filter((item: any) => item.id !== id),
-              );
+              setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
             }
             showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
           } catch (error: any) {
@@ -345,7 +343,7 @@ export default function InventarisView({
 
     // Fallback if setConfirmConfig is missing
     if (
-      !window.confirm(
+      !confirm(
         `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
       )
     )
@@ -355,9 +353,7 @@ export default function InventarisView({
     try {
       await deleteDoc(doc(db, "inventaris", id));
       if (setInventarisData) {
-        setInventarisData((prev: any) =>
-          prev.filter((item: any) => item.id !== id),
-        );
+        setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
       }
       showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
     } catch (error: any) {

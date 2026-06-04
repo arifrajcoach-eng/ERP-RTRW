@@ -11319,6 +11319,7 @@ function InventarisView({
   handleFirestoreError,
   showNotification,
   handleFileUpload,
+  setConfirmConfig,
 }: any) {
   const roleUpperGlobal = currentUser?.role?.toUpperCase() || "";
   const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpperGlobal);
@@ -11600,6 +11601,29 @@ function InventarisView({
       return;
     }
 
+    if (setConfirmConfig) {
+      setConfirmConfig({
+        title: "Konfirmasi Hapus Aset",
+        message: `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
+        onConfirm: async () => {
+          setConfirmConfig(null);
+          setIsLoadingDB(true);
+          try {
+            await deleteDoc(doc(db, "inventaris", id));
+            setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
+            showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
+          } catch (error: any) {
+            console.error("Firestore Delete Asset Error:", error);
+            handleFirestoreError(error, "delete", `inventaris/${id}`);
+          } finally {
+            setIsLoadingDB(false);
+          }
+        },
+      });
+      return;
+    }
+
+    // Fallback if setConfirmConfig is missing
     if (
       !confirm(
         `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
