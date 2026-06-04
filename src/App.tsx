@@ -641,6 +641,11 @@ export default function App() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
   const alertedSOSRef = useRef<Set<string>>(new Set());
   const appStartTime = useRef(Date.now());
 
@@ -3162,7 +3167,7 @@ export default function App() {
               <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
             </span>
           </h2>
-          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors">
+          <p className="font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-6 transition-colors" style={{ fontSize: "11px" }}>
             Berdampak & Memberdayakan
           </p>
           <div className="flex flex-col gap-2">
@@ -3318,7 +3323,7 @@ export default function App() {
               </div>
             ) : (
               <div className="flex flex-col">
-                <p className="text-[10px] text-brand-blue font-black uppercase tracking-wider mb-0.5">
+                <p className="text-[11px] text-brand-blue font-black uppercase tracking-wider mb-0.5">
                   Tenant ID
                 </p>
                 <div className="flex items-center gap-2">
@@ -3558,7 +3563,7 @@ export default function App() {
             <DashboardView
               allowedMenuItems={renderableNavItems}
               kasData={filteredKasDataCentral}
-              wargaData={cappedWargaData}
+              wargaData={filteredWargaDataCentral}
               suratData={filteredSuratDataCentral}
               iuranData={filteredIuranDataCentral}
               emergenciesData={emergenciesData}
@@ -3788,6 +3793,7 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               showNotification={showNotification}
               handleFileUpload={handleFileUpload}
+              setConfirmConfig={setConfirmConfig}
             />
           )}
           {activeTab === "surat" && (
@@ -4175,6 +4181,17 @@ export default function App() {
         tenantId={currentTenant?.id || currentUser?.tenantId || "rw26_berjuang"}
         tenantName={currentTenant?.nama || getTranslatedLabel("Sistem RT/RW", settings?.themeMode)}
       />
+      <AnimatePresence>
+        {confirmConfig && (
+          <ConfirmModal
+            isOpen={true}
+            title={confirmConfig.title}
+            message={confirmConfig.message}
+            onConfirm={confirmConfig.onConfirm}
+            onCancel={() => setConfirmConfig(null)}
+          />
+        )}
+      </AnimatePresence>
       {showFreeTrialModal && (
         <FreeTrialRegistrationModal
           onClose={() => setShowFreeTrialModal(false)}
@@ -11321,8 +11338,7 @@ function InventarisView({
   const [uploading, setUploading] = useState(false);
 
   const canEdit = useMemo(() => {
-    if (!userRole) return false;
-    const roleUpper = userRole.toUpperCase();
+    const roleUpper = (userRole || "").toUpperCase();
     return (
       roleUpper === "ADMIN" ||
       roleUpper === "RW" ||
@@ -11333,6 +11349,15 @@ function InventarisView({
       roleUpper === "SATPAM" ||
       roleUpper === "STAF" ||
       roleUpper === "STAFF" ||
+      roleUpper === "PENGELOLA" ||
+      roleUpper === "KETUA" ||
+      roleUpper === "PENGURUS RT" ||
+      roleUpper === "PENGURUS RW" ||
+      roleUpper === "SUPERADMIN" ||
+      roleUpper === "ADMINISTRATOR" ||
+      roleUpper.includes("KETUA") ||
+      roleUpper.includes("BENDAHARA") ||
+      roleUpper.includes("SEKRETARIS") ||
       currentUser?.isSuperAdmin
     );
   }, [userRole, currentUser?.isSuperAdmin]);
@@ -11576,7 +11601,7 @@ function InventarisView({
     }
 
     if (
-      !window.confirm(
+      !confirm(
         `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
       )
     )
@@ -11611,7 +11636,7 @@ function InventarisView({
     }
 
     if (
-      !window.confirm(
+      !confirm(
         "Hapus riwayat aktivitas ini? Tindakan ini tidak dapat dibatalkan.",
       )
     )

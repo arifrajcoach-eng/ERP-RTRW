@@ -8,6 +8,7 @@ import {
   Edit,
   X,
   Camera,
+  Trash2,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
@@ -28,6 +29,7 @@ export default function InventarisView({
   handleFirestoreError,
   showNotification,
   handleFileUpload,
+  setConfirmConfig,
 }: any) {
   const roleUpperGlobal = currentUser?.role?.toUpperCase() || "";
   const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpperGlobal);
@@ -47,8 +49,7 @@ export default function InventarisView({
   const [uploading, setUploading] = useState(false);
 
   const canEdit = useMemo(() => {
-    if (!userRole) return false;
-    const roleUpper = userRole.toUpperCase();
+    const roleUpper = (userRole || "").toUpperCase();
     return (
       roleUpper === "ADMIN" ||
       roleUpper === "RW" ||
@@ -59,6 +60,15 @@ export default function InventarisView({
       roleUpper === "SATPAM" ||
       roleUpper === "STAF" ||
       roleUpper === "STAFF" ||
+      roleUpper === "PENGELOLA" ||
+      roleUpper === "KETUA" ||
+      roleUpper === "PENGURUS RT" ||
+      roleUpper === "PENGURUS RW" ||
+      roleUpper === "SUPERADMIN" ||
+      roleUpper === "ADMINISTRATOR" ||
+      roleUpper.includes("KETUA") ||
+      roleUpper.includes("BENDAHARA") ||
+      roleUpper.includes("SEKRETARIS") ||
       currentUser?.isSuperAdmin
     );
   }, [userRole, currentUser?.isSuperAdmin]);
@@ -307,6 +317,33 @@ export default function InventarisView({
       return;
     }
 
+    if (setConfirmConfig) {
+      setConfirmConfig({
+        title: "Konfirmasi Hapus Aset",
+        message: `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
+        onConfirm: async () => {
+          setConfirmConfig(null);
+          setIsLoadingDB(true);
+          try {
+            await deleteDoc(doc(db, "inventaris", id));
+            if (setInventarisData) {
+              setInventarisData((prev: any) =>
+                prev.filter((item: any) => item.id !== id),
+              );
+            }
+            showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
+          } catch (error: any) {
+            console.error("Firestore Delete Asset Error:", error);
+            handleFirestoreError(error, "delete", `inventaris/${id}`);
+          } finally {
+            setIsLoadingDB(false);
+          }
+        },
+      });
+      return;
+    }
+
+    // Fallback if setConfirmConfig is missing
     if (
       !window.confirm(
         `Hapus barang "${nama}" dari inventaris? Tindakan ini tidak dapat dibatalkan.`,
@@ -318,7 +355,9 @@ export default function InventarisView({
     try {
       await deleteDoc(doc(db, "inventaris", id));
       if (setInventarisData) {
-        setInventarisData((prev: any) => prev.filter((item: any) => item.id !== id));
+        setInventarisData((prev: any) =>
+          prev.filter((item: any) => item.id !== id),
+        );
       }
       showNotification(`Aset "${nama}" berhasil dihapus.`, "success");
     } catch (error: any) {
@@ -344,6 +383,34 @@ export default function InventarisView({
       return;
     }
 
+    if (setConfirmConfig) {
+      setConfirmConfig({
+        title: "Konfirmasi Hapus Riwayat",
+        message:
+          "Hapus riwayat aktivitas ini? Tindakan ini tidak dapat dibatalkan.",
+        onConfirm: async () => {
+          setConfirmConfig(null);
+          setIsLoadingDB(true);
+          try {
+            await deleteDoc(doc(db, "inventaris_logs", logId));
+            if (setInventarisLogs) {
+              setInventarisLogs((prev: any) =>
+                prev.filter((log: any) => log.id !== logId),
+              );
+            }
+            showNotification("Catatan aktivitas berhasil dihapus.", "success");
+          } catch (error: any) {
+            console.error("Firestore Delete Log Error:", error);
+            handleFirestoreError(error, "delete", `inventaris_logs/${logId}`);
+          } finally {
+            setIsLoadingDB(false);
+          }
+        },
+      });
+      return;
+    }
+
+    // Fallback
     if (
       !window.confirm(
         "Hapus riwayat aktivitas ini? Tindakan ini tidak dapat dibatalkan.",
@@ -355,7 +422,9 @@ export default function InventarisView({
     try {
       await deleteDoc(doc(db, "inventaris_logs", logId));
       if (setInventarisLogs) {
-        setInventarisLogs((prev: any) => prev.filter((log: any) => log.id !== logId));
+        setInventarisLogs((prev: any) =>
+          prev.filter((log: any) => log.id !== logId),
+        );
       }
       showNotification("Catatan aktivitas berhasil dihapus.", "success");
     } catch (error: any) {
@@ -1265,9 +1334,4 @@ export default function InventarisView({
   );
 }
 
-// Internal icon for delete riwayat
-function Trash2({ className }: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-    )
-}
+// Global icons should be used from lucide-react

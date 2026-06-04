@@ -541,22 +541,8 @@ export function KasView({
     }
   };
 
-  const currentMonthTransactions = kasData.filter((t) => {
-    const matchesYear = t.tanggal.includes(selectedYear);
-    const monthStr = months[selectedMonth].substring(0, 3);
-    const matchesMonth = t.tanggal.includes(monthStr);
-
-    if (!matchesYear || !matchesMonth) return false;
-
-    if (searchQuery.trim() === "") return true;
-
-    const query = searchQuery.toLowerCase();
-    return (
-      t.transaksi?.toLowerCase().includes(query) ||
-      t.nama?.toLowerCase().includes(query) ||
-      t.keterangan?.toLowerCase().includes(query)
-    );
-  });
+  const currentMonthTransactions = kasData; // Use all transactions
+  // const currentMonthTransactions = kasData.filter((t) => { ... });
 
   const totalItems = currentMonthTransactions.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);

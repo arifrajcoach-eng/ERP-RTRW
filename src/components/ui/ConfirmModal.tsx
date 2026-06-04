@@ -28,7 +28,7 @@ export function ConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[100] p-4 print:hidden">
+    <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[9999] p-4 print:hidden">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
