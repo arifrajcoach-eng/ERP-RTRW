@@ -26,6 +26,7 @@ interface WargaViewProps {
   showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void;
   currentUser: any;
   settings?: any;
+  tenantsData?: any[];
 }
 
 const calculateAge = (tglLahir: string) => {
@@ -54,7 +55,8 @@ function WargaView(props: WargaViewProps) {
       handleFileUpload, 
       showNotification, 
       currentUser,
-      settings 
+      settings,
+      tenantsData
   } = props;
 
   // Restriction: WARGA cannot access Data Warga
@@ -245,7 +247,8 @@ function WargaView(props: WargaViewProps) {
             tIdsToClean.push("rw26_berjuang", "trihprw26");
           }
         }
-        const uniqueTids = Array.from(new Set(tIdsToClean));
+        const uniqueTids = tenantId ? [tenantId] : [];
+        if (uniqueTids.length === 0) return;
 
         const q = query(collection(db, 'data_warga'), where('tenantId', 'in', uniqueTids));
         const snapshot = await getDocs(q);

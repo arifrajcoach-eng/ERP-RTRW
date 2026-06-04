@@ -1317,13 +1317,20 @@ export default function App() {
   const activeTenantIds = useMemo(() => {
     const baseTenantId =
       currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang";
-    const tId =
-      currentUser?.isSuperAdmin && selectedTenantId
-        ? selectedTenantId
-        : baseTenantId;
     
-    const list = new Set<string>([tId]);
-
+    // If SuperAdmin, default to an empty string to force selection if not already selected
+    let tId = "";
+    if (currentUser?.isSuperAdmin) {
+       tId = selectedTenantId || "";
+    } else {
+       tId = baseTenantId;
+    }
+    
+    const list = new Set<string>();
+    if (tId) {
+      list.add(tId);
+    }
+    
     // Gather all valid options from actual tenant collection
     const addChildren = (parentId: string) => {
       tenantsData.forEach(t => {
@@ -1336,21 +1343,24 @@ export default function App() {
       });
     };
     
-    addChildren(tId);
+    if (tId) addChildren(tId);
 
     // Give children context for their parent safely with loop detection
-    let current = tenantsData.find(t => t.id === tId);
-    const visitedParents = new Set<string>();
-    while (current && current.parentId) {
-      if (visitedParents.has(current.id)) {
-        console.warn("[App] Loop detected in tenant parenthood structure for tId:", tId);
-        break; // Guard against infinite iteration
+    // Only include ancestors if not a SuperAdmin filtering a specific tenant
+    if (tId && !(currentUser?.isSuperAdmin && selectedTenantId)) {
+      let current = tenantsData.find(t => t.id === tId);
+      const visitedParents = new Set<string>();
+      while (current && current.parentId) {
+        if (visitedParents.has(current.id)) {
+          console.warn("[App] Loop detected in tenant parenthood structure for tId:", tId);
+          break; // Guard against infinite iteration
+        }
+        visitedParents.add(current.id);
+        if (!list.has(current.parentId)) {
+          list.add(current.parentId);
+        }
+        current = tenantsData.find(t => t.id === current?.parentId);
       }
-      visitedParents.add(current.id);
-      if (!list.has(current.parentId)) {
-        list.add(current.parentId);
-      }
-      current = tenantsData.find(t => t.id === current?.parentId);
     }
     
     return Array.from(list);
@@ -1664,28 +1674,31 @@ export default function App() {
 
     // 3. SOS (Global) - Important for safety
     let isInitialLoad = true;
-    const unsubEmergencies = onSnapshot(
-      query(collection(db, "emergencies"), where("tenantId", "in", tIds)),
-      (snap) => {
-        setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        snap.docChanges().forEach(change => {
-           if (change.type === "added" && change.doc.data().status === "ACTIVE") {
-              const data = change.doc.data();
-              const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
-              
-              const isMine = data.userId === auth.currentUser?.uid;
-              const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
-              
-              if (isMine || isNewSinceAppStart) {
-                 // Reveal ONLY new SOS, don't force-reveal on modifications
-                 setHiddenEmergencyId(null);
-              }
-           }
-        });
-        isInitialLoad = false;
-      },
-      (err) => handleFirestoreError(err, "list", "emergencies")
-    );
+    let unsubEmergencies = () => {};
+    if (tIds.length > 0) {
+      unsubEmergencies = onSnapshot(
+        query(collection(db, "emergencies"), where("tenantId", "in", tIds)),
+        (snap) => {
+          setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          snap.docChanges().forEach(change => {
+             if (change.type === "added" && change.doc.data().status === "ACTIVE") {
+                const data = change.doc.data();
+                const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
+                
+                const isMine = data.userId === auth.currentUser?.uid;
+                const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
+                
+                if (isMine || isNewSinceAppStart) {
+                   // Reveal ONLY new SOS, don't force-reveal on modifications
+                   setHiddenEmergencyId(null);
+                }
+             }
+          });
+          isInitialLoad = false;
+        },
+        (err) => handleFirestoreError(err, "list", "emergencies")
+      );
+    }
 
     return () => {
       unsubSettings();
@@ -1779,21 +1792,30 @@ export default function App() {
     if (activeTab !== "warga" && activeTab !== "dashboard" && activeTab !== "users") return;
 
     const tIds = activeTenantIds;
-    const constraints = [where("tenantId", "in", tIds), limit(1000)];
-    if (currentUser?.role === "RT") {
-      constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
+    
+    // Safety check: Prevent SuperAdmin from viewing all residents across all tenants by default.
+    // They must explicitly select a tenant first.
+    let unsubWarga = () => {};
+    if (tIds.length > 0 && !(currentUser?.isSuperAdmin && !selectedTenantId)) {
+      const constraints = [where("tenantId", "in", tIds), limit(1000)];
+      if (currentUser?.role === "RT") {
+        constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
+      }
+      unsubWarga = onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
+        setWargaData(snap.docs.map(doc => ({ docId: doc.id, ...doc.data() })));
+      });
+    } else {
+      setWargaData([]);
     }
-
-    const unsubWarga = onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
-      setWargaData(snap.docs.map(doc => ({ docId: doc.id, ...doc.data() })));
-    });
 
     let unsubUsers = () => {};
     if (currentUser?.isSuperAdmin || ["ADMIN", "RW", "RT"].includes(currentUser?.role || "")) {
-      const uq = currentUser?.isSuperAdmin ? query(collection(db, "users")) : query(collection(db, "users"), where("tenantId", "in", tIds));
-      unsubUsers = onSnapshot(query(uq, limit(1000)), (snap) => {
-        setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
-      });
+      if (currentUser?.isSuperAdmin || tIds.length > 0) {
+        const uq = currentUser?.isSuperAdmin ? query(collection(db, "users")) : query(collection(db, "users"), where("tenantId", "in", tIds));
+        unsubUsers = onSnapshot(query(uq, limit(1000)), (snap) => {
+          setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
+        });
+      }
     }
 
     return () => { unsubWarga(); unsubUsers(); };
@@ -1808,16 +1830,19 @@ export default function App() {
     const rt = currentUser?.role === "RT" ? getQueryRtNormalized(currentUser.rt) : null;
     
     let unsubKas = () => {};
-    if (hasFullAccess) {
+    if (hasFullAccess && tIds.length > 0) {
       const kq = rt ? query(collection(db, "kas"), where("tenantId", "in", tIds), where("rt", "==", rt), orderBy("tanggal", "desc"), limit(500)) : query(collection(db, "kas"), where("tenantId", "in", tIds), orderBy("tanggal", "desc"), limit(500));
       unsubKas = onSnapshot(kq, (snap) => setKasData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
     }
 
-    const iuranQ = hasFullAccess ? 
-      (rt ? query(collection(db, "iuran"), where("tenantId", "in", tIds), where("rt", "==", rt)) : query(collection(db, "iuran"), where("tenantId", "in", tIds))) :
-      query(collection(db, "iuran"), where("tenantId", "in", tIds), where("userId", "==", auth.currentUser?.uid || ""));
-    
-    const unsubIuran = onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+    let unsubIuran = () => {};
+    if (tIds.length > 0) {
+      const iuranQ = hasFullAccess ? 
+        (rt ? query(collection(db, "iuran"), where("tenantId", "in", tIds), where("rt", "==", rt)) : query(collection(db, "iuran"), where("tenantId", "in", tIds))) :
+        query(collection(db, "iuran"), where("tenantId", "in", tIds), where("userId", "==", auth.currentUser?.uid || ""));
+      
+      unsubIuran = onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+    }
 
     return () => { unsubKas(); unsubIuran(); };
   }, [activeTab, activeTenantIds, currentUser?.uid, hasFullAccess]);
@@ -1828,6 +1853,7 @@ export default function App() {
     if (activeTab !== "posyandu") return;
 
     const tIds = activeTenantIds;
+    if (tIds.length === 0) return;
     const collections = ["balita", "ibu_hamil", "posyandu_kegiatan", "posbindu_kegiatan", "pemeriksaan_balita", "pemeriksaan_posbindu", "imunisasi"];
     const unsubs = collections.map(col => {
       const q = query(collection(db, col), where("tenantId", "in", tIds), limit(100));
@@ -1850,6 +1876,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     const tIds = activeTenantIds;
+    if (tIds.length === 0) return;
     // Chunk array to max 10 items for firestore 'in' queries
     const chunkArray = (arr: any[], size: number) => {
       return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
@@ -1893,6 +1920,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     const tIds = activeTenantIds;
+    if (tIds.length === 0) return;
     const unsubs: (() => void)[] = [];
 
     // Surat
@@ -3525,6 +3553,7 @@ export default function App() {
               showNotification={showNotification}
               currentUser={currentUser}
               settings={settings}
+              tenantsData={tenantsData}
             />
           )}
           {activeTab === "buku-tamu" && (
@@ -11727,6 +11756,15 @@ function InventarisView({
                             title="Edit Aset"
                           >
                             <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canEdit && (
+                          <button
+                            onClick={() => handleDeleteItem(item.id, item.nama_barang)}
+                            className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
+                            title="Hapus Aset"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
