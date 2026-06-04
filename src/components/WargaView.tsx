@@ -777,10 +777,10 @@ function WargaView(props: WargaViewProps) {
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-3xl border border-slate-200/50 dark:border-slate-700/50">
               <button 
                 onClick={cleanupWarga} 
-                className="hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 p-2.5 rounded-2xl transition-all"
+                className="hover:bg-white/10 dark:hover:bg-slate-700 text-white p-2.5 rounded-2xl transition-all"
                 title="Bersihkan Data Ganda"
               >
-                <Trash2 size={18} />
+                <Trash2 size={18} className="text-white" />
               </button>
               <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
               {detectedRT ? (
@@ -1286,13 +1286,13 @@ function WargaView(props: WargaViewProps) {
                exit={{ opacity: 0, scale: 0.9, y: 20 }} 
                className="bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-4xl max-h-[92vh] flex flex-col shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20 dark:border-slate-800"
              >
-                <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="px-8 pt-0 pb-0 h-[100px] border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
                    <div className="flex items-center gap-5">
                       <div className="w-14 h-14 bg-gradient-to-br from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
                         {showEditForm ? <Edit2 className="w-7 h-7" /> : <UserPlus className="w-7 h-7" />}
                       </div>
                       <div>
-                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-xl font-elegant uppercase tracking-tight">
+                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-[18px] font-elegant uppercase tracking-tight">
                           {showEditForm ? 'Pembaruan Data' : 'Registrasi Penduduk'}
                         </h3>
                         <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Entri Administrasi Kependudukan</p>
@@ -1307,7 +1307,7 @@ function WargaView(props: WargaViewProps) {
                    </motion.button>
                 </div>
                 
-                <div className="p-10 overflow-y-auto custom-scrollbar">
+                <div className="px-10 pt-[12px] pb-[12px] h-[320px] overflow-y-auto custom-scrollbar">
                    <form id="wargaForm" className="space-y-10" onSubmit={async (e) => {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget as HTMLFormElement);
@@ -1534,7 +1534,7 @@ function WargaView(props: WargaViewProps) {
                       </div>
                    </form>
                 </div>
-                <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 justify-end items-center">
+                <div className="px-6 pt-0 pb-0 h-[80px] border-t border-slate-100 bg-slate-50 flex gap-3 justify-end items-center">
                    <button onClick={() => { setShowAddForm(false); setShowEditForm(false); setEditingWarga(null); }} className="px-6 py-3 font-black text-slate-400 bg-slate-200 border border-slate-300 rounded-xl hover:bg-slate-300 transition-colors uppercase text-[10px] tracking-widest">Batal</button>
                    <button form="wargaForm" type="submit" className="px-6 py-3 font-black text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 shadow-lg shadow-brand-blue/30 transition-all uppercase text-[10px] tracking-widest">Simpan Data</button>
                 </div>

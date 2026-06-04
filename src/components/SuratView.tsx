@@ -201,9 +201,9 @@ export function SuratView({
       if (!matchesOwnNik && !matchesFamilyNik && !matchesUid) return false;
     }
     
-    const matchesSearch = s.pemohon?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          s.jenis?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          s.id?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (s.pemohon || s.nama || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (s.jenis || s.jenisSurat || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (s.id || "").toLowerCase().includes(searchQuery.toLowerCase());
     
     if (activeSubTab === 'berjalan') {
       return matchesSearch && (s.status === 'Draft' || s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan RW' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan' || s.status === 'PENDING' || s.status === 'Pending' || s.status === 'Pending_RT' || s.status === 'PENDING_RT');
@@ -288,7 +288,7 @@ export function SuratView({
     const content = `
       <html>
         <head>
-          <title>${tenantName} - ${tagline} - Cetak ${surat.jenis}</title>
+          <title>${tenantName} - ${tagline} - Cetak ${surat.jenis || surat.jenisSurat || 'Surat Pengantar'}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
             body { font-family: 'Times New Roman', serif; padding: 40px; margin: 0; color: #000; background: #fff; line-height: 1.4; }
@@ -736,6 +736,7 @@ export function SuratView({
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'surat', suratToDelete.id));
+      setSuratData(prev => prev.filter(s => s.id !== suratToDelete.id));
       showNotification('Catatan surat dihapus.', 'success');
       setSuratToDelete(null);
     } catch (err: any) {
@@ -869,8 +870,8 @@ export function SuratView({
                       <td className="px-6 py-4">
                         {new Date(s.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
-                      <td className="px-6 py-4 font-bold">{s.jenis}</td>
-                      <td className="px-6 py-4">{s.pemohon}</td>
+                      <td className="px-6 py-4 font-bold">{s.jenis || s.jenisSurat || 'Surat Pengantar'}</td>
+                      <td className="px-6 py-4">{s.pemohon || s.nama || 'Warga'}</td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
                           s.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' :
@@ -1032,7 +1033,7 @@ export function SuratView({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={selectedWargaId ? `form-top-${selectedWargaId}` : (editingSurat?.id ? `form-top-${editingSurat.id}` : 'form-top')}>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Surat</label>
-                      <select name="jenis" defaultValue={editingSurat?.jenis || "Surat pengantar pembuatan KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
+                      <select name="jenis" defaultValue={editingSurat?.jenis || editingSurat?.jenisSurat || "Surat pengantar pembuatan KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
                         <option value="Surat pengantar pembuatan KTP">Surat pengantar pembuatan KTP</option>
                         <option value="Surat pengantar pembuatan KK">Surat pengantar pembuatan KK</option>
                         <option value="Surat pengantar domisili">Surat pengantar domisili</option>
@@ -1304,7 +1305,7 @@ export function SuratView({
                    
                    <div className="space-y-6">
                       <div>
-                        <h4 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{viewingSurat.jenis}</h4>
+                        <h4 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{viewingSurat.jenis || viewingSurat.jenisSurat || 'Surat Pengantar'}</h4>
                         <div className={`mt-2 inline-flex py-1 px-3 rounded-full text-[9px] font-black uppercase tracking-widest ${viewingSurat.status === 'Selesai' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                            {viewingSurat.status}
                         </div>
@@ -1561,7 +1562,7 @@ export function SuratView({
           <ConfirmModal 
             isOpen={true}
             title="Hapus Catatan Surat"
-            message={`Apakah Anda yakin ingin menghapus permohonan surat "${suratToDelete?.jenis}" milik "${suratToDelete?.pemohon}"?`}
+            message={`Apakah Anda yakin ingin menghapus permohonan surat "${suratToDelete?.jenis || suratToDelete?.jenisSurat || 'Surat Pengantar'}" milik "${suratToDelete?.pemohon || suratToDelete?.nama || 'Warga'}"?`}
             onConfirm={handleDeleteSurat}
             onCancel={() => setSuratToDelete(null)}
             confirmText="Ya, Hapus"

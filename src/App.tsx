@@ -11904,7 +11904,7 @@ function InventarisView({
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleSaveItem} className="p-6 space-y-4">
+            <form id="add-asset-form" onSubmit={handleSaveItem} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">
@@ -11927,6 +11927,7 @@ function InventarisView({
                         type="file"
                         name="foto_aset"
                         accept="image/*"
+                        capture="environment"
                         className="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
                       />
                       <p className="text-[9px] text-slate-400 mt-2 font-medium">
@@ -12154,7 +12155,7 @@ function InventarisView({
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleSaveLog} className="p-6 space-y-4">
+            <form id="log-asset-activity-form" onSubmit={handleSaveLog} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">
                   Jenis Transaksi <span className="text-red-500">*</span>

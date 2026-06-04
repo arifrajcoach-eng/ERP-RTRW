@@ -871,7 +871,7 @@ export function KasView({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white/90 backdrop-blur-2xl w-full max-w-xl rounded-[3rem] shadow-2xl border border-white overflow-hidden flex flex-col max-h-[95vh] relative"
             >
-              <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+              <div className="px-10 pt-[50px] pb-[50px] h-[50px] border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                 <div>
                    <h3 className="text-2xl font-black text-slate-800 flex items-center gap-4 tracking-tighter uppercase italic">
                     <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl shadow-xl shadow-blue-500/30">
@@ -895,7 +895,7 @@ export function KasView({
               <form
                 onSubmit={handleSaveKas}
                 ref={formRef}
-                className="p-10 overflow-y-auto space-y-8"
+                className="px-10 pt-0 pb-0 h-[300px] overflow-y-auto space-y-8"
               >
                 {scannedData && (
                   <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex items-center gap-3 animate-pulse">
@@ -1121,7 +1121,7 @@ export function KasView({
                 </button>
               </div>
 
-              <div className="p-10 space-y-8">
+              <div className="p-10 space-y-8 h-[340px] overflow-y-auto">
                 <div className="flex flex-col items-center mt-[-25px]">
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
                     Nominal Transaksi Digital

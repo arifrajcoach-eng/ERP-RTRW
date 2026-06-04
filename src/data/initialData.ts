@@ -59,15 +59,19 @@ export const INITIAL_SURAT_DATA = [
     id: "SRT-1004",
     tanggal: "19 Apr 2026",
     pemohon: "Ibu Siti Aminah",
+    jenis: "Surat Domisili",
     jenisSurat: "Surat Domisili",
     status: "Menunggu Persetujuan RT",
+    tenantId: "rw26_berjuang",
   },
   {
     id: "SRT-1003",
     tanggal: "17 Apr 2026",
     pemohon: "Bpk. Ahmad Suhendar",
+    jenis: "Pengantar Kelurahan",
     jenisSurat: "Pengantar Kelurahan",
     status: "Selesai",
+    tenantId: "rw26_berjuang",
   },
 ];
 

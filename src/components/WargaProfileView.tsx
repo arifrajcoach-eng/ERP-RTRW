@@ -117,6 +117,9 @@ export function WargaProfileView({
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'surat', suratToDelete.id));
+      if (typeof setSuratData === 'function') {
+        setSuratData((prev: any[]) => prev.filter((s: any) => s.id !== suratToDelete.id));
+      }
       showNotification('Surat pengantar berhasil dihapus.', 'success');
       setSuratToDelete(null);
     } catch (err: any) {
@@ -654,7 +657,7 @@ export function WargaProfileView({
                                               No: {item.nomorSurat || item.nomor_surat || "Belum ada nomor"}
                                            </span>
                                         </div>
-                                        <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-tight">{item.jenis}</h3>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-tight">{item.jenis || item.jenisSurat || 'Surat Pengantar'}</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs">
                                            <div>
                                               <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Tanggal:</span>{" "}
@@ -730,7 +733,7 @@ export function WargaProfileView({
                      </div>
                      <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant mb-3">Hapus Permohonan Surat?</h3>
                      <p className="text-sm text-slate-500 dark:text-slate-450 leading-relaxed mb-8">
-                        Apakah Anda yakin ingin menghapus permohonan surat <strong>{suratToDelete.jenis}</strong> ini? Tindakan ini tidak dapat dibatalkan dan data akan permanen terhapus dari sistem RT/RW.
+                        Apakah Anda yakin ingin menghapus permohonan surat <strong>{suratToDelete ? (suratToDelete.jenis || suratToDelete.jenisSurat || 'Surat Pengantar') : 'Surat Pengantar'}</strong> ini? Tindakan ini tidak dapat dibatalkan dan data akan permanen terhapus dari sistem RT/RW.
                      </p>
                      <div className="flex gap-4">
                         <button

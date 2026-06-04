@@ -44,8 +44,8 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
             <div className="border-b-2 border-black mt-0.5"></div>
             
             <div className="text-center mt-6">
-                <h3 className="text-lg font-bold underline">{surat?.jenisSurat || 'SURAT PENGANTAR'}</h3>
-                <p>Nomor : {surat?.nomor_surat || '...... / RT .... / RW .... / Tahun 202...'}</p>
+                <h3 className="text-lg font-bold underline uppercase">{surat?.jenis || surat?.jenisSurat || 'SURAT PENGANTAR'}</h3>
+                <p>Nomor : {surat?.nomorSurat || surat?.nomor_surat || '...... / RT .... / RW .... / Tahun 202...'}</p>
             </div>
 
             {/* In a real app, logic for specific letter fields would be here based on surat.jenisSurat */}

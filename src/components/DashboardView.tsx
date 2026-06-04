@@ -119,13 +119,25 @@ export default function DashboardView({
     const myOrders = tokoOrders.filter((o: any) => o.customerId === currentUser.uid || o.customerId === (currentUser.nik || ''));
     const pendingOrders = myOrders.filter((o: any) => o.status === 'PENDING' || o.status === 'PROCESS').length;
 
+    const myLetters = (suratData || []).filter((s: any) => {
+      const citizenNik = currentUser?.nik || currentUser?.nikMapping || "";
+      const uid = currentUser?.uid || currentUser?.id_user || currentUser?.authUid || "";
+      
+      const matchesOwnNik = citizenNik && s.nik === citizenNik;
+      const matchesUid = uid && (s.authUid === uid || s.userId === uid);
+      return matchesOwnNik || matchesUid;
+    });
+    const pendingStatuses = ['Draft', 'Menunggu Persetujuan RT', 'Menunggu Persetujuan RW', 'Menunggu Persetujuan', 'Diajukan', 'PENDING', 'Pending', 'Pending_RT', 'PENDING_RT'];
+    const pendingLetters = myLetters.filter((s: any) => s.status && pendingStatuses.includes(s.status)).length;
+
     return {
       saldoSampah,
       unpaidIuran: unpaidCount,
       pendingOrders,
-      totalOrders: myOrders.length
+      totalOrders: myOrders.length,
+      pendingLetters
     };
-  }, [isWarga, currentUser, sampahSetoranData, sampahTarikSaldoData, iuranData, tokoOrders]);
+  }, [isWarga, currentUser, sampahSetoranData, sampahTarikSaldoData, iuranData, tokoOrders, suratData]);
 
   const activeSOS = useMemo(() => emergenciesData?.find(e => e.status === 'ACTIVE'), [emergenciesData]);
   const canResolve = useMemo(() => {
@@ -150,7 +162,9 @@ export default function DashboardView({
     const totalWarga = wargaData.length;
     const uniqueKK = new Set(wargaData.map((w: any) => w.kk || w.kodeKeluarga).filter(kk => kk)).size;
     const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
-    const suratPending = suratData.filter(s => s.status && (s.status === 'Diajukan' || s.status.includes('Menunggu') || s.status.toUpperCase() === 'PENDING')).length;
+    
+    const pendingStatuses = ['Draft', 'Menunggu Persetujuan RT', 'Menunggu Persetujuan RW', 'Menunggu Persetujuan', 'Diajukan', 'PENDING', 'Pending', 'Pending_RT', 'PENDING_RT'];
+    const suratPending = (suratData || []).filter(s => s.status && pendingStatuses.includes(s.status)).length;
     
     return {
       totalWarga,
@@ -268,7 +282,7 @@ export default function DashboardView({
       })),
       ...suratData.map(s => ({ 
         title: 'Surat Pengantar',
-        desc: `${s.pemohon} - ${s.jenisSurat} (${s.keperluan || '-'})`,
+        desc: `${s.pemohon} - ${s.jenis || s.jenisSurat || 'Surat Pengantar'} (${s.keterangan || s.keperluan || '-'})`,
         date: s.tanggal,
         status: s.status,
         type: 'doc',
@@ -501,7 +515,7 @@ export default function DashboardView({
               className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-cyan-400 to-brand-blue hover:from-cyan-300 hover:to-indigo-500 text-white font-black uppercase text-[10px] tracking-widest px-5 py-3.5 rounded-xl shadow-lg shadow-brand-blue/30 hover:scale-[1.03] active:scale-95 transition-all text-center border border-white/15 whitespace-nowrap"
             >
               <span>Upgrade Sekarang</span>
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3.5 h-3.5 text-[#f5faff]" />
             </button>
           </div>
         </div>
@@ -553,21 +567,21 @@ export default function DashboardView({
                  <h2 className="text-[27px] font-black font-elegant tracking-tight">Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</h2>
               </div>
               <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmaRtRw AI Dashboard</p>
-              
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Saldo Sampah', val: `Rp ${personalStats?.saldoSampah.toLocaleString('id-ID')}`, icon: Recycle, color: 'text-emerald-400' },
-                  { label: 'Belum Lunas', val: `${personalStats?.unpaidIuran} Bulan`, icon: CreditCard, color: 'text-rose-400' },
-                  { label: 'Pesanan Lapak', val: `${personalStats?.pendingOrders} Proses`, icon: ShoppingBag, color: 'text-amber-400' },
-                  { label: 'Status Akun', val: 'Verified', icon: ShieldCheck, color: 'text-cyan-400' },
+                  { label: 'Saldo Sampah', val: `Rp ${personalStats?.saldoSampah.toLocaleString('id-ID')}`, icon: Recycle, color: 'text-emerald-400', tab: 'bank-sampah' },
+                  { label: 'Belum Lunas', val: `${personalStats?.unpaidIuran} Bulan`, icon: CreditCard, color: 'text-rose-400', tab: 'keuangan' },
+                  { label: 'Pesanan Lapak', val: `${personalStats?.pendingOrders} Proses`, icon: ShoppingBag, color: 'text-amber-400', tab: 'etoko' },
+                  { label: 'Permohonan Surat', val: `${personalStats?.pendingLetters || 0} Aktif`, icon: FileText, color: 'text-cyan-400', tab: 'surat' },
                 ].map((item, i) => (
                   <div 
                     key={i}
-                    className="bg-white/10 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-inner group/item"
+                    onClick={() => item.tab && setActiveTab && setActiveTab(item.tab)}
+                    className={`bg-white/10 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-inner group/item transition-all duration-300 ${item.tab ? 'cursor-pointer hover:bg-white/20 hover:scale-[1.02] active:scale-95' : ''}`}
                   >
                     <div className="flex items-center gap-3 mb-3">
                        <div className="p-2 bg-white/5 rounded-xl">
-                         <item.icon className={`w-4 h-4 ${item.color}`} />
+                          <item.icon className={`w-4 h-4 ${item.color}`} />
                        </div>
                        <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest">{item.label}</p>
                     </div>
@@ -640,13 +654,14 @@ export default function DashboardView({
       {!isWarga && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
-            { label: getTranslatedLabel("Daftar Warga", settings?.themeMode), val: stats.totalWarga, sub: `KK: ${stats.kepalaKeluarga} Terdaftar`, icon: Users, gradient: 'from-emerald-600 to-teal-700', shadow: 'shadow-emerald-500/20' },
-            { label: getTranslatedLabel("Kas Warga", settings?.themeMode), val: `Rp ${formatRupiah(stats.saldoTotal)}`, sub: 'Perekaman Otomatis', icon: CreditCard, gradient: 'from-brand-blue to-indigo-800', shadow: 'shadow-brand-blue/20' },
-            { label: getTranslatedLabel("Permohonan Surat", settings?.themeMode), val: stats.suratPending, sub: 'Menunggu Persetujuan', icon: FileText, gradient: 'from-rose-600 to-pink-700', shadow: 'shadow-pink-500/20' }
+            { label: getTranslatedLabel("Daftar Warga", settings?.themeMode), val: stats.totalWarga, sub: `KK: ${stats.kepalaKeluarga} Terdaftar`, icon: Users, gradient: 'from-emerald-600 to-teal-700', shadow: 'shadow-emerald-500/20', tab: 'warga' },
+            { label: getTranslatedLabel("Kas Warga", settings?.themeMode), val: `Rp ${formatRupiah(stats.saldoTotal)}`, sub: 'Perekaman Otomatis', icon: CreditCard, gradient: 'from-brand-blue to-indigo-800', shadow: 'shadow-brand-blue/20', tab: 'keuangan' },
+            { label: getTranslatedLabel("Permohonan Surat", settings?.themeMode), val: stats.suratPending, sub: 'Menunggu Persetujuan', icon: FileText, gradient: 'from-rose-600 to-pink-700', shadow: 'shadow-pink-500/20', tab: 'surat' }
           ].map((item, i) => (
             <div 
               key={i}
-              className={`bg-gradient-to-br ${item.gradient} p-8 rounded-3xl border border-white/20 shadow-2xl ${item.shadow} dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-all text-white`}
+              onClick={() => item.tab && setActiveTab && setActiveTab(item.tab)}
+              className={`bg-gradient-to-br ${item.gradient} p-8 rounded-3xl border border-white/20 shadow-2xl ${item.shadow} dark:shadow-none flex flex-col justify-center relative overflow-hidden group transition-all text-white cursor-pointer hover:scale-[1.02] hover:brightness-105 active:scale-95 duration-300`}
             >
               <div className="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform"></div>
               <p className="text-[11px] text-white/80 font-black uppercase tracking-widest mb-6 drop-shadow-sm">{item.label}</p>
@@ -708,8 +723,8 @@ export default function DashboardView({
               </div>
             </div>
           </div>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%" style={{ height: '350px' } as any}>
               <AreaChart data={currentChartData}>
                 <defs>
                   <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
