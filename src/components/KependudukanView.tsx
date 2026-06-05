@@ -61,7 +61,7 @@ export default function KependudukanView({
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const canEdit = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'OPERATOR'].includes(currentUser.role?.toUpperCase());
+  const canEdit = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'OPERATOR'].includes(currentUser?.role?.toUpperCase() || "");
 
   const filteredKelahiran = useMemo(() => {
     return kelahiranData.filter(item => 
@@ -484,7 +484,7 @@ export default function KependudukanView({
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-8">
+              <form onSubmit={handleSubmit} className="p-8 h-[450px] overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {activeTab === 'kelahiran' ? (
                     <>

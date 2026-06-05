@@ -139,6 +139,7 @@ import {
   writeBatch,
   limit,
   orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
@@ -3866,7 +3867,7 @@ export default function App() {
               setConfirmConfig={setConfirmConfig}
             />
           )}
-          {activeTab === "kependudukan" && (
+          {activeTab === "kependudukan" && currentUser && (
             <KependudukanView
               kelahiranData={kelahiranData}
               kematianData={kematianData}
@@ -3876,7 +3877,6 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
               wargaData={filteredWargaDataCentral}
-              activePlanData={activePlanData}
             />
           )}
           {activeTab === "surat" && (
@@ -6203,7 +6203,7 @@ function LoginView({
         setIsLoading(false);
         return;
       }
-
+      // 3. Setup User Profile
       const userData = {
         email: user.email,
         role: isArif
@@ -6227,6 +6227,8 @@ function LoginView({
 
       // Always ensure the role and tenant are set
       await setDoc(userRef, userData, { merge: true });
+      setCurrentUser(userData as any);
+      setIsLoading(false);
     } catch (err: any) {
       console.error("Google Login Error:", err);
       if (err.code === "auth/popup-blocked") {
@@ -6373,7 +6375,7 @@ function LoginView({
           )}
 
           {loginMode === "admin" && (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6 h-[450px]">
               <div>
                 <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">
                   EMAIL/ USERNAME
