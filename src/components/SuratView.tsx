@@ -769,7 +769,7 @@ export function SuratView({
           </h2>
         </div>
 
-        <div className="flex items-center gap-4 relative">
+        <div className="flex items-center gap-4 relative z-50">
           <button
             onClick={() => setShowSuiteMenu(!showSuiteMenu)}
             className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-4 rounded-2.5xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-xl shadow-indigo-100 dark:shadow-none border border-indigo-500/10 cursor-pointer active:scale-95 group"
@@ -788,7 +788,7 @@ export function SuratView({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 15, scale: 0.95 }}
                   transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute right-0 top-full mt-3 w-88 bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl border border-slate-100 dark:border-indigo-500/30 rounded-3xl p-6 shadow-2xl z-40 text-left"
+                  className="absolute right-0 top-full mt-3 w-80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl border border-slate-100 dark:border-indigo-500/30 rounded-3xl p-6 shadow-2xl z-50 text-left"
                 >
                   <div className="mb-4 pb-3 border-b border-slate-150 dark:border-slate-800/80 flex items-center justify-between">
                     <div>

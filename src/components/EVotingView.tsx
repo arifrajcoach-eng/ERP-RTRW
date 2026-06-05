@@ -81,7 +81,12 @@ export function EVotingView({
   }, [now, config?.status, config?.closeTime, config?.id, isAdmin, tenantId, showNotification]);
 
   const voterId = wargaAuth?.nik || currentUser?.uid;
-  const userVote = userVotes.find((v) => v.voterId === voterId);
+  const filteredCandidates = candidates.filter(c => (c.kategori || 'rt') === electionLevel);
+  const userVote = userVotes.find((v) => {
+    if (v.voterId !== voterId) return false;
+    const votedCand = candidates.find(c => c.id === v.candidateId);
+    return (votedCand?.kategori || 'rt') === electionLevel;
+  });
 
   const isVotingClosed = () => {
     if (config?.status !== "OPEN") return true;
@@ -202,13 +207,13 @@ export function EVotingView({
             <div className="bg-slate-100 p-1 rounded-2xl flex border border-slate-200 w-full sm:w-auto">
               <button
                 onClick={() => setActiveView("vote")}
-                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "vote" ? "bg-brand-blue text-white shadow-xl shadow-blue-100" : "text-slate-400 hover:text-slate-600"}`}
+                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "vote" ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white shadow-lg shadow-brand-blue/30" : "bg-white text-slate-500 hover:text-slate-700 shadow-sm border border-slate-200/50"}`}
               >
                 Bilik Suara
               </button>
               <button
                 onClick={() => setActiveView("admin")}
-                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "admin" ? "bg-brand-blue text-white shadow-xl shadow-blue-100" : "text-slate-400 hover:text-slate-600"}`}
+                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "admin" ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white shadow-lg shadow-brand-blue/30" : "bg-white text-slate-500 hover:text-slate-700 shadow-sm border border-slate-200/50"}`}
               >
                 Panel Kontrol
               </button>
@@ -350,9 +355,10 @@ export function EVotingView({
               {activeAdminTab === "candidates" ? (
                 <CandidateManagementView
                   tenantId={tenantId}
-                  candidates={candidates}
+                  candidates={filteredCandidates}
                   showNotification={showNotification}
                   handleFileUpload={handleFileUpload}
+                  activeElectionLevel={electionLevel}
                 />
               ) : activeAdminTab === "settings" ? (
                 <div className="space-y-6">

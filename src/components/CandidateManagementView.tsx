@@ -20,11 +20,13 @@ export function CandidateManagementView({
   candidates,
   showNotification,
   handleFileUpload,
+  activeElectionLevel = 'rt',
 }: {
   tenantId: string;
   candidates: Candidate[];
   showNotification: any;
   handleFileUpload: (file: File, folder: string) => Promise<string>;
+  activeElectionLevel?: 'rt' | 'rw';
 }) {
   const [editingCandidate, setEditingCandidate] = useState<Partial<Candidate> | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -42,6 +44,7 @@ export function CandidateManagementView({
         ...candidate,
         id: id.split("_").pop(), // keep original format if new
         tenantId,
+        kategori: candidate.kategori || activeElectionLevel,
         votes: candidate.votes || 0,
       }, { merge: true });
       showNotification("Kandidat berhasil disimpan.", "success");
@@ -102,7 +105,7 @@ export function CandidateManagementView({
           <div>
             <select
               className="w-full p-3 rounded-lg border border-slate-200 font-bold bg-white text-sm"
-              value={editingCandidate?.kategori || "rt"}
+              value={editingCandidate?.kategori || activeElectionLevel}
               onChange={(e) => setEditingCandidate({ ...editingCandidate, kategori: e.target.value as 'rt' | 'rw' })}
             >
               <option value="rt">Kandidat Ketua RT</option>

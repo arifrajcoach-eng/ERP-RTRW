@@ -483,7 +483,7 @@ export default function PosyanduView({
             </div>
           </div>
 
-          <div className="relative z-30">
+          <div className="relative z-50">
             <button
               onClick={() => setShowSuiteMenu(!showSuiteMenu)}
               className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white px-6 py-4 rounded-2.5xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-xl shadow-rose-100 dark:shadow-none border border-rose-400/10 cursor-pointer active:scale-95 group relative overflow-hidden font-sans"
@@ -510,7 +510,7 @@ export default function PosyanduView({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 15, scale: 0.95 }}
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-full mt-3 w-88 bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl border border-rose-100 dark:border-rose-500/30 rounded-3xl p-6 shadow-2xl z-45 text-left"
+                    className="absolute right-0 top-full mt-3 w-80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl border border-rose-100 dark:border-rose-500/30 rounded-3xl p-6 shadow-2xl z-50 text-left"
                   >
                     <div className="mb-4 pb-3 border-b border-rose-100/50 dark:border-rose-800/80 flex items-center justify-between">
                       <div>

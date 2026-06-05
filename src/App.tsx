@@ -4008,34 +4008,18 @@ export default function App() {
                 Memuat...
               </div>
             ) : getPlanFeatures(currentTenant || {}).ePemilu ? (
-              (tenantsData.find(t => t.id === currentTenant?.id)?.parentId || currentTenant?.parentId) ? (
-                <DualVotingView
-                  userRole={currentUser.role}
-                  tenantId={currentUser.tenantId || "rw26_berjuang"}
-                  candidates={votingCandidates}
-                  config={votingConfig}
-                  userVotes={userVotes}
-                  currentUser={currentUser}
-                  wargaAuth={wargaAuth}
-                  handleFirestoreError={handleFirestoreError}
-                  handleFileUpload={handleFileUpload}
-                  showNotification={showNotification}
-                  tenantsData={tenantsData}
-                />
-              ) : (
-                <EVotingView
-                  userRole={currentUser.role}
-                  tenantId={currentUser.tenantId || "rw26_berjuang"}
-                  candidates={votingCandidates}
-                  config={votingConfig}
-                  userVotes={userVotes}
-                  currentUser={currentUser}
-                  wargaAuth={wargaAuth}
-                  handleFirestoreError={handleFirestoreError}
-                  handleFileUpload={handleFileUpload}
-                  showNotification={showNotification}
-                />
-              )
+              <EVotingView
+                userRole={currentUser.role}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                candidates={votingCandidates}
+                config={votingConfig}
+                userVotes={userVotes}
+                currentUser={currentUser}
+                wargaAuth={wargaAuth}
+                handleFirestoreError={handleFirestoreError}
+                handleFileUpload={handleFileUpload}
+                showNotification={showNotification}
+              />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">

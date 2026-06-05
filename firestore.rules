@@ -394,39 +394,54 @@ service cloud.firestore {
     // --- Infrastructure & Misc ---
 
     match /inventaris/{docId} {
-      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || isAdminStatic());
-      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
-      allow create: if isTenantMember(request.resource.data.tenantId) || isAdmin();
-      allow update: if (isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId)) || isAdmin();
-      allow delete: if isTenantMember(resource.data.tenantId) || isAdmin();
+      allow list: if isSignedIn() && (isAdminStatic() || isTenantMemberStatic(resource.data.tenantId));
+      allow get: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
+      allow create: if isSignedIn() && (isAdmin() || ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId)));
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId) && resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId))
+      );
+      allow delete: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
     }
     match /inventaris_logs/{docId} {
-      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || isAdminStatic());
-      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
-      allow create: if isTenantMember(request.resource.data.tenantId) || isAdmin();
-      allow update: if (isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId)) || isAdmin();
-      allow delete: if isTenantMember(resource.data.tenantId) || isAdmin();
+      allow list: if isSignedIn() && (isAdminStatic() || isTenantMemberStatic(resource.data.tenantId));
+      allow get: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
+      allow create: if isSignedIn() && (isAdmin() || ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId)));
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId) && resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId))
+      );
+      allow delete: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
     }
     match /inventaris_kategori/{docId} {
-      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || isAdminStatic());
-      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
-      allow create: if isTenantMember(request.resource.data.tenantId) || isAdmin();
-      allow update: if (isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId)) || isAdmin();
-      allow delete: if isTenantMember(resource.data.tenantId) || isAdmin();
+      allow list: if isSignedIn() && (isAdminStatic() || isTenantMemberStatic(resource.data.tenantId));
+      allow get: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
+      allow create: if isSignedIn() && (isAdmin() || ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId)));
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId) && resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId))
+      );
+      allow delete: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
     }
     match /inventaris_lokasi/{docId} {
-      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || isAdminStatic());
-      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
-      allow create: if isTenantMember(request.resource.data.tenantId) || isAdmin();
-      allow update: if (isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId)) || isAdmin();
-      allow delete: if isTenantMember(resource.data.tenantId) || isAdmin();
+      allow list: if isSignedIn() && (isAdminStatic() || isTenantMemberStatic(resource.data.tenantId));
+      allow get: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
+      allow create: if isSignedIn() && (isAdmin() || ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId)));
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId) && resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId))
+      );
+      allow delete: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
     }
     match /inventaris_supplier/{docId} {
-      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || isAdminStatic());
-      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
-      allow create: if isTenantMember(request.resource.data.tenantId) || isAdmin();
-      allow update: if (isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId)) || isAdmin();
-      allow delete: if isTenantMember(resource.data.tenantId) || isAdmin();
+      allow list: if isSignedIn() && (isAdminStatic() || isTenantMemberStatic(resource.data.tenantId));
+      allow get: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
+      allow create: if isSignedIn() && (isAdmin() || ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId)));
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        ('tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId) && resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId))
+      );
+      allow delete: if isSignedIn() && (isAdmin() || (resource != null && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId)));
     }
 
     match /notifications/{docId} {
