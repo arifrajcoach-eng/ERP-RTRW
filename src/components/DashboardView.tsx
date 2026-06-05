@@ -790,7 +790,7 @@ export default function DashboardView({
               </div>
             </div>
           </div>
-          <div className="h-80 w-full flex flex-col md:flex-row items-center justify-center">
+          <div className="h-[350px] w-full flex flex-col md:flex-row items-center justify-center">
             <div className="relative w-full h-full flex items-center justify-center">
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Total</p>

@@ -11927,7 +11927,6 @@ function InventarisView({
                         type="file"
                         name="foto_aset"
                         accept="image/*"
-                        capture="environment"
                         className="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
                       />
                       <p className="text-[9px] text-slate-400 mt-2 font-medium">

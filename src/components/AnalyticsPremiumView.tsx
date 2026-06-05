@@ -291,7 +291,7 @@ export function AnalyticsPremiumView({
             <TrendingUp className="w-5 h-5 text-indigo-500" />
             Prediksi Pendapatan (6 Bulan Ke Depan)
           </h3>
-          <div className="h-[300px]">
+          <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data}>
                 <CartesianGrid
