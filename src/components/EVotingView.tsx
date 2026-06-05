@@ -33,20 +33,25 @@ export function EVotingView({
   handleFirestoreError: any;
   handleFileUpload: (file: File, folder: string) => Promise<string>;
   showNotification: any;
+  localTitleOverride?: string;
 }) {
+  const localTitleProp = arguments[0]?.localTitleOverride;
   const [activeView, setActiveView] = useState<"vote" | "admin">("vote");
   const [activeAdminTab, setActiveAdminTab] = useState<"stats" | "candidates" | "settings">("stats");
+  const [electionLevel, setElectionLevel] = useState<"rt" | "rw">("rt");
   const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState<any | null>(null);
-  const [localTitle, setLocalTitle] = useState("🗳️ E-PEMILU");
+  const [localTitle, setLocalTitle] = useState(localTitleProp || "🗳️ E-PEMILU");
   const [now, setNow] = useState(new Date().getTime());
 
   React.useEffect(() => {
     if (config?.title) {
       setLocalTitle(config.title);
+    } else if (localTitleProp) {
+      setLocalTitle(localTitleProp);
     }
-  }, [config?.title]);
+  }, [config?.title, localTitleProp]);
 
   React.useEffect(() => {
     const timer = setInterval(() => setNow(new Date().getTime()), 1000);
@@ -149,11 +154,11 @@ export function EVotingView({
     }
   };
 
-  const totalSuara = candidates.reduce((acc, c) => acc + (c.votes || 0), 0);
+  const totalSuara = filteredCandidates.reduce((acc, c) => acc + (c.votes || 0), 0);
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
         <div>
           {activeView === "admin" && isAdmin ? (
              <div className="flex items-center gap-2 mb-2">
@@ -176,8 +181,8 @@ export function EVotingView({
                 />
              </div>
           ) : (
-             <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase italic">
-               {config?.title || "🗳️ E-PEMILU"}
+             <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic flex items-center gap-3">
+               {config?.title || localTitle}
              </h2>
           )}
           <div className="flex items-center gap-3 mt-1">
@@ -192,22 +197,39 @@ export function EVotingView({
           </div>
         </div>
 
-        {isAdmin && (
-          <div className="bg-slate-100 p-1 rounded-2xl flex border border-slate-200">
-            <button
-              onClick={() => setActiveView("vote")}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === "vote" ? "bg-brand-blue text-white shadow-xl shadow-blue-100" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              Bilik Suara
-            </button>
-            <button
-              onClick={() => setActiveView("admin")}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === "admin" ? "bg-brand-blue text-white shadow-xl shadow-blue-100" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              Panel Kontrol
-            </button>
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-3">
+          {isAdmin && (
+            <div className="bg-slate-100 p-1 rounded-2xl flex border border-slate-200 w-full sm:w-auto">
+              <button
+                onClick={() => setActiveView("vote")}
+                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "vote" ? "bg-brand-blue text-white shadow-xl shadow-blue-100" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                Bilik Suara
+              </button>
+              <button
+                onClick={() => setActiveView("admin")}
+                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "admin" ? "bg-brand-blue text-white shadow-xl shadow-blue-100" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                Panel Kontrol
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex bg-slate-100 p-1.5 rounded-3xl border border-slate-200 mb-8 max-w-sm mt-[-10px]">
+        <button
+          onClick={() => setElectionLevel("rt")}
+          className={`flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${electionLevel === "rt" ? "bg-white text-slate-800 shadow-md" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50/50"}`}
+        >
+          Pilihan RT
+        </button>
+        <button
+          onClick={() => setElectionLevel("rw")}
+          className={`flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${electionLevel === "rw" ? "bg-white text-slate-800 shadow-md" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50/50"}`}
+        >
+          Pilihan RW
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -241,7 +263,7 @@ export function EVotingView({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {candidates.map((cand) => (
+                  {filteredCandidates.map((cand) => (
                     <motion.div
                       key={cand.id}
                       whileHover={{ y: -10 }}
@@ -249,13 +271,14 @@ export function EVotingView({
                     >
                       <div className="aspect-[4/5] relative overflow-hidden">
                         <img
-                          src={cand.photo || "https://via.placeholder.com/400"}
+                          src={cand.photo || "https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=400"}
+                          alt={cand.name}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                         <div className="absolute bottom-6 left-8 right-8">
                           <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1 block">
-                            Kandidat No. {cand.pomer || "0"}
+                            Kandidat No. {cand.number || "0"}
                           </span>
                           <h4 className="text-2xl font-black text-white tracking-tighter uppercase italic">
                             {cand.name}
@@ -391,8 +414,8 @@ export function EVotingView({
                     onClick={() => {
                       const csvRows = [];
                       csvRows.push("Kandidat,Nomor Urut,Total Suara,Persentase");
-                      const totalVotes = candidates.reduce((acc, c) => acc + (c.votes || 0), 0);
-                      candidates.forEach(c => {
+                      const totalVotes = filteredCandidates.reduce((acc, c) => acc + (c.votes || 0), 0);
+                      filteredCandidates.forEach(c => {
                         const pct = totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(1) + "%" : "0%";
                         csvRows.push(`"${c.name}",${c.number},${c.votes || 0},${pct}`);
                       });
@@ -400,7 +423,7 @@ export function EVotingView({
                       const encodedUri = encodeURI(csvContent);
                       const link = document.createElement("a");
                       link.setAttribute("href", encodedUri);
-                      link.setAttribute("download", `Hasil_Pemilihan_${config?.title || 'E-PEMILU'}.csv`);
+                      link.setAttribute("download", `Hasil_Pemilihan_${electionLevel.toUpperCase()}_${config?.title || 'E-PEMILU'}.csv`);
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
@@ -419,7 +442,7 @@ export function EVotingView({
                   </div>
 
               <div className="space-y-6">
-                {candidates.map((cand) => (
+                {filteredCandidates.map((cand) => (
                   <div
                     key={cand.id}
                     className="flex flex-col md:flex-row items-center gap-6 p-6 border border-slate-50 rounded-3xl hover:bg-slate-50/50 transition-all"

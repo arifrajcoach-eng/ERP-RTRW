@@ -52,15 +52,25 @@ export const safeLocalStorage = {
     delete inMemoryLocalStorage[key];
   },
   clear(): void {
+    const protectedKeys = ['firebase:auth', 'firebaseLocalStorageDb', 'currentTenant', 'parentTenant', 'impersonatedTenantId'];
     if (hasLocal) {
       try {
-        window.localStorage.clear();
+        const keys = Object.keys(window.localStorage);
+        keys.forEach(key => {
+          if (!protectedKeys.includes(key)) {
+            window.localStorage.removeItem(key);
+          }
+        });
         return;
       } catch (e) {
         console.warn("Storage failed to clear, using in-memory:", e);
       }
     }
-    Object.keys(inMemoryLocalStorage).forEach(key => delete inMemoryLocalStorage[key]);
+    Object.keys(inMemoryLocalStorage).forEach(key => {
+      if (!protectedKeys.includes(key)) {
+        delete inMemoryLocalStorage[key];
+      }
+    });
   },
   getKeys(): string[] {
     if (hasLocal) {

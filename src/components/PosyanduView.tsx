@@ -15,6 +15,9 @@ import {
   Edit,
   X,
   ChevronRight,
+  ChevronDown,
+  Sparkles,
+  FileText,
   User,
   Calendar,
   Settings,
@@ -119,6 +122,7 @@ export default function PosyanduView({
     | "timeline"
     | "ibuhamil_detail"
   >("dashboard");
+  const [showSuiteMenu, setShowSuiteMenu] = useState(false);
   const [showBalitaForm, setShowBalitaForm] = useState(false);
   const [showIbuHamilForm, setShowIbuHamilForm] = useState(false);
   const [showKegiatanForm, setShowKegiatanForm] = useState(false);
@@ -479,30 +483,88 @@ export default function PosyanduView({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-             {[
-               { id: "dashboard", label: "Status", icon: LayoutDashboard },
-               { id: "balita", label: "Balita", icon: Baby },
-               { id: "ibuhamil", label: "Ibu Hamil", icon: User },
-               { id: "posbindu", label: "Posbindu", icon: HeartPulse },
-               { id: "timeline", label: "Riwayat", icon: History },
-             ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveSubTab(tab.id as any)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${
-                      activeSubTab === tab.id
-                        ? "bg-rose-500 text-white shadow-lg shadow-rose-100"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    }`}
+          <div className="relative z-30">
+            <button
+              onClick={() => setShowSuiteMenu(!showSuiteMenu)}
+              className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white px-6 py-4 rounded-2.5xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-xl shadow-rose-100 dark:shadow-none border border-rose-400/10 cursor-pointer active:scale-95 group relative overflow-hidden font-sans"
+            >
+              <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-full blur-xl -mr-6 -mt-6"></div>
+              <Baby className="w-4 h-4 text-rose-100 group-hover:rotate-12 transition-transform duration-300" />
+              <span>
+                {activeSubTab === "dashboard" && "Status & Statistik"}
+                {activeSubTab === "balita" && "Data Balita"}
+                {activeSubTab === "ibuhamil" && "Ibu Hamil"}
+                {activeSubTab === "posbindu" && "Posbindu"}
+                {activeSubTab === "timeline" && "Riwayat Kegiatan"}
+                {activeSubTab === "ibuhamil_detail" && "Detail Ibu Hamil"}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-rose-100 transition-transform duration-500 ${showSuiteMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {showSuiteMenu && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowSuiteMenu(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-full mt-3 w-88 bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl border border-rose-100 dark:border-rose-500/30 rounded-3xl p-6 shadow-2xl z-45 text-left"
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                    {tab.label}
-                  </button>
-                )
-             })}
+                    <div className="mb-4 pb-3 border-b border-rose-100/50 dark:border-rose-800/80 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-widest mb-0.5 flex items-center gap-1.5 animate-pulse">
+                          <Sparkles className="w-3.5 h-3.5" /> SmaRtRW Posyandu Suite
+                        </p>
+                        <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight font-elegant">KONTROL KESEHATAN</h4>
+                      </div>
+                      <span className="bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[9px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider">
+                        Care: {balitaData.length + filteredIbuHamil.length} Jiwa
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {[
+                        { id: "dashboard", label: "Status & Statistik", desc: "Ringkasan data, statistik posyandu, & kepatuhan", icon: LayoutDashboard },
+                        { id: "balita", label: "Data Balita", desc: "Tinggi & berat badan, rekam imunisasi & tumbuh kembang anak", icon: Baby },
+                        { id: "ibuhamil", label: "Ibu Hamil", desc: "Nutrisi, vitamin tambahan, masa kehamilan, & kesehatan janin", icon: User },
+                        { id: "posbindu", label: "Posbindu (Umum & Lansia)", desc: "Pemeriksaan gula darah, kolesterol, tensi, & lansia terpadu", icon: HeartPulse },
+                        { id: "timeline", label: "Riwayat & Agenda Kegiatan", desc: "Histori kunjungan posyandu, linimasa imunisasi, & jadwal pos", icon: History },
+                      ].map((tab) => {
+                        const Icon = tab.icon;
+                        const isCurrent = activeSubTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => {
+                              setActiveSubTab(tab.id as any);
+                              setShowSuiteMenu(false);
+                            }}
+                            className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all duration-350 text-left cursor-pointer group ${
+                              isCurrent
+                                ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 font-extrabold shadow-sm'
+                                : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold'
+                            }`}
+                          >
+                            <div className={`p-2.5 rounded-xl transition-colors duration-300 ${
+                              isCurrent ? 'bg-rose-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-900 group-hover:bg-rose-500/10 group-hover:text-rose-500'
+                            }`}>
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1">
+                              <p className={`text-[12px] uppercase tracking-wider ${isCurrent ? 'text-rose-700 dark:text-rose-400 font-black' : 'text-slate-750 dark:text-slate-300 group-hover:text-rose-500'}`}>{tab.label}</p>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium normal-case mt-0.5">{tab.desc}</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-400 group-hover:translate-x-1 group-hover:text-rose-500 transition-all" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

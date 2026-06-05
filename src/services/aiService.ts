@@ -98,20 +98,26 @@ export async function generateAIReport(dataSummary: any) {
     return result.text || "";
   } catch (error: any) {
     console.error("Client report generating error:", error);
-    if (isQuotaExhaustedError(error)) {
-      return `### Laporan Bulanan SmaRtRw AI (Offline Mode)
-      
-Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Layanan AI kami untuk membuat laporan saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).
+    
+    // Self-healing: if quota exceeded OR network is offline / Failed to fetch, return elegant preview report instead of completely failing
+    const isQuota = isQuotaExhaustedError(error);
+    const errorMsg = isQuota 
+      ? "Layanan AI kami untuk membuat laporan saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted)."
+      : "Layanan AI kami terkendala jaringan sementara (Failed to fetch). Tenang saja, kami mengaktifkan Laporan Mandiri Mode Offline untuk Anda!";
 
-Tapi tenang aja, Kak! Ini adalah ringkasan kas manual dari data yang ada di sistem kami:
+    return `### Laporan Bulanan SmaRtRw AI (Offline Mode)
+      
+Aduh Kakak sayang, mohon maaf banget yaa! 🫣 ${errorMsg}
+
+Tapi tenang aja, Kak! Ini adalah ringkasan data mandiri dari data yang ada di sistem kami:
 - **Jumlah Data Keuangan**: ${dataSummary?.financial?.length || 0} transaksi tercatat.
 - **Jumlah Warga Terdaftar**: ${dataSummary?.warga || 0} warga aktif.
 - **Jumlah Data Iuran**: ${dataSummary?.iuran?.length || 0} rekaman iuran.
+${dataSummary?.kesehatan ? `- **Data Kelahiran**: ${dataSummary.kesehatan.kelahiranCount || 0} bayi terpantau.\n- **Data Kematian**: ${dataSummary.kesehatan.kematianCount || 0} warga meninggal.` : ''}
+${dataSummary?.kegiatan ? `- **Pengajuan Surat**: ${dataSummary.kegiatan.suratCount || 0} berkas.\n- **Laporan Keluhan**: ${dataSummary.kegiatan.complaintsCount || 0} aduan warga.` : ''}
 
-**✨ SOLUSI PREMIUM :**
-Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otomatis, Prediksi Keuangan, serta cetak surat tanpa batas bebas dari limit kuota harian harian, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium sekarang juga! 😉⚡`;
-    }
-    throw error;
+**✨ PANDUAN & SOLUSI PREMIUM :**
+Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otomatis, Prediksi Keuangan, secara penuh tanpa batas bebas limitasi kuota harian, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium sekarang juga! 😉⚡`;
   }
 }
 
@@ -130,15 +136,22 @@ export async function generateRegionalInsight(regionsData: any) {
     return result.text || "";
   } catch (error: any) {
     console.error("Client regional insight generating error:", error);
-    if (isQuotaExhaustedError(error)) {
-      return `### Analisis Regional SmaRtRw AI (Offline Mode)
+    
+    // Self-healing fallback for regional analyses
+    const isQuota = isQuotaExhaustedError(error);
+    const errorMsg = isQuota
+      ? "Kuota panggilan AI harian untuk analisis wilayah saat ini sedang mencapai batas limit (Error 429: Resource Exhausted)."
+      : "Layanan AI untuk analisis wilayah terkendala jaringan sementara (Failed to fetch). Menampilkan Mode Offline ringkasan data!";
+
+    return `### Analisis Regional SmaRtRw AI (Offline Mode)
       
-Mohon maaf sebesar-besarnya Bapak/Ibu Pimpinan Kelurahan. 🫣 Kuota panggilan AI harian untuk analisis wilayah saat ini sedang mencapai batas limit (Error 429: Resource Exhausted).
+Mohon maaf sebesar-besarnya Bapak/Ibu Pimpinan Kelurahan. 🫣 ${errorMsg}
+
+Berikut data ringkasan wilayah yang terpantau:
+- **Jumlah RW/RT Terdaftar**: ${regionsData?.length || 0} wilayah dalam pemantauan.
 
 **✨ AKTIVASI PREMIUM :**
-Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, rekomendasi taktis, serta integrasi pemantauan penuh, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium wilayah Rukun Tetangga/Warga Anda! 😉⚡`;
-    }
-    throw error;
+Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, rekomendasi taktis, serta integrasi pemantauan penuh bebas dari limit harian, silakan klik banner **"SmaRtRw AI"** di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di **wa.me/6287726741143** (0877-2674-1143) untuk melakukan aktivasi Premium wilayah Rukun Tetangga/Warga Anda! 😉⚡`;
   }
 }
 

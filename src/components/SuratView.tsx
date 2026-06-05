@@ -31,7 +31,9 @@ import {
   Globe,
   Files,
   RefreshCw,
-  Archive
+  Archive,
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -89,6 +91,7 @@ export function SuratView({
   const [selectedWargaId, setSelectedWargaId] = useState("");
   const [wargaSearch, setWargaSearch] = useState("");
   const [showWargaDropdown, setShowWargaDropdown] = useState(false);
+  const [showSuiteMenu, setShowSuiteMenu] = useState(false);
   
   const formRef = useRef<HTMLFormElement>(null);
   
@@ -749,45 +752,149 @@ export function SuratView({
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-4">
-        <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-2 rounded-3xl border border-slate-100 dark:border-slate-800 w-fit shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveSubTab('berjalan')}
-            className={`group flex items-center gap-4 px-10 py-4 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
-              activeSubTab === 'berjalan' 
-                ? 'bg-slate-900 dark:bg-brand-blue text-white shadow-2xl scale-100' 
-                : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            {activeSubTab === 'berjalan' && (
-               <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
-            )}
-            <Clock className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'berjalan' ? 'scale-110' : 'group-hover:scale-110'}`} />
-            Aktif
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveSubTab('arsip')}
-            className={`group flex items-center gap-4 px-10 py-4 ml-2 rounded-2xl text-[11px] font-black transition-all duration-500 uppercase tracking-widest relative overflow-hidden ${
-              activeSubTab === 'arsip' 
-                ? 'bg-brand-blue dark:bg-slate-800 text-white shadow-2xl scale-100' 
-                : 'text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-             {activeSubTab === 'arsip' && (
-               <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
-            )}
-            <History className={`w-5 h-5 transition-transform duration-500 ${activeSubTab === 'arsip' ? 'scale-110' : 'group-hover:scale-110'}`} />
-            Arsip
-          </motion.button>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-widest mb-1.5 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-pink-400 animate-pulse" /> SmaRtRW Document Suite
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight font-elegant flex items-center gap-3">
+            <span>Administrasi Warga</span>
+            <span className={`text-[9px] sm:text-[10px] px-3 py-1 font-black uppercase tracking-wider rounded-full flex items-center gap-1.5 border transition-colors ${
+              activeSubTab === 'berjalan'
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${activeSubTab === 'berjalan' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
+              {activeSubTab === 'berjalan' ? 'Layanan Aktif' : 'Arsip Dokumen'}
+            </span>
+          </h2>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl px-8 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl flex items-center gap-4">
+
+        <div className="flex items-center gap-4 relative">
+          <button
+            onClick={() => setShowSuiteMenu(!showSuiteMenu)}
+            className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-4 rounded-2.5xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-xl shadow-indigo-100 dark:shadow-none border border-indigo-500/10 cursor-pointer active:scale-95 group"
+          >
+            <FileText className="w-4 h-4 text-violet-200 group-hover:rotate-12 transition-transform duration-300" />
+            <span>Document Suite</span>
+            <ChevronDown className={`w-4 h-4 text-violet-200 transition-transform duration-500 ${showSuiteMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          <AnimatePresence>
+            {showSuiteMenu && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowSuiteMenu(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute right-0 top-full mt-3 w-88 bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl border border-slate-100 dark:border-indigo-500/30 rounded-3xl p-6 shadow-2xl z-40 text-left"
+                >
+                  <div className="mb-4 pb-3 border-b border-slate-150 dark:border-slate-800/80 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">SmaRtRW Portal</p>
+                      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight font-elegant">KONTROL ADMINISTRASI</h4>
+                    </div>
+                    <span className="bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 text-[9px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider">
+                      Vault: {filteredSurat.length} File
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <button
+                      onClick={() => {
+                        setActiveSubTab('berjalan');
+                        setShowSuiteMenu(false);
+                      }}
+                      className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all duration-350 text-left cursor-pointer group ${
+                        activeSubTab === 'berjalan'
+                          ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm'
+                          : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold'
+                      }`}
+                    >
+                      <div className={`p-2.5 rounded-xl transition-colors duration-300 ${
+                        activeSubTab === 'berjalan' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-900 group-hover:bg-indigo-500/10 group-hover:text-indigo-500'
+                      }`}>
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-[12px] uppercase tracking-wider ${activeSubTab === 'berjalan' ? 'text-indigo-700 dark:text-indigo-400 font-black' : 'text-slate-750 dark:text-slate-300'}`}>Layanan Aktif</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium normal-case mt-0.5">Surat berjalan, draft, & menunggu persetujuan wilayah</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-500 group-hover:translate-x-1 transition-transform" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveSubTab('arsip');
+                        setShowSuiteMenu(false);
+                      }}
+                      className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all duration-350 text-left cursor-pointer group ${
+                        activeSubTab === 'arsip'
+                          ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm'
+                          : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold'
+                      }`}
+                    >
+                      <div className={`p-2.5 rounded-xl transition-colors duration-300 ${
+                        activeSubTab === 'arsip' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-900 group-hover:bg-indigo-500/10 group-hover:text-indigo-500'
+                      }`}>
+                        <History className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-[12px] uppercase tracking-wider ${activeSubTab === 'arsip' ? 'text-indigo-700 dark:text-indigo-400 font-black' : 'text-slate-750 dark:text-slate-300'}`}>Arsip Surat & Dokumen</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium normal-case mt-0.5">Histori dokumen yang telah diverifikasi & diarsipkan</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-500 group-hover:translate-x-1 transition-transform" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedWargaId(""); 
+                        setWargaSearch(""); 
+                        setKtpUrl(""); 
+                        setKkUrl(""); 
+                        setShowForm(true);
+                        setShowSuiteMenu(false);
+                      }}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:bg-gradient-to-r hover:from-indigo-600 hover:to-violet-600 hover:text-white hover:border-indigo-500/10 transition-all duration-300 text-left cursor-pointer group hover:shadow-lg hover:shadow-indigo-500/20"
+                    >
+                      <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 group-hover:bg-white/20 group-hover:text-white transition-all">
+                        <PlusCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400 group-hover:text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[12px] font-black uppercase tracking-wider text-slate-750 dark:text-slate-300 group-hover:text-white">Pengajuan Surat Baru</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium normal-case mt-0.5 group-hover:text-white/80">Buat permohonan surat pengantar RT/RW baru secara instan</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    
+                    {isPengurus && (
+                      <button
+                        onClick={() => {
+                          setShowAutoArchiveModal(true);
+                          setShowSuiteMenu(false);
+                        }}
+                        className="w-full flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:bg-amber-500/10 hover:border-amber-500/20 text-left cursor-pointer group transition-all"
+                      >
+                        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 group-hover:bg-amber-500 group-hover:text-white transition-all text-slate-500">
+                          <Archive className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[12px] font-black uppercase tracking-wider text-slate-750 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">Pembersihan Auto-Arsip</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium normal-case mt-0.5">Arsipkan otomatis berkas lama berusia &gt; 3 bulan</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-500 group-hover:text-amber-500 group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          <div className="hidden md:flex bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl px-8 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl items-center gap-4">
             <div className="w-2.5 h-2.5 rounded-full bg-brand-blue animate-ping"></div>
-             <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Vault: {filteredSurat.length} File</p>
+            <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Vault: {filteredSurat.length} File</p>
           </div>
         </div>
       </div>
@@ -804,13 +911,13 @@ export function SuratView({
 
           <div className="flex flex-wrap gap-4 w-full lg:w-auto">
             <div className="relative flex-1 lg:flex-none group">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-brand-blue transition-colors" />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
               <input 
                 type="text" 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Cari Dokumen..." 
-                className="pl-14 pr-8 py-5 bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[13px] font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/20 w-full lg:w-80 shadow-sm transition-all placeholder:text-slate-300 placeholder:italic"
+                className="pl-14 pr-8 py-5 bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[13px] font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-indigo-500/20 w-full lg:w-80 shadow-sm transition-all placeholder:text-slate-300 placeholder:italic"
               />
             </div>
 
@@ -832,10 +939,11 @@ export function SuratView({
             )}
 
             <motion.button 
-              whileHover={{ scale: 1.03, boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.4)' }}
+              whileHover={{ scale: 1.03, boxShadow: '0 20px 25px -5px rgba(5, 191, 130, 0.4)' }}
               whileTap={{ scale: 0.97 }}
               onClick={() => { setSelectedWargaId(""); setWargaSearch(""); setKtpUrl(""); setKkUrl(""); setShowForm(true); }} 
-              className="w-full sm:w-auto flex items-center justify-center gap-4 bg-slate-900 dark:bg-brand-blue text-white px-10 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl relative overflow-hidden group"
+              style={{ backgroundColor: '#05bf82' }}
+              className="w-full sm:w-auto flex items-center justify-center gap-4 text-white px-10 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl relative overflow-hidden group"
             >
               <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-full blur-xl -mr-6 -mt-6"></div>
               <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-700" /> 
@@ -1033,7 +1141,7 @@ export function SuratView({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={selectedWargaId ? `form-top-${selectedWargaId}` : (editingSurat?.id ? `form-top-${editingSurat.id}` : 'form-top')}>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis Surat</label>
-                      <select name="jenis" defaultValue={editingSurat?.jenis || editingSurat?.jenisSurat || "Surat pengantar pembuatan KTP"} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
+                      <select name="jenis" defaultValue={editingSurat?.jenis || editingSurat?.jenisSurat || "Surat pengantar pembuatan KTP"} style={{ borderColor: '#5ac588' }} className="w-full px-4 py-3 border rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors">
                         <option value="Surat pengantar pembuatan KTP">Surat pengantar pembuatan KTP</option>
                         <option value="Surat pengantar pembuatan KK">Surat pengantar pembuatan KK</option>
                         <option value="Surat pengantar domisili">Surat pengantar domisili</option>
@@ -1078,7 +1186,7 @@ export function SuratView({
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Lengkap</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                        <input name="pemohon" defaultValue={getInitialValue('pemohon')} className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" required />
+                        <input name="pemohon" defaultValue={getInitialValue('pemohon')} style={{ borderColor: '#5ac588' }} className="w-full pl-10 pr-4 py-3 border rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" required />
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -1197,7 +1305,7 @@ export function SuratView({
                   
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Alamat Domisili (Jalan / Blok / No)</label>
-                    <textarea name="alamat" defaultValue={getInitialValue('alamat')} rows={2} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <textarea name="alamat" defaultValue={getInitialValue('alamat')} rows={2} style={{ borderColor: '#5ac588' }} className="w-full px-4 py-3 border rounded-xl text-sm font-bold text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

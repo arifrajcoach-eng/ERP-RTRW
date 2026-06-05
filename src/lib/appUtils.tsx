@@ -58,6 +58,14 @@ export const getPlanFeatures = (tenantOrStatus: any) => {
   return features;
 };
 
+export const getTenantId = (currentUser: any, currentTenant?: any): string => {
+  const tId = currentUser?.tenantId || currentTenant?.id;
+  if (!tId) {
+    throw new Error("CRITICAL: Tenant ID could not be determined. Access denied.");
+  }
+  return tId;
+};
+
 // Shared Helper for Document Generation
 export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
   const displayRT = surat.rt || kop.rt || "...";

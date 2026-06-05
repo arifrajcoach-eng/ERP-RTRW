@@ -696,14 +696,15 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
       const aiClient = new GoogleGenAI({ apiKey });
       const response = await withRetry(() => aiClient.models.generateContent({
         model: "gemini-3.5-flash",
-        contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten pintar SmaRtRw AI. Tolong buatkan "Analisis & Ringkasan Kegiatan Bulanan RW" secara mendalam tapi bahasa yang ramah/sopan berdasarkan data berikut: ${JSON.stringify(dataSummary)}. 
-        Laporan harus di format dengan Markdown rapi, dan mencakup:
+        contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah Chaty, asisten pintar dari SmaRtRw AI. Tolong buatkan "Analisis & Ringkasan Kegiatan Bulanan RT/RW" secara mendalam tapi bahasa yang ramah/sopan berdasarkan data berikut: ${JSON.stringify(dataSummary)}. 
+        Laporan HARUS dimulai dengan: "Halo! Selamat hari yang produktif untuk Bapak/Ibu Pengurus RT & RW yang luar biasa. Saya Chaty dari SmaRtRw AI, asisten pintar Anda."
+        Laporan harus diformat dalam bentuk teks yang rapi, mudah dibaca, TANPA menggunakan format Markdown seperti tanda bintang, pagar, atau garis pemisah. Gunakan spasi dan baris baru untuk struktur yang jelas, dan mencakup:
         1. Ringkasan Keseluruhan Kegiatan & Administrasi: (Dari total pembuatan surat, keluhan, dll).
         2. Keuangan & Keadaan Ekonomi: (Analisis dari arus kas dan iuran yang disetor).
         3. Keaktifan dan Keterlibatan Warga: (Apakah warga aktif berdasarkan data iuran/keluhan/surat).
         4. Kesehatan & Kependudukan: (Bahas tentang angka kelahiran, kematian, atau tren kesehatan).
         5. Tips & Masukan/Saran: Berikan saran konkret atau taktik (tips) kepada Pengurus dari hasil analisa di atas.
-        Jangan lupa salam pembuka dan salam penutup ya!` }] }]
+        Tulis laporan dengan bahasa yang santun, ramah, dan hindari simbol-simbol formatting markdown. Jangan lupa salam penutup ya!` }] }]
       }));
 
       res.json({ text: response.text || "" });

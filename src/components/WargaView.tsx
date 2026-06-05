@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   Users, Trash2, Edit2, Download, Printer, UserPlus, 
   MapPin, Phone, Info, Search, X, CheckCircle, AlertCircle, Eye, EyeOff, ClipboardList, Trash, ShieldCheck, LogOut, Menu, Lock,
-  ChevronDown, ChevronLeft, ChevronRight
+  ChevronDown, ChevronLeft, ChevronRight, Database, SlidersHorizontal
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import autoTable from 'jspdf-autotable';
@@ -120,6 +120,7 @@ function WargaView(props: WargaViewProps) {
 
   const [isUploading, setIsUploading] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showSuiteMenu, setShowSuiteMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredWargaData = useMemo(() => {
@@ -773,33 +774,7 @@ function WargaView(props: WargaViewProps) {
         </div>
         
         <div className="flex flex-wrap gap-3 items-center">
-          {canEdit && (
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-3xl border border-slate-200/50 dark:border-slate-700/50">
-              <button 
-                onClick={cleanupWarga} 
-                className="hover:bg-white/10 dark:hover:bg-slate-700 text-white p-2.5 rounded-2xl transition-all"
-                title="Bersihkan Data Ganda"
-              >
-                <Trash2 size={18} className="text-white" />
-              </button>
-              <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-              {detectedRT ? (
-                <button 
-                  onClick={syncWargaFromRW} 
-                  className="hover:bg-white dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 p-2.5 rounded-2xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                >
-                  <ClipboardList size={18} /> Sync RW
-                </button>
-              ) : (
-                <button 
-                  onClick={syncWargaFromRTsToRW} 
-                  className="hover:bg-white dark:hover:bg-slate-700 text-teal-600 dark:text-teal-400 p-2.5 rounded-2xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                >
-                  <ClipboardList size={18} /> Pull RT
-                </button>
-              )}
-            </div>
-          )}
+          <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
           
           <AnimatePresence>
             {selectedWargaIds.length > 0 && canEdit && (
@@ -808,49 +783,254 @@ function WargaView(props: WargaViewProps) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 onClick={promptBulkDelete} 
-                className="bg-rose-50 text-rose-600 border border-rose-100 px-5 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all hover:bg-rose-100 shadow-sm"
+                className="bg-rose-50 text-rose-600 border border-rose-100 px-5 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all hover:bg-rose-100 shadow-sm cursor-pointer"
               >
                 <Trash size={18} /> Hapus ({selectedWargaIds.length})
               </motion.button>
             )}
           </AnimatePresence>
 
-          <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
-          
-          {canEdit && (
+          {/* PREMIUM RESIDENT & DOCUMENT SUITE DROP-DOWN MENU */}
+          <div className="relative">
             <button 
-              onClick={() => fileInputRef.current?.click()} 
-              disabled={isUploading || limitReached} 
-              className="group relative bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-6 py-4 rounded-2xl flex items-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none shadow-sm disabled:opacity-50"
+              id="resident-document-suite-btn"
+              onClick={() => setShowSuiteMenu(!showSuiteMenu)}
+              className="px-6 py-4.5 bg-[#0d1527] dark:bg-slate-900 hover:bg-[#121c33] text-white border-2 border-indigo-500/30 hover:border-indigo-500 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-lg shadow-indigo-500/10 active:scale-95 cursor-pointer relative group overflow-hidden"
             >
-              <Download size={18} className="translate-y-[1px] group-hover:-translate-y-1 transition-transform" />
-              {isUploading ? 'Syncing...' : 'Import Data'}
+              <Database className="w-4.5 h-4.5 text-indigo-400 group-hover:rotate-12 transition-transform duration-300" />
+              <span>Menu Kelola Warga & Ekspor</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${showSuiteMenu ? 'rotate-180' : ''}`} />
             </button>
-          )}
 
-          {canEdit && (
-            <button 
-              onClick={() => {
-                if (limitReached) {
-                  showNotification(`Limit ${maxWargaLimit} tercapai. Mohon Upgrade.`, 'error');
-                  return;
-                }
-                setShowAddForm(true);
-              }} 
-              className="bg-gradient-to-tr from-brand-blue via-blue-600 to-indigo-700 hover:shadow-[0_20px_50px_rgba(59,130,246,0.3)] text-white px-8 py-4.5 rounded-2xl flex items-center gap-4 text-[11px] font-black uppercase tracking-widest transition-all duration-500 hover:scale-[1.03] active:scale-95 shadow-xl shadow-brand-blue/20 group"
-            >
-              <div className="bg-white/20 p-1.5 rounded-lg group-hover:rotate-12 transition-transform">
-                <UserPlus size={18} /> 
-              </div>
-              {limitReached ? 'Limit Penuh' : `Tambah ${isApt ? "Penghuni" : "Warga"}`}
-            </button>
-          )}
+            <AnimatePresence>
+              {showSuiteMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-30" 
+                    onClick={() => setShowSuiteMenu(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-full mt-3 w-88 bg-slate-950/95 backdrop-blur-md border border-indigo-500/30 rounded-2xl p-5 shadow-2xl z-40 text-left space-y-4"
+                  >
+                    {/* Popover Header */}
+                    <div className="border-b border-indigo-500/10 pb-3 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-[10px] font-black tracking-widest text-[#5eead4] uppercase flex items-center gap-1.5">
+                          <Database className="w-4 h-4 text-emerald-400 animate-pulse" />
+                          RESIDENT & DOCUMENT SUITE
+                        </h4>
+                        <p className="text-[10px] text-emerald-200/50 font-sans tracking-normal mt-0.5">
+                          Pengelolaan arsip, data dan singkronisasi wilayah
+                        </p>
+                      </div>
+                      <span className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-full font-mono font-black animate-pulse">
+                        ONLINE STATUS
+                      </span>
+                    </div>
+
+                    {/* Capacity indicators */}
+                    <div className="bg-slate-900/60 rounded-xl p-3 border border-emerald-500/10 space-y-2">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-300 uppercase">
+                        <span>Slot Kependudukan</span>
+                        <span className="font-mono text-emerald-400">{wargaData.length} / {maxWargaLimit}</span>
+                      </div>
+                      <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden p-0.5 border border-white/5">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${limitReached ? 'bg-rose-500' : 'bg-gradient-to-r from-teal-500 to-emerald-400'}`}
+                          style={{ width: `${Math.min((wargaData.length / maxWargaLimit) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Core action routes */}
+                    <div className="space-y-2">
+                      {canEdit && (
+                        <>
+                          {/* Tambah Warga Action btn */}
+                          <button
+                            onClick={() => {
+                              setShowSuiteMenu(false);
+                              if (limitReached) {
+                                showNotification(`Limit ${maxWargaLimit} tercapai. Mohon Upgrade.`, 'error');
+                                return;
+                              }
+                              setShowAddForm(true);
+                            }}
+                            className="w-full text-left p-2.5 rounded-xl bg-indigo-950/20 hover:bg-indigo-950/40 border border-indigo-500/20 transition-all flex items-center gap-3 cursor-pointer group"
+                          >
+                            <div className="p-2 rounded-lg bg-indigo-500/15 text-indigo-400 group-hover:scale-115 transition-transform">
+                              <UserPlus className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-black text-white uppercase tracking-wider">
+                                {limitReached ? 'Kapasitas Penuh' : `Tambah ${isApt ? "Penghuni" : "Warga"} Manual`}
+                              </div>
+                              <div className="text-[8px] text-slate-400 normal-case font-sans">
+                                Enrolment data kependudukan perorangan
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Import Database via Excel */}
+                          <button
+                            onClick={() => {
+                              setShowSuiteMenu(false);
+                              fileInputRef.current?.click();
+                            }}
+                            disabled={isUploading}
+                            className="w-full text-left p-2.5 rounded-xl bg-slate-900/40 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-3 cursor-pointer group"
+                          >
+                            <div className="p-2 rounded-lg bg-amber-500/15 text-amber-500 group-hover:scale-115 transition-transform">
+                              <Download className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-black text-white uppercase tracking-wider">
+                                {isUploading ? 'Sedang Sinkron...' : 'Impor Database Excel/CSV'}
+                              </div>
+                              <div className="text-[8px] text-slate-400 normal-case font-sans">
+                                Unggah struktur data warga dalam format spreadsheet
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Sinkronisasi Pull RT or Sync RW */}
+                          <button
+                            onClick={() => {
+                              setShowSuiteMenu(false);
+                              if (detectedRT) {
+                                syncWargaFromRW();
+                              } else {
+                                syncWargaFromRTsToRW();
+                              }
+                            }}
+                            className="w-full text-left p-2.5 rounded-xl bg-[#0a1e36]/40 hover:bg-[#0088cc]/10 border border-blue-500/10 hover:border-blue-500/30 transition-all flex items-center gap-3 cursor-pointer group"
+                          >
+                            <div className="p-2 rounded-lg bg-blue-500/15 text-blue-400 group-hover:scale-115 transition-transform">
+                              <ClipboardList className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-black text-white uppercase tracking-wider">
+                                {detectedRT ? 'Sinkronisasi RW Induk' : 'Pull RT (Tarik Data RT Semua)'}
+                              </div>
+                              <div className="text-[8px] text-slate-400 normal-case font-sans">
+                                {detectedRT ? 'Sinkronasikan pembaruan langsung dari database RW' : 'Konsolidasikan seluruh data RT ke basis RW Semua'}
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Cleanup Ganda duplicates */}
+                          <button
+                            onClick={() => {
+                              setShowSuiteMenu(false);
+                              cleanupWarga();
+                            }}
+                            className="w-full text-left p-2.5 rounded-xl bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/10 hover:border-rose-500/30 transition-all flex items-center gap-3 cursor-pointer group"
+                          >
+                            <div className="p-2 rounded-lg bg-rose-500/15 text-rose-400 group-hover:scale-115 transition-transform">
+                              <Trash2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-black text-white uppercase tracking-wider">
+                                Pembersihan Data Ganda
+                              </div>
+                              <div className="text-[8px] text-slate-400 normal-case font-sans">
+                                Cari dan eliminasi record NIK atau nama ganda otomatis
+                              </div>
+                            </div>
+                          </button>
+                        </>
+                      )}
+
+                      {/* Export Database button */}
+                      <button
+                        onClick={() => {
+                          setShowSuiteMenu(false);
+                          handleExportExcel();
+                        }}
+                        className="w-full text-left p-2.5 rounded-xl bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/10 hover:border-emerald-500/30 transition-all flex items-center gap-3 cursor-pointer group"
+                      >
+                        <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 group-hover:scale-115 transition-transform">
+                          <Printer className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-black text-white uppercase tracking-wider">
+                            Ekspor Database Excel (Maks RW Semua)
+                          </div>
+                          <div className="text-[8px] text-slate-400 normal-case font-sans">
+                            Kompilasi dan download arsip kependudukan wilayah
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Integrated Modern Filter Controls */}
+                    <div className="border-t border-indigo-500/10 pt-4 space-y-3">
+                      <h5 className="text-[10px] font-black tracking-widest text-[#5eead4] uppercase flex items-center gap-1.5">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+                        KONFIGURASI WILAYAH (FILTER DATA)
+                      </h5>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* RT Selector */}
+                        <div className="space-y-1 text-left">
+                          <label className="text-[8px] font-black uppercase text-slate-400 tracking-wider">RT Saring:</label>
+                          <div className="relative">
+                            <select
+                              value={filterRT}
+                              onChange={(e) => setFilterRT(e.target.value)}
+                              disabled={!!detectedRT || isRTAdmin}
+                              className="w-full bg-slate-900 border border-slate-800 text-[10px] font-black text-slate-300 rounded-lg p-2.5 outline-none appearance-none cursor-pointer focus:border-indigo-500/50 tracking-wider uppercase"
+                            >
+                              {detectedRT || isRTAdmin ? (
+                                <option value={detectedRT || myRT}>{`RT ${detectedRT || myRT}`}</option>
+                              ) : (
+                                <>
+                                  <option value="Semua">RT SEMUA</option>
+                                  {Array.from({length: 15}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
+                                    <option key={rt} value={rt}>{`RT ${rt}`}</option>
+                                  ))}
+                                </>
+                              )}
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* RW Selector */}
+                        <div className="space-y-1 text-left">
+                          <label className="text-[8px] font-black uppercase text-slate-400 tracking-wider">RW Saring:</label>
+                          <div className="relative">
+                            <select
+                              value={filterRW}
+                              onChange={(e) => setFilterRW(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 text-[10px] font-black text-slate-300 rounded-lg p-2.5 outline-none appearance-none cursor-pointer focus:border-indigo-500/50 tracking-wider uppercase"
+                            >
+                              <option value="Semua">RW SEMUA</option>
+                              {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => (
+                                <option key={rw} value={rw}>{`RW ${rw}`}</option>
+                              ))}
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
       <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl p-4 sm:p-10 rounded-3xl border border-white/20 dark:border-slate-800 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] dark:shadow-none transition-all">
          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-10">
-            <div className="relative md:col-span-3 group">
+            <div className="relative md:col-span-4 group">
               <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
                 <Search className="text-slate-300 group-focus-within:text-brand-blue transition-all duration-500 w-6 h-6" />
               </div>
@@ -863,45 +1043,35 @@ function WargaView(props: WargaViewProps) {
               />
             </div>
             
-            <div className="md:col-span-1 relative group/sel">
-              <select 
-                value={filterRT} 
-                onChange={(e) => setFilterRT(e.target.value)} 
-                disabled={!!detectedRT || isRTAdmin}
-                className="w-full bg-white/80 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-2xl py-5 px-8 outline-none text-[12px] font-black text-slate-600 dark:text-slate-300 transition-all appearance-none cursor-pointer focus:border-brand-blue/30 hover:border-slate-200 uppercase tracking-wider"
-              >
-                {detectedRT || isRTAdmin ? (
-                  <option value={detectedRT || myRT}>{`RT ${detectedRT || myRT}`}</option>
-                ) : (
-                  <>
-                    <option value="Semua">RT: SEMUA</option>
-                    {Array.from({length: 15}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
-                      <option key={rt} value={rt}>{`RT ${rt}`}</option>
-                    ))}
-                  </>
-                )}
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none group-hover/sel:text-brand-blue transition-colors" />
-            </div>
+            <div className="md:col-span-2 flex items-center justify-end gap-3 bg-slate-100/50 dark:bg-slate-800/30 px-5 py-4.5 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+              <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider mr-auto pl-1">Saringan Wilayah:</span>
+              
+              {filterRT !== "Semua" ? (
+                <button
+                  onClick={() => setFilterRT("Semua")}
+                  className="px-3 py-2 bg-indigo-500/15 border border-indigo-500/20 hover:border-rose-400 hover:bg-rose-500/10 text-indigo-400 hover:text-rose-400 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer group"
+                  title="Klik untuk reset filter RT"
+                >
+                  <span>RT {filterRT}</span>
+                  <X className="w-3 h-3 group-hover:rotate-90 transition-transform" />
+                </button>
+              ) : (
+                <span className="px-3 py-2 bg-slate-200/50 dark:bg-slate-800/50 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-wider">RT Semua</span>
+              )}
 
-            <div className="md:col-span-1 relative group/sel">
-              <select 
-                value={filterRW} 
-                onChange={(e) => setFilterRW(e.target.value)} 
-                className="w-full bg-white/80 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-2xl py-5 px-8 outline-none text-[12px] font-black text-slate-600 dark:text-slate-300 transition-all appearance-none cursor-pointer focus:border-brand-blue/30 hover:border-slate-200 uppercase tracking-wider"
-              >
-                <option value="Semua">RW: SEMUA</option>
-                {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => <option key={rw} value={rw}>{`RW ${rw}`}</option>)}
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none group-hover/sel:text-brand-blue transition-colors" />
+              {filterRW !== "Semua" ? (
+                <button
+                  onClick={() => setFilterRW("Semua")}
+                  className="px-3 py-2 bg-[#0088cc]/15 border border-[#0088cc]/20 hover:border-rose-400 hover:bg-rose-500/10 text-[#0088cc] hover:text-rose-400 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer group"
+                  title="Klik untuk reset filter RW"
+                >
+                  <span>RW {filterRW}</span>
+                  <X className="w-3 h-3 group-hover:rotate-90 transition-transform" />
+                </button>
+              ) : (
+                <span className="px-3 py-2 bg-slate-200/50 dark:bg-slate-800/50 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-wider">RW Semua</span>
+              )}
             </div>
-
-            <button 
-              onClick={handleExportExcel} 
-              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-4 py-5 shadow-2xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all duration-500"
-            > 
-              <Printer size={18} /> EXCEL 
-            </button>
          </div>
 
          <div className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">

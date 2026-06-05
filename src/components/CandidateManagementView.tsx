@@ -12,6 +12,7 @@ interface Candidate {
   mission: string;
   photo?: string;
   votes?: number;
+  kategori?: 'rt' | 'rw';
 }
 
 export function CandidateManagementView({
@@ -82,20 +83,32 @@ export function CandidateManagementView({
           className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4"
           onSubmit={(e) => { e.preventDefault(); handleSave(editingCandidate || {}); }}
         >
-          <input
-            type="text"
-            placeholder="Nama Kandidat"
-            className="w-full p-3 rounded-lg border border-slate-200"
-            value={editingCandidate?.name || ""}
-            onChange={(e) => setEditingCandidate({ ...editingCandidate, name: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Nomor Urut"
-            className="w-full p-3 rounded-lg border border-slate-200"
-            value={editingCandidate?.number || ""}
-            onChange={(e) => setEditingCandidate({ ...editingCandidate, number: e.target.value })}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Nama Kandidat"
+              className="w-full p-3 rounded-lg border border-slate-200"
+              value={editingCandidate?.name || ""}
+              onChange={(e) => setEditingCandidate({ ...editingCandidate, name: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="Nomor Urut"
+              className="w-full p-3 rounded-lg border border-slate-200"
+              value={editingCandidate?.number || ""}
+              onChange={(e) => setEditingCandidate({ ...editingCandidate, number: e.target.value })}
+            />
+          </div>
+          <div>
+            <select
+              className="w-full p-3 rounded-lg border border-slate-200 font-bold bg-white text-sm"
+              value={editingCandidate?.kategori || "rt"}
+              onChange={(e) => setEditingCandidate({ ...editingCandidate, kategori: e.target.value as 'rt' | 'rw' })}
+            >
+              <option value="rt">Kandidat Ketua RT</option>
+              <option value="rw">Kandidat Ketua RW</option>
+            </select>
+          </div>
           <textarea
             placeholder="Visi"
             className="w-full p-3 rounded-lg border border-slate-200"
@@ -160,6 +173,9 @@ export function CandidateManagementView({
               )}
               <span className="font-black text-slate-400">#{cand.number}</span>
               <span className="font-bold text-slate-800">{cand.name}</span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase text-white tracking-widest bg-slate-800">
+                {cand.kategori === 'rw' ? 'RW' : 'RT'}
+              </span>
             </div>
             <div className="flex gap-2">
               <button
