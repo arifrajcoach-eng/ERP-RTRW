@@ -315,6 +315,34 @@ export async function bookFacility(data: { tenantId: string, userId: string, nam
   }
 }
 
+export async function reportKelahiran(data: { tenantId: string, namaBayi: string, tempatLahir: string, tanggalLahir: string, jenisKelamin: string, namaAyah: string, namaIbu: string, alamat?: string, rt?: string, rw?: string }) {
+  try {
+    const docRef = await addDoc(collection(db, 'kelahiran'), {
+      ...data,
+      tanggalLapor: new Date(),
+      createdAt: new Date()
+    });
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error("Failed reportKelahiran", e);
+    return { success: false, error: 'Gagal menlaporkan kelahiran' };
+  }
+}
+
+export async function reportKematian(data: { tenantId: string, namaWarga: string, nikWarga: string, tanggalMati: string, tempatMati: string, penyebab?: string }) {
+  try {
+    const docRef = await addDoc(collection(db, 'kematian'), {
+      ...data,
+      tanggalLapor: new Date(),
+      createdAt: new Date()
+    });
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error("Failed reportKematian", e);
+    return { success: false, error: 'Gagal melaporkan kematian' };
+  }
+}
+
 // 6. MONITORING & ALERT (Anomaly Detection)
 export async function detectAnomalies(tenantId: string) {
   try {

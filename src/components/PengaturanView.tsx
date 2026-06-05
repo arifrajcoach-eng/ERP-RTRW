@@ -20,6 +20,7 @@ import {
 import { db } from "../firebase";
 import { getTranslatedLabel } from "../lib/langUtils";
 import { getPlanFeatures } from "../lib/appUtils";
+import AppQRCode from "./AppQRCode";
 
 interface PengaturanViewProps {
   tenantId: string;
@@ -1460,6 +1461,25 @@ export default function PengaturanView({
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Bagikan Aplikasi via QR Code */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8 p-6 flex flex-col md:flex-row items-center gap-8">
+        <div className="flex-1">
+          <h3 className="text-lg font-black text-slate-800 tracking-tight mb-2">Bagikan SmaRtRw AI</h3>
+          <p className="text-sm text-slate-500 mb-4">
+            Anda dapat mengunduh dan mencetak QR Code ini. Warga tinggal melakukan scan QR Code ini menggunakan kamera ponsel untuk langsung mengakses aplikasi warga.
+          </p>
+          <ul className="text-xs text-slate-500 space-y-2 font-medium list-disc ml-5">
+            <li>Tempelkan di Mading RW/RT</li>
+            <li>Taruh di Meja Pos Satpam</li>
+            <li>Tempelkan di pintu masuk Fasilitas Umum</li>
+            <li>Bagikan sebagai gambar di Grup WhatsApp Warga</li>
+          </ul>
+        </div>
+        <div className="w-full md:w-auto">
+          <AppQRCode tenantId={tenantId} />
         </div>
       </div>
 

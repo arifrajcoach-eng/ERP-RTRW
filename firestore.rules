@@ -549,6 +549,22 @@ service cloud.firestore {
       allow get: if isTenantMember(resource.data.tenantId);
       allow write: if isAdmin();
     }
+    // --- Layanan Kependudukan ---
+    match /kelahiran/{docId} {
+      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || isAdminStatic());
+      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow create: if isTenantMember(request.resource.data.tenantId);
+      allow update: if isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId);
+      allow delete: if isTenantMember(resource.data.tenantId);
+    }
+    match /kematian/{docId} {
+      allow list: if isSignedIn() && (isTenantMemberStatic(resource.data.tenantId) || isAdminStatic());
+      allow get: if isSignedIn() && (isTenantMember(resource.data.tenantId) || isAdmin());
+      allow create: if isTenantMember(request.resource.data.tenantId);
+      allow update: if isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId);
+      allow delete: if isTenantMember(resource.data.tenantId);
+    }
+
     match /usage_logs/{docId} {
       allow list: if isTenantMemberStatic(resource.data.tenantId);
       allow get: if isTenantMember(resource.data.tenantId);

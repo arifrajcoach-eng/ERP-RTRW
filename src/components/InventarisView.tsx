@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   PlusCircle,
@@ -9,6 +9,13 @@ import {
   X,
   Camera,
   Trash2,
+  Image as ImageIcon,
+  ChevronRight,
+  ChevronLeft,
+  Filter,
+  ArrowUpRight,
+  ArrowDownRight,
+  Plus
 } from "lucide-react";
 import { motion } from "motion/react";
 import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
@@ -47,6 +54,19 @@ export default function InventarisView({
   const [txStokFisik, setTxStokFisik] = useState(0);
   const [uploadPct, setUploadPct] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!showAddForm && !showLogForm) {
+      setFotoPreview(null);
+      setEditingItem(null);
+      setSelectedItem(null);
+      setTxType("Barang Masuk");
+      setTxJumlah(1);
+      setTxHarga(0);
+      setTxStokFisik(0);
+    }
+  }, [showAddForm, showLogForm]);
 
   const canEdit = useMemo(() => {
     const roleUpper = (userRole || "").toUpperCase();
@@ -659,32 +679,99 @@ export default function InventarisView({
             <form id="add-asset-form" onSubmit={handleSaveItem} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">
-                    Foto Aset
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
-                      {editingItem?.foto_url ? (
-                        <img
-                          src={editingItem.foto_url}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
+                      Foto Aset
+                    </label>
+                    {fotoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFotoPreview(null);
+                          const fileInput = document.getElementById('foto-aset-input') as HTMLInputElement;
+                          if (fileInput) fileInput.value = '';
+                        }}
+                        className="text-[9px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-600 transition-colors"
+                      >
+                        Hapus Preview
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div 
+                      onClick={() => document.getElementById('foto-aset-input')?.click()}
+                      className="w-20 h-20 rounded-xl bg-white border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all group relative shrink-0"
+                    >
+                      {fotoPreview || editingItem?.foto_url ? (
+                        <>
+                          <img
+                            src={fotoPreview || editingItem?.foto_url}
+                            alt="Preview"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Camera className="w-5 h-5 text-white" />
+                          </div>
+                        </>
                       ) : (
-                        <Camera className="w-8 h-8 text-slate-300" />
+                        <div className="flex flex-col items-center gap-1">
+                          <Camera className="w-6 h-6 text-slate-300 group-hover:text-blue-500" />
+                          <span className="text-[7px] font-black text-slate-400 group-hover:text-blue-500 uppercase tracking-tighter">Buka Kamera</span>
+                        </div>
                       )}
                     </div>
-                    <div className="flex-1">
+                    
+                    <div className="flex-1 min-w-0">
                       <input
+                        id="foto-aset-input"
                         type="file"
                         name="foto_aset"
                         accept="image/*"
                         capture="environment"
-                        className="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => setFotoPreview(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="hidden"
                       />
-                      <p className="text-[9px] text-slate-400 mt-2 font-medium">
-                        Format JPG/PNG, Max 2MB. Foto baru akan menggantikan
-                        yang lama.
+                      
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById('foto-aset-input') as HTMLInputElement;
+                            if (input) {
+                              input.setAttribute('capture', 'environment');
+                              input.click();
+                            }
+                          }}
+                          className="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-md shadow-blue-500/10"
+                        >
+                          <Camera className="w-3 h-3" />
+                          Gunakan Camera (Utama)
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById('foto-aset-input') as HTMLInputElement;
+                            if (input) {
+                              input.removeAttribute('capture');
+                              input.click();
+                            }
+                          }}
+                          className="flex items-center justify-center gap-2 w-full py-2 bg-slate-200 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-300 transition-all active:scale-95"
+                        >
+                          <ImageIcon className="w-3 h-3" />
+                          Pilih File Galeri
+                        </button>
+                      </div>
+                      <p className="text-[8px] text-slate-400 mt-2 font-bold leading-tight">
+                        Format JPG/PNG, Max 2MB. Gunakan kamera untuk dokumentasi aset.
                       </p>
                     </div>
                   </div>

@@ -14,7 +14,11 @@ import {
   getInventorySummary,
   getRegistrationInfo,
   createSurat,
-  registerELapak
+  registerELapak,
+  reportComplaint,
+  bookFacility,
+  reportKelahiran,
+  reportKematian
 } from '../services/aiAgentTools';
 import { chatWithAI, textToSpeech } from '../services/aiService';
 
@@ -436,6 +440,30 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
             } else if (jsonAction.action === 'registerELapak') {
               const res = await registerELapak({ ...jsonAction.params, tenantId, userId: currentUser?.email || 'unknown' });
               const msg = res.success ? `Alhamdulillah kak, pendaftaran e-lapak berhasil (ID: ${res.id}).` : 'Maaf kak, ada kendala saat mendaftar e-lapak.';
+              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
+              handleSpeak(msg);
+            } else if (jsonAction.action === 'reportKelahiran') {
+              const params = jsonAction.params || {};
+              const res = await reportKelahiran({ ...params, tenantId });
+              const msg = res.success ? (jsonAction.text || `Sip, kelahiran telah dicatat.`) : 'Maaf kak, gagal mencatat kelahiran.';
+              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
+              handleSpeak(msg);
+            } else if (jsonAction.action === 'reportKematian') {
+              const params = jsonAction.params || {};
+              const res = await reportKematian({ ...params, tenantId });
+              const msg = res.success ? (jsonAction.text || `Pelaporan kematian telah dicatat.`) : 'Maaf kak, gagal mencatat pelaporan kematian.';
+              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
+              handleSpeak(msg);
+            } else if (jsonAction.action === 'reportComplaint') {
+              const params = jsonAction.params || {};
+              const res = await reportComplaint({ ...params, tenantId, userId: currentUser?.uid });
+              const msg = res.success ? (jsonAction.text || `Keluhan telah dicatat (ID: ${res.id}).`) : 'Maaf kak, gagal mencatat keluhan.';
+              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
+              handleSpeak(msg);
+            } else if (jsonAction.action === 'bookFacility') {
+              const params = jsonAction.params || {};
+              const res = await bookFacility({ ...params, tenantId, userId: currentUser?.uid });
+              const msg = res.success ? (jsonAction.text || `Booking fasilitas telah diajukan (ID: ${res.id}).`) : 'Maaf kak, gagal melakukan booking.';
               setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
               handleSpeak(msg);
             } else {

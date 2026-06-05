@@ -1,0 +1,571 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  Baby, 
+  UserMinus, 
+  PlusCircle, 
+  FileText, 
+  Edit2,
+  Search, 
+  Calendar, 
+  Trash2, 
+  Eye, 
+  BarChart3, 
+  CheckCircle, 
+  AlertCircle,
+  FileSpreadsheet,
+  Printer,
+  X
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  writeBatch
+} from 'firebase/firestore';
+import { db } from '../firebase';
+
+import { getPlanFeatures } from '../lib/appUtils';
+
+interface KependudukanViewProps {
+  kelahiranData: any[];
+  kematianData: any[];
+  currentUser: any;
+  tenantId: string;
+  showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  handleFirestoreError: (err: any, op: string, res: string) => void;
+  setIsLoadingDB: (loading: boolean) => void;
+  wargaData: any[];
+  activePlanData?: any;
+}
+
+export default function KependudukanView({
+  kelahiranData,
+  kematianData,
+  currentUser,
+  tenantId,
+  showNotification,
+  handleFirestoreError,
+  setIsLoadingDB,
+  wargaData,
+  activePlanData
+}: KependudukanViewProps) {
+  const [activeTab, setActiveTab] = useState<'kelahiran' | 'kematian' | 'statistik'>('kelahiran');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+
+  const canEdit = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'OPERATOR'].includes(currentUser.role?.toUpperCase());
+
+  const filteredKelahiran = useMemo(() => {
+    return kelahiranData.filter(item => 
+      item.namaBayi?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.namaAyah?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.namaIbu?.toLowerCase().includes(searchQuery.toLowerCase())
+    ).sort((a, b) => (b.tanggalLapor?.seconds || 0) - (a.tanggalLapor?.seconds || 0));
+  }, [kelahiranData, searchQuery]);
+
+  const filteredKematian = useMemo(() => {
+    return kematianData.filter(item => 
+      item.namaWarga?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.nikWarga?.toLowerCase().includes(searchQuery.toLowerCase())
+    ).sort((a, b) => (b.tanggalLapor?.seconds || 0) - (a.tanggalLapor?.seconds || 0));
+  }, [kematianData, searchQuery]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!canEdit) {
+      showNotification("Anda tidak memiliki izin untuk melakukan tindakan ini.", "error");
+      return;
+    }
+
+    const currentFeatures = getPlanFeatures(activePlanData);
+    const maxSipil = currentFeatures.maxSipil || 5;
+    const currentTotal = kelahiranData.length + kematianData.length;
+
+    if (!editingItem && maxSipil !== -1 && currentTotal >= maxSipil) {
+      showNotification(`Batas Layanan Sipil tercapai (${maxSipil} pelaporan). Silakan upgrade paket langganan Anda.`, "error");
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    const data: any = {
+      tenantId,
+      updatedBy: currentUser.uid,
+      updatedAt: serverTimestamp(),
+      rt: currentUser.rt || "01",
+      rw: currentUser.rw || "26"
+    };
+
+    setIsLoadingDB(true);
+    try {
+      if (activeTab === 'kelahiran') {
+        data.namaBayi = formData.get('namaBayi');
+        data.tempatLahir = formData.get('tempatLahir');
+        data.tanggalLahir = formData.get('tanggalLahir');
+        data.jenisKelamin = formData.get('jenisKelamin');
+        data.namaAyah = formData.get('namaAyah');
+        data.namaIbu = formData.get('namaIbu');
+        data.alamat = formData.get('alamat');
+        data.beratBadan = formData.get('beratBadan');
+        data.panjangBadan = formData.get('panjangBadan');
+
+        if (editingItem) {
+          await updateDoc(doc(db, activeTab, editingItem.id), data);
+          showNotification("Data kelahiran berhasil diperbarui.", "success");
+        } else {
+          data.tanggalLapor = serverTimestamp();
+          
+          // Use batch to ensure both operations succeed or fail together
+          const batch = writeBatch(db);
+          
+          // 1. Add to kelahiran collection
+          const kelahiranRef = doc(collection(db, 'kelahiran'));
+          batch.set(kelahiranRef, data);
+          
+          // 2. Add to data_warga automatically
+          const babyWargaRef = doc(collection(db, 'data_warga'));
+          batch.set(babyWargaRef, {
+            tenantId,
+            nama: data.namaBayi,
+            nik: `BY-${Date.now()}`, // Placeholder NIK for baby
+            kk: '', // Unknown yet
+            tempatLahir: data.tempatLahir,
+            tglLahir: data.tanggalLahir,
+            jenisKelamin: data.jenisKelamin,
+            rt: data.rt,
+            rw: data.rw,
+            status: 'Warga Tetap',
+            updatedBy: currentUser.uid,
+            updatedAt: serverTimestamp(),
+            isAutoGenerated: true
+          });
+          
+          await batch.commit();
+          showNotification("Berhasil melaporkan kelahiran baru dan data warga telah ditambahkan otomatis.", "success");
+        }
+      } else {
+        data.namaWarga = formData.get('namaWarga');
+        data.nikWarga = formData.get('nikWarga');
+        data.tanggalMati = formData.get('tanggalMati');
+        data.tempatMati = formData.get('tempatMati');
+        data.penyebab = formData.get('penyebab');
+        data.lokasiMakam = formData.get('lokasiMakam');
+
+        if (editingItem) {
+          await updateDoc(doc(db, activeTab, editingItem.id), data);
+          showNotification("Data kematian berhasil diperbarui.", "success");
+        } else {
+          data.tanggalLapor = serverTimestamp();
+          
+          const batch = writeBatch(db);
+          
+          // 1. Add to kematian collection
+          const kematianRef = doc(collection(db, 'kematian'));
+          batch.set(kematianRef, data);
+          
+          // 2. Reduce (Delete) from data_warga automatically if NIK matches
+          if (data.nikWarga) {
+            const q = query(
+              collection(db, 'data_warga'), 
+              where('tenantId', '==', tenantId), 
+              where('nik', '==', data.nikWarga)
+            );
+            const snap = await getDocs(q);
+            snap.docs.forEach(d => {
+              batch.delete(doc(db, 'data_warga', d.id));
+            });
+          }
+          
+          await batch.commit();
+          showNotification("Berhasil melaporkan kematian dan data warga terkait telah dihapus otomatis.", "success");
+        }
+      }
+      setShowForm(false);
+      setEditingItem(null);
+    } catch (error) {
+      handleFirestoreError(error, "save", activeTab);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  const handleDelete = async (id: string, nama: string) => {
+    if (!confirm(`Hapus data ${activeTab === 'kelahiran' ? 'kelahiran' : 'kematian'} "${nama}"?`)) return;
+
+    setIsLoadingDB(true);
+    try {
+      await deleteDoc(doc(db, activeTab, id));
+      showNotification("Data berhasil dihapus.", "success");
+    } catch (error) {
+      handleFirestoreError(error, "delete", activeTab);
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header & Stats Card */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-1 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-brand-blue/10 rounded-2xl">
+              <BarChart3 className="w-6 h-6 text-brand-blue" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">Layanan Kependudukan</h2>
+              <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Digital & Otomatis</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+             <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
+                <span className="text-sm font-bold text-slate-600 dark:text-slate-400">Total Kelahiran</span>
+                <span className="text-lg font-black text-brand-blue">{kelahiranData.length}</span>
+             </div>
+             <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
+                <span className="text-sm font-bold text-slate-600 dark:text-slate-400">Total Kematian</span>
+                <span className="text-lg font-black text-rose-500">{kematianData.length}</span>
+             </div>
+             <div className="mt-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">
+               Kuota Layanan: {kelahiranData.length + kematianData.length} / {getPlanFeatures(activePlanData).maxSipil === -1 ? 'Unlimited' : getPlanFeatures(activePlanData).maxSipil}
+             </div>
+          </div>
+        </div>
+
+        <div className="md:col-span-2 bg-gradient-to-br from-brand-blue to-indigo-700 p-6 rounded-3xl text-white shadow-xl flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+             <Baby className="w-32 h-32" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-black mb-2">Pelaporan Cepat Digital</h3>
+            <p className="text-blue-100 text-sm max-w-md">
+              Sistem pelaporan otomatis untuk memantau dinamika kependudukan RT/RW secara real-time dan transparan.
+            </p>
+          </div>
+          <div className="flex gap-3 mt-6">
+            <button 
+              onClick={() => { setActiveTab('kelahiran'); setShowForm(true); setEditingItem(null); }}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+            >
+              Lapor Kelahiran
+            </button>
+            <button 
+              onClick={() => { setActiveTab('kematian'); setShowForm(true); setEditingItem(null); }}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+            >
+              Lapor Kematian
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs & Search */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl w-full md:w-auto">
+          <button
+            onClick={() => setActiveTab('kelahiran')}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'kelahiran' ? 'bg-white dark:bg-slate-700 text-brand-blue shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Data Kelahiran
+          </button>
+          <button
+            onClick={() => setActiveTab('kematian')}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'kematian' ? 'bg-white dark:bg-slate-700 text-rose-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Data Kematian
+          </button>
+          <button
+            onClick={() => setActiveTab('statistik')}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'statistik' ? 'bg-white dark:bg-slate-700 text-amber-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Statistik
+          </button>
+        </div>
+
+        <div className="relative w-full md:w-80 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
+          <input
+            type="text"
+            placeholder="Cari data..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+        {activeTab === 'kelahiran' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Detail Bayi</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Orang Tua</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu & Tempat</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredKelahiran.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500 italic">Belum ada data kelahiran</td>
+                  </tr>
+                ) : (
+                  filteredKelahiran.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-brand-blue/10 rounded-full flex items-center justify-center">
+                            <Baby className="w-5 h-5 text-brand-blue" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 dark:text-white">{item.namaBayi}</p>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">
+                              {item.jenisKelamin} • {item.beratBadan}kg / {item.panjangBadan}cm
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">A: {item.namaAyah}</p>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">I: {item.namaIbu}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs mb-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{item.tanggalLahir}</span>
+                         </div>
+                         <p className="text-xs text-slate-500 italic">{item.tempatLahir}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2">
+                           <button 
+                             onClick={() => { setEditingItem(item); setShowForm(true); }}
+                             className="p-2 hover:bg-brand-blue/10 text-brand-blue rounded-lg transition-colors"
+                           >
+                             <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button 
+                             onClick={() => handleDelete(item.id, item.namaBayi)}
+                             className="p-2 hover:bg-rose-100 text-rose-500 rounded-lg transition-colors"
+                           >
+                             <Trash2 className="w-4 h-4" />
+                           </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'kematian' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Warga Terkait</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Detail Kejadian</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pemakaman</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredKematian.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500 italic">Belum ada data kematian</td>
+                  </tr>
+                ) : (
+                  filteredKematian.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center">
+                            <UserMinus className="w-5 h-5 text-rose-500" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 dark:text-white">{item.namaWarga}</p>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">
+                              NIK: {item.nikWarga}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs mb-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{item.tanggalMati}</span>
+                         </div>
+                         <p className="text-xs text-rose-500 font-bold italic">{item.penyebab}</p>
+                         <p className="text-[10px] text-slate-500">{item.tempatMati}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{item.lokasiMakam}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2">
+                           <button 
+                             onClick={() => { setEditingItem(item); setShowForm(true); }}
+                             className="p-2 hover:bg-brand-blue/10 text-brand-blue rounded-lg transition-colors"
+                           >
+                             <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button 
+                             onClick={() => handleDelete(item.id, item.namaWarga)}
+                             className="p-2 hover:bg-rose-100 text-rose-500 rounded-lg transition-colors"
+                           >
+                             <Trash2 className="w-4 h-4" />
+                           </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'statistik' && (
+          <div className="p-12 text-center">
+             <div className="w-16 h-16 bg-amber-50 dark:bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <BarChart3 className="w-8 h-8 text-amber-500" />
+             </div>
+             <h3 className="text-lg font-bold text-slate-800 dark:text-white">Statistik Demografi Otomatis</h3>
+             <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-sm mx-auto text-sm">
+               Sistem sedang mengolah tren data tahunan untuk memberikan wawasan demografi yang akurat. Fitur ini akan segera tersedia secara visual.
+             </p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal Form */}
+      <AnimatePresence>
+        {showForm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowForm(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${activeTab === 'kelahiran' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-rose-100 text-rose-500'}`}>
+                    {activeTab === 'kelahiran' ? <Baby className="w-5 h-5" /> : <UserMinus className="w-5 h-5" />}
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white italic">
+                    {editingItem ? 'Edit Data' : 'Lapor '}{activeTab === 'kelahiran' ? 'Kelahiran' : 'Kematian'}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowForm(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {activeTab === 'kelahiran' ? (
+                    <>
+                      <div className="md:col-span-2 space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nama Bayi</label>
+                        <input name="namaBayi" required defaultValue={editingItem?.namaBayi} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all border-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Jenis Kelamin</label>
+                        <select name="jenisKelamin" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none">
+                           <option value="Laki-laki">Laki-laki</option>
+                           <option value="Perempuan">Perempuan</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Tanggal Lahir</label>
+                        <input type="date" name="tanggalLahir" required defaultValue={editingItem?.tanggalLahir} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nama Ayah</label>
+                        <input name="namaAyah" required defaultValue={editingItem?.namaAyah} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nama Ibu</label>
+                        <input name="namaIbu" required defaultValue={editingItem?.namaIbu} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Berat (kg)</label>
+                        <input step="0.1" type="number" name="beratBadan" defaultValue={editingItem?.beratBadan} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Panjang (cm)</label>
+                        <input type="number" name="panjangBadan" defaultValue={editingItem?.panjangBadan} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="md:col-span-1 space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nama Warga</label>
+                        <input name="namaWarga" required defaultValue={editingItem?.namaWarga} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="md:col-span-1 space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">NIK Warga</label>
+                        <input name="nikWarga" required defaultValue={editingItem?.nikWarga} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Tanggal Wafat</label>
+                        <input type="date" name="tanggalMati" required defaultValue={editingItem?.tanggalMati} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Sebab Wafat</label>
+                        <input name="penyebab" placeholder="Sakit/Usia/Lainnya" defaultValue={editingItem?.penyebab} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                      <div className="md:col-span-2 space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Lokasi Pemakaman</label>
+                        <input name="lokasiMakam" defaultValue={editingItem?.lokasiMakam} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none border-none" />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex gap-3 mt-10">
+                   <button 
+                     type="button" 
+                     onClick={() => setShowForm(false)}
+                     className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all shadow-md"
+                   >
+                     Batal
+                   </button>
+                   <button 
+                     type="submit" 
+                     className={`flex-1 py-4 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg transform active:scale-95 transition-all ${activeTab === 'kelahiran' ? 'bg-brand-blue shadow-brand-blue/30' : 'bg-rose-500 shadow-rose-500/30'}`}
+                   >
+                     {editingItem ? 'Simpan Perubahan' : 'Kirim Laporan'}
+                   </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

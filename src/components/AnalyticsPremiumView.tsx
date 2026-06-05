@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Volume2,
   VolumeX,
+  FileDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
@@ -114,6 +115,11 @@ export function AnalyticsPremiumView({
   kasData,
   wargaData,
   iuranData,
+  kelahiranData = [],
+  kematianData = [],
+  suratData = [],
+  complaintData = [],
+  organizationName = "RW DIGITAL",
 }: any) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState("");
@@ -172,6 +178,14 @@ export function AnalyticsPremiumView({
         financial: kasData.slice(-20),
         warga: wargaData.length,
         iuran: iuranData.slice(-20),
+        kesehatan: {
+          kelahiranCount: kelahiranData.length,
+          kematianCount: kematianData.length,
+        },
+        kegiatan: {
+          suratCount: suratData.length,
+          complaintsCount: complaintData.length,
+        }
       };
 
       const aiReportText = await generateAIReport(dataSummary);
@@ -258,13 +272,42 @@ export function AnalyticsPremiumView({
             <Bot className="w-6 h-6" />
             LAPORAN BULANAN OTOMATIS (AI)
           </h3>
-          <div className="prose prose-invert max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-indigo-100 leading-relaxed text-sm bg-indigo-950/50 p-6 rounded-2xl border border-indigo-800">
+          <div className="bg-indigo-950/50 p-8 rounded-3xl border border-indigo-800 mb-6 group relative overflow-hidden">
+            {/* Header / KOP Dokumen */}
+            <div className="flex items-center justify-between border-b border-indigo-800 pb-6 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <FileDown className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black uppercase tracking-[0.2em] text-white">
+                    LAPORAN RINGKASAN & ANALISIS (PDF FORMAT)
+                  </h4>
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5">
+                    Organisasi: <span className="text-white">{organizationName}</span>
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                  Waktu Generate
+                </p>
+                <p className="text-xs font-black text-white uppercase">
+                  {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+
+            <pre className="whitespace-pre-wrap font-sans text-indigo-50 leading-relaxed text-sm">
               {report}
             </pre>
           </div>
-          <div className="mt-6 flex gap-4">
-            <button className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-bold text-[10px] uppercase tracking-widest">
+          <div className="mt-6 flex flex-wrap gap-4">
+            <button 
+              onClick={() => window.print()}
+              className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-xl"
+            >
+              <FileDown className="w-4 h-4" />
               Cetak PDF
             </button>
             <button

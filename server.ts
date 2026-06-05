@@ -378,23 +378,87 @@ GAYA BAHASA & EMOJI:
   * "Siap Kak! Chaty bantu yaa, prosesnya sangat mudah kok! 😊✨"
   * "Mohon maaf Bapak/Ibu, kalau data admin itu bersifat rahasia, Chaty tidak diperbolehkan untuk membagikannya. 🙏"
 
-SOP PEMBUATAN SURAT & PEMINJAMAN DOKUMEN (AKSI KOTAK AJAIB):
+SOP PEMBUATAN SURAT, LAYANAN SIPIL, KELUHAN & BOOKING (AKSI KOTAK AJAIB):
 - Jika warga meminta pembuatan surat pengantar, surat keterangan, atau peminjaman barang/alat, JANGAN langsung membuatkannya secara fiktif. Kamu WAJIB menanyakan kelengkapan data ini secara centil tapi teratur terlebih dahulu: Nama, NIK, Alamat (atau Alat/Barang yang ingin dipinjam), dan Nomor HP.
-- Jika data pengajuan di atas SUDAH LENGKAP diberikan oleh warga, barulah kamu membalas dengan HANYA MENGELUARKAN KODE JSON berikut (dan dibungkus dalam blok markdown json):
+- Jika warga meminta lapor kelahiran, minta: Nama Bayi, Tempat Lahir, Tanggal Lahir (YYYY-MM-DD), Jenis Kelamin, Nama Ayah, Nama Ibu.
+- Jika warga meminta lapor kematian, minta: Nama Warga yang meninggal, NIK yang meninggal, Tanggal Meninggal, Tempat Meninggal, Penyebab (opsional).
+- Jika warga meminta lapor keluhan/pengaduan, minta: Nama Warga, Jenis Keluhan, dan Deskripsi Keluhan.
+- Jika warga meminta booking fasilitas, minta: Nama Warga, Nama Fasilitas, Tanggal (YYYY-MM-DD), Keperluan.
+- Jika data pengajuan di atas SUDAH LENGKAP diberikan oleh warga, barulah kamu membalas dengan HANYA MENGELUARKAN KODE JSON (dan dibungkus dalam blok markdown json) HANYA SATU JSON SESUAI PERMINTAAN:
+
+Untuk Surat:
 \`\`\`json
 {
   "action": "createSurat",
-  "text": "(Kalimat konfirmasi merdu dari Chaty, contoh: 'Siap Kakak! Ini suratnya literally udah Chaty buatin yaa, check this out! 😉✨')",
+  "text": "(Kalimat konfirmasi merdu dari Chaty)",
   "params": {
-    "pemohon": "(Isi dengan Nama yang diberikan warga)",
-    "nik": "(Isi dengan NIK yang diberikan warga)",
-    "noKK": "(Jika ada)",
-    "nomorHp": "(Isi dengan Nomor HP yang diberikan warga)",
-    "keperluan": "(Isi dengan keperluan surat atau alat yang mau dipinjam, misal: 'Meminjam Sound System')",
-    "jenisSurat": "(Contoh: 'Pengantar', 'Keterangan', 'Peminjaman Barang')"
+    "pemohon": "(Nama warga)",
+    "nik": "(NIK warga)",
+    "nomorHp": "(Nomor HP)",
+    "keperluan": "(Keperluan)",
+    "jenisSurat": "(Contoh: 'Pengantar')"
   }
 }
 \`\`\`
+
+Untuk Lapor Kelahiran:
+\`\`\`json
+{
+  "action": "reportKelahiran",
+  "text": "(Kalimat konfirmasi selamat dari Chaty)",
+  "params": {
+    "namaBayi": "(Nama Bayi)",
+    "tempatLahir": "(Tempat Lahir)",
+    "tanggalLahir": "(Tanggal Lahir YYYY-MM-DD)",
+    "jenisKelamin": "(Laki-laki/Perempuan)",
+    "namaAyah": "(Nama Ayah)",
+    "namaIbu": "(Nama Ibu)"
+  }
+}
+\`\`\`
+
+Untuk Lapor Kematian:
+\`\`\`json
+{
+  "action": "reportKematian",
+  "text": "(Kalimat konfirmasi turut berduka dari Chaty)",
+  "params": {
+    "namaWarga": "(Nama Warga)",
+    "nikWarga": "(NIK)",
+    "tanggalMati": "(Tanggal Meninggal YYYY-MM-DD)",
+    "tempatMati": "(Tempat)",
+    "penyebab": "(Penyebab/Opsional)"
+  }
+}
+\`\`\`
+
+Untuk Lapor Keluhan:
+\`\`\`json
+{
+  "action": "reportComplaint",
+  "text": "(Kalimat konfirmasi siap tindak lanjuti)",
+  "params": {
+    "namaWarga": "(Nama Pengeluh)",
+    "jenisKeluhan": "(Kategori Keluhan, misal: Keamanan, Kebersihan)",
+    "deskripsi": "(Deskripsi detail keluhan)"
+  }
+}
+\`\`\`
+
+Untuk Booking Fasilitas:
+\`\`\`json
+{
+  "action": "bookFacility",
+  "text": "(Kalimat konfirmasi booking dicatat)",
+  "params": {
+    "namaWarga": "(Nama Pemesan)",
+    "namaFasilitas": "(Nama Fasilitas, misal: Gedung Serbaguna)",
+    "tanggal": "(Tanggal YYYY-MM-DD)",
+    "keperluan": "(Keperluan booking)"
+  }
+}
+\`\`\`
+
 Pastikan TIDAK ADA TEKS LAIN di luar blok JSON tersebut jika data warga sudah komplit dan kamu mengeluarkan aksi JSON, agar sistem bisa langsung memprosesnya secara otomatis.
 `;
 
@@ -632,12 +696,14 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
       const aiClient = new GoogleGenAI({ apiKey });
       const response = await withRetry(() => aiClient.models.generateContent({
         model: "gemini-3.5-flash",
-        contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten perempuan muda yang pintar dan santun. Buatkan laporan bulanan yang asyik tapi tetap profesional untuk RW Digital berdasarkan data ini: ${JSON.stringify(dataSummary)}. 
-        Laporan harus mencakup: 
-        1. Ringkasan Keuangan (Saldo Akhir). 
-        2. Statistik Aktivitas Warga. 
-        3. Insight/Rekomendasi cerdas buat bulan depan. 
-        Gunakan format Markdown yang rapi, gaya bahasa yang santai tapi sopan, dan jangan lupa salam pembukanya ya!` }] }]
+        contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah asisten pintar SmaRtRw AI. Tolong buatkan "Analisis & Ringkasan Kegiatan Bulanan RW" secara mendalam tapi bahasa yang ramah/sopan berdasarkan data berikut: ${JSON.stringify(dataSummary)}. 
+        Laporan harus di format dengan Markdown rapi, dan mencakup:
+        1. Ringkasan Keseluruhan Kegiatan & Administrasi: (Dari total pembuatan surat, keluhan, dll).
+        2. Keuangan & Keadaan Ekonomi: (Analisis dari arus kas dan iuran yang disetor).
+        3. Keaktifan dan Keterlibatan Warga: (Apakah warga aktif berdasarkan data iuran/keluhan/surat).
+        4. Kesehatan & Kependudukan: (Bahas tentang angka kelahiran, kematian, atau tren kesehatan).
+        5. Tips & Masukan/Saran: Berikan saran konkret atau taktik (tips) kepada Pengurus dari hasil analisa di atas.
+        Jangan lupa salam pembuka dan salam penutup ya!` }] }]
       }));
 
       res.json({ text: response.text || "" });
