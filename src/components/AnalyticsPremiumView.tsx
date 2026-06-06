@@ -571,17 +571,17 @@ export function AnalyticsPremiumView({
               {report}
             </pre>
           </div>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <div className="relative flex-1">
+          <div className="mt-6 flex flex-wrap gap-4">
+            <div className="relative">
               <button 
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
                 style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%)' }}
-                className="w-full p-3 md:p-2.5 text-white rounded-xl font-black flex items-center justify-center hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/20 cursor-pointer active:scale-95 relative overflow-hidden group"
+                className="p-2.5 text-white rounded-xl font-black flex items-center justify-center hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/20 cursor-pointer active:scale-95 relative overflow-hidden group"
                 title="AI Document Suite"
               >
                 {/* Shimmer element */}
                 <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                <Sparkles className="w-5 h-5 text-pink-300 animate-pulse" />
+                <Sparkles className="w-4 h-4 text-pink-300 animate-pulse" />
               </button>
 
               <AnimatePresence>
@@ -745,14 +745,14 @@ export function AnalyticsPremiumView({
             </div>
             
             {/* DOCUMENT SUITE MENU (REPLACES OLD SPEAK BUTTON) */}
-            <div className="relative flex-1">
+            <div className="relative">
               <button 
                 onClick={() => setShowDocumentSuite(!showDocumentSuite)}
                 style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' }}
-                className="w-full p-3 md:p-2.5 text-white rounded-xl font-black flex items-center justify-center hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/15 cursor-pointer active:scale-95"
+                className="p-2.5 text-white rounded-xl font-black flex items-center justify-center hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/15 cursor-pointer active:scale-95"
                 title="Dokumen & Suara AI"
               >
-                <Bot className="w-5 h-5 animate-bounce" />
+                <Bot className="w-4 h-4 animate-bounce" />
                 {isSpeaking && (
                   <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-400 animate-ping" />
                 )}
@@ -866,14 +866,14 @@ export function AnalyticsPremiumView({
                 )}
               </AnimatePresence>
                       {/* PREMIUM INTERACTIVE DOCUMENT DISTRIBUTION SUITE */}
-            <div className="relative flex-1">
+            <div className="relative">
               <button 
                 id="share-distribution-suite-btn"
                 onClick={() => setShowShareMenu(!showShareMenu)}
-                className="w-full p-3 md:p-2.5 bg-[#0d1527] hover:bg-[#121c33] text-white border-2 border-emerald-500/30 hover:border-emerald-500 rounded-xl font-black transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 active:scale-95 cursor-pointer relative group overflow-hidden"
+                className="p-2.5 bg-[#0d1527] hover:bg-[#121c33] text-white border-2 border-emerald-500/30 hover:border-emerald-500 rounded-xl font-black transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 active:scale-95 cursor-pointer relative group overflow-hidden"
                 title="Bagi & Distribusi AI"
               >
-                <Share2 className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
+                <Share2 className="w-4 h-4 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
                 <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </button>
 
