@@ -604,13 +604,10 @@ export default function DashboardView({
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                     <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">GoLive</h3>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{currentTenant?.name || settings?.nama_rt || 'Digital Environment'}</p>
+                  <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" style={{ marginLeft: '16px' }}>{currentTenant?.name || settings?.nama_rt || 'Digital Environment'}</p>
                 </div>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-100 dark:border-slate-700 flex items-center gap-3 transition-colors shadow-sm">
-                <Shield className="w-4 h-4 text-brand-blue" />
-                V.2.4.0 • Secured
-              </div>
+
             </div>
           </div>
         )}

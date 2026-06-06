@@ -479,8 +479,11 @@ export default function MadingDigitalView({
               <LayoutGrid className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant uppercase flex items-center gap-2">
-                Mading Digital Warga
+              <h2 
+                className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant uppercase flex items-center gap-2"
+                style={{ fontSize: '16px' }}
+              >
+                Mading Digital
                 <span className="text-[9px] bg-brand-blue text-white px-2.5 py-1 rounded-full font-sans font-bold tracking-widest uppercase align-middle">KOLASE FOTO</span>
               </h2>
               <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.25em] mt-1">Informasi & Kegiatan Bulanan Pengurus RT/RW</p>

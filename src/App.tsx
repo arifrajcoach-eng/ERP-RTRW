@@ -4256,6 +4256,7 @@ export default function App() {
         onClose={() => setShowQRModal(false)}
         tenantId={currentTenant?.id || currentUser?.tenantId || "rw26_berjuang"}
         tenantName={currentTenant?.nama || getTranslatedLabel("Sistem RT/RW", settings?.themeMode)}
+        showNotification={showNotification}
       />
       <AnimatePresence>
         {confirmConfig && (
@@ -4352,11 +4353,13 @@ function RegistrationQRModal({
   onClose,
   tenantId,
   tenantName,
+  showNotification,
 }: {
   isOpen: boolean;
   onClose: () => void;
   tenantId: string;
   tenantName: string;
+  showNotification?: (message: string, type: "success" | "error" | "info") => void;
 }) {
   const regUrl = `${window.location.origin}?reg=${tenantId}`;
 
@@ -4411,7 +4414,7 @@ function RegistrationQRModal({
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(regUrl);
-                  alert("Link pendaftaran berhasil disalin!");
+                  showNotification?.("Link pendaftaran berhasil disalin!", "success");
                 }}
                 className="flex-1 py-4 bg-white border-2 border-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
               >
@@ -4765,7 +4768,7 @@ function AnalyticsPremiumView({
         console.error("Failed to save report to firestore");
       }
     } catch (e) {
-      alert("Gagal membuat laporan AI");
+      showNotification?.("Gagal membuat laporan AI", "error");
     } finally {
       setIsGenerating(false);
     }

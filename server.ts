@@ -578,7 +578,10 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
         if (attempt >= retries) {
           throw err;
         }
-        if (isTransientErrorServer(err) || isQuotaExhaustedErrorServer(err)) {
+        if (isTransientErrorServer(err)) {
+          if (isQuotaExhaustedErrorServer(err)) {
+            throw err; // Don't retry for quota exhausted, it's usually a persistent limit
+          }
           console.log(`[Gemini Retry] Attempt ${attempt} failed with transient situation: ${getErrorString(err)}. Retrying in ${delayMs}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delayMs));
           delayMs *= 2; // Exponential backoff for resiliency
@@ -888,7 +891,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       }
     });
   } else {
-    const buildPath = path.join(process.cwd(), "build");
+    const buildPath = path.join(process.cwd(), "dist/client");
     app.use(express.static(buildPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(buildPath, "index.html"));

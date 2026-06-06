@@ -206,7 +206,10 @@ export function EVotingView({
                 />
              </div>
           ) : (
-             <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic flex items-center gap-3">
+             <h2 
+               className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic flex items-center gap-3"
+               style={{ fontSize: '30px' }}
+             >
                {config?.title || localTitle}
              </h2>
           )}
@@ -373,7 +376,7 @@ export function EVotingView({
           ) : (
             <div 
               className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden"
-              style={{ height: '568.629px', paddingTop: '82px' }}
+              style={{ height: '655.628px', paddingTop: '82px' }}
             >
               {/* Premium Document Suite Menu */}
               <div 

@@ -11,7 +11,7 @@ export default defineConfig(({mode}) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ""),
     },
     build: {
-      outDir: 'build',
+      outDir: 'dist/client',
       emptyOutDir: true,
       chunkSizeWarningLimit: 2000,
       rollupOptions: {
