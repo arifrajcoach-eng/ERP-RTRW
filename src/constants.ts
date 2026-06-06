@@ -172,7 +172,8 @@ export const PLAN_FEATURES: Record<string, any> = {
       "Warga & Layanan Sipil Tanpa Batas (Unlimited)",
       "AI Chatbot & Scan Tanpa Batas (Unlimited)",
       "Dedicated CS Manager 24/7",
-      "Mading Digital: Maksimal 10 gambar per bulan."
+      "Mading Digital: Maksimal 10 gambar per bulan.",
+      "Analitik Ringkasan: Maksimal 10 x per bulan."
     ],
     keuangan: "ENTERPRISE",
     surat: "DYNAMIC",
@@ -271,7 +272,8 @@ export const PLAN_CONFIG = {
       "AI Chatbot: Maksimal 15x Chat / minggu (setara ~60x sebulan).",
       "AI Scan Struk: Hadir sebagai fitur baru dengan batas 3x Scan / minggu (setara ~12x sebulan).",
       "Pencatatan Transaksi: Batas 150 Transaksi Kas / bulan (setara 5 entry transaksi per hari).",
-      "Mading Digital: Maksimal 3 gambar per bulan."
+      "Mading Digital: Maksimal 3 gambar per bulan.",
+      "Analitik Ringkasan: Maksimal 3 x per bulan."
     ], 
     systemKey: 'BASIC' 
   },
@@ -291,7 +293,8 @@ export const PLAN_CONFIG = {
       "AI Chatbot: Akses asisten pintar hingga 50x Chat / minggu (setara ~200x/bln).",
       "AI Scan Struk: Hadir dengan batas 8x Scan / minggu (setara ~32x sebulan).",
       "Pencatatan Transaksi: Batas 500 Transaksi Kas / bulan (setara 15 entry transaksi harian).",
-      "Mading Digital: Maksimal 4 gambar per bulan."
+      "Mading Digital: Maksimal 4 gambar per bulan.",
+      "Analitik Ringkasan: Maksimal 4 x per bulan."
     ], 
     systemKey: 'PRO' 
   },
@@ -310,7 +313,8 @@ export const PLAN_CONFIG = {
       "AI Scan Struk: Kapasitas pengolahan laporan keuangan otomatis berbasis foto struk (500x per bulan).",
       "Pencatatan Transaksi: Batas 1.500 Transaksi Kas / bulan (setara 50 entry transaksi harian).",
       "Layanan Support Prioritas: Jalur khusus untuk bantuan teknis dan pendampingan implementasi bagi pengurus.",
-      "Mading Digital: Maksimal 5 gambar per bulan."
+      "Mading Digital: Maksimal 5 gambar per bulan.",
+      "Analitik Ringkasan: Maksimal 5 x per bulan."
     ], 
     systemKey: 'PREMIUM', 
     isBestSeller: true 
@@ -327,7 +331,9 @@ export const PLAN_CONFIG = {
       'Custom Domain / White Label', 
       'Warga & Layanan Sipil UNLIMITED',
       'AI Chatbot & Scan UNLIMITED',
-      'Dedicated CS 24/7'
+      'Dedicated CS 24/7',
+      'Mading Digital: Maksimal 10 gambar per bulan.',
+      'Analitik Ringkasan: Maksimal 10 x per bulan.'
     ], 
     systemKey: 'ENTERPRISE' 
   },

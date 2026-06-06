@@ -20,7 +20,7 @@ async function runCleanup() {
   console.log("Fetching all data_warga for tenants:", tenants);
   
   const snapshot = await db.collection("data_warga").where("tenantId", "in", tenants).get();
-  const docs = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+  const docs = snapshot.docs.map(d => ({id: d.id, ...d.data()})) as any[];
   
   console.log(`Found ${docs.length} total docs.`);
   const map = new Map();

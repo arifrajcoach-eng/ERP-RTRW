@@ -284,11 +284,11 @@ service cloud.firestore {
     // --- Keuangan & Layanan ---
 
     match /kas/{docId} {
-      allow list: if isTenantMemberStatic(resource.data.tenantId);
-      allow get: if isTenantMember(resource.data.tenantId);
-      allow create: if isTenantMember(request.resource.data.tenantId);
-      allow update: if isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId);
-      allow delete: if isTenantMember(resource.data.tenantId);
+      allow list: if isAdmin() || isTenantMemberStatic(resource.data.tenantId);
+      allow get: if isAdmin() || isTenantMember(resource.data.tenantId);
+      allow create: if isAdmin() || isTenantMember(request.resource.data.tenantId);
+      allow update: if isAdmin() || (isTenantMember(request.resource.data.tenantId) && isTenantMember(resource.data.tenantId));
+      allow delete: if isAdmin() || isTenantMember(resource.data.tenantId);
     }
 
     match /iuran/{docId} {
