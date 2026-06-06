@@ -248,12 +248,17 @@ function WargaView(props: WargaViewProps) {
             tIdsToClean.push("rw26_berjuang", "trihprw26");
           }
         }
-        const uniqueTids = tenantId ? [tenantId] : [];
+        const uniqueTids = Array.from(new Set([...wargaData.map(w => w.tenantId), tenantId].filter(Boolean)));
         if (uniqueTids.length === 0) return;
 
-        const q = query(collection(db, 'data_warga'), where('tenantId', 'in', uniqueTids));
-        const snapshot = await getDocs(q);
-        const docs = snapshot.docs.map(d => ({id: d.id, ...(d.data() as any)}));
+        let docs: any[] = [];
+        // Firestore limits 'in' queries to 10 elements
+        for (let i = 0; i < uniqueTids.length; i += 10) {
+            const chunk = uniqueTids.slice(i, i + 10);
+            const q = query(collection(db, 'data_warga'), where('tenantId', 'in', chunk));
+            const snapshot = await getDocs(q);
+            docs = docs.concat(snapshot.docs.map(d => ({id: d.id, ...(d.data() as any)})));
+        }
         
         console.log(`Analyzing ${docs.length} documents for duplicates across tenants: ${uniqueTids.join(', ')}...`);
         
@@ -1543,6 +1548,13 @@ function WargaView(props: WargaViewProps) {
                           showNotification('Data warga berhasil diubah', 'success');
                           await logAuditEvent(currentUser?.uid || 'system', currentUser?.name || 'Aplikasi', 'UPDATE_WARGA', 'data_warga', `Mengubah data warga: ${finalData.nama}`, tenantId);
                         } else {
+                          const { autoDeduplicate } = await import('../services/dataService');
+                          const isDup = await autoDeduplicate('data_warga', 'nik', finalData.nik);
+                          if (isDup && finalData.nik !== 'Belum Ada' && finalData.nik !== '') {
+                              showNotification('Data Warga dengan NIK tersebut sudah terdaftar.', 'error');
+                              setIsLoadingDB(false);
+                              return;
+                          }
                           await setDoc(doc(db, 'data_warga', docId), finalData);
                           setWargaData([...wargaData, finalData]);
                           showNotification('Warga baru berhasil ditambahkan', 'success');

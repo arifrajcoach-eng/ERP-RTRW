@@ -1834,7 +1834,7 @@ export default function App() {
     if (tIds.length > 0 && !(currentUser?.isSuperAdmin && !selectedTenantId)) {
       const chunks = chunkArray(tIds, 10);
       chunks.forEach(chunk => {
-        const constraints = [where("tenantId", "in", chunk), limit(1000)];
+        const constraints: any[] = [where("tenantId", "in", chunk)];
         if (currentUser?.role === "RT") {
           constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
         }
@@ -1851,13 +1851,13 @@ export default function App() {
 
     if (currentUser?.isSuperAdmin || ["ADMIN", "RW", "RT"].includes(currentUser?.role || "")) {
       if (currentUser?.isSuperAdmin) {
-        unsubs.push(onSnapshot(query(collection(db, "users"), limit(1000)), (snap) => {
+        unsubs.push(onSnapshot(query(collection(db, "users")), (snap) => {
           setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
         }));
       } else if (tIds.length > 0) {
         const chunks = chunkArray(tIds, 10);
         chunks.forEach(chunk => {
-          unsubs.push(onSnapshot(query(collection(db, "users"), where("tenantId", "in", chunk), limit(1000)), (snap) => {
+          unsubs.push(onSnapshot(query(collection(db, "users"), where("tenantId", "in", chunk)), (snap) => {
             setUsersData(prev => {
               const filtered = prev.filter(p => !chunk.includes(p.tenantId));
               return [...filtered, ...snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any))];
@@ -1883,7 +1883,7 @@ export default function App() {
       const chunks = chunkArray(tIds, 10);
       chunks.forEach(chunk => {
         if (hasFullAccess) {
-           const kq = rt ? query(collection(db, "kas"), where("tenantId", "in", chunk), where("rt", "==", rt), orderBy("tanggal", "desc"), limit(500)) : query(collection(db, "kas"), where("tenantId", "in", chunk), orderBy("tanggal", "desc"), limit(500));
+           const kq = rt ? query(collection(db, "kas"), where("tenantId", "in", chunk), where("rt", "==", rt), orderBy("tanggal", "desc"), limit(1000)) : query(collection(db, "kas"), where("tenantId", "in", chunk), orderBy("tanggal", "desc"), limit(1000));
            unsubs.push(onSnapshot(kq, (snap) => setKasData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
         }
         
@@ -1911,7 +1911,7 @@ export default function App() {
     
     chunks.forEach(chunk => {
       collections.forEach(col => {
-        const q = query(collection(db, col), where("tenantId", "in", chunk), limit(100));
+        const q = query(collection(db, col), where("tenantId", "in", chunk), limit(500));
         unsubs.push(onSnapshot(q, (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
           if (col === "balita") setBalitaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
@@ -1939,8 +1939,8 @@ export default function App() {
     // Inventaris
     if (activeTab === "inventaris") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", chunk)), (snap) => setInventarisData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))] )));
-         unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", chunk)), (snap) => setInventarisLogs(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))] )));
+         unsubs.push(onSnapshot(query(collection(db, "inventaris"), where("tenantId", "in", chunk), limit(500)), (snap) => setInventarisData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))] )));
+         unsubs.push(onSnapshot(query(collection(db, "inventaris_logs"), where("tenantId", "in", chunk), limit(500)), (snap) => setInventarisLogs(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))] )));
       });
     }
 
@@ -1948,7 +1948,7 @@ export default function App() {
     if (activeTab === "bank-sampah") {
       ["sampah_kategori", "sampah_setoran", "sampah_tarik_saldo"].forEach(c => {
         tIdsChunks.forEach(chunk => {
-           unsubs.push(onSnapshot(query(collection(db, c), where("tenantId", "in", chunk), limit(200)), (snap) => {
+           unsubs.push(onSnapshot(query(collection(db, c), where("tenantId", "in", chunk), limit(1000)), (snap) => {
               const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
               if (c === "sampah_kategori") setSampahKategoriData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
               else if (c === "sampah_setoran") setSampahSetoranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
@@ -1962,7 +1962,7 @@ export default function App() {
     if (activeTab === "kependudukan") {
       ["kelahiran", "kematian"].forEach(c => {
         tIdsChunks.forEach(chunk => {
-           unsubs.push(onSnapshot(query(collection(db, c), where("tenantId", "in", chunk)), (snap) => {
+           unsubs.push(onSnapshot(query(collection(db, c), where("tenantId", "in", chunk), limit(1000)), (snap) => {
               const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
               if (c === "kelahiran") setKelahiranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
               else setKematianData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...data]);
@@ -1974,9 +1974,9 @@ export default function App() {
     // Shop/Store
     if (activeTab === "etoko") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", chunk)), snap => setTokoProducts(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
-         unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", chunk)), snap => setTokoOrders(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
-         unsubs.push(onSnapshot(query(collection(db, "toko_reviews"), where("tenantId", "in", chunk)), snap => setTokoReviews(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "toko_products"), where("tenantId", "in", chunk), limit(1000)), snap => setTokoProducts(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "toko_orders"), where("tenantId", "in", chunk), limit(1000)), snap => setTokoOrders(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "toko_reviews"), where("tenantId", "in", chunk), limit(500)), snap => setTokoReviews(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
       });
     }
 
@@ -2003,36 +2003,36 @@ export default function App() {
     // Voting
     if (activeTab === "voting") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", chunk)), snap => setVotingCandidates(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ docId: d.id, ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", chunk), limit(500)), snap => setVotingCandidates(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ docId: d.id, ...d.data() } as any))])));
       });
       unsubs.push(onSnapshot(doc(db, "voting_config", activeTenantId), snap => snap.exists() && setVotingConfig(snap.data())));
       if (["ADMIN", "SUPER_ADMIN", "RT", "RW"].includes(currentUser?.role?.toUpperCase())) {
          tIdsChunks.forEach(chunk => {
-            unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", chunk)), snap => setUserVotes(prev => [...prev.filter(p => !chunk.includes((p as any).tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+            unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", chunk), limit(1000)), snap => setUserVotes(prev => [...prev.filter(p => !chunk.includes((p as any).tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
          });
       } else {
-         unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser?.id || "guest")), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+         unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser?.id || "guest"), limit(50)), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
       }
     }
 
     // Booking
     if (activeTab === "booking" || activeTab === "dashboard" || activeTab === "ai-bot") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", chunk)), snap => setBookingsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", chunk), limit(500)), snap => setBookingsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
       });
     }
 
     // Complaints
     if (activeTab === "complaint" || activeTab === "dashboard" || activeTab === "ai-bot") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", chunk)), snap => setComplaintsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", chunk), limit(500)), snap => setComplaintsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
       });
     }
 
     // Verifikasi
     if (activeTab === "verifikasi" || activeTab === "dashboard") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk)), snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk), limit(500)), snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
       });
     }
 
