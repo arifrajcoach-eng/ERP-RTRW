@@ -41,13 +41,11 @@ export function RegistrationQRModal({
   onClose,
   tenantId,
   tenantName,
-  showNotification,
 }: {
   isOpen: boolean;
   onClose: () => void;
   tenantId: string;
   tenantName: string;
-  showNotification?: (msg: string, type: string) => void;
 }) {
   const regUrl = `${window.location.origin}?reg=${tenantId}`;
 
@@ -102,7 +100,7 @@ export function RegistrationQRModal({
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(regUrl);
-                  showNotification?.("Link pendaftaran berhasil disalin!", "success");
+                  alert("Link pendaftaran berhasil disalin!");
                 }}
                 className="flex-1 py-4 bg-white border-2 border-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
               >
@@ -467,7 +465,7 @@ export function AnalyticsPremiumView({
         console.error("Failed to save report to firestore");
       }
     } catch (e) {
-      showNotification?.("Gagal membuat laporan AI", "error");
+      alert("Gagal membuat laporan AI");
     } finally {
       setIsGenerating(false);
     }
@@ -576,12 +574,13 @@ export function AnalyticsPremiumView({
               <button 
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
                 style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%)' }}
-                className="p-2.5 text-white rounded-xl font-black flex items-center justify-center hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/20 cursor-pointer active:scale-95 relative overflow-hidden group"
-                title="AI Document Suite"
+                className="px-4 py-2 text-white rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/20 cursor-pointer active:scale-95 relative overflow-hidden group"
               >
                 {/* Shimmer element */}
                 <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                 <Sparkles className="w-4 h-4 text-pink-300 animate-pulse" />
+                <span>AI Document Suite</span>
+                <span className="bg-white/20 text-[9px] font-black px-1.5 py-0.5 rounded ml-1 animate-pulse">PRO</span>
               </button>
 
               <AnimatePresence>
@@ -749,12 +748,12 @@ export function AnalyticsPremiumView({
               <button 
                 onClick={() => setShowDocumentSuite(!showDocumentSuite)}
                 style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' }}
-                className="p-2.5 text-white rounded-xl font-black flex items-center justify-center hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/15 cursor-pointer active:scale-95"
-                title="Dokumen & Suara AI"
+                className="px-4 py-2 text-white rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/15 cursor-pointer active:scale-95"
               >
                 <Bot className="w-4 h-4 animate-bounce" />
+                <span>Dokumen & Suara AI</span>
                 {isSpeaking && (
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-400 animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
                 )}
               </button>
 
@@ -870,11 +869,11 @@ export function AnalyticsPremiumView({
               <button 
                 id="share-distribution-suite-btn"
                 onClick={() => setShowShareMenu(!showShareMenu)}
-                className="p-2.5 bg-[#0d1527] hover:bg-[#121c33] text-white border-2 border-emerald-500/30 hover:border-emerald-500 rounded-xl font-black transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 active:scale-95 cursor-pointer relative group overflow-hidden"
-                title="Bagi & Distribusi AI"
+                className="px-4 py-2 bg-[#0d1527] hover:bg-[#121c33] text-white border-2 border-emerald-500/30 hover:border-emerald-500 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center gap-2 shadow-lg shadow-emerald-500/10 active:scale-95 cursor-pointer relative group overflow-hidden"
               >
                 <Share2 className="w-4 h-4 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Bagi & Distribusi AI</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               </button>
 
               <AnimatePresence>
