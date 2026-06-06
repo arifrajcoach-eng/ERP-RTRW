@@ -6,6 +6,7 @@ import { db } from "../firebase";
 
 interface Candidate {
   id: string;
+  docId?: string;
   name: string;
   number: string;
   vision: string;
@@ -23,7 +24,7 @@ export function CandidateManagementView({
   activeElectionLevel = 'rt',
 }: {
   tenantId: string;
-  candidates: Candidate[];
+  candidates: (Candidate & { docId?: string })[];
   showNotification: any;
   handleFileUpload: (file: File, folder: string) => Promise<string>;
   activeElectionLevel?: 'rt' | 'rw';
@@ -39,14 +40,18 @@ export function CandidateManagementView({
     }
     setLoading(true);
     try {
-      const id = candidate.id || `${tenantId}_${Date.now()}`;
-      await setDoc(doc(db, "voting_candidates", id), {
+      const fullDocId = (candidate as any).docId || `${tenantId}_${Date.now()}`;
+      const dataToSave = {
         ...candidate,
-        id: id.split("_").pop(), // keep original format if new
+        id: fullDocId, // Use full ID as the id field too for consistency
         tenantId,
         kategori: candidate.kategori || activeElectionLevel,
         votes: candidate.votes || 0,
-      }, { merge: true });
+      };
+      // Remove docId from data to save
+      delete (dataToSave as any).docId;
+
+      await setDoc(doc(db, "voting_candidates", fullDocId), dataToSave, { merge: true });
       showNotification("Kandidat berhasil disimpan.", "success");
       setEditingCandidate(null);
       setIsAdding(false);
@@ -57,10 +62,12 @@ export function CandidateManagementView({
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (candidate: any) => {
+    const idToUse = candidate.docId || candidate.id;
+    if (!idToUse) return;
     if (!confirm("Yakin ingin menghapus kandidat ini?")) return;
     try {
-      await deleteDoc(doc(db, "voting_candidates", `${tenantId}_${id}`));
+      await deleteDoc(doc(db, "voting_candidates", idToUse));
       showNotification("Kandidat berhasil dihapus.", "success");
     } catch(e) {
       showNotification("Gagal menghapus kandidat.", "error");
@@ -168,8 +175,15 @@ export function CandidateManagementView({
       )}
 
       <div className="grid gap-4">
-        {candidates.map((cand) => (
-          <div key={cand.id} className="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-2xl">
+        {candidates.length === 0 ? (
+          <div className="p-10 border-2 border-dashed border-slate-200 rounded-3xl text-center bg-slate-50/50">
+            <PlusCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 font-bold text-sm tracking-tight">Belum ada kandidat untuk level {activeElectionLevel.toUpperCase()}</p>
+            <p className="text-slate-400 text-xs mt-1">Silakan klik "Tambah Kandidat" untuk mulai mendaftarkan calon.</p>
+          </div>
+        ) : (
+          candidates.map((cand) => (
+            <div key={cand.id} className="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
               {cand.photo && (
                 <img src={cand.photo} alt={cand.name} className="w-10 h-10 object-cover rounded-full" />
@@ -188,15 +202,16 @@ export function CandidateManagementView({
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
-                onClick={() => handleDelete(cand.id)}
+                onClick={() => handleDelete(cand)}
                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
-        ))}
-      </div>
+        ))
+      )}
+    </div>
     </div>
   );
 }

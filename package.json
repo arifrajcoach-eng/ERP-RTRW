@@ -1,13 +1,13 @@
 {
-  "name": "react-example",
+  "name": "smartrw-ai",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "node scripts/build.js",
-    "start": "node dist/server.cjs",
-    "clean": "rm -rf dist",
+    "build": "vite build --outDir build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=build/server.cjs",
+    "start": "node build/server.cjs",
+    "clean": "rm -rf build",
     "lint": "tsc --noEmit",
     "verify": "tsx scripts/verify-tenant.ts",
     "test": "npm run verify"

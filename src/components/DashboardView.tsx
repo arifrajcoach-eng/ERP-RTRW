@@ -949,15 +949,17 @@ export default function DashboardView({
                   <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Iuran</span>
                 </button>
 
-                <button 
-                  onClick={() => setActiveTab('analitik')}
-                  className="w-full h-32 bg-indigo-600/40 hover:bg-indigo-600/60 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-indigo-500/30 backdrop-blur-xl shadow-lg"
-                >
-                  <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-400/30">
-                    <TrendingUp className="w-6 h-6 text-cyan-300" />
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Analitik Ringkasan</span>
-                </button>
+                {!isStarter && (
+                  <button 
+                    onClick={() => setActiveTab('analitik')}
+                    className="w-full h-32 bg-indigo-600/40 hover:bg-indigo-600/60 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-indigo-500/30 backdrop-blur-xl shadow-lg"
+                  >
+                    <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-400/30">
+                      <TrendingUp className="w-6 h-6 text-cyan-300" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Analitik Ringkasan</span>
+                  </button>
+                )}
 
                 <button 
                   onClick={() => setActiveTab('etoko')}

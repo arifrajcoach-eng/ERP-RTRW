@@ -5,7 +5,11 @@ import {
   RefreshCw, 
   ChevronRight, 
   CheckCircle2, 
-  ShieldCheck 
+  ShieldCheck,
+  BarChart3,
+  Users2,
+  Settings2,
+  FileText
 } from "lucide-react";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -44,6 +48,14 @@ export function EVotingView({
   const [showConfirm, setShowConfirm] = useState<any | null>(null);
   const [localTitle, setLocalTitle] = useState(localTitleProp || "🗳️ E-PEMILU");
   const [now, setNow] = useState(new Date().getTime());
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [infoTitle, setInfoTitle] = useState(config?.infoTitle || "Pemilihan RW 26");
+  const [infoDescription, setInfoDescription] = useState(config?.infoDescription || "Sistem pemilihan demokratis yang diawasi oleh pengawas RT/RW dan dijamin keamanannya.");
+
+  React.useEffect(() => {
+    if (config?.infoTitle) setInfoTitle(config.infoTitle);
+    if (config?.infoDescription) setInfoDescription(config.infoDescription);
+  }, [config?.infoTitle, config?.infoDescription]);
 
   React.useEffect(() => {
     if (config?.title) {
@@ -81,10 +93,10 @@ export function EVotingView({
   }, [now, config?.status, config?.closeTime, config?.id, isAdmin, tenantId, showNotification]);
 
   const voterId = wargaAuth?.nik || currentUser?.uid;
-  const filteredCandidates = candidates.filter(c => (c.kategori || 'rt') === electionLevel);
-  const userVote = userVotes.find((v) => {
+  const filteredCandidates = (candidates || []).filter(c => (c.kategori || 'rt') === electionLevel);
+  const userVote = (userVotes || []).find((v) => {
     if (v.voterId !== voterId) return false;
-    const votedCand = candidates.find(c => c.id === v.candidateId);
+    const votedCand = (candidates || []).find(c => (c.docId || c.id) === v.candidateId);
     return (votedCand?.kategori || 'rt') === electionLevel;
   });
 
@@ -96,6 +108,12 @@ export function EVotingView({
       }
     }
     return false;
+  };
+
+  const getStatusText = () => {
+    if (config?.status !== "OPEN") return "● Voting Belum Dibuka";
+    if (config?.closeTime && now > new Date(config.closeTime).getTime()) return "● Voting Selesai";
+    return "● Voting Dibuka";
   };
 
   const calculateTimeLeftText = () => {
@@ -136,17 +154,19 @@ export function EVotingView({
     setIsLoading(true);
     try {
       const voteId = `VOTE-${voterId}-${Date.now()}`;
+      const candIdToUse = cand.docId || cand.id;
+      
       await setDoc(doc(db, "voting_votes", voteId), {
         id: voteId,
         voterId,
-        candidateId: cand.id,
+        candidateId: candIdToUse,
         candidateName: cand.name,
         timestamp: new Date().toISOString(),
         tenantId,
       });
 
-      // Simple implementation: update candidate local count (demo only)
-      await updateDoc(doc(db, "voting_candidates", cand.id), {
+      // Update candidate local count
+      await updateDoc(doc(db, "voting_candidates", candIdToUse), {
         votes: (cand.votes || 0) + 1,
       });
 
@@ -194,26 +214,23 @@ export function EVotingView({
             <span
               className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${!isVotingClosed() ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}
             >
-              {!isVotingClosed() ? "● Voting Dibuka" : "● Voting Selesai"}
-            </span>
-            <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">
-              Digital Voting
+              {getStatusText()}
             </span>
           </div>
         </div>
 
         <div className="flex flex-col items-end gap-3">
           {isAdmin && (
-            <div className="bg-slate-100 p-1 rounded-2xl flex border border-slate-200 w-full sm:w-auto">
+            <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setActiveView("vote")}
-                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "vote" ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white shadow-lg shadow-brand-blue/30" : "bg-white text-slate-500 hover:text-slate-700 shadow-sm border border-slate-200/50"}`}
+                className={`px-6 py-2.5 rounded-xl text-[11px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all shadow-sm border ${activeView === "vote" ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white border-transparent" : "bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border-slate-200/80"}`}
               >
                 Bilik Suara
               </button>
               <button
                 onClick={() => setActiveView("admin")}
-                className={`px-6 py-2 rounded-xl text-[10px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all ${activeView === "admin" ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white shadow-lg shadow-brand-blue/30" : "bg-white text-slate-500 hover:text-slate-700 shadow-sm border border-slate-200/50"}`}
+                className={`px-6 py-2.5 rounded-xl text-[11px] flex-1 sm:flex-none font-black uppercase tracking-widest transition-all shadow-sm border ${activeView === "admin" ? "bg-gradient-to-r from-brand-blue to-indigo-600 text-white border-transparent" : "bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border-slate-200/80"}`}
               >
                 Panel Kontrol
               </button>
@@ -266,6 +283,31 @@ export function EVotingView({
                     </div>
                   </div>
                 </div>
+              ) : filteredCandidates.length === 0 ? (
+                <div className="bg-white p-12 rounded-[3rem] border border-slate-100 shadow-xl text-center space-y-6 md:col-span-2 lg:col-span-3">
+                  <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto border-4 border-slate-100 italic">
+                    <Vote className="w-10 h-10 text-slate-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-800 uppercase italic tracking-tighter">
+                      Belum Ada Kandidat
+                    </h3>
+                    <p className="text-slate-400 text-sm font-medium max-w-xs mx-auto mt-2">
+                      Daftar calon pemimpin untuk level pemilihan <strong>{electionLevel.toUpperCase()}</strong> belum tersedia atau belum didaftarkan.
+                    </p>
+                  </div>
+                  {isAdmin && (
+                    <button 
+                      onClick={() => {
+                        setActiveView("admin");
+                        setActiveAdminTab("candidates");
+                      }}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-brand-blue text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-100"
+                    >
+                      Daftarkan Kandidat Sekarang
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {filteredCandidates.map((cand) => (
@@ -313,9 +355,14 @@ export function EVotingView({
                         <button
                           onClick={() => setShowConfirm(cand)}
                           disabled={isVotingClosed()}
-                          className="w-full py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-600 transition-all flex items-center justify-center gap-2 group active:scale-95 disabled:grayscale"
+                          className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2 group active:scale-95 disabled:grayscale disabled:opacity-50 ${
+                            isVotingClosed() 
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200" 
+                            : "bg-brand-blue text-white shadow-xl shadow-blue-100 hover:bg-blue-600"
+                          }`}
                         >
-                          Pilih Kandidat <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                          {isVotingClosed() ? "Voting Belum Dibuka" : "Pilih Kandidat"} 
+                          {!isVotingClosed() && <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
                         </button>
                       </div>
                     </motion.div>
@@ -324,32 +371,77 @@ export function EVotingView({
               )}
             </>
           ) : (
-            <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
-              <div className="flex items-center gap-2 mb-6">
-                <button
-                  onClick={() => setActiveAdminTab("stats")}
-                  className={`px-4 py-2 rounded-lg text-xs font-black ${
-                    activeAdminTab === "stats" ? "bg-slate-200" : "hover:bg-slate-100"
-                  }`}
-                >
-                  Statistik
-                </button>
-                <button
-                  onClick={() => setActiveAdminTab("candidates")}
-                  className={`px-4 py-2 rounded-lg text-xs font-black ${
-                    activeAdminTab === "candidates" ? "bg-slate-200" : "hover:bg-slate-100"
-                  }`}
-                >
-                  Manajemen Kandidat
-                </button>
-                <button
-                  onClick={() => setActiveAdminTab("settings")}
-                  className={`px-4 py-2 rounded-lg text-xs font-black ${
-                    activeAdminTab === "settings" ? "bg-slate-200" : "hover:bg-slate-100"
-                  }`}
-                >
-                  Pengaturan
-                </button>
+            <div 
+              className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden"
+              style={{ height: '568.629px', paddingTop: '82px' }}
+            >
+              {/* Premium Document Suite Menu */}
+              <div 
+                className="flex flex-col xl:flex-row xl:items-center gap-6 mb-10 pb-6 border-b border-slate-100"
+                style={{ paddingBottom: '24px', marginTop: '-68px' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5 text-brand-blue" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-800 uppercase italic tracking-tighter">Panel Administrasi</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">E-Pemilu Document Suite</p>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <div className="flex bg-slate-50 p-1.5 rounded-2xl gap-1 w-full sm:w-max xl:w-auto">
+                    <button
+                      onClick={() => setActiveAdminTab("stats")}
+                      className={`flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-all relative group shrink-0 ${
+                        activeAdminTab === "stats" 
+                          ? "bg-white text-brand-blue shadow-sm ring-1 ring-slate-200" 
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      <BarChart3 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:scale-110 ${activeAdminTab === "stats" ? "text-brand-blue" : "text-slate-400"}`} />
+                      <span className="hidden sm:inline">Statistik</span>
+                      {activeAdminTab === "stats" && (
+                        <motion.div layoutId="activeTabPill" className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-brand-blue rounded-full" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setActiveAdminTab("candidates")}
+                      className={`flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-all relative group shrink-0 ${
+                        activeAdminTab === "candidates" 
+                          ? "bg-white text-brand-blue shadow-sm ring-1 ring-slate-200" 
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      <Users2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:scale-110 ${activeAdminTab === "candidates" ? "text-brand-blue" : "text-slate-400"}`} />
+                      <span className="hidden sm:inline">Kandidat</span>
+                      {activeAdminTab === "candidates" && (
+                        <motion.div layoutId="activeTabPill" className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-brand-blue rounded-full" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setActiveAdminTab("settings")}
+                      className={`flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-all relative group shrink-0 ${
+                        activeAdminTab === "settings" 
+                          ? "bg-white text-brand-blue shadow-sm ring-1 ring-slate-200" 
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                      }`}
+                      style={{ 
+                        height: '54.3466px',
+                        width: '82.148px', 
+                        paddingTop: '11px', 
+                        paddingLeft: '5px'
+                      }}
+                    >
+                      <Settings2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:scale-110 ${activeAdminTab === "settings" ? "text-brand-blue" : "text-slate-400"}`} />
+                      <span className="hidden sm:inline">Pengaturan</span>
+                      {activeAdminTab === "settings" && (
+                        <motion.div layoutId="activeTabPill" className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-brand-blue rounded-full" />
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {activeAdminTab === "candidates" ? (
@@ -378,6 +470,40 @@ export function EVotingView({
                     />
                   </div>
                   
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Sub-Judul Info</label>
+                      <input
+                        type="text"
+                        className="w-full p-3 text-sm font-bold text-slate-800 border border-slate-200 rounded-lg outline-none focus:border-brand-blue"
+                        placeholder="e.g. Pemilihan RW 26"
+                        value={infoTitle}
+                        onChange={(e) => {
+                          setInfoTitle(e.target.value);
+                          clearTimeout((window as any).infoTitleTimeout);
+                          (window as any).infoTitleTimeout = setTimeout(async () => {
+                            try { await setDoc(doc(db, "voting_config", config?.id || tenantId), { infoTitle: e.target.value }, { merge: true }); } catch (err) {}
+                          }, 500);
+                        }}
+                      />
+                    </div>
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Deskripsi Info</label>
+                      <textarea
+                        className="w-full p-3 text-sm font-bold text-slate-800 border border-slate-200 rounded-lg outline-none focus:border-brand-blue min-h-[46px]"
+                        placeholder="Deskripsi singkat pemilihan..."
+                        value={infoDescription}
+                        onChange={(e) => {
+                          setInfoDescription(e.target.value);
+                          clearTimeout((window as any).infoDescTimeout);
+                          (window as any).infoDescTimeout = setTimeout(async () => {
+                            try { await setDoc(doc(db, "voting_config", config?.id || tenantId), { infoDescription: e.target.value }, { merge: true }); } catch (err) {}
+                          }, 500);
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                       <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Deadline (Waktu Tutup)</label>
@@ -409,7 +535,8 @@ export function EVotingView({
                             showNotification("Gagal mengubah status", "error");
                           }
                         }}
-                        className={`w-full p-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${config?.status === "OPEN" ? "bg-red-500 hover:bg-red-600 text-white" : "bg-emerald-500 hover:bg-emerald-600 text-white"}`}
+                        className={`w-full p-4 rounded-xl font-black uppercase tracking-widest transition-all border ${config?.status === "OPEN" ? "bg-red-50 hover:bg-red-100 text-red-600 border-red-200 shadow-sm" : "bg-white hover:bg-slate-50 text-brand-blue border-slate-200 shadow-sm"}`}
+                        style={{ fontSize: '11px', textAlign: 'center' }}
                       >
                         {config?.status === "OPEN" ? "Tutup Voting" : "Buka Voting"}
                       </button>
@@ -438,11 +565,51 @@ export function EVotingView({
                   >
                     Download Hasil CSV
                   </button>
+
+                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+                    <label className="block text-[10px] font-black uppercase text-slate-400">Pengaturan Informasi Sidepanel</label>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Judul Info</label>
+                      <input
+                        type="text"
+                        className="w-full p-2 text-xs font-bold border border-slate-200 rounded-lg"
+                        value={infoTitle}
+                        onChange={(e) => setInfoTitle(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Deskripsi Info</label>
+                      <textarea
+                        className="w-full p-2 text-[10px] border border-slate-200 rounded-lg min-h-[80px]"
+                        value={infoDescription}
+                        onChange={(e) => setInfoDescription(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, "voting_config", config?.id || tenantId), {
+                            infoTitle,
+                            infoDescription
+                          });
+                          showNotification("Informasi sidepanel diperbarui", "success");
+                        } catch (err) {
+                          showNotification("Gagal memperbarui informasi", "error");
+                        }
+                      }}
+                      className="w-full py-2 bg-slate-800 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-700"
+                    >
+                      Update Informasi Sidepanel
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-                    <h3 className="text-xl font-black text-slate-800 uppercase italic flex-1">
+                    <h3 
+                      className="text-xl font-black text-slate-800 uppercase italic flex-1"
+                      style={{ marginTop: '-38px', fontSize: '17px', textAlign: 'center' }}
+                    >
                       Statistik Perolehan Suara
                     </h3>
                   </div>
@@ -535,41 +702,61 @@ export function EVotingView({
           </div>
 
           <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
-              Informasi Pemilihan
-            </h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Informasi Pemilihan
+              </h3>
+              {isAdmin && activeView === "admin" && (
+                <button 
+                  onClick={() => setIsEditingInfo(!isEditingInfo)}
+                  className="text-[9px] font-black uppercase text-brand-blue hover:underline"
+                >
+                  {isEditingInfo ? "Selesai" : "Edit"}
+                </button>
+              )}
+            </div>
             <div className="space-y-4">
               <div className="flex gap-4 items-start">
                 <div className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center shrink-0">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 </div>
-                <div>
-                  <p className="text-xs font-black text-slate-800 uppercase tracking-tight mb-1">
-                    Pemilihan RW 26
-                  </p>
-                  <p className="text-[10px] font-medium text-slate-400 leading-relaxed">
-                    Sistem pemilihan demokratis yang diawasi oleh pengawas RT/RW dan dijamin keamanannya.
-                  </p>
-                </div>
+                {isEditingInfo && isAdmin ? (
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      className="w-full p-2 text-xs font-bold border border-slate-200 rounded-lg outline-none focus:border-brand-blue"
+                      value={infoTitle}
+                      onChange={(e) => {
+                        setInfoTitle(e.target.value);
+                        clearTimeout((window as any).infoTitleTimeout);
+                        (window as any).infoTitleTimeout = setTimeout(async () => {
+                          try { await setDoc(doc(db, "voting_config", config?.id || tenantId), { infoTitle: e.target.value }, { merge: true }); } catch (err) {}
+                        }, 500);
+                      }}
+                    />
+                    <textarea
+                      className="w-full p-2 text-[10px] border border-slate-200 rounded-lg outline-none focus:border-brand-blue min-h-[60px]"
+                      value={infoDescription}
+                      onChange={(e) => {
+                        setInfoDescription(e.target.value);
+                        clearTimeout((window as any).infoDescTimeout);
+                        (window as any).infoDescTimeout = setTimeout(async () => {
+                          try { await setDoc(doc(db, "voting_config", config?.id || tenantId), { infoDescription: e.target.value }, { merge: true }); } catch (err) {}
+                        }, 500);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs font-black text-slate-800 uppercase tracking-tight mb-1">
+                      {config?.infoTitle || infoTitle}
+                    </p>
+                    <p className="text-[10px] font-medium text-slate-400 leading-relaxed">
+                      {config?.infoDescription || infoDescription}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="flex gap-4 items-start">
-                <div className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-4 h-4 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-slate-800 uppercase tracking-tight mb-1">
-                    Satu Suara Per Identitas
-                  </p>
-                  <p className="text-[10px] font-medium text-slate-400 leading-relaxed">
-                    Sistem menggunakan NIK/Email yang terverifikasi untuk memastikan integritas data.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="pt-6 border-t border-slate-50">
-              <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center animate-pulse">
-                "Pilihan Anda Menentukan Masa Depan Kita"
-              </p>
             </div>
           </div>
         </div>

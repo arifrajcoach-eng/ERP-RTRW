@@ -6,15 +6,17 @@ import {
   Building, Activity, Zap, Shield, Wallet
 } from "lucide-react";
 import { getTranslatedLabel } from "../lib/langUtils";
+import { getPlanFeatures } from "../lib/appUtils";
 
 interface CommandPaletteProps {
   onNavigate: (tab: string) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   themeMode?: string;
+  currentTenant?: any;
 }
 
-export default function CommandPalette({ onNavigate, isOpen, setIsOpen, themeMode }: CommandPaletteProps) {
+export default function CommandPalette({ onNavigate, isOpen, setIsOpen, themeMode, currentTenant }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +45,7 @@ export default function CommandPalette({ onNavigate, isOpen, setIsOpen, themeMod
     { id: "dashboard", name: "Beranda Utama", icon: LayoutDashboard, category: "Navigasi", action: () => onNavigate("dashboard") },
     { id: "warga", name: `Data ${getTranslatedLabel("Warga", themeMode)}`, icon: Users, category: "Navigasi", action: () => onNavigate("warga") },
     { id: "finansial", name: "Analytics Finansial", icon: Activity, category: "Navigasi", action: () => onNavigate("keuangan") },
-    { id: "analitik_ringkasan", name: "Analitik Ringkasan & Kegiatan", icon: Activity, category: "Navigasi", action: () => onNavigate("analitik") },
+    ...(getPlanFeatures(currentTenant).analytics ? [{ id: "analitik_ringkasan", name: "Analitik Ringkasan & Kegiatan", icon: Activity, category: "Navigasi", action: () => onNavigate("analitik") }] : []),
     { id: "kas", name: "Catatan Kas & Iuran", icon: CreditCard, category: "Navigasi", action: () => onNavigate("keuangan") },
     { id: "surat", name: "Administrasi Surat", icon: FileText, category: "Navigasi", action: () => onNavigate("surat") },
     { id: "mading", name: "Papan Informasi", icon: Megaphone, category: "Navigasi", action: () => onNavigate("dashboard") },

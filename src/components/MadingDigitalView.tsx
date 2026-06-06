@@ -498,9 +498,7 @@ export default function MadingDigitalView({
         )}
       </div>
 
-      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium leading-relaxed mb-4 -mt-3">
-        Berikut adalah mading dokumentasi kegiatan rutin bulanan lingkungan. Klik gambar pada kolase di bawah untuk memperbesar detail berita, melacak riwayat kegiatan, atau memperbarui konten khusus pengurus.
-      </p>
+
 
       {/* --- MONTH & YEAR ARCHIVE SELECTORS --- */}
       <div className="mb-6 p-4 sm:p-5 bg-slate-50 dark:bg-slate-850 rounded-[1.5rem] border border-slate-100 dark:border-slate-800/80 shadow-inner flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5" id="mading-archive-filter-bar">

@@ -105,7 +105,6 @@ import SOSOverlay from "./components/SOSOverlay";
 import PengaturanView from "./components/PengaturanView";
 import ETokoView from "./components/toko/ETokoView";
 import { EVotingView } from "./components/EVotingView";
-import { DualVotingView } from "./components/DualVotingView";
 import Webcam from "react-webcam";
 import {
   BarChart,
@@ -2004,13 +2003,13 @@ export default function App() {
     // Voting
     if (activeTab === "voting") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", chunk)), snap => setVotingCandidates(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", chunk)), snap => setVotingCandidates(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ docId: d.id, ...d.data() } as any))])));
       });
-      unsubs.push(onSnapshot(doc(db, "voting_config", currentUser?.tenantId || "rw26_berjuang"), snap => snap.exists() && setVotingConfig(snap.data())));
+      unsubs.push(onSnapshot(doc(db, "voting_config", activeTenantId), snap => snap.exists() && setVotingConfig(snap.data())));
       if (["ADMIN", "SUPER_ADMIN", "RT", "RW"].includes(currentUser?.role?.toUpperCase())) {
-        tIdsChunks.forEach(chunk => {
-           unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", chunk)), snap => setUserVotes(prev => [...prev.filter(p => !chunk.includes((p as any).tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
-        });
+         tIdsChunks.forEach(chunk => {
+            unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", chunk)), snap => setUserVotes(prev => [...prev.filter(p => !chunk.includes((p as any).tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+         });
       } else {
          unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser?.id || "guest")), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
       }
@@ -4010,7 +4009,7 @@ export default function App() {
             ) : getPlanFeatures(currentTenant || {}).ePemilu ? (
               <EVotingView
                 userRole={currentUser.role}
-                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                tenantId={activeTenantId}
                 candidates={votingCandidates}
                 config={votingConfig}
                 userVotes={userVotes}
@@ -4250,6 +4249,7 @@ export default function App() {
           setIsSidebarOpen(false);
         }}
         themeMode={settings?.themeMode}
+        currentTenant={currentTenant}
       />
       <RegistrationQRModal
         isOpen={showQRModal}
