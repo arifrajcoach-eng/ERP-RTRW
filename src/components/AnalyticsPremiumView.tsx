@@ -579,8 +579,8 @@ export function AnalyticsPremiumView({
                 {/* Shimmer element */}
                 <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                 <Sparkles className="w-4 h-4 text-pink-300 animate-pulse" />
-                <span>AI Document Suite</span>
-                <span className="bg-white/20 text-[9px] font-black px-1.5 py-0.5 rounded ml-1 animate-pulse">PRO</span>
+                <span className="hidden sm:inline">AI Document Suite</span>
+                <span className="hidden sm:inline bg-white/20 text-[9px] font-black px-1.5 py-0.5 rounded ml-1 animate-pulse">PRO</span>
               </button>
 
               <AnimatePresence>
@@ -751,7 +751,7 @@ export function AnalyticsPremiumView({
                 className="px-4 py-2 text-white rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 hover:opacity-95 transition-all duration-300 shadow-xl shadow-indigo-500/15 cursor-pointer active:scale-95"
               >
                 <Bot className="w-4 h-4 animate-bounce" />
-                <span>Dokumen & Suara AI</span>
+                <span className="hidden sm:inline">Dokumen & Suara AI</span>
                 {isSpeaking && (
                   <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
                 )}
@@ -872,7 +872,7 @@ export function AnalyticsPremiumView({
                 className="px-4 py-2 bg-[#0d1527] hover:bg-[#121c33] text-white border-2 border-emerald-500/30 hover:border-emerald-500 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center gap-2 shadow-lg shadow-emerald-500/10 active:scale-95 cursor-pointer relative group overflow-hidden"
               >
                 <Share2 className="w-4 h-4 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
-                <span>Bagi & Distribusi AI</span>
+                <span className="hidden sm:inline">Bagi & Distribusi AI</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               </button>
 
