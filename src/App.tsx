@@ -183,6 +183,7 @@ import { VerifikasiAdminView } from "./components/VerifikasiAdminView";
 import { WargaProfileView } from "./components/WargaProfileView";
 import { ComplaintView } from "./components/ComplaintView";
 import { BookingView } from "./components/BookingView";
+import { AnalyticsPremiumView } from "./components/AnalyticsPremiumView";
 import { OrganisasiView } from "./components/OrganisasiView";
 import UsersView from "./components/UsersView";
 import TenantsView from "./components/TenantsView";
@@ -4127,7 +4128,7 @@ function RegistrationQRModal({
 }
 
 // --- PREMIUM: ANALYTICS VIEW ---
-function AnalyticsPremiumView({
+function Legacy_AnalyticsPremiumView({
   tenantId,
   kasData,
   wargaData,

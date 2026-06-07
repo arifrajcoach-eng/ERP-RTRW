@@ -121,6 +121,89 @@ export function RegistrationQRModal({
   );
 }
 
+const MONTHS_NAMES = [
+  { val: 1, label: "Januari" },
+  { val: 2, label: "Februari" },
+  { val: 3, label: "Maret" },
+  { val: 4, label: "April" },
+  { val: 5, label: "Mei" },
+  { val: 6, label: "Juni" },
+  { val: 7, label: "Juli" },
+  { val: 8, label: "Agustus" },
+  { val: 9, label: "September" },
+  { val: 10, label: "Oktober" },
+  { val: 11, label: "November" },
+  { val: 12, label: "Desember" }
+];
+
+const getElementDate = (item: any): Date | null => {
+  if (!item) return null;
+  
+  if (item.tanggalLapor) {
+    if (typeof item.tanggalLapor.toDate === 'function') {
+      return item.tanggalLapor.toDate();
+    }
+    if (typeof item.tanggalLapor.seconds === 'number') {
+      return new Date(item.tanggalLapor.seconds * 1000);
+    }
+  }
+  if (item.createdAt) {
+    if (typeof item.createdAt.toDate === 'function') {
+      return item.createdAt.toDate();
+    }
+    if (typeof item.createdAt.seconds === 'number') {
+      return new Date(item.createdAt.seconds * 1000);
+    }
+  }
+
+  const dateStr = item.tanggal || item.createdAt || item.tglLapor || item.tanggalLahir || item.tanggalMati;
+  if (!dateStr) return null;
+
+  if (typeof dateStr === 'string') {
+    const monthsId: Record<string, number> = {
+      jan: 0, janari: 0, januari: 0,
+      feb: 1, peb: 1, februari: 1,
+      mar: 2, maret: 2,
+      apr: 3, april: 3,
+      mei: 4, may: 4,
+      jun: 5, juni: 5,
+      jul: 6, juli: 6,
+      agu: 7, agustus: 7, ags: 7,
+      sep: 8, september: 8,
+      okt: 9, oktober: 9,
+      nov: 10, november: 10,
+      des: 11, desember: 11, dec: 11
+    };
+
+    const parts = dateStr.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const day = parseInt(parts[0], 10);
+      const monthLabel = parts[1].toLowerCase().substring(0, 3);
+      const year = parseInt(parts[2], 10);
+      
+      const monthIndex = monthsId[monthLabel];
+      if (monthIndex !== undefined && !isNaN(day) && !isNaN(year)) {
+        return new Date(year, monthIndex, day);
+      }
+    }
+    
+    const isIsoFormat = /^\d{4}-\d{2}-\d{2}/.test(dateStr);
+    if (isIsoFormat) {
+      const parsed = new Date(dateStr);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+  }
+
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  return null;
+};
+
 export function AnalyticsPremiumView({
   tenantId,
   kasData,
@@ -135,6 +218,13 @@ export function AnalyticsPremiumView({
 }: any) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState("");
+
+  // Premium Month & Year Filter States
+  const [filterMode, setFilterMode] = useState<"all" | "monthly" | "range">("all");
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const [startMonth, setStartMonth] = useState<number>(1); // e.g. January
+  const [endMonth, setEndMonth] = useState<number>(new Date().getMonth() + 1); // e.g. Current Month
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear()); // e.g. 2026
 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -431,21 +521,132 @@ export function AnalyticsPremiumView({
     }
   };
 
+  // Filtered datasets based on selected Month/Range and Year
+  const filteredKas = useMemo(() => {
+    if (filterMode === "all") return kasData;
+    return kasData.filter((k: any) => {
+      const d = getElementDate(k);
+      if (!d) return false;
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      if (filterMode === "monthly") {
+        return m === selectedMonth && y === selectedYear;
+      } else {
+        // Range mode
+        return y === selectedYear && m >= startMonth && m <= endMonth;
+      }
+    });
+  }, [kasData, filterMode, selectedMonth, selectedYear, startMonth, endMonth]);
+
+  const filteredIuran = useMemo(() => {
+    if (filterMode === "all") return iuranData;
+    return iuranData.filter((i: any) => {
+      const d = getElementDate(i);
+      if (!d) return false;
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      if (filterMode === "monthly") {
+        return m === selectedMonth && y === selectedYear;
+      } else {
+        // Range mode
+        return y === selectedYear && m >= startMonth && m <= endMonth;
+      }
+    });
+  }, [iuranData, filterMode, selectedMonth, selectedYear, startMonth, endMonth]);
+
+  const filteredKelahiran = useMemo(() => {
+    if (filterMode === "all") return kelahiranData;
+    return kelahiranData.filter((k: any) => {
+      const d = getElementDate(k);
+      if (!d) return false;
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      if (filterMode === "monthly") {
+        return m === selectedMonth && y === selectedYear;
+      } else {
+        // Range mode
+        return y === selectedYear && m >= startMonth && m <= endMonth;
+      }
+    });
+  }, [kelahiranData, filterMode, selectedMonth, selectedYear, startMonth, endMonth]);
+
+  const filteredKematian = useMemo(() => {
+    if (filterMode === "all") return kematianData;
+    return kematianData.filter((k: any) => {
+      const d = getElementDate(k);
+      if (!d) return false;
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      if (filterMode === "monthly") {
+        return m === selectedMonth && y === selectedYear;
+      } else {
+        // Range mode
+        return y === selectedYear && m >= startMonth && m <= endMonth;
+      }
+    });
+  }, [kematianData, filterMode, selectedMonth, selectedYear, startMonth, endMonth]);
+
+  const filteredSurat = useMemo(() => {
+    if (filterMode === "all") return suratData;
+    return suratData.filter((s: any) => {
+      const d = getElementDate(s);
+      if (!d) return false;
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      if (filterMode === "monthly") {
+        return m === selectedMonth && y === selectedYear;
+      } else {
+        // Range mode
+        return y === selectedYear && m >= startMonth && m <= endMonth;
+      }
+    });
+  }, [suratData, filterMode, selectedMonth, selectedYear, startMonth, endMonth]);
+
+  const filteredComplaint = useMemo(() => {
+    if (filterMode === "all") return complaintData;
+    return complaintData.filter((c: any) => {
+      const d = getElementDate(c);
+      if (!d) return false;
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      if (filterMode === "monthly") {
+        return m === selectedMonth && y === selectedYear;
+      } else {
+        // Range mode
+        return y === selectedYear && m >= startMonth && m <= endMonth;
+      }
+    });
+  }, [complaintData, filterMode, selectedMonth, selectedYear, startMonth, endMonth]);
+
   const generateReport = async () => {
     setIsGenerating(true);
     try {
+      const selectedMonthLabel = MONTHS_NAMES.find(m => m.val === selectedMonth)?.label || "";
+      const startMonthLabel = MONTHS_NAMES.find(m => m.val === startMonth)?.label || "";
+      const endMonthLabel = MONTHS_NAMES.find(m => m.val === endMonth)?.label || "";
+
       const dataSummary = {
-        financial: kasData.slice(-20),
+        financial: filteredKas.slice(-30),
         warga: wargaData.length,
-        iuran: iuranData.slice(-20),
+        iuran: filteredIuran.slice(-30),
         kesehatan: {
-          kelahiranCount: kelahiranData.length,
-          kematianCount: kematianData.length,
+          kelahiranCount: filteredKelahiran.length,
+          kematianCount: filteredKematian.length,
         },
         kegiatan: {
-          suratCount: suratData.length,
-          complaintsCount: complaintData.length,
-        }
+          suratCount: filteredSurat.length,
+          complaintsCount: filteredComplaint.length,
+        },
+        periode: filterMode === "all" 
+          ? "Seluruh Periode" 
+          : filterMode === "monthly"
+            ? `Bulan ${selectedMonthLabel} Tahun ${selectedYear}`
+            : `Rentang Periode ${startMonthLabel} s.d. ${endMonthLabel} Tahun ${selectedYear}`,
+        catatan: filterMode === "all" 
+          ? "Tolong formulasikan analisis komprehensif dari seluruh data historis warga, kas, iuran, kesehatan, dan surat." 
+          : filterMode === "monthly"
+            ? `PENTING: Laporan yang diminta adalah KHUSUS untuk periode Bulan ${selectedMonthLabel} Tahun ${selectedYear}. Hanya bahas data yang diberikan pada periode tersebut.`
+            : `PENTING: Laporan yang diminta adalah KHUSUS untuk rentang periode dari Bulan ${startMonthLabel} Selesai sampai Bulan ${endMonthLabel} Tahun ${selectedYear}. Silakan analisis tren performa, kelonjakan atau penurunan kas dan iuran warga, efisiensi surat-menyurat, serta berikan rekomendasi pembangunan wilayah yang berkesinambungan.`
       };
 
       const aiReportText = await generateAIReport(dataSummary);
@@ -453,11 +654,20 @@ export function AnalyticsPremiumView({
 
       // Save to Firestore
       try {
-        const reportId = `report_${new Date().getFullYear()}_${new Date().getMonth() + 1}`;
+        const reportId = filterMode === "all"
+          ? `report_all_time_${Date.now()}`
+          : filterMode === "monthly"
+            ? `report_${selectedYear}_${selectedMonth}`
+            : `report_${selectedYear}_range_${startMonth}_to_${endMonth}`;
+
         await setDoc(doc(db, "monthly_reports", reportId), {
           tenantId,
-          month: new Date().getMonth() + 1,
-          year: new Date().getFullYear(),
+          month: filterMode === "all" 
+            ? null 
+            : filterMode === "monthly" 
+              ? selectedMonth 
+              : `${startMonth}-${endMonth}`,
+          year: filterMode === "all" ? null : selectedYear,
           content: aiReportText,
           createdAt: new Date().toISOString(),
           generatedBy: "AI_SYSTEM",
@@ -523,6 +733,243 @@ export function AnalyticsPremiumView({
         isOpen={isUpgradeModalOpen} 
         onClose={() => setIsUpgradeModalOpen(false)} 
       />
+
+      {/* Premium Period Config Block */}
+      <div className="bg-white dark:bg-slate-950 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/20 dark:shadow-none mb-6 transition-all">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-widest flex items-center gap-1.5 mb-11">
+              <Sparkles className="w-3.5 h-3.5" />
+              Konfigurasi Periode Analisis Chaty AI
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              Pilih seluruh periode data, filter bulan tunggal, atau definisikan rentang periode kustom untuk analisis performa taktis.
+            </p>
+          </div>
+          
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-fit border border-slate-200/20">
+            <button
+              onClick={() => setFilterMode("all")}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+                filterMode === "all"
+                  ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-md shadow-slate-200/50"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+              }`}
+            >
+              Seluruh Waktu
+            </button>
+            <button
+              onClick={() => setFilterMode("monthly")}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+                filterMode === "monthly"
+                  ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-md shadow-slate-200/50"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+              }`}
+            >
+              Pilih Bulan
+            </button>
+            <button
+              onClick={() => setFilterMode("range")}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+                filterMode === "range"
+                  ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-md shadow-slate-200/50"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+              }`}
+            >
+              Rentang Periode
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {filterMode === "monthly" && (
+            <motion.div
+              key="monthly-panel"
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 20 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden border-t border-slate-100 dark:border-slate-800/85 pt-5"
+            >
+              <div className="flex flex-col gap-5">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#94a3b8] dark:text-[#475569] block mb-3">
+                    Pilih Bulan Laporan
+                  </span>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2">
+                    {MONTHS_NAMES.map((m) => {
+                      const isActive = selectedMonth === m.val;
+                      return (
+                        <button
+                          key={m.val}
+                          onClick={() => setSelectedMonth(m.val)}
+                          className={`py-2 px-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 transform active:scale-95 cursor-pointer ${
+                            isActive
+                              ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none"
+                              : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          {m.label.substring(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {filterMode === "range" && (
+            <motion.div
+              key="range-panel"
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 20 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden border-t border-slate-100 dark:border-slate-800/85 pt-5"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-2">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 block mb-3 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+                    Mulai Dari Bulan (Sesi Awal)
+                  </span>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {MONTHS_NAMES.map((m) => {
+                      const isActive = startMonth === m.val;
+                      const isPastEnd = m.val > endMonth;
+                      return (
+                        <button
+                          key={m.val}
+                          onClick={() => {
+                            setStartMonth(m.val);
+                            if (m.val > endMonth) {
+                              setEndMonth(m.val);
+                            }
+                          }}
+                          className={`py-2 px-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 transform active:scale-95 cursor-pointer ${
+                            isActive
+                              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none"
+                              : isPastEnd
+                                ? "bg-slate-50/50 dark:bg-slate-900/50 text-slate-300 dark:text-slate-600 cursor-not-allowed"
+                                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          {m.label.substring(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 block mb-3 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-pulse"></span>
+                    Sampai Dengan Bulan (Sesi Akhir)
+                  </span>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {MONTHS_NAMES.map((m) => {
+                      const isActive = endMonth === m.val;
+                      const isBeforeStart = m.val < startMonth;
+                      return (
+                        <button
+                          key={m.val}
+                          onClick={() => {
+                            setEndMonth(m.val);
+                            if (m.val < startMonth) {
+                              setStartMonth(m.val);
+                            }
+                          }}
+                          className={`py-2 px-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 transform active:scale-95 cursor-pointer ${
+                            isActive
+                              ? "bg-violet-600 text-white shadow-lg shadow-violet-100 dark:shadow-none"
+                              : isBeforeStart
+                                ? "bg-slate-50/50 dark:bg-slate-900/50 text-slate-300 dark:text-slate-600 cursor-not-allowed"
+                                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          {m.label.substring(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Unified Bottom Config Actions Panel */}
+        <div className="border-t border-slate-100 dark:border-slate-800/85 pt-5 mt-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mt-1 bg-slate-50/60 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-3 w-full lg:w-auto">
+              {filterMode !== "all" ? (
+                <>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#94a3b8] dark:text-[#475569]">
+                    PILIH TAHUN:
+                  </span>
+                  <div className="flex gap-2">
+                    {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((y) => (
+                      <button
+                        key={y}
+                        onClick={() => setSelectedYear(y)}
+                        className={`px-4 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all duration-200 cursor-pointer ${
+                          selectedYear === y
+                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                            : "bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700"
+                        }`}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  Model Analisis Mencakup Seluruh Sejarah Wilayah
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 flex-wrap lg:flex-nowrap justify-between lg:justify-end w-full lg:w-auto">
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
+                  Data khusus untuk Chaty AI:
+                </span>
+                <div className="text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 px-3.5 py-1.5 rounded-xl border border-rose-100 dark:border-rose-900 inline-block">
+                  📊 {filteredKas.length} Kas • {filteredIuran.length} Iuran • {filteredSurat.length} Surat • {filteredComplaint.length} Keluhan
+                </div>
+              </div>
+
+              <button
+                onClick={generateReport}
+                disabled={isGenerating}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none active:scale-95 disabled:opacity-50 font-sans cursor-pointer whitespace-nowrap"
+              >
+                {isGenerating ? (
+                  "Sedang Menyusun..."
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    {filterMode === "all" ? (
+                      "Generate Laporan Seluruh Waktu"
+                    ) : filterMode === "monthly" ? (
+                      `Generate Laporan ${MONTHS_NAMES.find(m => m.val === selectedMonth)?.label} ${selectedYear}`
+                    ) : (
+                      `Generate Laporan ${MONTHS_NAMES.find(m => m.val === startMonth)?.label} s.d ${MONTHS_NAMES.find(m => m.val === endMonth)?.label} ${selectedYear}`
+                    )}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
 
       {report && (
         <motion.div
