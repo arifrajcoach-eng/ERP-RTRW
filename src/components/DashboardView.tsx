@@ -832,28 +832,28 @@ export default function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-colors">
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-5">
+        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-4 sm:p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-colors">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 sm:mb-10 text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-5">
               <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center shadow-inner border border-indigo-500/5">
                 <Clock className="w-7 h-7 text-indigo-500" />
               </div>
-              <div>
-                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">Log Aktivitas</h3>
-                <div className="flex items-center gap-2 mt-1">
+              <div className="flex flex-col items-center sm:items-start">
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant text-center sm:text-left">Log Aktivitas</h3>
+                <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                    <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Sinkronisasi Real-time Lingkungan</p>
                 </div>
               </div>
             </div>
           </div>
-          <div style={{ paddingBottom: '8px', paddingRight: '8px', marginRight: '0px', marginLeft: '0px', width: '100%' }} className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar flex flex-col items-center">
+          <div className="w-full max-w-2xl mx-auto space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar">
             {recentActivities.map((act, i) => (
               <div 
                 key={`activity-${act.id || i}`}
-                className="flex items-start gap-6 p-6 rounded-[2rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 p-4 sm:p-6 rounded-[2rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700 text-center sm:text-left"
               >
-                <div className={`w-16 h-16 rounded-[1.2rem] flex items-center justify-center shrink-0 shadow-lg ${
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-[1.2rem] flex items-center justify-center shrink-0 shadow-lg ${
                   act.type === 'in' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 
                   act.type === 'out' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10' :
                   act.type === 'doc' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
@@ -876,20 +876,20 @@ export default function DashboardView({
                   {act.type === 'complaint' && <MessageSquare size={24} />}
                   {act.type === 'booking' && <Calendar size={24} />}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1.5 flex-wrap">
-                    <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant truncate max-w-[70%]">{act.title}</h4>
-                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg uppercase tracking-widest">{act.date}</span>
+                <div className="flex-1 min-w-0 w-full">
+                  <div className="flex flex-col sm:flex-row items-center justify-between mb-1.5 gap-2">
+                    <h4 className="text-base sm:text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant truncate w-full sm:max-w-[70%] text-center sm:text-left">{act.title}</h4>
+                    <span className="text-[9px] sm:text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg uppercase tracking-widest whitespace-nowrap">{act.date}</span>
                   </div>
-                  <p className="text-[13px] text-slate-700 dark:text-slate-200 font-bold leading-tight tracking-tight truncate">{act.desc}</p>
+                  <p className="text-[13px] text-slate-700 dark:text-slate-200 font-bold leading-tight tracking-tight text-center sm:text-left">{act.desc}</p>
                 </div>
                 {act.amount && (
-                  <span className={`text-lg font-black tracking-tighter ml-4 font-elegant tabular-nums ${act.type === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                  <span className={`text-lg font-black tracking-tighter mt-1 sm:mt-0 sm:ml-4 font-elegant tabular-nums shrink-0 ${act.type === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
                     {act.type === 'in' ? '+' : ''}{formatRupiah(act.amount)}
                   </span>
                 )}
                 {act.status && (
-                  <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ml-4 shadow-sm shrink-0 ${
+                  <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border mt-1 sm:mt-0 sm:ml-4 shadow-sm shrink-0 ${
                     act.status === 'Selesai' || act.status === 'Disetujui' || act.status === 'Suara Masuk' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' :
                     act.status === 'Diajukan' || act.status === 'Menunggu' || act.status === 'Diproses' || act.status === 'Aktif' ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
                     act.status === 'Ditolak' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20' :
