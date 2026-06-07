@@ -942,7 +942,7 @@ export default function DashboardView({
                   <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Iuran</span>
                 </button>
 
-                {!isStarter && (
+                {!isStarter && !isWarga && (
                   <button 
                     onClick={() => setActiveTab('analitik')}
                     className="w-full h-32 bg-indigo-600/40 hover:bg-indigo-600/60 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-indigo-500/30 backdrop-blur-xl shadow-lg"

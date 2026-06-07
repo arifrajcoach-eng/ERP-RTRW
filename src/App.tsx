@@ -2660,7 +2660,6 @@ export default function App() {
           KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot", "panduan-admin"],
           WARGA: [
             "dashboard",
-            "verifikasi",
             "keuangan",
             "posyandu",
             "bank-sampah",
@@ -2678,7 +2677,7 @@ export default function App() {
         };
 
         const allowed = rolePermissions[role] || ["dashboard"];
-        if (item.id === "organisasi") return true;
+        if (item.id === "organisasi" && role !== "WARGA" && role !== "TAMU" && role !== "VIEWER") return true;
         return allowed.includes(item.id);
       })
       .map((item) => {
