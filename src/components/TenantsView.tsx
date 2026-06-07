@@ -27,6 +27,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { StyledButton } from "./StyledButton";
+import { ControlSuiteMenu } from "./ControlSuiteMenu";
 import { ConfirmModal } from "./ui/ConfirmModal";
 import { getPlanFeatures } from "../lib/appUtils";
 import { ADDON_CONFIG, PLAN_FEATURES, PLAN_ALIASES } from "../constants";
@@ -366,43 +367,19 @@ export default function TenantsView({
           </div>
         </div>
         <div className="flex gap-2">
-          <StyledButton
-            label="Pulihkan Default Tenants"
-            onClick={handleRestoreDefaultTenants}
-            colorType="secondary"
-            icon={<RefreshCw className="w-4 h-4 text-emerald-600" />}
-          />
-          <StyledButton
-            label="Hapus Permanen Tenants Lama"
-            onClick={handlePermanentDeleteLegacyTenants}
-            colorType="danger"
-            icon={<RefreshCw className="w-4 h-4 text-white" />}
-          />
-          <StyledButton
-            label="Standardisasi maxWarga"
-            onClick={runMigration}
-            colorType="secondary"
-            icon={<RefreshCw className="w-4 h-4" />}
-          />
-          {selectedTenantId && (
-            <StyledButton
-              label="Reset ke Super Admin"
-              onClick={() => {
-                setSelectedTenantId(null);
-                showNotification("Kembali ke mode Super Admin pusat.", "info");
-              }}
-              colorType="secondary"
-              icon={<Shield className="w-4 h-4" />}
-            />
-          )}
-          <StyledButton
-            label="Tambah Tenant Baru"
-            onClick={() => {
+          <ControlSuiteMenu
+            onRestoreDefaults={handleRestoreDefaultTenants}
+            onDeleteLegacy={handlePermanentDeleteLegacyTenants}
+            onStandardize={runMigration}
+            onAddTenant={() => {
               setEditingTenant(null);
               setShowAddForm(true);
             }}
-            colorType="primary"
-            icon={<PlusCircle className="w-4 h-4" />}
+            canReset={!!selectedTenantId}
+            onReset={() => {
+              setSelectedTenantId(null);
+              showNotification("Kembali ke mode Super Admin pusat.", "info");
+            }}
           />
         </div>
       </div>

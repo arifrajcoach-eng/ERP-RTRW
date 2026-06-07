@@ -2317,7 +2317,7 @@ export default function App() {
       },
       {
         id: "analitik",
-        label: "Analitik Ringkasan",
+        label: "ANALYTICS AI",
         icon: Activity,
         plan: "analytics",
       },
@@ -2961,7 +2961,7 @@ export default function App() {
       <aside
         className={`fixed md:relative z-50 md:z-auto w-72 md:w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800 flex flex-col h-full print:hidden transition-all duration-300 md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full shadow-2xl md:shadow-none"} rounded-r-3xl md:rounded-none`}
       >
-        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex-shrink-0 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 relative overflow-hidden group rounded-tr-3xl md:rounded-none">
+        <div style={{ height: '322.733px' }} className="p-8 border-b border-slate-100 dark:border-slate-800 flex-shrink-0 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 relative overflow-hidden group rounded-tr-3xl md:rounded-none">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-blue/10 rounded-full blur-3xl group-hover:bg-brand-pink/20 transition-all duration-700"></div>
           <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-brand-yellow/10 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-all duration-700"></div>
           
@@ -3052,8 +3052,8 @@ export default function App() {
           </button>
         </div>
 
-        <div style={{ height: '137.08px', paddingTop: '-8px', marginBottom: '-39px' }} className="flex-shrink-0 px-6 py-5 bg-slate-50/30 dark:bg-slate-800/30 border-b border-slate-100/50 dark:border-slate-800/50">
-          <div className="flex items-center gap-2.5 mb-3">
+        <div style={{ height: '137.08px', paddingTop: '-8px', marginBottom: '-39px' }} className="-mt-6 flex-shrink-0 px-6 py-5 bg-slate-50/30 dark:bg-slate-800/30 border-b border-slate-100/50 dark:border-slate-800/50">
+          <div style={{ paddingTop: '0px', marginTop: '12px', marginLeft: '0px' }} className="flex items-center gap-2.5 mb-3">
             <div className="relative flex">
               <div className="w-2.5 h-2.5 rounded-full bg-brand-green shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse"></div>
               <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-brand-green animate-ping opacity-20"></div>
@@ -3062,7 +3062,7 @@ export default function App() {
               System Active
             </p>
           </div>
-          <div className="p-3 bg-white/80 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-brand-blue/20">
+          <div style={{ marginTop: '-10px' }} className="p-3 bg-white/80 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-brand-blue/20">
             {getPlanFeatures(currentTenant).multiRegion ? (
               <div className="space-y-1.5">
                 <label className="text-[9px] text-brand-blue font-black uppercase tracking-widest pl-1">
@@ -4485,7 +4485,7 @@ function AnalyticsPremiumView({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white tracking-tighter">
-          ANALYTICS PREDIKTIF AI
+          ANALYTICS AI
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* PREMIUM INTERACTIVE DOCUMENT SUITE MENU */}

@@ -481,7 +481,7 @@ export default function MadingDigitalView({
             <div>
               <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant uppercase flex items-center gap-2">
                 Mading Digital
-                <span className="text-[9px] bg-brand-blue text-white px-2.5 py-1 rounded-full font-sans font-bold tracking-widest uppercase align-middle">KOLASE FOTO</span>
+                <span style={{ paddingTop: '4px', marginLeft: '0px', marginRight: '0px', paddingRight: '8px' }} className="text-[9px] bg-brand-blue text-white px-2.5 py-1 rounded-full font-sans font-bold tracking-widest uppercase align-middle">KOLASE FOTO</span>
               </h2>
               <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.25em] mt-1">Informasi & Kegiatan Bulanan Pengurus RT/RW</p>
             </div>
@@ -501,7 +501,7 @@ export default function MadingDigitalView({
 
 
       {/* --- MONTH & YEAR ARCHIVE SELECTORS --- */}
-      <div className="mb-6 p-4 sm:p-5 bg-slate-50 dark:bg-slate-850 rounded-[1.5rem] border border-slate-100 dark:border-slate-800/80 shadow-inner flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5" id="mading-archive-filter-bar">
+      <div style={{ marginTop: '-13px' }} className="mb-6 p-4 sm:p-5 bg-slate-50 dark:bg-slate-850 rounded-[1.5rem] border border-slate-100 dark:border-slate-800/80 shadow-inner flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5" id="mading-archive-filter-bar">
         {/* Year Select Selector */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-brand-blue border border-indigo-150 dark:border-brand-blue/10">

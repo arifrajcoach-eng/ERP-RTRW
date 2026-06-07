@@ -92,7 +92,7 @@ async function startServer() {
   // Automatic Follow-ups Cron (Runs every day at midnight)
   cron.schedule("0 0 * * *", async () => {
     console.log("Running automatic tenant follow-up check...");
-    if (!admin.apps.length) return;
+    if (!admin.apps || admin.apps.length === 0) return;
     
     const db = admin.firestore();
     const now = new Date();

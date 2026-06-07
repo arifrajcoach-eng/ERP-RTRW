@@ -491,7 +491,7 @@ export function AnalyticsPremiumView({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-black text-slate-800 tracking-tighter">
-          ANALYTICS PREDIKTIF AI
+          ANALYTICS AI
         </h2>
         <div className="flex gap-3">
           <button

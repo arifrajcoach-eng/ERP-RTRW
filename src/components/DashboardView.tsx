@@ -480,7 +480,7 @@ export default function DashboardView({
             </h3>
             
             <p className="text-xs text-slate-300 font-medium max-w-2xl leading-relaxed">
-              Tingkatkan status wilayah Anda ke paket premium untuk mengaktifkan modul eksklusif seperti Robot AI WhatsApp, Posyandu Digital, Mading, Bank Sampah Mandiri, ePemilu, dan hilangkan batas kuota warga!
+              Tingkatkan status wilayah Anda ke paket premium untuk mengaktifkan modul eksklusif seperti Analitics AI, Posyandu Digital, Mading Digital, Bank Sampah Mandiri, e-Pemilu dan hilangkan batas kuota warga!
             </p>
 
             {isStarter && (
@@ -847,11 +847,11 @@ export default function DashboardView({
               </div>
             </div>
           </div>
-          <div className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
+          <div style={{ paddingBottom: '8px', paddingRight: '8px', marginRight: '0px', marginLeft: '0px', width: '100%' }} className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar flex flex-col items-center">
             {recentActivities.map((act, i) => (
               <div 
                 key={`activity-${act.id || i}`}
-                className="flex items-center gap-6 p-6 rounded-[2rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                className="flex items-start gap-6 p-6 rounded-[2rem] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
               >
                 <div className={`w-16 h-16 rounded-[1.2rem] flex items-center justify-center shrink-0 shadow-lg ${
                   act.type === 'in' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 
@@ -877,11 +877,11 @@ export default function DashboardView({
                   {act.type === 'booking' && <Calendar size={24} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 truncate tracking-tight font-elegant">{act.title}</h4>
+                  <div className="flex items-center justify-between mb-1.5 flex-wrap">
+                    <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight font-elegant truncate max-w-[70%]">{act.title}</h4>
                     <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg uppercase tracking-widest">{act.date}</span>
                   </div>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400 font-bold truncate leading-tight tracking-tight">{act.desc}</p>
+                  <p className="text-[13px] text-slate-700 dark:text-slate-200 font-bold leading-tight tracking-tight truncate">{act.desc}</p>
                 </div>
                 {act.amount && (
                   <span className={`text-lg font-black tracking-tighter ml-4 font-elegant tabular-nums ${act.type === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
@@ -889,7 +889,7 @@ export default function DashboardView({
                   </span>
                 )}
                 {act.status && (
-                  <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ml-4 shadow-sm ${
+                  <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ml-4 shadow-sm shrink-0 ${
                     act.status === 'Selesai' || act.status === 'Disetujui' || act.status === 'Suara Masuk' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' :
                     act.status === 'Diajukan' || act.status === 'Menunggu' || act.status === 'Diproses' || act.status === 'Aktif' ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
                     act.status === 'Ditolak' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20' :
@@ -954,7 +954,7 @@ export default function DashboardView({
                     <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-400/30">
                       <TrendingUp className="w-6 h-6 text-cyan-300" />
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Analitik Ringkasan</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">ANALYTICS AI</span>
                   </button>
                 )}
 
