@@ -400,14 +400,10 @@ export default function DashboardView({
   const isPaidPremium = currentTenant?.id === 'rw26_berjuang' || 
                         currentTenant?.id === 'trihprw26' || 
                         (currentTenant?.id && currentTenant.id.endsWith('_rw26_berjuang')) ||
-                        ['PREMIUM', 'PRIME', 'ENTERPRISE'].some(st => currentTenant?.status?.toUpperCase()?.includes(st));
+                        ['FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC'].some(st => currentTenant?.status?.toUpperCase()?.includes(st));
 
   const isStarter = !isPaidPremium && (!currentTenant?.status || 
-                    currentTenant?.status === 'STARTER' || 
-                    currentTenant?.status === 'GRATIS' || 
-                    currentTenant?.status === 'BASIC' || 
-                    currentTenant?.status === 'TRIAL' ||
-                    currentTenant?.status === 'ACTIVE');
+                    ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE'].includes(currentTenant?.status?.toUpperCase()));
 
   const trialEndDate = useMemo(() => {
     if (!isStarter) return null;
@@ -480,7 +476,7 @@ export default function DashboardView({
             </h3>
             
             <p className="text-xs text-slate-300 font-medium max-w-2xl leading-relaxed">
-              Tingkatkan status wilayah Anda ke paket premium untuk mengaktifkan modul eksklusif seperti Analitics AI, Posyandu Digital, Mading Digital, Bank Sampah Mandiri, e-Pemilu dan hilangkan batas kuota warga!
+              Tingkatkan status wilayah Anda ke paket premium untuk mengaktifkan modul eksklusif seperti Analytics AI, Posyandu Digital, Mading Digital, Bank Sampah Mandiri, e-Pemilu dan hilangkan batas kuota warga!
             </p>
 
             {isStarter && (

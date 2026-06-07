@@ -30,8 +30,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const agentTitle = isPrivileged ? "Chaty - AI Asisten Ketua" : "Chaty - AI Asisten Warga";
 
   const welcomeMessage = isPrivileged 
-    ? `Assalamu’alaikum Bapak/Ibu Ketua! 🫡 Aku Chaty, asisten pribadi Bapak/Ibu yang sopan, santun, dan sangat ceria! Chaty siap membantu melaporkan data keuangan, aktivitas warga, atau memberikan insight strategis untuk lingkungan kita. Ada yang bisa Chaty bantu hari ini, Pimpinan? 😊✨`
-    : `Assalamu’alaikum! Halo Kakak tetangga yang baik! 😊 Perkenalkan, aku Chaty, AI asisten warga yang sopan dan ceria. Ada yang bisa Chaty bantu hari ini? Chaty siap membantu membuat surat pengantar, booking fasilitas, atau menjawab pertanyaan Kakak seputar lingkungan kita! 😉✨`;
+    ? `Halo, selamat hari yang luar biasa, Ketua ! Chaty senang sekali bisa menyapa Bapak Ibu hari ini. Ada yang bisa Chaty bantu untuk keperluan wilayah kita hari ini, Pimpinan? Chaty siap membantu dengan penuh semangat!`
+    : `Halo Bapak/ Ibu Pengurus RT RW ! Selamat datang, Chaty senang sekali bisa menyapa Bapak/ Ibu hari ini. 😊✨ Ada yang bisa Chaty bantu untuk keperluan administrasi, pembuatan surat, atau layanan warga lainnya hari ini ? Silakan beri tahu Chaty ya, Chaty siap membantu dengan senang hati! 🙏`;
 
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
     { role: 'bot', text: welcomeMessage }
@@ -158,6 +158,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   }, [messages]);
 
    const handleSpeak = async (text: string) => {
+    if (!isPrivileged) return; // Nonaktifkan suara untuk AI Asisten Warga
     if (isMuted) return;
 
     if (sourceRef.current) {
@@ -529,28 +530,30 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
             </p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            const newMuted = !isMuted;
-            setIsMuted(newMuted);
-            if (newMuted) {
-              stopSpeaking();
-            } else {
-              const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot');
-              if (lastBotMsg && lastBotMsg.text) {
-                handleSpeak(lastBotMsg.text);
+        {isPrivileged && (
+          <button
+            onClick={() => {
+              const newMuted = !isMuted;
+              setIsMuted(newMuted);
+              if (newMuted) {
+                stopSpeaking();
+              } else {
+                const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot');
+                if (lastBotMsg && lastBotMsg.text) {
+                  handleSpeak(lastBotMsg.text);
+                }
               }
-            }
-          }}
-          className={`p-2 rounded-xl border transition-all ${
-            isMuted 
-              ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500' 
-              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 shadow-sm'
-          }`}
-          title={isMuted ? "Suara Chaty: Nonaktif" : "Suara Chaty: Aktif"}
-        >
-          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5 animate-bounce" style={{ animationDuration: '2s' }} />}
-        </button>
+            }}
+            className={`p-2 rounded-xl border transition-all ${
+              isMuted 
+                ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500' 
+                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 shadow-sm'
+            }`}
+            title={isMuted ? "Suara Chaty: Nonaktif" : "Suara Chaty: Aktif"}
+          >
+            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5 animate-bounce" style={{ animationDuration: '2s' }} />}
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -575,7 +578,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
                 }`}>
                   {msg.text || (isLoading && idx === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : '...')}
                   
-                  {msg.role === 'bot' && msg.text && (
+                  {msg.role === 'bot' && msg.text && isPrivileged && (
                     <button
                       onClick={() => {
                         setIsMuted(false);

@@ -93,6 +93,7 @@ import {
   Tag,
   Ticket,
   Gift,
+  HelpCircle,
 } from "lucide-react";
 import BelanjaView from "./components/toko/BelanjaView";
 import jsPDF from "jspdf";
@@ -103,6 +104,7 @@ import AuditLogView from "./components/AuditLogView";
 import EnterpriseGovDashboard from "./components/EnterpriseGovDashboard";
 import SOSOverlay from "./components/SOSOverlay";
 import PengaturanView from "./components/PengaturanView";
+import PanduanAdminView from "./components/PanduanAdminView";
 import ETokoView from "./components/toko/ETokoView";
 import { EVotingView } from "./components/EVotingView";
 import { AIDocumentSuiteMenu } from "./components/AIDocumentSuiteMenu";
@@ -2439,6 +2441,7 @@ export default function App() {
         icon: Activity,
         plan: "analytics",
       },
+      { id: "panduan-admin", label: "Panduan Admin", icon: HelpCircle },
       { id: "pengaturan", label: "Pengaturan", icon: Settings },
     ]
       .filter((item) => {
@@ -2515,6 +2518,7 @@ export default function App() {
             "audit",
             "analitik",
             "organisasi",
+            "panduan-admin",
           ],
           KELURAHAN_ADMIN: [
             "dashboard",
@@ -2536,6 +2540,7 @@ export default function App() {
             "audit",
             "analitik",
             "organisasi",
+            "panduan-admin",
           ],
           ADMIN: [
             "dashboard",
@@ -2561,6 +2566,7 @@ export default function App() {
             "audit",
             "analitik",
             "organisasi",
+            "panduan-admin",
           ],
           RW: [
             "dashboard",
@@ -2586,6 +2592,7 @@ export default function App() {
             "analitik",
             "pengaturan",
             "organisasi",
+            "panduan-admin",
           ],
           RT: [
             "dashboard",
@@ -2609,6 +2616,7 @@ export default function App() {
             "analitik",
             "kependudukan",
             "organisasi",
+            "panduan-admin",
           ],
           OPERATOR: [
             "dashboard",
@@ -2628,6 +2636,7 @@ export default function App() {
             "booking",
             "kependudukan",
             "organisasi",
+            "panduan-admin",
           ],
           SEKRETARIS: [
             "dashboard",
@@ -2644,10 +2653,11 @@ export default function App() {
             "analitik",
             "kependudukan",
             "organisasi",
+            "panduan-admin",
           ],
-          BENDAHARA: ["dashboard", "keuangan", "bank-sampah", "chat", "ai-bot", "analitik"],
+          BENDAHARA: ["dashboard", "keuangan", "bank-sampah", "chat", "ai-bot", "analitik", "panduan-admin"],
           SATPAM: ["dashboard", "buku-tamu"],
-          KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot"],
+          KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot", "panduan-admin"],
           WARGA: [
             "dashboard",
             "verifikasi",
@@ -3759,6 +3769,7 @@ export default function App() {
               setActiveTab={setActiveTab}
             />
           )}
+          {activeTab === "panduan-admin" && <PanduanAdminView />}
           {activeTab === "voting" && (
             isLoadingDB ? (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
