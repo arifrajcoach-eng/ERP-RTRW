@@ -738,7 +738,7 @@ export function AnalyticsPremiumView({
       <div className="bg-white dark:bg-slate-950 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/20 dark:shadow-none mb-6 transition-all">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-widest flex items-center gap-1.5 mb-11">
+            <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-widest flex items-center gap-1.5 mb-1">
               <Sparkles className="w-3.5 h-3.5" />
               Konfigurasi Periode Analisis Chaty AI
             </h3>
@@ -756,7 +756,7 @@ export function AnalyticsPremiumView({
                   : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
-              Seluruh Waktu
+              <span className="text-[12px] block">Seluruh Waktu</span>
             </button>
             <button
               onClick={() => setFilterMode("monthly")}
@@ -766,7 +766,7 @@ export function AnalyticsPremiumView({
                   : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
-              Pilih Bulan
+              <span className="text-[12px] block">Pilih Bulan</span>
             </button>
             <button
               onClick={() => setFilterMode("range")}
@@ -775,8 +775,9 @@ export function AnalyticsPremiumView({
                   ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-md shadow-slate-200/50"
                   : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
+              style={{ fontSize: "12px" }}
             >
-              Rentang Periode
+              <span className="text-[12px] block" style={{ fontSize: "12px" }}>Rentang Periode</span>
             </button>
           </div>
         </div>

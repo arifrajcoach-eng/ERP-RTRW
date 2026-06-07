@@ -265,28 +265,28 @@ const INITIAL_INVENTARIS_DATA: any[] = [];
 // Global utility helpers
 export function getTrialStatus(tenant: any, currentUser?: any) {
   if (!tenant) {
-    return { phase: "ACTIVE" as const, daysRemainingActive: 30, daysRemainingFrozen: 30 };
+    return { phase: "ACTIVE" as const, daysRemainingActive: 30, daysRemainingFrozen: 0 };
   }
   
   if (currentUser?.isSuperAdmin || tenant.id === "MASTER" || tenant.id === "rw26_berjuang") {
-    return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 9999 };
+    return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 0 };
   }
 
   const isPaidPremium = tenant.id === "rw26_berjuang" || 
                         tenant.id === "trihprw26" || 
                         (tenant.id && tenant.id.endsWith("_rw26_berjuang")) ||
-                        ["PREMIUM", "PRIME", "ENTERPRISE"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
+                        ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
 
   const isStarter = !isPaidPremium && (!tenant.status || 
-                    ["STARTER", "GRATIS", "BASIC", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
+                    ["STARTER", "GRATIS", "FREE", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
 
   if (!isStarter) {
-    return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 9999 };
+    return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 0 };
   }
 
   let createdAt = tenant.createdAt;
   if (!createdAt) {
-    return { phase: "ACTIVE" as const, daysRemainingActive: 30, daysRemainingFrozen: 30 };
+    return { phase: "ACTIVE" as const, daysRemainingActive: 30, daysRemainingFrozen: 0 };
   }
 
   const startDate = typeof createdAt === "string" 
@@ -297,12 +297,10 @@ export function getTrialStatus(tenant: any, currentUser?: any) {
   const diffMs = now.getTime() - startDate.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays >= 60) {
+  if (diffDays >= 30) {
     return { phase: "DELETED" as const, daysRemainingActive: 0, daysRemainingFrozen: 0 };
-  } else if (diffDays >= 30) {
-    return { phase: "FROZEN" as const, daysRemainingActive: 0, daysRemainingFrozen: 60 - diffDays };
   } else {
-    return { phase: "ACTIVE" as const, daysRemainingActive: 30 - diffDays, daysRemainingFrozen: 30 };
+    return { phase: "ACTIVE" as const, daysRemainingActive: 30 - diffDays, daysRemainingFrozen: 0 };
   }
 }
 
@@ -1792,6 +1790,124 @@ export default function App() {
     checkTenantFollowups();
   }, [currentUser?.isSuperAdmin, tenantsData.length]);
 
+  // 6b. Automation: Day 31 Free-Tier Expiration, Data Zero-Wipe & Lead Storage
+  useEffect(() => {
+    const handleDay31WipeForActiveTenant = async () => {
+      // 1. Handled loaded current tenant
+      if (currentTenant && currentTenant.id !== "MASTER" && currentTenant.id !== "rw26_berjuang") {
+        const trialStatus = getTrialStatus(currentTenant, currentUser);
+        if (trialStatus.phase === "DELETED" && !currentTenant.isWiped) {
+          console.log(`[AUTO-WIPE] Expiration detected for active tenant: ${currentTenant.id}. Purging tables...`);
+          try {
+            await runDataPurge(currentTenant);
+          } catch (err) {
+            console.error("[AUTO-WIPE] Active tenant purge failed:", err);
+          }
+        }
+      }
+
+      // 2. Super-admin background sweep for all registered stale trials
+      if (currentUser?.isSuperAdmin && tenantsData.length > 0) {
+        for (const tenant of tenantsData) {
+          if (tenant.id === "MASTER" || tenant.id === "rw26_berjuang") continue;
+          const statusResult = getTrialStatus(tenant, null);
+          if (statusResult.phase === "DELETED" && !tenant.isWiped) {
+            console.log(`[AUTO-WIPE] background sweep purging stale tenant: ${tenant.id}`);
+            try {
+              await runDataPurge(tenant);
+            } catch (pErr) {
+              console.error(`[AUTO-WIPE] Background tenant purge failed for ${tenant.id}:`, pErr);
+            }
+          }
+        }
+      }
+    };
+
+    const runDataPurge = async (t: any) => {
+      const collectionsToWipe = [
+        "data_warga",
+        "kas",
+        "iuran",
+        "inventaris",
+        "inventaris_logs",
+        "toko_products",
+        "toko_orders",
+        "toko_reviews",
+        "surat",
+        "voting_candidates",
+        "voting_votes",
+        "bookings",
+        "complaints",
+        "verifikasi_warga",
+        "audit_logs",
+        "balita",
+        "ibu_hamil",
+        "posyandu_kegiatan",
+        "posbindu_kegiatan",
+        "pemeriksaan_balita",
+        "pemeriksaan_posbindu",
+        "imunisasi",
+        "sampah_kategori",
+        "sampah_setoran",
+        "sampah_tarik_saldo",
+        "kelahiran",
+        "kematian",
+        "emergencies",
+        "kop_templates"
+      ];
+
+      for (const colName of collectionsToWipe) {
+        try {
+          const q = query(collection(db, colName), where("tenantId", "==", t.id));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const batch = writeBatch(db);
+            snap.docs.forEach((docSnap) => {
+              batch.delete(docSnap.ref);
+            });
+            await batch.commit();
+            console.log(`[AUTO-WIPE] Purged ${snap.size} documents from ${colName} for tenant ${t.id}`);
+          }
+        } catch (e) {
+          console.warn(`[AUTO-WIPE] Error clean collection ${colName} for ${t.id}:`, e);
+        }
+      }
+
+      // Record to free_tier_followups
+      await setDoc(doc(db, "free_tier_followups", t.id), {
+        tenantId: t.id,
+        tenantName: t.name || t.nama || "",
+        adminEmail: t.adminEmail || t.email || "",
+        phone: t.phone || t.adminPhone || t.telepon || "",
+        createdAt: t.createdAt || new Date().toISOString(),
+        expiredAt: new Date().toISOString(),
+        followUpStatus: "NEW",
+        isWiped: true,
+        isFollowedUp: false,
+        source: "AUTO_WIPE_DAY_31"
+      });
+
+      // Update tenant status to EXPIRED & isWiped
+      await updateDoc(doc(db, "tenants", t.id), {
+        status: "EXPIRED",
+        isWiped: true,
+        wipedAt: new Date().toISOString()
+      });
+
+      // If active currentTenant, synchronize state
+      if (currentTenant && currentTenant.id === t.id) {
+        setCurrentTenant((prev: any) => ({
+          ...prev,
+          status: "EXPIRED",
+          isWiped: true,
+          wipedAt: new Date().toISOString()
+        }));
+      }
+    };
+
+    handleDay31WipeForActiveTenant();
+  }, [currentTenant?.id, currentTenant?.isWiped, tenantsData.length, currentUser?.isSuperAdmin]);
+
   // --- CENTRAL CONFIG HELPERS ---
   const getSetting = (key: string) => {
     return settings[key] || "";
@@ -2741,21 +2857,24 @@ export default function App() {
               Data Uji Coba Telah Dihapus!
             </h2>
             <div className="mt-2 text-red-400 font-extrabold uppercase text-[10px] tracking-widest pl-3 pr-3 py-1 bg-red-500/10 rounded-full border border-red-500/20 inline-block mb-6">
-              Masa Tenggat 60 Hari Terlampaui
+              Hari Ke-31: Penghapusan Otomatis Selesai
             </div>
 
-            <p className="text-slate-400 text-sm leading-relaxed mb-8">
-              Uji coba wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah melewati tenggat 60 hari. Sesuai dengan kebijakan privasi dan pembersihan data berkala SmaRtRw AI, database wilayah Anda <strong>telah dihapus secara permanen</strong> dari server kami.
+            <p className="text-slate-400 text-sm leading-relaxed mb-8 text-left">
+              Masa aktif Paket Gratis / Uji Coba untuk wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah berakhir dan masuk hari ke-31 tanpa adanya upgrade ke Paket Berbayar (Flash, Pro, Premium, atau Enterprise).
+              <br /><br />
+              Sesuai dengan kebijakan privasi platform dan pembersihan data otomatis berkala, <strong>seluruh database riwayat warga, pembukuan kas, iuran, mading, posyandu, dan surat pengantar wilayah Anda telah dihapus secara permanen secara otomatis</strong> dari server kami.
+              <br /><br />
+              Email administratif dan database tenant Anda telah disimpan dalam basis data follow-up SmaRtRw AI agar kami bisa menghubungi Anda melalui email dan WA untuk penawaran spesial upgrade.
             </p>
 
             <div className="w-full bg-slate-950/40 border border-slate-800/60 p-5 rounded-2xl mb-8 text-left space-y-2">
               <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                Info Kebijakan Sistem:
+                Status Data Wilayah Anda:
               </h4>
               <ul className="text-[11px] text-slate-400 space-y-1 bg-transparent font-sans list-disc list-inside">
                 <li>Hari 1-30: Masa uji coba penuh aktif.</li>
-                <li>Hari 31-60: Data dibekukan & disimpan aman.</li>
-                <li>Hari 61: Penghapusan data permanen tak terpulihkan.</li>
+                <li className="text-red-400 font-bold">Hari 31+: Penghapusan data otomatis dan permanen (Wipe Total).</li>
               </ul>
             </div>
 
@@ -2779,64 +2898,7 @@ export default function App() {
       );
     }
 
-    if (trialStatus.phase === "FROZEN") {
-      return (
-        <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">
-          {/* Decorative ambient background */}
-          <div className="absolute top-10 right-10 w-96 h-96 bg-brand-pink/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-10 -left-10 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
-          
-          <div className="max-w-xl w-full bg-slate-900/40 backdrop-blur-3xl border border-slate-800/80 p-8 sm:p-10 rounded-3xl shadow-2xl text-center relative z-10 flex flex-col items-center">
-            <div className="w-20 h-20 bg-amber-500/15 border border-amber-500/30 rounded-3xl flex items-center justify-center text-amber-400 mb-6 shadow-inner animate-pulse duration-[2s]">
-              <Lock className="w-10 h-10" />
-            </div>
-            
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-100 uppercase tracking-tight leading-snug">
-              Masa Uji Coba Selesai!
-            </h2>
-            <div className="mt-2 text-rose-450 font-extrabold uppercase text-[10px] tracking-widest pl-3 pr-3 py-1 bg-rose-500/10 rounded-full border border-rose-500/20 inline-block mb-6">
-              Sistem Terkunci • Mode Penyimpanan Aman
-            </div>
 
-            <p className="text-slate-400 text-sm leading-relaxed mb-8">
-              Uji coba gratis 30 hari untuk wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah berakhir. Seluruh data warga, keuangan, dan surat pengantar Anda tetap tersimpan dengan aman, namun database <strong>terkunci sementara</strong> hingga Anda melakukan upgrade paket.
-            </p>
-
-            {/* Countdown Area */}
-            <div className="w-full bg-slate-950/40 border border-slate-800/60 p-6 rounded-2xl mb-8 flex flex-col items-center justify-center">
-              <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-rose-500" />
-                Sisa Waktu Penyimpanan Data Anda:
-              </span>
-              <div className="flex items-baseline gap-1.5 text-white">
-                <span className="text-4xl font-extrabold font-mono text-amber-500 animate-pulse">{trialStatus.daysRemainingFrozen}</span>
-                <span className="text-sm font-black uppercase text-slate-400">Hari Lagi</span>
-              </div>
-              <span className="text-[10px] text-slate-400 italic mt-2 text-center">
-                Perhatian: Pada hari ke-61, data Anda akan dihapus secara otomatis & permanen oleh sistem.
-              </span>
-            </div>
-
-            {/* Action Button */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full">
-              <button
-                onClick={() => window.open(`https://wa.me/6287726741143?text=Halo%20Admin%20SmaRtRw%20AI,%20kami%20tertarik%20dengan%20info%20paket%20dan%20aktivasi%20SmaRtRw%20AI%20premium%20untuk%20wilayah%20kami%20${currentTenant.id}.%20Saat%20ini%20status%20kami%20Free%20Trial%20Frozen.`, "_blank")}
-                className="flex-1 px-6 py-4 bg-brand-pink text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-pink/90 active:scale-95 shadow-xl shadow-brand-pink/20 transition-all flex items-center justify-center gap-2"
-              >
-                <Zap className="w-4 h-4 animate-bounce" />
-                Upgrade Sekarang ⚡
-              </button>
-              <button
-                onClick={handleLogout}
-                className="px-6 py-4 bg-slate-800 text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-700 active:scale-95 transition-all"
-              >
-                Keluar Sesi
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
   }
 
   if (wargaAuth && !currentUser?.isSuperAdmin) {

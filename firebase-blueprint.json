@@ -352,6 +352,24 @@
       },
       "required": ["id", "name", "status"]
     },
+    "FreeTierFollowup": {
+      "title": "Free Tier Followup",
+      "description": "Data followup otomatis tenant gratis yang masa aktifnya telah habis di hari ke-31",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "tenantName": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiredAt": { "type": "string", "format": "date-time" },
+        "followUpStatus": { "type": "string" },
+        "isWiped": { "type": "boolean" },
+        "isFollowedUp": { "type": "boolean" },
+        "source": { "type": "string" }
+      },
+      "required": ["tenantId", "tenantName"]
+    },
     "Branding": {
       "title": "Branding",
       "description": "Branding settings per RT/RW (Multi-tenant)",
@@ -865,6 +883,10 @@
     "/mading/{id}": {
       "schema": "Mading",
       "description": "Koleksi foto mading digital kolase"
+    },
+    "/free_tier_followups/{id}": {
+      "schema": "FreeTierFollowup",
+      "description": "Koleksi data followup otomatis tenant gratis yang masa aktifnya habis di hari ke-31"
     }
   }
 }

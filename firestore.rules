@@ -592,6 +592,9 @@ service cloud.firestore {
       allow create: if true; 
       allow update: if isSignedIn() && (isAdmin() || ('email' in request.auth.token && docId == request.auth.token.email));
     }
+    match /free_tier_followups/{docId} {
+      allow read, write: if true;
+    }
 
   }
 }

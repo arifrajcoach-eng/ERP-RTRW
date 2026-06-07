@@ -89,9 +89,9 @@ async function startServer() {
     }
   };
 
-  // Automatic Follow-ups Cron (Runs every day at midnight)
+  // Automatic Follow-ups and Day 31 Data Wipe Cron (Runs every day at midnight)
   cron.schedule("0 0 * * *", async () => {
-    console.log("Running automatic tenant follow-up check...");
+    console.log("Running automatic tenant follow-up and data-wipe check...");
     if (!admin.apps || admin.apps.length === 0) return;
     
     const db = admin.firestore();
@@ -99,43 +99,114 @@ async function startServer() {
     const sixtyDaysInMs = 60 * 24 * 60 * 60 * 1000;
 
     try {
-      const tenantsSnap = await db.collection("tenants")
-        .where("status", "in", ["EXPIRED", "TRIAL", "BASIC"])
-        .get();
+      const tenantsSnap = await db.collection("tenants").get();
       
-      for (const doc of tenantsSnap.docs) {
-        const tenant = doc.data();
-        const endDate = tenant.endDate ? new Date(tenant.endDate) : (tenant.createdAt ? new Date(tenant.createdAt) : null);
+      for (const tDoc of tenantsSnap.docs) {
+        const tenant = tDoc.data();
+        const tenantId = tDoc.id;
         
-        if (!endDate) continue;
-        const diff = now.getTime() - endDate.getTime();
+        // Skip administrative tenants
+        if (tenantId === "MASTER" || tenantId === "rw26_berjuang") continue;
 
-        if (diff > sixtyDaysInMs && !tenant.autoFollowedUpAfterTwoMonths) {
-          console.log(`Sending auto follow-up to tenant: ${tenant.name}`);
-          
-          const message = `Halo ${tenant.name}, kami perhatikan masa aktif SmaRtRw AI Anda telah berakhir. Ada yang bisa kami bantu untuk proses perpanjangan?`;
+        const isPaidPremium = ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
+        const isStarter = !isPaidPremium && (!tenant.status || ["STARTER", "GRATIS", "FREE", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
+
+        if (!isStarter) continue;
+
+        const startDate = tenant.createdAt ? (tenant.createdAt.toDate ? tenant.createdAt.toDate() : new Date(tenant.createdAt)) : null;
+        if (!startDate) continue;
+
+        const diffTime = now.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        // Day 31 limit reached & data not wiped: Purge data automatically
+        if (diffDays >= 30 && !tenant.isWiped) {
+          console.log(`[AUTO-WIPE-CRON] Expiry Day 31 reached. Purging tables for tenant: ${tenant.name || tenantId}`);
+
+          const collectionsToWipe = [
+            "data_warga",
+            "kas",
+            "iuran",
+            "inventaris",
+            "inventaris_logs",
+            "toko_products",
+            "toko_orders",
+            "toko_reviews",
+            "surat",
+            "voting_candidates",
+            "voting_votes",
+            "bookings",
+            "complaints",
+            "verifikasi_warga",
+            "audit_logs",
+            "balita",
+            "ibu_hamil",
+            "posyandu_kegiatan",
+            "posbindu_kegiatan",
+            "pemeriksaan_balita",
+            "pemeriksaan_posbindu",
+            "imunisasi",
+            "sampah_kategori",
+            "sampah_setoran",
+            "sampah_tarik_saldo",
+            "kelahiran",
+            "kematian",
+            "emergencies",
+            "kop_templates"
+          ];
+
+          for (const colName of collectionsToWipe) {
+            try {
+              const querySnap = await db.collection(colName).where("tenantId", "==", tenantId).get();
+              if (!querySnap.empty) {
+                const batch = db.batch();
+                querySnap.docs.forEach((doc) => batch.delete(doc.ref));
+                await batch.commit();
+                console.log(`[AUTO-WIPE-CRON] Cleaned ${querySnap.size} documents from ${colName} for tenant ${tenantId}`);
+              }
+            } catch (err) {
+              console.error(`[AUTO-WIPE-CRON] Failed deleting collection ${colName} for tenant ${tenantId}:`, err);
+            }
+          }
+
+          // Record to free_tier_followups for administrative team
+          await db.collection("free_tier_followups").doc(tenantId).set({
+            tenantId,
+            tenantName: tenant.name || tenant.nama || "",
+            adminEmail: tenant.adminEmail || tenant.email || "",
+            phone: tenant.phone || tenant.adminPhone || tenant.telepon || "",
+            createdAt: tenant.createdAt ? (tenant.createdAt.toISOString ? tenant.createdAt.toISOString() : tenant.createdAt) : new Date().toISOString(),
+            expiredAt: new Date().toISOString(),
+            followUpStatus: "NEW",
+            isWiped: true,
+            isFollowedUp: false,
+            source: "AUTO_WIPE_DAY_31_CRON"
+          });
+
+          // Mark tenants document as EXPIRED and isWiped
+          await tDoc.ref.update({
+            status: "EXPIRED",
+            isWiped: true,
+            wipedAt: new Date().toISOString()
+          });
+
+          // Notify about the automated data protection shredding
+          const notificationMessage = `Halo Pengurus ${tenant.name || 'Wilayah'}, masa uji coba gratis SmaRtRw AI Anda telah berakhir di hari ke-31. Sesuai kebijakan privasi sistem, seluruh data warga dan pembukuan Anda telah dihapus secara otomatis & permanen demi privasi warga. Silakan upgrade ke paket berbayar untuk menikmati kembali fitur kami.`;
           
           try {
-            // Try WhatsApp first, then fallback to email log
-            if (tenant.adminPhone && process.env.TWILIO_PHONE_NUMBER) {
-              await sendWhatsApp(tenant.adminPhone, message);
+            if ((tenant.adminPhone || tenant.phone) && process.env.TWILIO_PHONE_NUMBER) {
+              await sendWhatsApp(tenant.adminPhone || tenant.phone, notificationMessage);
             }
-            
-            if (tenant.adminEmail) {
-              await sendEmail(tenant.adminEmail, tenant.name, "SmaRtRw AI: Masa Aktif Berakhir", message);
+            if (tenant.adminEmail || tenant.email) {
+              await sendEmail(tenant.adminEmail || tenant.email, tenant.name, "SmaRtRw AI: Pemberitahuan Penghapusan Data Otomatis", notificationMessage);
             }
-
-            await doc.ref.update({
-              autoFollowedUpAfterTwoMonths: true,
-              lastAutoFollowUpAt: new Date().toISOString()
-            });
-          } catch (err) {
-            console.error(`Failed to send follow-up to ${tenant.name}:`, err);
+          } catch (notifErr) {
+            console.error("[AUTO-WIPE-CRON] Failed sending wipe notifications:", notifErr);
           }
         }
       }
-    } catch (e) {
-      console.error("Cron Follow-up Error:", e);
+    } catch (err) {
+      console.error("Cron Auto Wipe Checker error:", err);
     }
   });
 
