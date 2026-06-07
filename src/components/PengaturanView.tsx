@@ -1219,7 +1219,7 @@ export default function PengaturanView({
                 <div className="flex items-start gap-2 mt-2">
                   <div className="w-1 h-1 rounded-full bg-purple-400 mt-1.5 shrink-0"></div>
                   <p className="text-[10px] text-slate-500 italic leading-tight">
-                    Tagline ini akan muncul tepat di bawah nama instansi/organisasi dan di atas teks Nexapps Intelligent di sidebar.
+                    Tagline ini akan muncul tepat di bawah nama instansi/organisasi dan di atas teks Powered by Nexapps di sidebar.
                   </p>
                 </div>
               </div>

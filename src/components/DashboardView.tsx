@@ -912,15 +912,17 @@ export default function DashboardView({
               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mb-10 ml-5 opacity-70">Layanan Akses Cepat Warga</p>
               
               <div className="grid md:grid-cols-5 gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                <button 
-                  onClick={() => setShowQRModal(true)}
-                  className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
-                >
-                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
-                    <QrCode className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Daftar Tamu</span>
-                </button>
+                {!isWarga && (
+                  <button 
+                    onClick={() => setShowQRModal(true)}
+                    className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
+                  >
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                      <QrCode className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Daftar Tamu</span>
+                  </button>
+                )}
                 
                 <button 
                   onClick={() => setActiveTab('surat')}
@@ -941,6 +943,18 @@ export default function DashboardView({
                   </div>
                   <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Iuran</span>
                 </button>
+
+                {currentTenant?.status !== 'STARTER' && (
+                  <button 
+                    onClick={() => setShowAIChat(true)}
+                    className="w-full h-32 bg-purple-600/40 hover:bg-purple-600/60 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-purple-500/30 backdrop-blur-xl shadow-lg"
+                  >
+                    <div className="w-12 h-12 bg-purple-500/20 rounded-2xl flex items-center justify-center border border-purple-400/30">
+                      <Bot className="w-6 h-6 text-fuchsia-300" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">AI CS Warga</span>
+                  </button>
+                )}
 
                 {!isStarter && !isWarga && (
                   <button 

@@ -601,19 +601,21 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       {/* Input */}
       <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 transition-colors">
         <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-brand-blue/10 focus-within:border-brand-blue transition-all">
-          <button
-            type="button"
-            onClick={toggleListening}
-            className={`p-2.5 rounded-xl transition-all ${
-              isListening
-                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-            }`}
-            title={isListening ? "Mendengarkan... klik untuk berhenti" : "Klik & sapa Chaty melalui Mic"}
-            disabled={isLoading}
-          >
-            <Mic className={`w-4 h-4 ${isListening ? 'scale-110' : ''}`} />
-          </button>
+          {isPrivileged && (
+            <button
+              type="button"
+              onClick={toggleListening}
+              className={`p-2.5 rounded-xl transition-all ${
+                isListening
+                  ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+              title={isListening ? "Mendengarkan... klik untuk berhenti" : "Klik & sapa Chaty melalui Mic"}
+              disabled={isLoading}
+            >
+              <Mic className={`w-4 h-4 ${isListening ? 'scale-110' : ''}`} />
+            </button>
+          )}
 
           <input
             value={input}

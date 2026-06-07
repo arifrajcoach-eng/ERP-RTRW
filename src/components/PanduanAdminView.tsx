@@ -121,6 +121,51 @@ export default function PanduanAdminView() {
                     </ul>
                   </div>
 
+                  {/* Section: Kesehatan & Posyandu */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="p-2 bg-pink-50 rounded-lg">
+                        <Activity className="h-5 w-5 text-pink-600" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">Kesehatan (Posyandu)</h3>
+                    </div>
+                    <ul className="space-y-3 text-sm text-slate-600">
+                      <li><strong>1. Data Pasien:</strong> Pencatatan biodata balita, ibu hamil, dan lansia.</li>
+                      <li><strong>2. Rekam Medis:</strong> Pantau grafik berat/tinggi badan balita dan tensi darah lansia.</li>
+                      <li><strong>3. Jadwal Layanan:</strong> Publikasikan jadwal imunisasi rutin.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section: Bank Sampah */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="p-2 bg-emerald-50 rounded-lg">
+                        <Shield className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">Bank Sampah</h3>
+                    </div>
+                    <ul className="space-y-3 text-sm text-slate-600">
+                      <li><strong>1. Setor Sampah:</strong> Tabungan warga dari penimbangan sampah daur ulang.</li>
+                      <li><strong>2. Saldo Tabungan:</strong> Setiap warga memiliki saldo bank sampah yang dapat ditarik.</li>
+                      <li><strong>3. Harga Komoditas:</strong> Atur harga per kilo untuk kardus, plastik, botol, dll.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section: Booking Fasum & Inventaris */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="p-2 bg-teal-50 rounded-lg">
+                        <Users className="h-5 w-5 text-teal-600" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">Booking Fasum & Inventaris</h3>
+                    </div>
+                    <ul className="space-y-3 text-sm text-slate-600">
+                      <li><strong>1. Pinjam Fasilitas:</strong> Warga dapat membooking lapangan atau balai pertemuan.</li>
+                      <li><strong>2. Peminjaman Alat:</strong> Manajemen dan pendataan peminjaman aset inventaris (tenda, kursi, dll).</li>
+                      <li><strong>3. Jadwal Otomatis:</strong> Mencegah bentrok jadwal antar warga.</li>
+                    </ul>
+                  </div>
+
                   {/* Section: Komunikasi & Pengaduan */}
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-3 mb-4">

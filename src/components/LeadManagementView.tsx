@@ -567,7 +567,7 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
              </div>
              <div>
                 <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Panduan Paket & Benefits</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Struktur Kapasitas & Fitur Nexapps Intelligent</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Struktur Kapasitas & Fitur Powered by Nexapps</p>
              </div>
           </div>
           <div className="px-5 py-2 bg-indigo-50 border border-indigo-100 rounded-full">

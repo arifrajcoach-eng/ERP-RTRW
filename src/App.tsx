@@ -2666,8 +2666,6 @@ export default function App() {
             "etoko",
             "voting",
             "surat",
-            "chat",
-            "ai-bot",
             "complaint",
             "booking",
             "inventaris",
@@ -3110,7 +3108,7 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none !mt-[-1px]">
-                    Nexapps Intelligent
+                    Powered by Nexapps
                   </p>
                 </div>
               )}
