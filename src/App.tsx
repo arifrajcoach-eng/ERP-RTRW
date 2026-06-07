@@ -328,6 +328,13 @@ const calculateAge = (tglLahir: string) => {
 export default function App() {
   console.log("App component: DB exists?", !!db);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isLoadingDB, setIsLoadingDB] = useState(true);
+  const [dbStatus, setDbStatus] = useState<
+    "ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING"
+  >("INITIALIZING");
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [currentTenant, setCurrentTenant] = useState<any>(null);
   const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
   const [impersonatedTenantId, setImpersonatedTenantId] = useState<
     string | null
@@ -779,13 +786,6 @@ export default function App() {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [kopSettings, setKopSettings] = useState<Record<string, any>>({});
 
-  const [isLoadingDB, setIsLoadingDB] = useState(true);
-  const [dbStatus, setDbStatus] = useState<
-    "ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING"
-  >("INITIALIZING");
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
-  const [dbError, setDbError] = useState<string | null>(null);
-  const [currentTenant, setCurrentTenant] = useState<any>(null);
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";

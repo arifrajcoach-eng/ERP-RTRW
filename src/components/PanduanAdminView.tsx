@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb } from 'lucide-react';
+import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PanduanAdminView() {
@@ -26,7 +26,7 @@ export default function PanduanAdminView() {
       </div>
 
       {/* Tabs Container */}
-      <div className="flex overflow-x-auto hide-scrollbar bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex overflow-x-auto no-scrollbar bg-white p-1 rounded-xl shadow-sm border border-slate-200">
         <div className="flex space-x-1 min-w-max w-full">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -192,6 +192,22 @@ export default function PanduanAdminView() {
                     <ul className="space-y-3 text-sm text-slate-600">
                       <li><strong>1. Asisten Ketua:</strong> Chaty bisa beri insight (contoh: "Siapa warga yang belum lunas iuran?").</li>
                       <li><strong>2. Edukasi Warga:</strong> Chaty bisa menjawab cara penggunaan fitur aplikasi untuk warga.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section: Tema & Tampilan */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="p-2 bg-slate-50 rounded-lg">
+                        <Palette className="h-5 w-5 text-slate-600" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">Kustomisasi & Tema</h3>
+                    </div>
+                    <ul className="space-y-3 text-sm text-slate-600">
+                      <li><strong>1. Ganti Skin/Tema:</strong> Aplikasi memiliki berbagai pilihan tema (Glassmorphism, Dark Luxury, Corporate, dll).</li>
+                      <li><strong>2. Logo & Tagline:</strong> Unggah logo instansi dan tentukan tagline khusus wilayah Anda pada menu pengaturan.</li>
+                      <li><strong>3. Branding Personal:</strong> Sesuaikan nama wilayah dan warna aksen agar aplikasi terasa lebih personal dan eksklusif.</li>
+                      <li><strong>4. Responsif:</strong> Tampilan otomatis menyesuaikan saat dibuka melalui Laptop, Tablet, maupun HP.</li>
                     </ul>
                   </div>
                 </div>
