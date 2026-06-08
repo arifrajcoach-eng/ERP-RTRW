@@ -13,6 +13,8 @@ export default function PanduanAdminView() {
   ];
 
   const handlePrint = () => {
+    // We use window.print() to provide the highest fidelity output using the browser's 
+    // native PDF engine, which perfectly supports modern Tailwind v4 CSS (oklch colors).
     window.print();
   };
 
@@ -238,11 +240,11 @@ export default function PanduanAdminView() {
                 </div>
 
                 <div 
+                  id="print-sosialisasi-content"
                   className="bg-white border border-slate-200 rounded-2xl shadow-sm relative overflow-hidden print:border-none print:shadow-none"
                   style={{ minHeight: '800px', paddingTop: '49px' }}
                 >
-                  {/* Action Button - Pulled up with custom styles from focus mode feedback */}
-                  <div className="absolute top-6 right-6 print:hidden">
+                  <div className="absolute top-6 right-6 print:hidden z-10">
                     <button 
                       onClick={handlePrint}
                       className="flex items-center space-x-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl active:scale-95 group shadow-slate-900/20"

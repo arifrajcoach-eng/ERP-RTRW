@@ -5355,6 +5355,7 @@ function SelfRegistrationView({
                   }
                   className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
+                  <option value="Kepala Keluarga">Kepala Keluarga</option>
                   <option value="Suami (Kepala Keluarga)">
                     Suami (Kepala Keluarga)
                   </option>
@@ -5564,10 +5565,10 @@ function SelfRegistrationView({
                   <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <CreditCard className="w-6 h-6 text-brand-blue" />
                   </div>
-                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest mb-2">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-2">
                     Foto KTP
                   </h4>
-                  <p className="text-[10px] text-slate-400 mb-4 px-4 font-medium italic">
+                  <p className="text-[10px] text-slate-800 mb-4 px-4 font-medium italic">
                     Ambil foto KTP asli / scan yang terbaca jelas.
                   </p>
                   <input
@@ -5593,10 +5594,10 @@ function SelfRegistrationView({
                   <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <Files className="w-6 h-6 text-brand-pink" />
                   </div>
-                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest mb-2">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-2">
                     Foto Kartu Keluarga
                   </h4>
-                  <p className="text-[10px] text-slate-400 mb-4 px-4 font-medium italic">
+                  <p className="text-[10px] text-slate-800 mb-4 px-4 font-medium italic">
                     Ambil foto KK asli agar mempermudah validasi data.
                   </p>
                   <input
