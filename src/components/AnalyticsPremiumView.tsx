@@ -1107,13 +1107,15 @@ export function AnalyticsPremiumView({
             <div className="space-y-4 relative z-10">
               <div className="bg-white/10 p-4 rounded-2xl border border-white/10">
                 <p className="text-sm font-bold leading-relaxed italic">
-                  "Berdasarkan tren 3 bulan terakhir, pembayaran iuran memuncak
-                  di minggu ke-2. Kami merekomendasikan pengiriman pengingat di
-                  tanggal 5 setiap bulannya untuk efisiensi tertagih +15%."
+                  {kasData.length > 0 ? (
+                    "Berdasarkan tren histori Anda, pembayaran iuran memuncak di minggu ke-2. Kami merekomendasikan pengiriman pengingat di tanggal 5 setiap bulannya untuk efisiensi tertagih."
+                  ) : (
+                    "Belum ada histori data keuangan yang cukup untuk menghasilkan insight prediktif. Mulailah mencatat iuran atau kas untuk mengaktifkan AI Insight."
+                  )}
                 </p>
               </div>
               <p className="text-[10px] font-medium opacity-60">
-                Insight dihasilkan otomatis pukul 08:00 WIB
+                {kasData.length > 0 ? "Insight dihasilkan otomatis pukul 08:00 WIB" : "Insight akan tersedia setelah data tercukupi"}
               </p>
             </div>
           </div>
@@ -1123,45 +1125,7 @@ export function AnalyticsPremiumView({
               Metrik Efisiensi
             </h4>
             <div className="space-y-4">
-              {[
-                {
-                  label: "Kepatuhan Iuran",
-                  val: "92%",
-                  change: "+4.5%",
-                  color: "emerald",
-                },
-                {
-                  label: "Respon Admin",
-                  val: "12m",
-                  change: "-5m",
-                  color: "blue",
-                },
-                {
-                  label: "Kepuasan Warga",
-                  val: "4.8",
-                  change: "+0.2",
-                  color: "amber",
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl"
-                >
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      {stat.label}
-                    </p>
-                    <p className="text-xl font-black text-slate-800">
-                      {stat.val}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-[10px] font-black text-${stat.color}-600 bg-${stat.color}-50 px-2 py-1 rounded-lg`}
-                  >
-                    {stat.change}
-                  </span>
-                </div>
-              ))}
+              <div className="text-xs text-slate-400 italic">Data belum tersedia</div>
             </div>
           </div>
         </div>

@@ -52,63 +52,26 @@ const QUICK_LINKS = [
   { label: 'Cek Kupon', icon: Tag, color: 'text-rose-500', bg: 'bg-rose-50' },
 ];
 
-const PRODUCTS = [
-  { id: '1', name: 'Beras Premium 5kg', category: 'Sembako', description: 'Beras pilihan kualitas super', price: 75000, stock: 45, image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=400', discount: '5%' },
-  { id: '2', name: 'Jasa Service AC', category: 'Servis', description: 'Cuci AC & Tambah Freon', price: 75000, stock: 10, image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7bc3?auto=format&fit=crop&q=80&w=400' },
-  { id: '3', name: 'Sofa Minimalis', category: 'Rumah tangga', description: 'Sofa nyaman untuk ruang tamu', price: 2500000, stock: 2, image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=400' },
-  { id: '4', name: 'T-Shirt Cotton Combed', category: 'Fashion', description: 'Kaos adem sedia berbagai warna', price: 85000, stock: 100, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400', discount: '10%' },
-  { id: '5', name: 'Powerbank 10000mAh', category: 'Elektronik', description: 'Fast charging dual port', price: 150000, stock: 25, image: 'https://images.unsplash.com/photo-1609592424109-dd03d6f16dcc?auto=format&fit=crop&q=80&w=400' },
-];
+const PRODUCTS = [];
 
-const RECENT_CHECKS = [
-  { id: 'rc1', name: 'Pembersih Saluran', label: '3/5/10M', image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=200', category: 'Rumah Tangga' },
-  { id: 'rc2', name: 'Tamiya Green Jet', label: 'Vehicle Model', image: 'https://images.unsplash.com/photo-1532330393533-443990a51d10?auto=format&fit=crop&q=80&w=200', category: 'Mainan' },
-  { id: 'rc3', name: 'Kawat Fleksibel', label: 'Pembersih Kerak', image: 'https://images.unsplash.com/photo-1595113316349-9fa49ed200d7?auto=format&fit=crop&q=80&w=200', category: 'Alat Tukang' },
-  { id: 'rc4', name: 'RC Monster Truck', label: 'Mobil & Truk RC', image: 'https://images.unsplash.com/photo-1594731802114-035622550d5a?auto=format&fit=crop&q=80&w=200', category: 'Mainan' },
-];
+const RECENT_CHECKS = [];
 
-const BANNERS = [
-  {
-    id: 1,
-    title: "Hemat di Tiap Transaksi",
-    subtitle: "11x Diskon",
-    benefit: "s.d. Rp55rb",
-    promoCode: "PASTIDISKON",
-    image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=1200",
-    color: "from-emerald-500/20"
-  },
-  {
-    id: 2,
-    title: "Flash Sale Spesial",
-    subtitle: "Diskon 50%",
-    benefit: "Hanya Hari Ini",
-    promoCode: "FLASHSALE50",
-    image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&q=80&w=1200",
-    color: "from-rose-500/20"
-  },
-  {
-    id: 3,
-    title: "Gratis Ongkir RT 26",
-    subtitle: "Belanja Puas",
-    benefit: "Tanpa Minimal",
-    promoCode: "ONGKIR0",
-    image: "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=1200",
-    color: "from-blue-500/20"
-  }
-];
+const BANNERS = [];
 
 export default function BelanjaView({ 
   products = [], 
   onAddToCart,
   showNotification,
   onProductSelect,
-  onBackToMain
+  onBackToMain,
+  currentUser
 }: { 
   products?: any[], 
   onAddToCart?: (p: any) => void,
   showNotification?: (msg: string, type?: "success" | "error" | "info" | "warning") => void,
   onProductSelect?: (p: any) => void,
-  onBackToMain?: () => void
+  onBackToMain?: () => void,
+  currentUser?: any
 }) {
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
@@ -347,6 +310,8 @@ export default function BelanjaView({
         
         {activeMainTab === "Home" && (
           <>
+            {BANNERS.length > 0 && (
+          <>
             {/* Banner Section - Swipeable */}
             <div className="relative group overflow-hidden rounded-3xl shadow-xl shadow-emerald-900/5">
           <div className="absolute inset-y-0 left-4 z-10 flex items-center">
@@ -433,6 +398,8 @@ export default function BelanjaView({
             ))}
           </div>
         </div>
+      </>
+        )}
 
         {/* Quick Links Row */}
         <div className="bg-white rounded-2xl p-2 flex items-center gap-2 border border-slate-100 overflow-x-auto no-scrollbar">
@@ -475,65 +442,69 @@ export default function BelanjaView({
         </div>
 
         {/* Recent Checks Section */}
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-black text-slate-800 tracking-tight uppercase font-elegant">Lanjut cek ini, yuk</h3>
-            <button 
-              onClick={() => showNotification?.("Melihat semua riwayat", "info")}
-              className="p-1 hover:bg-slate-100 rounded-full transition-colors"
-            >
-              <ChevronRight className="w-5 h-5 text-slate-400" />
-            </button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-            {RECENT_CHECKS.map((item) => (
-              <div 
-                key={item.id} 
-                onClick={() => handleRecentClick(item)}
-                className="min-w-[140px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all hover:scale-105 cursor-pointer group"
+        {RECENT_CHECKS.length > 0 && (
+          <div className="space-y-4 pt-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-800 tracking-tight uppercase font-elegant">Lanjut cek ini, yuk</h3>
+              <button 
+                onClick={() => showNotification?.("Melihat semua riwayat", "info")}
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
               >
-                <div className="h-28 bg-slate-100 overflow-hidden relative">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  <div className="absolute top-2 left-2 bg-rose-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">Baru</div>
-                </div>
-                <div className="p-3">
-                  <h4 className="text-[11px] font-black text-slate-800 truncate mb-1 uppercase tracking-tight group-hover:text-emerald-600 transition-colors">{item.name}</h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{item.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Feed Headers & Tabs */}
-        <div className="sticky top-[68px] z-40 bg-slate-50/95 backdrop-blur-sm pt-4 pb-2">
-            <div className="flex items-center gap-3 mb-4 px-2">
-               <h2 className="text-xl font-black text-slate-800 font-elegant tracking-tight">For You</h2>
-               <div className="bg-indigo-600 text-white px-2 py-1 rounded flex items-center gap-1.5 shadow-md shadow-indigo-500/20">
-                  <div className="bg-white rounded-full p-0.5">
-                    <CheckCircle2 size={10} className="text-indigo-600" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-tighter">Mall</span>
-               </div>
+                <ChevronRight className="w-5 h-5 text-slate-400" />
+              </button>
             </div>
-            <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-slate-100 pb-2">
-              {["Untuk Kamu", "Belanja Mall", "Elektronik", "Hiburan", "Top Up"].map((tab) => (
-                <button 
-                  key={tab}
-                  onClick={() => setActiveFeedTab(tab)}
-                  className={`pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant transition-all relative ${activeFeedTab === tab ? "text-emerald-600 font-black" : "text-slate-400 font-bold hover:text-slate-600"}`}
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+              {RECENT_CHECKS.map((item) => (
+                <div 
+                  key={item.id} 
+                  onClick={() => handleRecentClick(item)}
+                  className="min-w-[140px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all hover:scale-105 cursor-pointer group"
                 >
-                  {tab}
-                  {activeFeedTab === tab && (
-                    <motion.div 
-                      layoutId="feedTab"
-                      className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full"
-                    />
-                  )}
-                </button>
+                  <div className="h-28 bg-slate-100 overflow-hidden relative">
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <div className="absolute top-2 left-2 bg-rose-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">Baru</div>
+                  </div>
+                  <div className="p-3">
+                    <h4 className="text-[11px] font-black text-slate-800 truncate mb-1 uppercase tracking-tight group-hover:text-emerald-600 transition-colors">{item.name}</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{item.label}</p>
+                  </div>
+                </div>
               ))}
             </div>
-        </div>
+          </div>
+        )}
+
+        {/* Feed Headers & Tabs */}
+        {filteredProducts.length > 0 && (
+          <div className="sticky top-[68px] z-40 bg-slate-50/95 backdrop-blur-sm pt-4 pb-2">
+              <div className="flex items-center gap-3 mb-4 px-2">
+                 <h2 className="text-xl font-black text-slate-800 font-elegant tracking-tight">For You</h2>
+                 <div className="bg-indigo-600 text-white px-2 py-1 rounded flex items-center gap-1.5 shadow-md shadow-indigo-500/20">
+                    <div className="bg-white rounded-full p-0.5">
+                      <CheckCircle2 size={10} className="text-indigo-600" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Mall</span>
+                 </div>
+              </div>
+              <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-slate-100 pb-2">
+                {["Untuk Kamu", "Belanja Mall", "Elektronik", "Hiburan", "Top Up"].map((tab) => (
+                  <button 
+                    key={tab}
+                    onClick={() => setActiveFeedTab(tab)}
+                    className={`pb-2 whitespace-nowrap text-sm tracking-tight px-1 uppercase font-elegant transition-all relative ${activeFeedTab === tab ? "text-emerald-600 font-black" : "text-slate-400 font-bold hover:text-slate-600"}`}
+                  >
+                    {tab}
+                    {activeFeedTab === tab && (
+                      <motion.div 
+                        layoutId="feedTab"
+                        className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+          </div>
+        )}
 
         {/* Product Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 pt-4">
@@ -599,15 +570,32 @@ export default function BelanjaView({
 
         {/* Empty State */}
         {filteredProducts.length === 0 && (
-          <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
-             <Package size={48} className="text-slate-200 mx-auto mb-4" />
-             <h4 className="text-lg font-black text-slate-400 uppercase tracking-widest">Produk Tidak Ditemukan</h4>
-             {searchQuery && (
+          <div className="py-20 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center">
+             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                <Store size={40} className="text-slate-200" />
+             </div>
+             <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Lapak 26 Masih Kosong</h4>
+             <p className="text-slate-500 text-sm max-w-sm px-6 leading-relaxed">
+               {PRODUCTS.length === 0 
+                 ? "Belum ada warga yang membuka lapak di sini. Jadilah yang pertama memajukan ekonomi lingkungan dengan membuka toko Anda!" 
+                 : searchQuery 
+                   ? `Tidak ada produk yang sesuai dengan pencarian "${searchQuery}" di kategori ini.`
+                   : `Belum ada produk di kategori ${activeCategory}.`}
+             </p>
+             {searchQuery ? (
                <button 
                  onClick={() => setSearchQuery("")}
-                 className="mt-6 text-emerald-600 font-black text-sm uppercase tracking-widest hover:underline"
+                 className="mt-8 px-6 py-3 bg-emerald-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95"
                >
                  Hapus Pencarian
+               </button>
+             ) : PRODUCTS.length === 0 && (
+               <button 
+                 onClick={() => setActiveMainTab("Pendaftaran Toko")}
+                 className="mt-8 px-8 py-4 bg-emerald-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl hover:bg-emerald-700 transition-all shadow-2xl shadow-emerald-600/30 active:scale-95 flex items-center gap-2"
+               >
+                 <Plus size={16} />
+                 Buka Lapak Sekarang
                </button>
              )}
           </div>

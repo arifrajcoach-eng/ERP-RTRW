@@ -481,6 +481,7 @@ export default function ETokoView({
                 setSelectedProduct(p);
                 setShowProductModal(true);
               }}
+              currentUser={currentUser}
             />
           )}
 

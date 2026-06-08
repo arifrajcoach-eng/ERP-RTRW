@@ -231,141 +231,252 @@ export default function PanduanAdminView() {
 
             {activeTab === 'sosialisasi' && (
               <div className="space-y-6 print:m-0 print:p-0">
-                {/* Print Header - Only visible when printing */}
+                {/* Print Header */}
                 <div className="hidden print:block text-center border-b-2 border-slate-900 pb-6 mb-8">
-                  <h1 className="text-3xl font-black uppercase tracking-tight">Materi Sosialisasi Aplikasi SmaRtRw AI</h1>
-                  <p className="text-slate-600 mt-2">Dukungan Teknologi untuk Lingkungan yang Lebih Modern & Transparan</p>
+                  <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900">Bahan Sosialisasi SmaRtRw AI</h1>
+                  <p className="text-slate-600 mt-2 font-bold italic">"Dari Warga, Oleh Warga, Untuk Lingkungan yang Pintar"</p>
                 </div>
 
-                <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-2xl shadow-sm relative overflow-hidden print:border-none print:shadow-none">
-                  {/* Action Button for UI */}
+                <div 
+                  className="bg-white border border-slate-200 rounded-2xl shadow-sm relative overflow-hidden print:border-none print:shadow-none"
+                  style={{ minHeight: '800px', paddingTop: '49px' }}
+                >
+                  {/* Action Button - Pulled up with custom styles from focus mode feedback */}
                   <div className="absolute top-6 right-6 print:hidden">
                     <button 
                       onClick={handlePrint}
-                      className="flex items-center space-x-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                      className="flex items-center space-x-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl active:scale-95 group shadow-slate-900/20"
+                      style={{ marginTop: '-35px', paddingTop: '20px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px' }}
                     >
-                      <Printer className="w-4 h-4" />
-                      <span>Cetak / Simpan PDF</span>
+                      <Printer className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                      <span>Cetak PDF</span>
                     </button>
                   </div>
 
-                  <div className="flex items-center space-x-3 mb-8 pb-4 border-b border-slate-100 print:mb-4">
-                    <div className="p-3 bg-blue-100 rounded-xl text-blue-600 print:hidden">
-                      <FileText className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-800">Materi Edukasi Warga</h3>
-                      <p className="text-sm text-slate-500 mt-1">Gunakan poin-poin ini saat melakukan rapat warga atau pesan grup</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-8">
-                    {/* Q1: Kenapa Pakai Aplikasi Ini? */}
-                    <section>
-                      <div className="flex items-center space-x-2 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">1</div>
-                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Kenapa Pakai SmaRtRw AI?</h4>
+                  <div className="p-6 md:p-8 space-y-12 text-slate-800" style={{ paddingTop: '14px' }}>
+                    <section className="space-y-6">
+                      <div className="border-l-4 border-slate-900 pl-4">
+                        <h4 className="font-black uppercase tracking-tight text-2xl text-slate-900">Kenapa kita harus pakai aplikasi SmartRW AI?</h4>
+                        <p className="text-slate-500 mt-2 text-sm">Poin-poin ini dirancang berdasarkan fitur nyata yang ada di dalam aplikasi:</p>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-10 print:ml-4">
-                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                          <h5 className="font-bold text-slate-800 mb-2 flex items-center"><Zap className="w-4 h-4 mr-2 text-amber-500" /> Digitalisasi Tanpa Ribet</h5>
-                          <p className="text-sm text-slate-600">Mengubah sistem manual yang lambat menjadi sistem digital yang cepat dan bisa diakses kapan saja dari genggaman.</p>
+                      
+                      <p className="text-lg font-medium text-slate-700 italic border-l-2 border-slate-200 pl-4 py-2 bg-slate-50/50 rounded-r-xl">
+                        "Kita pindah ke digital bukan sekadar gaya-gayaan, tapi untuk menyelesaikan masalah klasik di lingkungan kita:"
+                      </p>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                          <h5 className="font-black text-slate-900 uppercase tracking-tight text-sm mb-2 flex items-center">
+                            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mr-2 text-[10px]">1</span>
+                            Transparansi
+                          </h5>
+                          <p className="text-sm text-slate-600 leading-relaxed pl-8">
+                            Tidak ada lagi kecurigaan "uang iuran lari ke mana?". Semua tercatat sistem, warga bisa cek riwayat bayarnya sendiri kapan saja.
+                          </p>
                         </div>
-                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                          <h5 className="font-bold text-slate-800 mb-2 flex items-center"><ShieldCheck className="w-4 h-4 mr-2 text-blue-500" /> Keamanan Data</h5>
-                          <p className="text-sm text-slate-600">Arsip warga tidak lagi berupa tumpukan kertas yang mudah rusak/hilang, tapi tersimpan aman di sistem cloud terenkripsi.</p>
+
+                        <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                          <h5 className="font-black text-slate-900 uppercase tracking-tight text-sm mb-2 flex items-center">
+                            <span className="w-6 h-6 bg-rose-100 text-rose-600 rounded-lg flex items-center justify-center mr-2 text-[10px]">2</span>
+                            Keamanan 24/7 (Fitur SOS)
+                          </h5>
+                          <p className="text-sm text-slate-600 leading-relaxed pl-8">
+                            Saat ada keadaan darurat (sakit, maling, kebakaran), warga tidak perlu bingung cari nomor telepon pengurus. Cukup satu klik tombol SOS, semua pengurus dan warga sekitar yang aktif akan mendapat notifikasi instan.
+                          </p>
+                        </div>
+
+                        <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                          <h5 className="font-black text-slate-900 uppercase tracking-tight text-sm mb-2 flex items-center">
+                            <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mr-2 text-[10px]">3</span>
+                            Administrasi Tanpa Ribet
+                          </h5>
+                          <p className="text-sm text-slate-600 leading-relaxed pl-8">
+                            Urus surat pengantar atau lapor warga baru tidak perlu lagi cari-cari pengurus ke rumahnya. Semua bisa diajukan lewat HP, pengurus tinggal klik "Approve".
+                          </p>
                         </div>
                       </div>
                     </section>
 
-                    {/* Q2: Benefit Section */}
-                    <section>
-                      <div className="flex items-center space-x-2 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">2</div>
-                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Manfaat Bagi Semua Pihak</h4>
-                      </div>
-                      <div className="space-y-4 ml-10 print:ml-4">
+                    <section className="space-y-8">
+                      <h4 className="font-black uppercase tracking-tight text-2xl text-slate-900 border-b-2 border-slate-100 pb-4">Apa manfaatnya bagi kita semua?</h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Warga */}
-                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                          <h5 className="font-black text-blue-900 text-sm uppercase tracking-widest mb-3 flex items-center">
-                            <Heart className="w-4 h-4 mr-2 fill-blue-500 text-blue-500" /> Bagi Warga
-                          </h5>
-                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-blue-800">
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Monitor Iuran & Saldo secara Real-time.</li>
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Urus Surat Pengantar dari HP tanpa harus ke rumah Pengurus.</li>
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Tombol SOS untuk kondisi darurat lingkungan.</li>
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Info kegiatan & Transparansi Keuangan Wilayah.</li>
+                        <div className="space-y-4">
+                          <div className="bg-blue-600 text-white p-3 rounded-xl inline-block font-black uppercase tracking-widest text-[10px]">Bagi Warga</div>
+                          <ul className="space-y-3">
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Self-Service:</strong> Bisa update data profil sendiri, cek saldo iuran, dan akses layanan surat tanpa harus menunggu jam kerja pengurus.</p>
+                            </li>
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Ekonomi Lokal (Lapak):</strong> Bisa jualan produk UMKM atau jasa di fitur "Lapak" yang hanya bisa diakses oleh tetangga sendiri (pasar yang terpercaya).</p>
+                            </li>
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Suara Didengar:</strong> Ikut voting atau pemilihan ketua RT/RW secara digital, cepat, dan rahasia.</p>
+                            </li>
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Mading Digital:</strong> Aktifitas terdokumentasi dengan baik.</p>
+                            </li>
                           </ul>
                         </div>
-                        {/* RT/RW */}
-                        <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                          <h5 className="font-black text-emerald-900 text-sm uppercase tracking-widest mb-3 flex items-center">
-                            <Shield className="w-4 h-4 mr-2 fill-emerald-500 text-emerald-500" /> Bagi Pengurus (RT & RW)
-                          </h5>
-                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-emerald-800">
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Otomatisasi Laporan Keuangan (RT) & Konsolidasi (RW).</li>
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Database warga yang rapi, akurat, dan mudah dicari.</li>
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Verifikasi mandiri bukti bayar iuran warga.</li>
-                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Koordinasi cepat antar RT melalui dashboard RW.</li>
+
+                        {/* Pengurus RT */}
+                        <div className="space-y-4">
+                          <div className="bg-emerald-600 text-white p-3 rounded-xl inline-block font-black uppercase tracking-widest text-[10px]">Bagi Pengurus RT</div>
+                          <ul className="space-y-3">
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Data Rapi & Digital:</strong> Tidak ada lagi tumpukan buku atau file Excel yang rawan hilang. Data warga tersentralisasi dan aman.</p>
+                            </li>
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Monitoring Kolektif Iuran:</strong> Sistem otomatis menghitung siapa yang sudah bayar dan siapa yang menunggak. Penagihan jadi lebih objektif (berdasarkan sistem).</p>
+                            </li>
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Manajemen Darurat:</strong> Respon cepat terhadap laporan SOS warga di wilayahnya.</p>
+                            </li>
+                          </ul>
+                        </div>
+
+                        {/* Pengurus RW */}
+                        <div className="space-y-4">
+                          <div className="bg-rose-600 text-white p-3 rounded-xl inline-block font-black uppercase tracking-widest text-[10px]">Bagi Pengurus RW</div>
+                          <ul className="space-y-3">
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Dashboard Wilayah:</strong> RW punya pandangan luas (helikopter view) terhadap kondisi seluruh RT di bawahnya (Prinsip Parent-Child).</p>
+                            </li>
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Audit Terpusat:</strong> Memastikan standar keamanan dan administrasi berjalan sama di setiap RT.</p>
+                            </li>
+                            <li className="flex gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                              <p className="text-xs text-slate-600"><strong>Sinkronisasi Inventaris:</strong> Memantau aset atau fasilitas bersama di tingkat lingkungan secara lebih efisien.</p>
+                            </li>
                           </ul>
                         </div>
                       </div>
                     </section>
 
-                    {/* Q3: Unifying Features */}
-                    <section>
-                      <div className="flex items-center space-x-2 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">3</div>
-                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Ekosistem yang Menyatukan Kita</h4>
+                    <section className="space-y-6">
+                      <h4 className="font-black uppercase tracking-tight text-2xl text-slate-900">Hal apa yang menyatukan aktivitas kita di aplikasi ini?</h4>
+                      <p className="text-slate-500 text-sm italic">Aplikasi ini bukan sekadar alat hitung, tapi Jembatan Interaksi Warga:</p>
+                      
+                      <div className="space-y-6">
+                        <div className="flex gap-4 p-6 bg-slate-900 text-white rounded-3xl shadow-xl shadow-slate-900/10">
+                          <Heart className="w-8 h-8 text-rose-400 shrink-0" />
+                          <div>
+                            <h6 className="font-black text-sm uppercase tracking-[0.2em] mb-2">Gotong Royong Digital</h6>
+                            <p className="text-sm text-slate-300 leading-relaxed">
+                              Melalui fitur SOS, kita kembali menghidupkan semangat saling menjaga. Saat satu warga kesulitan, teknologi ini menyatukan kita untuk membantu dengan cepat.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                          <Zap className="w-8 h-8 text-blue-500 shrink-0" />
+                          <div>
+                            <h6 className="font-black text-sm uppercase tracking-[0.2em] mb-2 text-slate-900">Satu Pintu Aktivitas</h6>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              Dari urusan bayar sampah, belanja di tetangga (Lapak), sampai urus administrasi, semuanya dilakukan di satu "rumah digital" yang sama. Ini membuat kita lebih sering berinteraksi meskipun secara virtual.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                          <Users className="w-8 h-8 text-emerald-500 shrink-0" />
+                          <div>
+                            <h6 className="font-black text-sm uppercase tracking-[0.2em] mb-2 text-slate-900">Inklusi Digital</h6>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              Dengan SmartRW AI, kita memastikan tidak ada warga yang tertinggal informasi. Pengumuman penting sampai ke tangan setiap warga secara bersamaan, menciptakan rasa setara dan adil di lingkungan.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="ml-10 print:ml-4 bg-slate-900 p-6 rounded-2xl text-white">
-                        <p className="text-sm text-slate-300 mb-6">Aplikasi ini bukan sekadar alat administrasi, tapi wadah interaksi sosial:</p>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="text-center">
-                            <Store className="w-8 h-8 mx-auto mb-3 text-rose-400" />
-                            <h6 className="font-bold text-xs uppercase mb-1">E-Lapak UMKM</h6>
-                            <p className="text-[10px] text-slate-400">Jual-Beli antar tetangga untuk perkuat ekonomi warga.</p>
-                          </div>
-                          <div className="text-center">
-                            <Activity className="w-8 h-8 mx-auto mb-3 text-emerald-400" />
-                            <h6 className="font-bold text-xs uppercase mb-1">Bank Sampah & Posyandu</h6>
-                            <p className="text-[10px] text-slate-400">Menjaga lingkungan & kesehatan bersama secara terukur.</p>
-                          </div>
-                          <div className="text-center">
-                            <MessageSquare className="w-8 h-8 mx-auto mb-3 text-sky-400" />
-                            <h6 className="font-bold text-xs uppercase mb-1">Aspirasi & Pengaduan</h6>
-                            <p className="text-[10px] text-slate-400">Suara warga didengar dan ditindaklanjuti secara sistematis.</p>
-                          </div>
+
+                      <div className="bg-amber-900 text-amber-100 p-8 rounded-3xl text-center space-y-4">
+                        <h5 className="font-black text-amber-400 uppercase tracking-[0.3em] text-[10px]">Slogan Sosialisasi</h5>
+                        <blockquote className="text-3xl font-black tracking-tight leading-none overflow-visible">
+                          "Dari Warga, Oleh Warga, Untuk Lingkungan yang Pintar."
+                        </blockquote>
+                        <p className="text-sm text-amber-200/80 max-w-lg mx-auto">
+                          Bahwa aplikasi ini adalah milik bersama untuk meningkatkan kualitas hidup kita di lingkungan RT/RW ini.
+                        </p>
+                      </div>
+                    </section>
+
+                    <section className="print:break-before-page pt-10 space-y-8">
+                      <div className="space-y-2">
+                        <h4 className="font-black uppercase tracking-tight text-2xl text-slate-900">Catatan Penting: Value Proposition</h4>
+                        <p className="text-slate-500 text-sm">Poin mendasar tadi, ada beberapa aspek nilai tambah (Value Proposition) yang sangat krusial saat sosialisasi:</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-6 bg-white border border-slate-200 rounded-3xl hover:border-slate-400 transition-colors">
+                          <h6 className="font-black text-slate-900 mb-3 text-sm">1. Transparansi Finansial Real-Time (Tanpa Tunggu Laporan Bulanan)</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed italic border-l-4 border-slate-100 pl-4">
+                            "Dengan aplikasi ini, setiap Rupiah iuran yang masuk tercatat otomatis. Warga bisa melihat progres saldo kas lingkungan kapan saja. Ini membangun kepercayaan (trust) yang luar biasa antara warga dan pengurus."
+                          </p>
+                        </div>
+
+                        <div className="p-6 bg-white border border-slate-200 rounded-3xl hover:border-slate-400 transition-colors">
+                          <h6 className="font-black text-slate-900 mb-3 text-sm">2. Digitalisasi "Surat-Menyurat" dalam Genggaman</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed italic border-l-4 border-slate-100 pl-4">
+                            "Warga bisa mengajukan permohonan surat (Sket Domisili, Pengantar, dll) langsung secara digital. Pengurus tinggal melakukan approve lewat HP. Surat jadi lebih cepat, terdokumentasi rapi, dan mengurangi penggunaan kertas."
+                          </p>
+                        </div>
+
+                        <div className="p-6 bg-white border border-slate-200 rounded-3xl hover:border-slate-400 transition-colors">
+                          <h6 className="font-black text-slate-900 mb-3 text-sm">3. Membangun Ekosistem Ekonomi Lokal (Lapak Warga)</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed italic border-l-4 border-slate-100 pl-4">
+                            "Fitur Belanja/Toko di dalam aplikasi bukan sekadar pajangan. Ini adalah wadah untuk warga saling melariskan dagangan tetangga. Uang berputar di dalam lingkungan kita sendiri, memperkuat ekonomi komunitas."
+                          </p>
+                        </div>
+
+                        <div className="p-6 bg-white border border-slate-200 rounded-3xl hover:border-slate-400 transition-colors">
+                          <h6 className="font-black text-slate-900 mb-3 text-sm">4. Validitas dan Keamanan Data Warga</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed italic border-l-4 border-slate-100 pl-4">
+                            "Data kependudukan (NIK, KK) tersimpan di enkripsi standar keamanan industri. Memudahkan pengurus saat ada bantuan sosial atau pendataan mendadak dari Kelurahan karena data selalu up-to-date dan valid."
+                          </p>
+                        </div>
+
+                        <div className="p-6 bg-white border border-slate-200 rounded-3xl hover:border-slate-400 transition-colors">
+                          <h6 className="font-black text-slate-900 mb-3 text-sm">5. Jejak Digital Lingkungan (Digital Legacy)</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed italic border-l-4 border-slate-100 pl-4">
+                            "Aplikasi ini menjadi 'otak' bagi wilayah kita. Semua riwayat kegiatan, pembangunan, dan kebijakan terekam permanen. Siapapun yang menjadi pengurus berikutnya tidak perlu mulai dari nol karena semua datanya sudah ada di sistem."
+                          </p>
+                        </div>
+
+                        <div className="p-6 bg-white border border-slate-200 rounded-3xl hover:border-slate-400 transition-colors">
+                          <h6 className="font-black text-slate-900 mb-3 text-sm">6. Notifikasi Cerdas & Pengingat Otomatis</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed italic border-l-4 border-slate-100 pl-4">
+                            "Sistem akan memberikan pengingat lembut (friendly reminders) ke HP warga. Pengurus tidak perlu merasa tidak enak hati untuk menagih secara manual, karena sistem yang melakukannya secara profesional."
+                          </p>
                         </div>
                       </div>
                     </section>
 
-                    {/* Bonus: Additional Points */}
-                    <section className="print:break-before-page print:mt-20">
-                      <div className="flex items-center space-x-2 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">4</div>
-                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Standar Masa Depan</h4>
-                      </div>
-                      <div className="ml-10 print:ml-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-4 border border-slate-200 rounded-xl">
-                          <h6 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2">Transparansi Mutlak</h6>
-                          <p className="text-xs text-slate-600 leading-relaxed">Setiap rupiah yang masuk dan keluar dapat diaudit langsung oleh warga lewat grafik yang jujur.</p>
-                        </div>
-                        <div className="p-4 border border-slate-200 rounded-xl">
-                          <h6 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2">Keadilan Layanan</h6>
-                          <p className="text-xs text-slate-600 leading-relaxed">Sistem antrian surat dan verifikasi iuran menjamin semua warga mendapat hak layanan yang sama cepatnya.</p>
-                        </div>
-                        <div className="p-4 border border-slate-200 rounded-xl">
-                          <h6 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2">Akses Inklusif</h6>
-                          <p className="text-xs text-slate-600 leading-relaxed">Bisa diakses dari browser mana pun tanpa harus download aplikasi berat, hemat memori HP warga.</p>
-                        </div>
-                      </div>
-                    </section>
+                    <div className="bg-slate-200 p-8 rounded-[40px] text-center border-2 border-dashed border-slate-300">
+                      <h4 className="font-black uppercase tracking-[0.4em] text-[10px] text-slate-500 mb-4">Saran Strategi Sosialisasi:</h4>
+                      <p className="text-xl font-black text-slate-900 leading-relaxed">
+                        Saat berbicara dengan warga, gunakan istilah <span className="text-blue-600 underline">"Modernisasi Lingkungan"</span> atau <span className="text-blue-600 underline">"Kampung Digital"</span>.
+                      </p>
+                      <p className="text-sm text-slate-600 mt-4 max-w-md mx-auto">
+                        Tekankan bahwa aplikasi ini bukan untuk menambah beban, tapi untuk menyederhanakan kesulitan yang selama ini kita anggap biasa.
+                      </p>
+                    </div>
                   </div>
                   
                   {/* Print Footer */}
                   <div className="hidden print:block mt-12 pt-8 border-t border-slate-100 text-center">
                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">SmaRtRw AI • Digitalized for Harmony</p>
+                    <p className="text-[8px] text-slate-400 mt-1">Dicetak oleh Admin Wilayah - SmartRW AI Management System</p>
                   </div>
                 </div>
               </div>
