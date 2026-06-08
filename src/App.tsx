@@ -5179,7 +5179,7 @@ function SelfRegistrationView({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   NIK (16 Digit)
                 </label>
                 <input
@@ -5190,11 +5190,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, nik: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Nomor KK (16 Digit)
                 </label>
                 <input
@@ -5205,11 +5205,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, kk: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="md:col-span-2 space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Nama Lengkap
                 </label>
                 <input
@@ -5219,11 +5219,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, nama: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold uppercase"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold uppercase text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Tempat Lahir
                 </label>
                 <input
@@ -5233,11 +5233,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, tempatLahir: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Tanggal Lahir
                 </label>
                 <input
@@ -5247,11 +5247,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, tglLahir: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Jenis Kelamin
                 </label>
                 <select
@@ -5259,14 +5259,14 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, jk: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold text-slate-900"
                 >
                   <option value="Laki-Laki">Laki-Laki</option>
                   <option value="Perempuan">Perempuan</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Kewarganegaraan
                 </label>
                 <select
@@ -5277,14 +5277,14 @@ function SelfRegistrationView({
                       kewarganegaraan: e.target.value,
                     })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold text-slate-900"
                 >
                   <option value="WNI">WNI</option>
                   <option value="WNA">WNA</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Pendidikan Terakhir
                 </label>
                 <select
@@ -5292,7 +5292,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, pendidikan: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
                   <option value="">Pilih Pendidikan</option>
                   <option value="Belum Sekolah">Belum Sekolah</option>
@@ -5309,7 +5309,7 @@ function SelfRegistrationView({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Agama
                 </label>
                 <select
@@ -5317,7 +5317,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, agama: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
                   <option value="Islam">Islam</option>
                   <option value="Kristen">Kristen</option>
@@ -5328,7 +5328,7 @@ function SelfRegistrationView({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Status Perkawinan
                 </label>
                 <select
@@ -5336,7 +5336,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, statusKawin: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
                   <option value="Belum Kawin">Belum Kawin</option>
                   <option value="Kawin">Kawin</option>
@@ -5345,7 +5345,7 @@ function SelfRegistrationView({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Posisi dalam Keluarga
                 </label>
                 <select
@@ -5353,7 +5353,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, posisiKeluarga: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
                   <option value="Suami (Kepala Keluarga)">
                     Suami (Kepala Keluarga)
@@ -5366,7 +5366,7 @@ function SelfRegistrationView({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Golongan Darah
                 </label>
                 <input
@@ -5375,7 +5375,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, golDarah: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold uppercase"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-blue/30 outline-none transition-all font-bold uppercase text-slate-900"
                 />
               </div>
             </div>
@@ -5393,7 +5393,7 @@ function SelfRegistrationView({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   No. Blok Rumah
                 </label>
                 <input
@@ -5403,11 +5403,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, blok: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 outline-none transition-all font-bold uppercase"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 outline-none transition-all font-bold uppercase text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   RT
                 </label>
                 <select
@@ -5415,7 +5415,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, rt: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
                   {["01", "02", "03", "04", "05", "06", "07", "08"].map(
                     (rt) => (
@@ -5427,7 +5427,7 @@ function SelfRegistrationView({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   RW
                 </label>
                 <select
@@ -5435,7 +5435,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, rw: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
                   {["26"].map((rw) => (
                     <option key={rw} value={rw}>
@@ -5445,7 +5445,7 @@ function SelfRegistrationView({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Status Warga
                 </label>
                 <select
@@ -5453,7 +5453,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, statusWarga: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
                   <option value="Warga Tetap">Warga Tetap</option>
                   <option value="Warga Kontrak">Warga Kontrak</option>
@@ -5461,7 +5461,7 @@ function SelfRegistrationView({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Nomor HP / WhatsApp
                 </label>
                 <input
@@ -5472,11 +5472,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, hp: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Email
                 </label>
                 <input
@@ -5486,11 +5486,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Kelurahan
                 </label>
                 <input
@@ -5500,11 +5500,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, kelurahan: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Kecamatan
                 </label>
                 <input
@@ -5514,11 +5514,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, kecamatan: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Kota / Kabupaten
                 </label>
                 <input
@@ -5528,11 +5528,11 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, kota: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">
                   Profesi / Pekerjaan
                 </label>
                 <input
@@ -5542,7 +5542,7 @@ function SelfRegistrationView({
                   onChange={(e) =>
                     setFormData({ ...formData, pekerjaan: e.target.value })
                   }
-                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 />
               </div>
             </div>
