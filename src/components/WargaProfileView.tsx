@@ -80,10 +80,27 @@ export function WargaProfileView({
   const [activeCitizenTab, setActiveCitizenTab] = useState<'profil' | 'layanan' | 'riwayat'>('profil');
   const [uploadPct, setUploadPct] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<any>(wargaData);
+  const [formData, setFormData] = useState<any>(wargaData || {});
+
+  // Update formData when wargaData arrives
+  useEffect(() => {
+    if (wargaData) {
+      setFormData(wargaData);
+    }
+  }, [wargaData]);
+
   const [files, setFiles] = useState<{ktp?: File, kk?: File}>({});
   const [uploading, setUploading] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  if (!wargaData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-10 text-slate-400 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-brand-blue rounded-full animate-spin mb-4"></div>
+        <p className="text-[10px] font-bold uppercase tracking-widest">Sinkronisasi Data Profil...</p>
+      </div>
+    );
+  }
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {

@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette } from 'lucide-react';
+import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette, FileText, Printer, CheckCircle2, Heart, ShieldCheck, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PanduanAdminView() {
-  const [activeTab, setActiveTab] = useState<'fitur' | 'action' | 'peringatan'>('fitur');
+  const [activeTab, setActiveTab] = useState<'fitur' | 'action' | 'peringatan' | 'sosialisasi'>('fitur');
 
   const tabs = [
     { id: 'fitur', label: 'Fitur Aplikasi', icon: Info },
+    { id: 'sosialisasi', label: 'Bahan Sosialisasi', icon: FileText },
     { id: 'action', label: 'Action Plan', icon: Star },
     { id: 'peringatan', label: 'Peringatan Penting', icon: AlertOctagon },
   ];
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="space-y-6 pb-20 max-w-4xl mx-auto">
@@ -220,6 +225,148 @@ export default function PanduanAdminView() {
                   <p className="text-sm text-blue-700 leading-relaxed ml-8">
                     Mulailah dengan (1) melengkapi <strong>Data Wilayah/Organisasi</strong>, (2) mencatat <strong>Data Warga/KK</strong>, dan (3) membimbing warga menginstall aplikasi. Selamat bertugas menjadi pengurus yang modern! 🚀
                   </p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'sosialisasi' && (
+              <div className="space-y-6 print:m-0 print:p-0">
+                {/* Print Header - Only visible when printing */}
+                <div className="hidden print:block text-center border-b-2 border-slate-900 pb-6 mb-8">
+                  <h1 className="text-3xl font-black uppercase tracking-tight">Materi Sosialisasi Aplikasi SmaRtRw AI</h1>
+                  <p className="text-slate-600 mt-2">Dukungan Teknologi untuk Lingkungan yang Lebih Modern & Transparan</p>
+                </div>
+
+                <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-2xl shadow-sm relative overflow-hidden print:border-none print:shadow-none">
+                  {/* Action Button for UI */}
+                  <div className="absolute top-6 right-6 print:hidden">
+                    <button 
+                      onClick={handlePrint}
+                      className="flex items-center space-x-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Cetak / Simpan PDF</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center space-x-3 mb-8 pb-4 border-b border-slate-100 print:mb-4">
+                    <div className="p-3 bg-blue-100 rounded-xl text-blue-600 print:hidden">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800">Materi Edukasi Warga</h3>
+                      <p className="text-sm text-slate-500 mt-1">Gunakan poin-poin ini saat melakukan rapat warga atau pesan grup</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    {/* Q1: Kenapa Pakai Aplikasi Ini? */}
+                    <section>
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">1</div>
+                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Kenapa Pakai SmaRtRw AI?</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-10 print:ml-4">
+                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                          <h5 className="font-bold text-slate-800 mb-2 flex items-center"><Zap className="w-4 h-4 mr-2 text-amber-500" /> Digitalisasi Tanpa Ribet</h5>
+                          <p className="text-sm text-slate-600">Mengubah sistem manual yang lambat menjadi sistem digital yang cepat dan bisa diakses kapan saja dari genggaman.</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                          <h5 className="font-bold text-slate-800 mb-2 flex items-center"><ShieldCheck className="w-4 h-4 mr-2 text-blue-500" /> Keamanan Data</h5>
+                          <p className="text-sm text-slate-600">Arsip warga tidak lagi berupa tumpukan kertas yang mudah rusak/hilang, tapi tersimpan aman di sistem cloud terenkripsi.</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Q2: Benefit Section */}
+                    <section>
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">2</div>
+                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Manfaat Bagi Semua Pihak</h4>
+                      </div>
+                      <div className="space-y-4 ml-10 print:ml-4">
+                        {/* Warga */}
+                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                          <h5 className="font-black text-blue-900 text-sm uppercase tracking-widest mb-3 flex items-center">
+                            <Heart className="w-4 h-4 mr-2 fill-blue-500 text-blue-500" /> Bagi Warga
+                          </h5>
+                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-blue-800">
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Monitor Iuran & Saldo secara Real-time.</li>
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Urus Surat Pengantar dari HP tanpa harus ke rumah Pengurus.</li>
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Tombol SOS untuk kondisi darurat lingkungan.</li>
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Info kegiatan & Transparansi Keuangan Wilayah.</li>
+                          </ul>
+                        </div>
+                        {/* RT/RW */}
+                        <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                          <h5 className="font-black text-emerald-900 text-sm uppercase tracking-widest mb-3 flex items-center">
+                            <Shield className="w-4 h-4 mr-2 fill-emerald-500 text-emerald-500" /> Bagi Pengurus (RT & RW)
+                          </h5>
+                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-emerald-800">
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Otomatisasi Laporan Keuangan (RT) & Konsolidasi (RW).</li>
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Database warga yang rapi, akurat, dan mudah dicari.</li>
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Verifikasi mandiri bukti bayar iuran warga.</li>
+                            <li className="flex items-start"><CheckCircle2 className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" /> Koordinasi cepat antar RT melalui dashboard RW.</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Q3: Unifying Features */}
+                    <section>
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">3</div>
+                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Ekosistem yang Menyatukan Kita</h4>
+                      </div>
+                      <div className="ml-10 print:ml-4 bg-slate-900 p-6 rounded-2xl text-white">
+                        <p className="text-sm text-slate-300 mb-6">Aplikasi ini bukan sekadar alat administrasi, tapi wadah interaksi sosial:</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="text-center">
+                            <Store className="w-8 h-8 mx-auto mb-3 text-rose-400" />
+                            <h6 className="font-bold text-xs uppercase mb-1">E-Lapak UMKM</h6>
+                            <p className="text-[10px] text-slate-400">Jual-Beli antar tetangga untuk perkuat ekonomi warga.</p>
+                          </div>
+                          <div className="text-center">
+                            <Activity className="w-8 h-8 mx-auto mb-3 text-emerald-400" />
+                            <h6 className="font-bold text-xs uppercase mb-1">Bank Sampah & Posyandu</h6>
+                            <p className="text-[10px] text-slate-400">Menjaga lingkungan & kesehatan bersama secara terukur.</p>
+                          </div>
+                          <div className="text-center">
+                            <MessageSquare className="w-8 h-8 mx-auto mb-3 text-sky-400" />
+                            <h6 className="font-bold text-xs uppercase mb-1">Aspirasi & Pengaduan</h6>
+                            <p className="text-[10px] text-slate-400">Suara warga didengar dan ditindaklanjuti secara sistematis.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Bonus: Additional Points */}
+                    <section className="print:break-before-page print:mt-20">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">4</div>
+                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg">Standar Masa Depan</h4>
+                      </div>
+                      <div className="ml-10 print:ml-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 border border-slate-200 rounded-xl">
+                          <h6 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2">Transparansi Mutlak</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed">Setiap rupiah yang masuk dan keluar dapat diaudit langsung oleh warga lewat grafik yang jujur.</p>
+                        </div>
+                        <div className="p-4 border border-slate-200 rounded-xl">
+                          <h6 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2">Keadilan Layanan</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed">Sistem antrian surat dan verifikasi iuran menjamin semua warga mendapat hak layanan yang sama cepatnya.</p>
+                        </div>
+                        <div className="p-4 border border-slate-200 rounded-xl">
+                          <h6 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-2">Akses Inklusif</h6>
+                          <p className="text-xs text-slate-600 leading-relaxed">Bisa diakses dari browser mana pun tanpa harus download aplikasi berat, hemat memori HP warga.</p>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                  
+                  {/* Print Footer */}
+                  <div className="hidden print:block mt-12 pt-8 border-t border-slate-100 text-center">
+                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">SmaRtRw AI • Digitalized for Harmony</p>
+                  </div>
                 </div>
               </div>
             )}

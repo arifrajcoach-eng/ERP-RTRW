@@ -118,7 +118,7 @@ export default function BelanjaView({
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
   const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat" | "LiveChat" | "EmailSupport">("Main");
   const [chatMessages, setChatMessages] = useState<Array<{ id: number; text: string; sender: 'user' | 'agent'; time: string }>>([
-    { id: 1, text: "Halo Bpk. Arif, saya Ratih dari Customer Support E-LAPAK26 (SmaRtRw AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
+    { id: 1, text: "Halo Bapak/Ibu, saya Ratih dari Customer Support E-LAPAK26 (SmaRtRw AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatIsTyping, setChatIsTyping] = useState(false);
@@ -129,15 +129,15 @@ export default function BelanjaView({
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [helpForm, setHelpForm] = useState({ category: "", message: "" });
   const [localAddresses, setLocalAddresses] = useState([
-    { id: 1, label: "Rumah", receiver: "Arif", phone: "+62 812-3456-7890", street: "Jl. Melati IV No. 12, Blok B/12, RT 026/004", district: "Kelurahan Pusat", city: "Jakarta Selatan", isMain: true },
-    { id: 2, label: "Kantor", receiver: "Arif (Kerja)", phone: "+62 812-3456-7890", street: "Gedung Smart City, Lt. 5, Jl. Teknologi Modern No. 8", district: "Kelurahan Maju", city: "Jakarta Pusat", isMain: false }
+    { id: 1, label: "Rumah", receiver: "Bapak/Ibu", phone: "+62 812-3456-7890", street: "Jl. Melati IV No. 12, Blok B/12, RT 026/004", district: "Kelurahan Pusat", city: "Jakarta Selatan", isMain: true },
+    { id: 2, label: "Kantor", receiver: "Bapak/Ibu (Kerja)", phone: "+62 812-3456-7890", street: "Gedung Smart City, Lt. 5, Jl. Teknologi Modern No. 8", district: "Kelurahan Maju", city: "Jakarta Pusat", isMain: false }
   ]);
   const [newAddress, setNewAddress] = useState({ label: "", receiver: "", street: "" });
   const [editingAddress, setEditingAddress] = useState<{ id: number; label: string; receiver: string; phone: string; street: string; district: string; city: string; isMain: boolean } | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [profileName, setProfileName] = useState("Arif Rajcoach");
-  const [profilePhone, setProfilePhone] = useState("+62 812-3456-7890");
-  const [profileEmail, setProfileEmail] = useState("arif@smartrw.ai");
+  const [profileName, setProfileName] = useState("Profil Warga");
+  const [profilePhone, setProfilePhone] = useState("+62 8xx-xxxx-xxxx");
+  const [profileEmail, setProfileEmail] = useState("user@smartrw.ai");
   const profileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,7 +173,7 @@ export default function BelanjaView({
     setChatIsTyping(true);
 
     setTimeout(() => {
-      let replyText = "Baik Bpk. Arif, pesan Anda sudah kami terima. Pengurus lapak RT 26 akan segera mengecek dan menanggapi dalam waktu dekat.";
+      let replyText = "Baik Bapak/Ibu, pesan Anda sudah kami terima. Pengurus lapak RT 26 akan segera mengecek dan menanggapi dalam waktu dekat.";
       const lowerText = text.toLowerCase();
       if (lowerText.includes("pesanan") || lowerText.includes("status") || lowerText.includes("sore")) {
         replyText = "Untuk melacak transaksi atau pesanan aktif Bapak, silakan periksa status pengiriman di tab 'Daftar Pesanan' di menu Toko / Lapak Anda.";
@@ -182,7 +182,7 @@ export default function BelanjaView({
       } else if (lowerText.includes("saldo") || lowerText.includes("top-up") || lowerText.includes("gopay") || lowerText.includes("isi")) {
         replyText = "Anda dapat menambah saldo balance Anda secara instan dengan mengklik tombol 'Isi Saldo' di menu Dompet Aktif Anda.";
       } else if (lowerText.includes("halo") || lowerText.includes("pagi") || lowerText.includes("siang") || lowerText.includes("malam")) {
-        replyText = "Halo juga Bpk. Arif! Ada yang bisa tim admin bantu seputar layanan terpadu warga RT 26 pada hari ini?";
+        replyText = "Halo juga Bapak/Ibu! Ada yang bisa tim admin bantu seputar layanan terpadu warga RT 26 pada hari ini?";
       }
 
       const agentMsg = {
@@ -935,7 +935,7 @@ export default function BelanjaView({
                         <div className="py-2 border-y border-slate-50 space-y-2">
                           <div className="flex justify-between text-xs font-bold">
                             <span className="text-slate-400">Buyer:</span>
-                            <span className="text-slate-800">{id === 1 ? 'Arif' : id === 2 ? 'Budi' : 'Citra'} (Blok B/{id}2)</span>
+                            <span className="text-slate-800">{id === 1 ? 'Warga' : id === 2 ? 'Budi' : 'Citra'} (Blok B/{id}2)</span>
                           </div>
                           <div className="flex justify-between text-xs font-bold">
                             <span className="text-slate-400">Total:</span>
@@ -1767,7 +1767,7 @@ export default function BelanjaView({
                           onClick={() => {
                             setSupportEmail({
                               category: tpl.cat,
-                              subject: tpl.label + " - Bpk. Arif",
+                              subject: tpl.label + " - " + (currentUser?.name || "Bapak/Ibu"),
                               message: `Halo Pengurus RT 26,\n\nSaya ingin melaporkan/memberikan saran terkait hal ini:\n`
                             });
                             showNotification?.("Template diaktifkan", "info");

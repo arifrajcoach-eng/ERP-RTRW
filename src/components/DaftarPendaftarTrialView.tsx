@@ -26,7 +26,7 @@ Langkah Selanjutnya:
 Silakan balas email ini jika Anda memiliki pertanyaan atau kendala selama masa uji coba 14 hari gratis ini.
 
 Salam Hangat,
-Arif Coach - SmaRtRw Support Team`
+SmaRtRw Support Team`
   },
   {
     id: 'demo',

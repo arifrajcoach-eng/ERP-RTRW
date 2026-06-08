@@ -326,7 +326,9 @@ const calculateAge = (tglLahir: string) => {
 };
 
 export default function App() {
-  console.log("App component: DB exists?", !!db);
+  console.log("App Component: Mounting...");
+  
+  // --- CORE SYSTEM STATES ---
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbStatus, setDbStatus] = useState<
@@ -335,6 +337,18 @@ export default function App() {
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [currentTenant, setCurrentTenant] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    name: string;
+    role: string;
+    email?: string;
+    tenantId?: string;
+    isSuperAdmin?: boolean;
+    [key: string]: any;
+  } | null>(null);
+  const [isAuthInitializing, setIsAuthInitializing] = useState(true);
+  const [isAuthHanging, setIsAuthHanging] = useState(false);
+
+  // --- SECONDARY UI STATES ---
   const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
   const [impersonatedTenantId, setImpersonatedTenantId] = useState<
     string | null
@@ -353,18 +367,21 @@ export default function App() {
     message: string;
     onConfirm: () => Promise<void>;
   } | null>(null);
+
+  // --- REFS ---
   const alertedSOSRef = useRef<Set<string>>(new Set());
   const appStartTime = useRef(Date.now());
 
-  const [currentUser, setCurrentUser] = useState<{
-    name: string;
-    role: string;
-    email?: string;
-    tenantId?: string;
-    isSuperAdmin?: boolean;
-    [key: string]: any;
-  } | null>(null);
-  const [isAuthInitializing, setIsAuthInitializing] = useState(true);
+  // Safety Timeout for Auth Initialization (Watchdog)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isAuthInitializing) {
+        console.warn("Auth initialization is hanging for >8s. Triggering fallback bypass.");
+        setIsAuthHanging(true);
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [isAuthInitializing]);
 
   // --- FIREBASE AUTH SYNC ---
   useEffect(() => {
@@ -520,7 +537,7 @@ export default function App() {
               userData.role = "SUPER_ADMIN";
               userData.tenantId = "MASTER";
               if (!userData.name || userData.name === "User") {
-                userData.name = "Bpk. Arif (Super Admin)";
+                userData.name = user.displayName || "Admin Master";
               }
               if (isAdminStatusWrong) needsUpdate = true;
               
@@ -553,7 +570,7 @@ export default function App() {
             const overrideAdmin = user.uid === "MKe94buSU4SMg8jiRbCcOLwJp9H3";
             setCurrentUser({
               name: overrideAdmin
-                ? "Bpk. Arif (Super Admin Override)"
+                ? (user.displayName || "Admin Master (Override)")
                 : "Warga (Anonymous)",
               role: overrideAdmin ? "SUPER_ADMIN" : "Warga",
               uid: user.uid,
@@ -614,10 +631,10 @@ export default function App() {
                 const newUser = {
                   id_user: user.uid,
                   name: isMasterEmail
-                    ? "Bpk. Arif (Super Admin)"
+                    ? (user.displayName || "Admin Master")
                     : "Admin RW Berjuang",
                   nama: isMasterEmail
-                    ? "Bpk. Arif (Super Admin)"
+                    ? (user.displayName || "Admin Master")
                     : "Admin RW Berjuang",
                   username: user.email?.split("@")[0] || "user",
                   role: isMasterEmail ? "SUPER_ADMIN" : "RW",
@@ -652,7 +669,7 @@ export default function App() {
             const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
             if (isMasterEmail) {
               setCurrentUser({ 
-                name: "Bpk. Arif (Super Admin)", 
+                name: (user.displayName || "Admin Master"), 
                 role: "SUPER_ADMIN", 
                 uid: user.uid, 
                 tenantId: "MASTER", 
@@ -2735,28 +2752,20 @@ export default function App() {
     );
   }
 
-  if (isAuthInitializing) {
+  if (isAuthInitializing && !isAuthHanging) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-soft-blue border-t-brand-blue rounded-full animate-spin mb-6"></div>
-          <AppLogo
-            size={8}
-            className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse"
-            logoUrl={settings?.org_logo_url || settings?.logo_url}
-          />
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="relative mb-8">
+          <div className="w-20 h-20 border-4 border-slate-800 border-t-brand-blue rounded-full animate-spin"></div>
         </div>
-        <h2 className="text-xl font-black text-slate-800 tracking-tight font-['Georgia'] mb-2">
-          <span className="bg-gradient-to-r from-sky-500 via-blue-300 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(34,211,238,0.3)]">SmaRtRw</span>
-          {' '}
-          <span className="bg-gradient-to-r from-rose-400 via-red-300 to-pink-400 bg-clip-text text-transparent drop-shadow-[0_2px_2px_rgba(251,113,133,0.5)] font-black">AI</span>
+        <h2 className="text-white font-bold tracking-widest text-[10px] uppercase">
+          Menyiapkan Ekosistem Digital
         </h2>
-        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
-          Menyiapkan Sesi Keamanan...
-        </p>
       </div>
     );
   }
+
+  console.log("App: Auth Initialized. User:", currentUser?.uid, "WargaAuth:", !!wargaAuth);
 
   if (regTenantId) {
     return (
@@ -6279,7 +6288,7 @@ function LoginView({
           inputEmail.toLowerCase() === "master"
         ) {
           msg =
-            'AKUN ADMIN: Bpk. Arif, silakan gunakan tombol "Masuk dengan Google" atau pastikan password sudah diset di Firebase Console.';
+            'AKUN ADMIN: Silakan gunakan tombol "Masuk dengan Google" atau pastikan password sudah diset di Firebase Console.';
         } else {
           msg =
             "KREDENSIAL SALAH: Email/Username atau password tidak sesuai. Pastikan akun sudah terdaftar dan provider Email/Password sudah aktif di Firebase Console.";
@@ -6371,7 +6380,7 @@ function LoginView({
             : preRegisteredRole,
         isSuperAdmin: isArif,
         name: isArif
-          ? "Bpk. Arif (Super Admin)"
+          ? (user.displayName || "Admin Master")
           : userDoc.exists()
             ? userDoc.data()?.name
             : user.displayName || "User",
