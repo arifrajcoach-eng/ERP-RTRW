@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
   MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot, LayoutGrid,
@@ -405,16 +406,20 @@ export default function DashboardView({
   const isStarter = !isPaidPremium && (!currentTenant?.status || 
                     ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE'].includes(currentTenant?.status?.toUpperCase()));
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const trialEndDate = useMemo(() => {
-    if (!isStarter) return null;
-    
-    // For demo tenant, use a fixed trial (e.g., 30 days from some stable date if createdAt is missing)
+    // Determine the target end date for the countdown
     let createdAt = currentTenant?.createdAt;
     
-    if (!createdAt && currentTenant?.id === 'rw26_berjuang') {
-      // Mock for demo
-      const demoStart = new Date();
-      demoStart.setDate(demoStart.getDate() - 5); // 5 days ago
+    if (!createdAt && (currentTenant?.id === 'rw26_berjuang' || currentTenant?.id === 'trihprw26')) {
+      // Mock for demo/master tenants to show the feature
+      const demoStart = new Date('2026-06-05T00:00:00Z'); 
       createdAt = demoStart.toISOString();
     }
 
@@ -425,19 +430,36 @@ export default function DashboardView({
       : (createdAt.toDate ? createdAt.toDate() : new Date(createdAt.seconds * 1000));
     
     const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 30);
+    
+    if (isStarter) {
+      // Free trials get 30 days
+      endDate.setDate(endDate.getDate() + 30);
+    } else {
+      // Paid packages show their expiry if available, or a 1-year baseline for demo
+      if (currentTenant?.expiredAt) {
+        return new Date(currentTenant.expiredAt);
+      }
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    }
+    
     return endDate;
   }, [currentTenant, isStarter]);
 
-  const daysRemaining = useMemo(() => {
-    if (!isStarter) return null;
-    if (!trialEndDate) {
-      return 27;
-    }
-    const now = new Date();
-    const diff = trialEndDate.getTime() - now.getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }, [trialEndDate, isStarter]);
+  const timeLeft = useMemo(() => {
+    const target = trialEndDate;
+    if (!target) return null;
+    
+    const diff = target.getTime() - currentTime.getTime();
+    
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    
+    return {
+      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((diff / 1000 / 60) % 60),
+      seconds: Math.floor((diff / 1000) % 60)
+    };
+  }, [trialEndDate, currentTime]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 font-sans pt-[54px]">
@@ -487,32 +509,89 @@ export default function DashboardView({
           </div>
 
           {/* Sisi Kanan: Widget Countdown & Tombol CTA */}
-          <div className="flex flex-col items-center justify-center gap-4 shrink-0 bg-slate-950/40 p-5 rounded-2xl border border-white/5 shadow-inner text-center w-full lg:w-auto">
-            {isStarter && (
-              <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex flex-col items-center justify-center gap-5 shrink-0 bg-slate-950/60 p-6 rounded-[2rem] border border-white/10 shadow-2xl text-center w-full lg:w-auto relative overflow-hidden backdrop-blur-md">
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-white/5">
+              {timeLeft && (
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, (timeLeft.days / 30) * 100)}%` }}
+                  className="h-full bg-gradient-to-r from-amber-500 to-rose-500"
+                />
+              )}
+            </div>
+            
+            {timeLeft && (
+              <div className="flex flex-col items-center gap-3 text-center">
                 <div className="flex flex-col items-center justify-center leading-none">
-                  <p className="text-[9px] font-black uppercase tracking-widest opacity-80 text-slate-400 mb-1">Sisa Trial</p>
-                  <p className="text-[8px] font-bold uppercase tracking-wider opacity-65 text-slate-500">Dari 30 Hari</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 text-slate-400 mb-1.5">
+                    {isPaidPremium ? "Sisa Masa Langganan" : "Sisa Masa Trial"}
+                  </p>
                 </div>
-                <div className="flex items-baseline gap-1 font-elegant text-white leading-none">
-                  <span className="text-3xl font-black tabular-nums drop-shadow-lg text-amber-400 tracking-tight">
-                    {daysRemaining !== null ? daysRemaining : 30}
-                  </span>
-                  <span className="text-[10px] font-black uppercase text-slate-300">Hari</span>
+                
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center">
+                    <motion.span 
+                      key={timeLeft.days}
+                      initial={{ y: 5, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="text-3xl font-black tabular-nums text-white"
+                    >
+                      {timeLeft.days.toString().padStart(2, '0')}
+                    </motion.span>
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Hari</span>
+                  </div>
+                  <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
+                  <div className="flex flex-col items-center">
+                    <motion.span 
+                      key={timeLeft.hours}
+                      initial={{ y: 5, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="text-3xl font-black tabular-nums text-amber-400"
+                    >
+                      {timeLeft.hours.toString().padStart(2, '0')}
+                    </motion.span>
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Jam</span>
+                  </div>
+                  <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
+                  <div className="flex flex-col items-center">
+                    <motion.span 
+                      key={timeLeft.minutes}
+                      initial={{ y: 5, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="text-3xl font-black tabular-nums text-rose-400"
+                    >
+                      {timeLeft.minutes.toString().padStart(2, '0')}
+                    </motion.span>
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Min</span>
+                  </div>
+                  <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
+                  <div className="flex flex-col items-center">
+                    <motion.span 
+                      key={timeLeft.seconds}
+                      initial={{ scale: 1.2, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-3xl font-black tabular-nums text-white"
+                    >
+                      {timeLeft.seconds.toString().padStart(2, '0')}
+                    </motion.span>
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Det</span>
+                  </div>
                 </div>
               </div>
             )}
 
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -4, boxShadow: "0 20px 40px -10px rgba(54, 211, 230, 0.4)" }}
+              whileTap={{ scale: 0.95 }}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowUpgradeModal(true);
               }}
-              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-cyan-400 to-brand-blue hover:from-cyan-300 hover:to-indigo-500 text-white font-black uppercase text-[10px] tracking-widest px-5 py-3.5 rounded-xl shadow-lg shadow-brand-blue/30 hover:scale-[1.03] active:scale-95 transition-all text-center border border-white/15 whitespace-nowrap"
+              className="flex items-center justify-center gap-3 bg-gradient-to-br from-cyan-400 via-brand-blue to-indigo-600 text-white font-black uppercase text-[11px] tracking-[0.2em] px-8 py-4.5 rounded-2xl shadow-xl hover:shadow-cyan-400/30 transition-all text-center border border-white/20 whitespace-nowrap group/btn"
             >
               <span>Upgrade Sekarang</span>
-              <ChevronRight className="w-3.5 h-3.5 text-[#f5faff]" />
-            </button>
+              <ChevronRight className="w-4 h-4 text-white group-hover/btn:translate-x-1 transition-transform" />
+            </motion.button>
           </div>
         </div>
       </div>

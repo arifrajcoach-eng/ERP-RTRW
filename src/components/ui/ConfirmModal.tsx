@@ -33,9 +33,9 @@ export function ConfirmModal({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[350px]"
+        className="bg-white w-full max-w-md rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-slate-200 overflow-hidden flex flex-col"
       >
-        <div className="p-6 text-center">
+        <div className="p-8 text-center">
           <div className={`w-16 h-16 ${
             type === 'danger' ? 'bg-red-50 text-red-600' : 
             type === 'warning' ? 'bg-amber-50 text-amber-600' : 

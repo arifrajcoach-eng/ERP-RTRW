@@ -1,74 +1,352 @@
 import React, { useState } from 'react';
-import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette, FileText, Printer, CheckCircle2, Heart, ShieldCheck, Zap } from 'lucide-react';
+import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette, FileText, Printer, CheckCircle2, Heart, ShieldCheck, Zap, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 export default function PanduanAdminView() {
   const [activeTab, setActiveTab] = useState<'fitur' | 'action' | 'peringatan' | 'sosialisasi'>('fitur');
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const tabs = [
-    { id: 'fitur', label: 'Fitur Aplikasi', icon: Info },
-    { id: 'sosialisasi', label: 'Bahan Sosialisasi', icon: FileText },
-    { id: 'action', label: 'Action Plan', icon: Star },
-    { id: 'peringatan', label: 'Peringatan Penting', icon: AlertOctagon },
+    { id: 'fitur', label: 'Fitur Aplikasi', icon: Info, color: 'from-blue-500 to-indigo-600', activeBg: 'bg-indigo-600' },
+    { id: 'sosialisasi', label: 'Bahan Sosialisasi', icon: FileText, color: 'from-violet-500 to-purple-600', activeBg: 'bg-purple-600' },
+    { id: 'action', label: 'Action Plan', icon: Star, color: 'from-emerald-500 to-teal-600', activeBg: 'bg-emerald-600' },
+    { id: 'peringatan', label: 'Peringatan Penting', icon: AlertOctagon, color: 'from-rose-500 to-red-600', activeBg: 'bg-rose-600' },
   ];
 
-  const handlePrint = () => {
-    // We use window.print() to provide the highest fidelity output using the browser's 
-    // native PDF engine, which perfectly supports modern Tailwind v4 CSS (oklch colors).
-    window.print();
+  const handlePrint = async () => {
+    if (isPrinting) return;
+
+    // We keep window.print() as a background-friendly option, 
+    // but we'll primarily use jsPDF + html2canvas for a direct file download
+    // which is more reliable in AI Studio's sandboxed iframe environment.
+    
+    const elementId = activeTab === 'sosialisasi' ? 'print-sosialisasi-content' : `active-tab-content-${activeTab}`;
+    const element = document.getElementById(elementId);
+    
+    if (!element) {
+      window.print();
+      return;
+    }
+
+    try {
+      setIsPrinting(true);
+      
+      // Capture the element with high resolution
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          // Robust sanitization for modern color functions (oklch, oklab) which crash html2canvas parser
+          const sanitizeCSS = (css: string) => {
+            if (!css) return '';
+            return css
+              .replace(/oklch\([^)]+\)/g, '#475569')
+              .replace(/oklab\([^)]+\)/g, '#475569');
+          };
+
+          // 1. Sanitize all style tags
+          const styleTags = clonedDoc.getElementsByTagName('style');
+          for (let i = 0; i < styleTags.length; i++) {
+            try {
+              if (styleTags[i].innerHTML) {
+                styleTags[i].innerHTML = sanitizeCSS(styleTags[i].innerHTML);
+              }
+              if (styleTags[i].textContent) {
+                styleTags[i].textContent = sanitizeCSS(styleTags[i].textContent);
+              }
+            } catch (e) {
+              console.warn('Failed to sanitize style tag:', e);
+            }
+          }
+
+          // 2. Sanitize inline styles on all elements
+          const allElements = clonedDoc.querySelectorAll('*');
+          allElements.forEach((el) => {
+            const styleAttr = el.getAttribute('style');
+            if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
+              el.setAttribute('style', sanitizeCSS(styleAttr));
+            }
+          });
+
+          // 3. Force visibility for specific print-only elements
+          const hiddenPrintElements = clonedDoc.querySelectorAll('.hidden.print\\:block');
+          hiddenPrintElements.forEach((el) => {
+            (el as HTMLElement).style.setProperty('display', 'block', 'important');
+            (el as HTMLElement).style.setProperty('visibility', 'visible', 'important');
+            (el as HTMLElement).style.setProperty('opacity', '1', 'important');
+          });
+
+          // 4. Inject a normalization print stylesheet
+          const normalizationStyle = clonedDoc.createElement('style');
+          normalizationStyle.innerHTML = `
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            body { background: white !important; }
+            .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+          `;
+          clonedDoc.head.appendChild(normalizationStyle);
+        }
+      });
+      
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+      
+      const imgWidth = 210; 
+      const pageHeight = 297; 
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      const fileName = `SmartRW_Admin_${activeTab}.pdf`;
+      const pdfBlob = pdf.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      // Fallback to window.print() if canvas capture fails
+      window.print();
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-4xl mx-auto">
-      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
-        <div className="inline-flex items-center justify-center p-3 bg-blue-50 rounded-xl mb-4 text-blue-600">
-          <BookOpen className="h-8 w-8" />
+    <div className="space-y-8 pb-20 max-w-5xl mx-auto print:m-0 print:p-0 print:max-w-none">
+      {/* Global Print Styles Injection */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          body {
+            background: white !important;
+            color: black !important;
+            padding: 0 !important;
+          }
+          /* Hide non-print elements */
+          .print\:hidden { display: none !important; }
+          
+          /* Force sections to start on new pages if needed */
+          .print\:break-before-page {
+            break-before: page;
+          }
+          
+          /* Remove shadows and borders that look bad in PDF */
+          .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl {
+            box-shadow: none !important;
+          }
+          
+          /* High contrast for text */
+          .text-slate-500, .text-slate-600 {
+            color: #475569 !important;
+          }
+          
+          /* Prevent items from being cut in half */
+          .bg-white.p-6 {
+            break-inside: avoid;
+            margin-bottom: 20px;
+          }
+        }
+      `}} />
+
+      {/* Global Document Header for Print Only */}
+      <div className="hidden print:block mb-8 border-b-4 border-slate-900 pb-6">
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Digital Governance Guide</h1>
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-1">SmartRW AI Management System • Official Documentation</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-900 uppercase">Document Ref: ADM-GUIDE-2024</p>
+            <p className="text-[10px] text-slate-400">Generated: {new Date().toLocaleDateString('id-ID')}</p>
+          </div>
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
-          Pusat Panduan & Bantuan Admin
-        </h2>
-        <p className="text-slate-600 max-w-2xl mx-auto">
-          Selamat datang di Pusat Panduan SmaRtRw AI. Di sini Anda dapat menemukan petunjuk operasional, langkah strategis, serta panduan keamanan untuk menggunakan aplikasi sebagai Pengurus.
-        </p>
       </div>
 
-      {/* Tabs Container */}
-      <div className="flex overflow-x-auto no-scrollbar bg-white p-1 rounded-xl shadow-sm border border-slate-200">
-        <div className="flex space-x-1 min-w-max w-full">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+      <div className="bg-white/40 backdrop-blur-xl p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-white/60 text-center print:hidden relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent pointer-events-none" />
+        <div className="relative z-10">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="inline-flex items-center justify-center p-4 bg-indigo-600 text-white rounded-2xl mb-6 shadow-xl shadow-indigo-200"
+          >
+            <BookOpen className="h-10 w-10" />
+          </motion.div>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">
+            Pusat Panduan <span className="text-indigo-600">&</span> Bantuan Admin
+          </h2>
+          <p className="text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed font-medium">
+            Petunjuk operasional, langkah strategis, dan protokol keamanan eksklusif untuk Pengurus Wilayah.
+          </p>
         </div>
+      </div>
+
+      {/* Modern Unified Navigation Suite */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 print:hidden">
+        {tabs.map((tab, idx) => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+          return (
+            <motion.button
+              key={tab.id}
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ 
+                delay: idx * 0.08,
+                type: 'spring',
+                stiffness: 120,
+                damping: 20
+              }}
+              whileHover={{ 
+                y: -12, 
+                scale: 1.05,
+                transition: { duration: 0.3, ease: "easeOut" }
+              }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`relative flex flex-col items-center justify-center p-6 md:p-8 rounded-[2.5rem] transition-all duration-500 overflow-hidden group border-2 ${
+                isActive 
+                  ? `border-transparent shadow-[0_30px_60px_-15px_rgba(79,70,229,0.4)] text-white` 
+                  : 'bg-white/80 backdrop-blur-md border-slate-100 text-slate-500 hover:border-indigo-200/50 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.08)]'
+              }`}
+            >
+              {isActive && (
+                <motion.div 
+                  layoutId="activeTabBg"
+                  className={`absolute inset-0 bg-gradient-to-br ${tab.color}`}
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.8 }}
+                >
+                  <div className="absolute inset-x-0 top-0 h-px bg-white/40" />
+                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5 mix-blend-overlay" />
+                </motion.div>
+              )}
+              
+              <div className="relative z-10 flex flex-col items-center space-y-4">
+                <motion.div 
+                  className={`p-4 rounded-2xl transition-all duration-500 ${
+                    isActive ? 'bg-white/20 shadow-lg shadow-black/10 backdrop-blur-md' : 'bg-slate-50 group-hover:bg-indigo-50 shadow-sm'
+                  }`}
+                  animate={isActive ? { y: [0, -3, 0] } : {}}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Icon className={`h-8 w-8 transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600'}`} />
+                </motion.div>
+                
+                <div className="flex flex-col items-center">
+                  <span className={`text-[11px] md:text-sm font-black uppercase tracking-[0.25em] text-center leading-tight transition-colors duration-300 ${
+                    isActive ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    {tab.label.split(' ')[0]}
+                  </span>
+                  <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-[0.1em] text-center mt-1 opacity-60 ${
+                    isActive ? 'text-white' : 'text-slate-500'
+                  }`}>
+                    {tab.label.split(' ').slice(1).join(' ')}
+                  </span>
+                </div>
+              </div>
+
+              {isActive && (
+                <motion.div 
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 2, opacity: 0.2 }}
+                  className="absolute -right-10 -bottom-10 bg-white rounded-full w-40 h-40 blur-3xl"
+                />
+              )}
+            </motion.button>
+          );
+        })}
+
+        {/* Unified Print Action Card */}
+        <motion.button
+          initial={{ opacity: 0, scale: 0.9, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          whileHover={{ 
+            y: -12, 
+            scale: 1.05,
+            transition: { duration: 0.3, ease: "easeOut" }
+          }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handlePrint}
+          disabled={isPrinting}
+          className={`relative flex flex-col items-center justify-center p-6 md:p-8 rounded-[2.5rem] bg-slate-900 border-2 border-slate-800 text-white shadow-2xl hover:shadow-[0_30px_60px_-15px_rgba(15,23,42,0.5)] transition-all duration-500 overflow-hidden group ${isPrinting ? 'opacity-70 cursor-not-allowed' : ''}`}
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-900 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 mix-blend-overlay" />
+          
+          <div className="relative z-10 flex flex-col items-center space-y-4">
+            <div className={`p-4 rounded-2xl bg-white/10 group-hover:bg-indigo-500 group-hover:shadow-[0_0_40px_rgba(99,102,241,0.6)] transition-all duration-500 ${isPrinting ? 'animate-pulse' : ''}`}>
+              {isPrinting ? (
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+              ) : (
+                <Printer className="h-8 w-8 group-hover:rotate-12 transition-transform" />
+              )}
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[11px] md:text-sm font-black uppercase tracking-[0.25em] text-center leading-tight">
+                {isPrinting ? 'Cetak' : 'Cetak'}
+              </span>
+              <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.1em] text-center mt-1 opacity-60">
+                {isPrinting ? 'Dokumen...' : 'Dokumen PDF'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-15 transition-opacity">
+            <Palette className="w-24 h-24 rotate-12" />
+          </div>
+        </motion.button>
       </div>
 
       {/* Content Area */}
-      <div className="mt-6">
+      <div className="mt-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
+            id={`active-tab-content-${activeTab}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'fitur' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-6 print:space-y-8">
+                <div className="hidden print:block mb-6">
+                  <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">Daftar Fitur Utama Aplikasi</h2>
+                  <p className="text-slate-500 text-sm">Berikut adalah modul fungsional yang tersedia untuk membantu operasional wilayah.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-6">
                   {/* Section: Warga & Kependudukan */}
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-3 mb-4">
@@ -233,29 +511,12 @@ export default function PanduanAdminView() {
 
             {activeTab === 'sosialisasi' && (
               <div className="space-y-6 print:m-0 print:p-0">
-                {/* Print Header */}
-                <div className="hidden print:block text-center border-b-2 border-slate-900 pb-6 mb-8">
-                  <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900">Bahan Sosialisasi SmaRtRw AI</h1>
-                  <p className="text-slate-600 mt-2 font-bold italic">"Dari Warga, Oleh Warga, Untuk Lingkungan yang Pintar"</p>
-                </div>
-
                 <div 
                   id="print-sosialisasi-content"
                   className="bg-white border border-slate-200 rounded-2xl shadow-sm relative overflow-hidden print:border-none print:shadow-none"
-                  style={{ minHeight: '800px', paddingTop: '49px' }}
+                  style={{ minHeight: '800px' }}
                 >
-                  <div className="absolute top-6 right-6 print:hidden z-10">
-                    <button 
-                      onClick={handlePrint}
-                      className="flex items-center space-x-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl active:scale-95 group shadow-slate-900/20"
-                      style={{ marginTop: '-35px', paddingTop: '20px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px' }}
-                    >
-                      <Printer className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
-                      <span>Cetak PDF</span>
-                    </button>
-                  </div>
-
-                  <div className="p-6 md:p-8 space-y-12 text-slate-800" style={{ paddingTop: '14px' }}>
+                  <div className="p-6 md:p-8 space-y-12 text-slate-800 print:p-0">
                     <section className="space-y-6">
                       <div className="border-l-4 border-slate-900 pl-4">
                         <h4 className="font-black uppercase tracking-tight text-2xl text-slate-900">Kenapa kita harus pakai aplikasi SmartRW AI?</h4>
@@ -485,14 +746,14 @@ export default function PanduanAdminView() {
             )}
 
             {activeTab === 'action' && (
-              <div className="bg-white border text-emerald-800 border-slate-200 p-6 md:p-8 rounded-2xl shadow-sm">
-                <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
-                  <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
+              <div className="bg-white border text-emerald-800 border-slate-200 p-6 md:p-8 rounded-2xl shadow-sm print:border-none print:shadow-none print:p-0">
+                <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100 print:border-slate-900 print:mb-8">
+                  <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600 print:hidden">
                     <Star className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-800">Action Plan Implementasi</h3>
-                    <p className="text-sm text-slate-500 mt-1">Langkah praktis mengajak warga menggunakan aplikasi</p>
+                    <h3 className="text-xl font-bold text-slate-800 print:text-2xl print:font-black print:uppercase">Action Plan Implementasi</h3>
+                    <p className="text-sm text-slate-500 mt-1 print:text-slate-700">Langkah praktis mengajak warga menggunakan aplikasi</p>
                   </div>
                 </div>
                 
@@ -532,14 +793,14 @@ export default function PanduanAdminView() {
             )}
 
             {activeTab === 'peringatan' && (
-              <div className="bg-white border border-rose-200 p-6 md:p-8 rounded-2xl shadow-sm">
-                <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-rose-100">
-                  <div className="p-3 bg-rose-100 rounded-xl text-rose-600">
+              <div className="bg-white border border-rose-200 p-6 md:p-8 rounded-2xl shadow-sm print:border-none print:shadow-none print:p-0">
+                <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-rose-100 print:border-slate-900 print:mb-8">
+                  <div className="p-3 bg-rose-100 rounded-xl text-rose-600 print:hidden">
                     <AlertOctagon className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-800">Hal yang Harus Dihindari</h3>
-                    <p className="text-sm text-slate-500 mt-1">Demi keamanan dan kelancaran sistem bersama</p>
+                    <h3 className="text-xl font-bold text-slate-800 print:text-2xl print:font-black print:uppercase">Peringatan Penting & Keamanan</h3>
+                    <p className="text-sm text-slate-500 mt-1 print:text-slate-700">Hal yang harus dihindari demi keamanan sistem dan data warga</p>
                   </div>
                 </div>
 

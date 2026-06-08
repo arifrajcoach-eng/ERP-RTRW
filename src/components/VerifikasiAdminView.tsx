@@ -317,40 +317,58 @@ export function VerifikasiAdminView({
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
-          <button 
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 w-full md:w-auto">
+          <motion.button 
+            whileHover={{ y: -10, scale: 1.05, boxShadow: "0 25px 50px -12px rgba(79,70,229,0.5)" }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             onClick={handleMassSync}
             disabled={!verifikasiData.some(v => v.status === 'Disetujui' && !v.isFinalized)}
-            className="px-6 py-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-2xl shadow-indigo-500/30 flex items-center gap-3 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0 group"
+            className="px-8 py-5 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 shadow-[0_20px_40px_-10px_rgba(79,70,229,0.4)] flex items-center gap-3 disabled:opacity-50 disabled:grayscale whitespace-nowrap shrink-0 group relative overflow-hidden ring-1 ring-white/20"
           >
-            <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-1000" />
             SINKRONKAN
-          </button>
+          </motion.button>
           
-          <button 
+          <motion.button 
+            whileHover={{ y: -10, scale: 1.05, boxShadow: "0 25px 50px -12px rgba(244,63,94,0.2)" }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             onClick={handlePeriodicCleanup}
-            className="px-6 py-4 bg-white text-rose-500 border border-rose-100 hover:border-rose-200 hover:bg-rose-50 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-xl shadow-rose-500/10 flex items-center gap-3 whitespace-nowrap shrink-0"
+            className="px-8 py-5 bg-white/80 backdrop-blur-md text-rose-500 border-2 border-rose-100/50 hover:border-rose-200/80 rounded-3xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 shadow-[0_20px_40px_-10px_rgba(244,63,94,0.1)] flex items-center gap-3 whitespace-nowrap shrink-0 group relative overflow-hidden"
           >
-            <Trash2 className="w-4 h-4" />
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Trash2 className="w-5 h-5 group-hover:animate-bounce transition-transform" />
             BERSIHKAN DATA
-          </button>
+          </motion.button>
           
-          <div className="hidden sm:block h-8 w-px bg-slate-200/60 mx-1 shrink-0" />
+          <div className="hidden lg:block h-10 w-px bg-slate-200/60 mx-2 shrink-0" />
           
-          <div className="flex bg-slate-100/50 p-1.5 rounded-[1.5rem] overflow-x-auto gap-1 w-full sm:w-auto pb-1.5 sm:pb-1.5 scrollbar-hide border border-slate-200/40">
-            {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`whitespace-nowrap shrink-0 px-6 py-3 rounded-[1.25rem] text-[10px] font-bold uppercase tracking-wider transition-all duration-500 ${
-                  filter === f 
-                    ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-100 font-black' 
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+          <div className="flex bg-slate-900/5 backdrop-blur-xl p-2 rounded-[2.5rem] overflow-x-auto gap-1 w-full sm:w-auto pb-2 sm:pb-2 scrollbar-hide border border-slate-200/50 shadow-inner group">
+            {['All', 'Menunggu Persetujuan', 'Disetujui', 'Ditolak'].map((f: any) => {
+              const isActive = filter === f;
+              return (
+                <motion.button
+                  key={f}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setFilter(f)}
+                  className={`relative whitespace-nowrap shrink-0 px-8 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-wider transition-all duration-500 z-10 ${
+                    isActive ? 'text-white' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeFilterIndicator"
+                      className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[1.8rem] shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] border border-blue-400/20"
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <span className="relative z-20">{f}</span>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -436,37 +454,43 @@ export function VerifikasiAdminView({
                         {!item.isFinalized && (
                           <>
                             {item.status !== 'Disetujui' && (
-                              <button 
+                              <motion.button 
+                                whileHover={{ scale: 1.2, rotate: 8 }}
+                                whileTap={{ scale: 0.8 }}
                                 onClick={() => handleApprove(item)}
                                 disabled={actionLoading}
-                                className="p-3 bg-white text-emerald-500 hover:bg-emerald-50 rounded-2xl transition-all border border-slate-100 hover:border-emerald-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
+                                className="p-3.5 bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-600 hover:from-emerald-500 hover:to-teal-600 hover:text-white rounded-2xl transition-all border border-emerald-100/50 shadow-sm hover:shadow-emerald-200/50 disabled:opacity-50"
                                 title="Setujui"
                               >
                                 {actionLoading ? <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div> : <CheckCircle className="w-5 h-5" />}
-                              </button>
+                              </motion.button>
                             )}
                             {item.status !== 'Ditolak' && (
-                              <button 
+                              <motion.button 
+                                whileHover={{ scale: 1.2, rotate: -8 }}
+                                whileTap={{ scale: 0.8 }}
                                 onClick={() => handleReject(item)}
                                 disabled={actionLoading}
-                                className="p-3 bg-white text-rose-500 hover:bg-rose-50 rounded-2xl transition-all border border-slate-100 hover:border-rose-100 shadow-sm hover:scale-110 active:scale-90 disabled:opacity-50"
+                                className="p-3.5 bg-gradient-to-br from-rose-50 to-red-50 text-rose-600 hover:from-rose-500 hover:to-red-600 hover:text-white rounded-2xl transition-all border border-rose-100/50 shadow-sm hover:shadow-rose-200/50 disabled:opacity-50"
                                 title={item.status === 'Disetujui' ? 'Batalkan & Tolak' : 'Tolak'}
                               >
                                 {actionLoading ? <div className="w-5 h-5 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div> : <XCircle className="w-5 h-5" />}
-                              </button>
+                              </motion.button>
                             )}
                           </>
                         )}
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.2, y: -2 }}
+                          whileTap={{ scale: 0.8 }}
                           onClick={() => {
                             setCatatan('');
                             setSelectedItem(item);
                           }}
-                          className="p-3 bg-white text-blue-500 hover:bg-blue-50 rounded-2xl transition-all border border-slate-100 hover:border-blue-100 shadow-sm hover:scale-110 active:scale-90"
+                          className="p-3.5 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 hover:from-blue-500 hover:to-indigo-600 hover:text-white rounded-2xl transition-all border border-blue-100/50 shadow-sm hover:shadow-blue-200/50"
                           title="Detail"
                         >
                           <Eye className="w-5 h-5" />
-                        </button>
+                        </motion.button>
                       </div>
                     </td>
                   </tr>
@@ -567,31 +591,38 @@ export function VerifikasiAdminView({
                       />
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                      <button 
+                    <div className="flex flex-col sm:flex-row gap-6 pt-8">
+                      <motion.button 
+                        whileHover={{ y: -5, scale: 1.02, boxShadow: "0 25px 50px -12px rgba(5, 150, 105, 0.4)" }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => handleApprove(selectedItem)}
                         disabled={actionLoading || selectedItem.status === 'Disetujui'}
-                        className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black uppercase tracking-widest text-[11px] py-5 rounded-[1.5rem] shadow-xl shadow-emerald-200 hover:scale-[1.02] hover:shadow-emerald-300 disabled:opacity-50 flex items-center justify-center gap-3 transition-all active:scale-95"
+                        className="flex-1 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 text-white font-black uppercase tracking-[0.2em] text-[11px] py-6 rounded-3xl shadow-[0_20px_40px_-10px_rgba(5,150,105,0.3)] disabled:opacity-50 flex items-center justify-center gap-3 transition-all relative overflow-hidden group/btn"
                       >
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                         {actionLoading ? (
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                          <CheckCircle className="w-5 h-5" />
+                          <CheckCircle className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
                         )}
-                        {actionLoading ? 'MEMPROSES...' : 'SETUJUI PERUBAHAN'}
-                      </button>
-                      <button 
+                        <span className="relative z-10">{actionLoading ? 'MEMPROSES...' : 'SETUJUI PERUBAHAN'}</span>
+                      </motion.button>
+                      
+                      <motion.button 
+                        whileHover={{ y: -5, scale: 1.02, boxShadow: "0 25px 50px -12px rgba(225, 29, 72, 0.4)" }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => handleReject(selectedItem)}
                         disabled={actionLoading || selectedItem.status === 'Ditolak' || selectedItem.isFinalized}
-                        className="flex-1 bg-gradient-to-r from-rose-600 to-red-600 text-white font-black uppercase tracking-widest text-[11px] py-5 rounded-[1.5rem] shadow-xl shadow-red-200 hover:scale-[1.02] hover:shadow-red-300 disabled:opacity-50 flex items-center justify-center gap-3 transition-all active:scale-95"
+                        className="flex-1 bg-gradient-to-br from-rose-500 via-rose-600 to-red-700 text-white font-black uppercase tracking-[0.2em] text-[11px] py-6 rounded-3xl shadow-[0_20px_40px_-10px_rgba(225,29,72,0.3)] disabled:opacity-50 flex items-center justify-center gap-3 transition-all relative overflow-hidden group/btn"
                       >
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                         {actionLoading ? (
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                          <XCircle className="w-5 h-5" />
+                          <XCircle className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
                         )}
-                        {actionLoading ? 'MEMPROSES...' : (selectedItem.status === 'Disetujui' ? 'BATALKAN & TOLAK' : 'TOLAK PENGAJUAN')}
-                      </button>
+                        <span className="relative z-10">{actionLoading ? 'MEMPROSES...' : (selectedItem.status === 'Disetujui' ? 'BATALKAN & TOLAK' : 'TOLAK PENGAJUAN')}</span>
+                      </motion.button>
                     </div>
                   </div>
 

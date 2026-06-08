@@ -89,14 +89,64 @@ async function startServer() {
     }
   };
 
-  // Automatic Follow-ups and Day 31 Data Wipe Cron (Runs every day at midnight)
+  // Automatic Follow-ups and Data Wipe Cron (Runs every day at midnight)
   cron.schedule("0 0 * * *", async () => {
-    console.log("Running automatic tenant follow-up and data-wipe check...");
+    console.log("Running automatic tenant maintenance (follow-up & data-wipe check)...");
     if (!admin.apps || admin.apps.length === 0) return;
     
     const db = admin.firestore();
     const now = new Date();
-    const sixtyDaysInMs = 60 * 24 * 60 * 60 * 1000;
+    
+    const collectionsToWipe = [
+      "data_warga", "kas", "iuran", "inventaris", "inventaris_logs",
+      "toko_products", "toko_orders", "toko_reviews", "surat",
+      "voting_candidates", "voting_votes", "bookings", "complaints",
+      "verifikasi_warga", "audit_logs", "balita", "ibu_hamil",
+      "posyandu_kegiatan", "posbindu_kegiatan", "pemeriksaan_balita",
+      "pemeriksaan_posbindu", "imunisasi", "sampah_kategori",
+      "sampah_setoran", "sampah_tarik_saldo", "kelahiran", "kematian",
+      "emergencies", "kop_templates", "users", "messages", "chat_history"
+    ];
+
+    const performDataWipeOnly = async (tenantId: string, tenantName: string) => {
+      console.log(`[AUTO-WIPE] Purging sensitive data only for tenant: ${tenantName} (${tenantId})`);
+      for (const colName of collectionsToWipe) {
+        if (colName === "users") continue; // Keep users for potential login/recovery until full deletion
+        try {
+          const querySnap = await db.collection(colName).where("tenantId", "==", tenantId).get();
+          if (!querySnap.empty) {
+            const batch = db.batch();
+            querySnap.docs.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+          }
+        } catch (err) {}
+      }
+      await db.collection("tenants").doc(tenantId).update({ isWiped: true, wipedAt: new Date().toISOString() });
+    };
+
+    const performFullDeletion = async (tenantId: string, tenantName: string) => {
+      console.log(`[AUTO-DELETION] Permanently removing tenant and all records: ${tenantName} (${tenantId})`);
+      
+      for (const colName of collectionsToWipe) {
+        try {
+          const querySnap = await db.collection(colName).where("tenantId", "==", tenantId).get();
+          if (!querySnap.empty) {
+            const batch = db.batch();
+            querySnap.docs.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+          }
+        } catch (err) {
+          console.error(`[AUTO-DELETION] Failed purging collection ${colName}:`, err);
+        }
+      }
+
+      try {
+        await db.collection("subscriptions").doc(tenantId).delete();
+      } catch (e) {}
+
+      await db.collection("tenants").doc(tenantId).delete();
+      console.log(`[AUTO-DELETION] Final: Tenant ${tenantId} purged from system.`);
+    };
 
     try {
       const tenantsSnap = await db.collection("tenants").get();
@@ -105,108 +155,60 @@ async function startServer() {
         const tenant = tDoc.data();
         const tenantId = tDoc.id;
         
-        // Skip administrative tenants
         if (tenantId === "MASTER" || tenantId === "rw26_berjuang") continue;
 
-        const isPaidPremium = ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
-        const isStarter = !isPaidPremium && (!tenant.status || ["STARTER", "GRATIS", "FREE", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
+        const tenantStatus = (tenant.status || "").toUpperCase();
+        // Specifically include the requested packages for the 3-month rule
+        const isPaidPremium = ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some(st => tenantStatus.includes(st));
+        const isStarter = !isPaidPremium && ["STARTER", "GRATIS", "FREE", "TRIAL", "ACTIVE", ""].includes(tenantStatus);
 
-        if (!isStarter) continue;
+        // 1. STARTER (FREE / TRIAL) LOGIC: 2 Months (60 Days)
+        if (isStarter) {
+          const startDate = tenant.createdAt ? (tenant.createdAt.toDate ? tenant.createdAt.toDate() : new Date(tenant.createdAt)) : null;
+          if (!startDate) continue;
 
-        const startDate = tenant.createdAt ? (tenant.createdAt.toDate ? tenant.createdAt.toDate() : new Date(tenant.createdAt)) : null;
-        if (!startDate) continue;
+          const diffDays = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-        const diffTime = now.getTime() - startDate.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        // Day 31 limit reached & data not wiped: Purge data automatically
-        if (diffDays >= 30 && !tenant.isWiped) {
-          console.log(`[AUTO-WIPE-CRON] Expiry Day 31 reached. Purging tables for tenant: ${tenant.name || tenantId}`);
-
-          const collectionsToWipe = [
-            "data_warga",
-            "kas",
-            "iuran",
-            "inventaris",
-            "inventaris_logs",
-            "toko_products",
-            "toko_orders",
-            "toko_reviews",
-            "surat",
-            "voting_candidates",
-            "voting_votes",
-            "bookings",
-            "complaints",
-            "verifikasi_warga",
-            "audit_logs",
-            "balita",
-            "ibu_hamil",
-            "posyandu_kegiatan",
-            "posbindu_kegiatan",
-            "pemeriksaan_balita",
-            "pemeriksaan_posbindu",
-            "imunisasi",
-            "sampah_kategori",
-            "sampah_setoran",
-            "sampah_tarik_saldo",
-            "kelahiran",
-            "kematian",
-            "emergencies",
-            "kop_templates"
-          ];
-
-          for (const colName of collectionsToWipe) {
-            try {
-              const querySnap = await db.collection(colName).where("tenantId", "==", tenantId).get();
-              if (!querySnap.empty) {
-                const batch = db.batch();
-                querySnap.docs.forEach((doc) => batch.delete(doc.ref));
-                await batch.commit();
-                console.log(`[AUTO-WIPE-CRON] Cleaned ${querySnap.size} documents from ${colName} for tenant ${tenantId}`);
-              }
-            } catch (err) {
-              console.error(`[AUTO-WIPE-CRON] Failed deleting collection ${colName} for tenant ${tenantId}:`, err);
-            }
+          // A. Day 60 (2 Months): Full Deletion of Data AND Tenant
+          if (diffDays >= 60) {
+            await performFullDeletion(tenantId, tenant.name || tenantId);
+            continue;
           }
 
-          // Record to free_tier_followups for administrative team
-          await db.collection("free_tier_followups").doc(tenantId).set({
-            tenantId,
-            tenantName: tenant.name || tenant.nama || "",
-            adminEmail: tenant.adminEmail || tenant.email || "",
-            phone: tenant.phone || tenant.adminPhone || tenant.telepon || "",
-            createdAt: tenant.createdAt ? (tenant.createdAt.toISOString ? tenant.createdAt.toISOString() : tenant.createdAt) : new Date().toISOString(),
-            expiredAt: new Date().toISOString(),
-            followUpStatus: "NEW",
-            isWiped: true,
-            isFollowedUp: false,
-            source: "AUTO_WIPE_DAY_31_CRON"
-          });
+          // B. Day 31: Data Wipe Only (Privacy Protection for abandoned trials)
+          if (diffDays >= 31 && !tenant.isWiped) {
+            await performDataWipeOnly(tenantId, tenant.name || tenantId);
+          }
+        }
 
-          // Mark tenants document as EXPIRED and isWiped
-          await tDoc.ref.update({
-            status: "EXPIRED",
-            isWiped: true,
-            wipedAt: new Date().toISOString()
-          });
-
-          // Notify about the automated data protection shredding
-          const notificationMessage = `Halo Pengurus ${tenant.name || 'Wilayah'}, masa uji coba gratis SmaRtRw AI Anda telah berakhir di hari ke-31. Sesuai kebijakan privasi sistem, seluruh data warga dan pembukuan Anda telah dihapus secara otomatis & permanen demi privasi warga. Silakan upgrade ke paket berbayar untuk menikmati kembali fitur kami.`;
+        // 2. PAID PACKAGE LOGIC: 3 Months (90 Days) of non-payment post-expiry
+        if (isPaidPremium) {
+          const subDoc = await db.collection("subscriptions").doc(tenantId).get();
+          const sub = subDoc.data();
           
-          try {
-            if ((tenant.adminPhone || tenant.phone) && process.env.TWILIO_PHONE_NUMBER) {
-              await sendWhatsApp(tenant.adminPhone || tenant.phone, notificationMessage);
+          if (sub && sub.endDate) {
+            const expiryDate = new Date(sub.endDate);
+            const diffDaysAfterExpiry = Math.floor((now.getTime() - expiryDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            if (diffDaysAfterExpiry >= 90) {
+              await performFullDeletion(tenantId, tenant.name || tenantId);
+              console.log(`[POLIS] Paid tenant ${tenant.name} (${tenantId}) deleted after 90 days expired.`);
             }
-            if (tenant.adminEmail || tenant.email) {
-              await sendEmail(tenant.adminEmail || tenant.email, tenant.name, "SmaRtRw AI: Pemberitahuan Penghapusan Data Otomatis", notificationMessage);
+          } else {
+            // If it's supposed to be paid but has no subscription record or payment info, 
+            // use createdAt as a fallback but allow 3 months
+            const startDate = tenant.createdAt ? (tenant.createdAt.toDate ? tenant.createdAt.toDate() : new Date(tenant.createdAt)) : null;
+            if (startDate) {
+              const diffDays = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+              if (diffDays >= 90) {
+                await performFullDeletion(tenantId, tenant.name || tenantId);
+              }
             }
-          } catch (notifErr) {
-            console.error("[AUTO-WIPE-CRON] Failed sending wipe notifications:", notifErr);
           }
         }
       }
     } catch (err) {
-      console.error("Cron Auto Wipe Checker error:", err);
+      console.error("Cron Auto Maintenance error:", err);
     }
   });
 

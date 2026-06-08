@@ -96,21 +96,29 @@ export function ControlSuiteMenu({
                 </motion.div>
               </div>
             ) : (
-              // Desktop View: Contextual Dropdown
+              // Desktop View: Contextual Dropdown with subtle backdrop and safer positioning
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+                <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-50 text-slate-800"
+                  className="absolute right-0 md:-right-6 lg:-right-10 top-full mt-4 w-80 bg-white rounded-[2.5rem] shadow-[0_30px_70px_rgba(0,0,0,0.2)] border border-slate-100 p-4 z-[101] text-slate-800"
                 >
-                  <div className="flex flex-col gap-1">
+                  <div className="px-4 py-3 border-b border-slate-50 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        Control Suite Actions
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
                     <MenuAction label="Pulihkan Default Tenants" icon={<RefreshCw />} onClick={() => { onRestoreDefaults(); setIsOpen(false); }} />
-                    <MenuAction label="Hapus Permanen Tenants Lama" icon={<RefreshCw />} onClick={() => { onDeleteLegacy(); setIsOpen(false); }} />
-                    <MenuAction label="Standardisasi maxWarga" icon={<RefreshCw />} onClick={() => { onStandardize(); setIsOpen(false); }} />
+                    <MenuAction label="Hapus Tenants Lama" icon={<RefreshCw />} onClick={() => { onDeleteLegacy(); setIsOpen(false); }} />
+                    <MenuAction label="Standardisasi Data" icon={<RefreshCw />} onClick={() => { onStandardize(); setIsOpen(false); }} />
                     {canReset && <MenuAction label="Reset ke Super Admin" icon={<Shield />} onClick={() => { onReset(); setIsOpen(false); }} />}
-                    <div className="border-t border-slate-100 my-1" />
+                    <div className="border-t border-slate-50 my-2" />
                     <MenuAction label="Tambah Tenant Baru" icon={<PlusCircle />} onClick={() => { onAddTenant(); setIsOpen(false); }} active />
                   </div>
                 </motion.div>

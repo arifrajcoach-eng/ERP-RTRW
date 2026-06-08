@@ -12,32 +12,37 @@ interface StyledButtonProps {
 }
 
 const colorMap = {
-  primary: 'from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white',
-  secondary: 'from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 text-slate-800',
-  accent: 'from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800 text-white',
-  danger: 'from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 text-white',
-  success: 'from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white',
-  pastelBlue: 'from-sky-200 to-sky-300 hover:from-sky-300 hover:to-sky-400 text-sky-900',
-  pastelPink: 'from-pink-200 to-pink-300 hover:from-pink-300 hover:to-pink-400 text-pink-900',
-  pastelGreen: 'from-emerald-200 to-emerald-300 hover:from-emerald-300 hover:to-emerald-400 text-emerald-900',
-  pastelRed: 'from-red-200 to-red-300 hover:from-red-300 hover:to-red-400 text-red-900',
-  pastelRedActive: 'from-[#fc005d] to-[#d6004e] hover:from-[#d6004e] hover:to-[#b00040] text-white',
-  pastelBlueActive: 'from-[#0087f7] to-[#006bd6] hover:from-[#006bd6] hover:to-[#005bb0] text-white',
-  brightPink: 'from-[#f5007f] to-[#d4006e] hover:from-[#d4006e] hover:to-[#b3005d] text-white',
+  primary: 'from-blue-600 via-indigo-600 to-indigo-700 text-white shadow-[0_10px_20px_-5px_rgba(37,99,235,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(37,99,235,0.5)] border-t border-white/20',
+  secondary: 'from-slate-50 to-slate-100 text-slate-800 shadow-sm border border-slate-200/60 hover:bg-white',
+  accent: 'from-amber-400 via-amber-500 to-orange-600 text-white shadow-[0_10px_20px_-5px_rgba(245,158,11,0.4)] border-t border-white/20',
+  danger: 'from-rose-500 via-red-600 to-red-700 text-white shadow-[0_10px_20px_-5px_rgba(225,29,72,0.4)] border-t border-white/20',
+  success: 'from-emerald-500 via-emerald-600 to-teal-700 text-white shadow-[0_10px_20px_-5px_rgba(5,150,105,0.4)] border-t border-white/20',
+  pastelBlue: 'from-blue-50 to-blue-100 text-blue-700 border border-blue-200/50',
+  pastelPink: 'from-pink-50 to-pink-100 text-pink-700 border border-pink-200/50',
+  pastelGreen: 'from-emerald-50 to-emerald-100 text-emerald-700 border border-emerald-200/50',
+  pastelRed: 'from-rose-50 to-rose-100 text-rose-700 border border-rose-200/50',
+  pastelRedActive: 'from-rose-600 to-red-700 text-white shadow-lg border-t border-white/20',
+  pastelBlueActive: 'from-blue-600 to-indigo-700 text-white shadow-lg border-t border-white/20',
+  brightPink: 'from-pink-500 via-rose-600 to-rose-700 text-white shadow-[0_10px_20px_-5px_rgba(244,63,94,0.4)] border-t border-white/20',
 };
 
 export const StyledButton: React.FC<StyledButtonProps> = ({ label, onClick, colorType = 'primary', className, icon, disabled, type = 'button' }) => {
   return (
     <motion.button
       type={type}
-      whileHover={disabled ? {} : { scale: 1.02 }}
-      whileTap={disabled ? {} : { scale: 0.98 }}
+      whileHover={disabled ? {} : { 
+        scale: 1.03, 
+        y: -3, 
+        transition: { type: "spring", stiffness: 400, damping: 10 } 
+      }}
+      whileTap={disabled ? {} : { scale: 0.96 }}
       onClick={onClick}
       disabled={disabled}
-      className={`px-4 py-2 rounded-lg font-medium shadow-md transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-br ${disabled ? 'bg-gray-400 from-gray-400 to-gray-500 text-white cursor-not-allowed' : colorMap[colorType]} ${className}`}
+      className={`relative overflow-hidden px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-[0.15em] transition-all duration-300 flex items-center justify-center gap-2.5 bg-gradient-to-br ${disabled ? 'bg-slate-300 from-slate-300 to-slate-400 text-slate-500 cursor-not-allowed opacity-60 shadow-none' : colorMap[colorType]} ${className}`}
     >
-      {icon}
-      {label}
+      <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity pointer-events-none" />
+      {icon && <span className="relative z-10">{icon}</span>}
+      <span className="relative z-10">{label}</span>
     </motion.button>
   );
 };

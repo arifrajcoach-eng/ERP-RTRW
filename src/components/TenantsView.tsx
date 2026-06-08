@@ -351,57 +351,66 @@ export default function TenantsView({
   };
 
   return (
-    <div className="tenants-wrapper">
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
-            <Shield className="w-6 h-6" />
+    <div className="w-full min-h-screen p-4 md:p-8 lg:p-12 animate-in fade-in duration-700">
+      <div className="mb-12">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10 bg-white p-10 md:p-16 rounded-[4rem] border border-slate-200/60 shadow-2xl relative">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none"></div>
+          
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-10 relative z-10 w-full xl:w-auto">
+            <div className="p-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-900 text-white rounded-[3.5rem] shadow-2xl shrink-0 ring-8 ring-blue-50/50">
+              <Shield className="w-14 h-14" />
+            </div>
+            <div className="text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-4 mb-4">
+                <span className="w-10 h-1.5 bg-blue-600 rounded-full"></span>
+                <span className="text-[12px] font-black uppercase tracking-[0.5em] text-blue-600/80">Infrastructure Management</span>
+              </div>
+              <h3 className="text-[45px] font-black tracking-tighter uppercase italic text-slate-900 leading-[0.85] mb-6 pr-6">
+                Manajemen <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-800 bg-clip-text text-transparent">Tenant</span>
+              </h3>
+              <p className="text-[15px] text-slate-500 font-medium max-w-3xl leading-relaxed">
+                Pusat kendali ekosistem multi-tenant SmaRtRw AI. Kelola isolasi data wilayah, otoritas akses berjenjang, dan orkestrasi paket layanan antar wilayah secara real-time.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-slate-800">
-              Manajemen Tenant (Client RW/RT)
-            </h3>
-            <p className="text-sm text-slate-500">
-              Ekosistem Multi-Tenant SmaRtRw AI System.
-            </p>
+          
+          <div className="flex flex-wrap items-center justify-center xl:justify-end gap-4 relative z-20">
+            <ControlSuiteMenu
+              onRestoreDefaults={handleRestoreDefaultTenants}
+              onDeleteLegacy={handlePermanentDeleteLegacyTenants}
+              onStandardize={runMigration}
+              onAddTenant={() => {
+                setEditingTenant(null);
+                setShowAddForm(true);
+              }}
+              canReset={!!selectedTenantId}
+              onReset={() => {
+                setSelectedTenantId(null);
+                showNotification("Kembali ke mode Super Admin pusat.", "info");
+              }}
+            />
           </div>
-        </div>
-        <div className="flex gap-2">
-          <ControlSuiteMenu
-            onRestoreDefaults={handleRestoreDefaultTenants}
-            onDeleteLegacy={handlePermanentDeleteLegacyTenants}
-            onStandardize={runMigration}
-            onAddTenant={() => {
-              setEditingTenant(null);
-              setShowAddForm(true);
-            }}
-            canReset={!!selectedTenantId}
-            onReset={() => {
-              setSelectedTenantId(null);
-              showNotification("Kembali ke mode Super Admin pusat.", "info");
-            }}
-          />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-[3.5rem] border border-slate-200/60 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.05)] overflow-hidden mt-10">
+        <div className="overflow-x-auto scroller-slate">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              <tr className="bg-slate-50/80 border-b border-slate-100">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
                   Detail Tenant
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
                   Admin Utama
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
                   Paket
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
                   Status Akses
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-right">
                   Aksi
                 </th>
               </tr>
@@ -411,9 +420,14 @@ export default function TenantsView({
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-10 text-center text-slate-400 italic text-sm"
+                    className="px-8 py-20 text-center text-slate-400 italic font-medium"
                   >
-                    Belum ada tenant terdaftar.
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="p-4 bg-slate-50 rounded-full">
+                        <Database className="w-8 h-8 text-slate-200" />
+                      </div>
+                      <p>Belum ada tenant yang terdaftar dalam sistem.</p>
+                    </div>
                   </td>
                 </tr>
               )}
