@@ -52,6 +52,7 @@ export default function TenantsView({
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
   const [tenantToDelete, setTenantToDelete] = useState<any>(null);
+  const [isLegacyDeleteConfirmOpen, setIsLegacyDeleteConfirmOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleRestoreDefaultTenants = async () => {
@@ -170,6 +171,7 @@ export default function TenantsView({
       showNotification(`Gagal menghapus tenant dari backend: ${e.message}`, "error");
     } finally {
       setIsLoadingDB(false);
+      setIsLegacyDeleteConfirmOpen(false);
     }
   };
 
@@ -378,7 +380,7 @@ export default function TenantsView({
           <div className="flex flex-wrap items-center justify-center xl:justify-end gap-4 relative z-20">
             <ControlSuiteMenu
               onRestoreDefaults={handleRestoreDefaultTenants}
-              onDeleteLegacy={handlePermanentDeleteLegacyTenants}
+              onDeleteLegacy={() => setIsLegacyDeleteConfirmOpen(true)}
               onStandardize={runMigration}
               onAddTenant={() => {
                 setEditingTenant(null);
@@ -911,6 +913,18 @@ export default function TenantsView({
       </div>
 
       <AnimatePresence>
+        {isLegacyDeleteConfirmOpen && (
+          <ConfirmModal
+            isOpen={true}
+            title="Hapus Permanen Tenants Lama"
+            message="Apakah Anda yakin ingin menghapus tenants lama (RW26, RW_BERJUANG, RW26_SMART, rt01_rw26) secara permanen dari backend? Tindakan ini tidak dapat dibatalkan."
+            onConfirm={handlePermanentDeleteLegacyTenants}
+            onCancel={() => setIsLegacyDeleteConfirmOpen(false)}
+            confirmText="Hapus Permanen"
+            cancelText="Batal"
+            isLoading={isLoadingDB}
+          />
+        )}
         {tenantToDelete && (
           <ConfirmModal
             isOpen={true}

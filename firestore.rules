@@ -172,11 +172,13 @@ service cloud.firestore {
       allow read: if isTenantMember(tenantId);
       allow create: if true; // Allow anyone to initiate registration
       allow update: if isPengurus() && isTenantMember(tenantId);
+      allow delete: if isAdmin();
     }
 
     match /tenant_settings/{tenantId} {
       allow read: if isTenantMember(tenantId);
       allow write: if isPengurus() && isTenantMember(tenantId);
+      allow delete: if isAdmin();
     }
 
     match /tenants/{tenantId} {
@@ -383,6 +385,7 @@ service cloud.firestore {
       allow list: if isTenantMemberStatic(docId);
       allow get: if isTenantMember(docId);
       allow write: if isPengurus() && isTenantMember(docId);
+      allow delete: if isAdmin();
     }
 
     match /voting_votes/{docId} {
