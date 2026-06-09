@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { safeLocalStorage } from '../lib/safeStorage';
@@ -65,10 +65,11 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
   const [billingName, setBillingName] = useState('');
   
   // Custom states for manual bank transfers
-  const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'MANUAL_ATM'>('ONLINE');
+  const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'MANUAL_ATM' | 'QRIS' | 'M_BANKING'>('ONLINE');
   const [senderName, setSenderName] = useState('');
   const [senderBank, setSenderBank] = useState('');
   const [paymentProofFileName, setPaymentProofFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [tenantData, setTenantData] = useState<any>(null);
 
   // Taxes / NPWP
@@ -672,20 +673,48 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
               </div>
 
               {/* Payment Type Selector tabs */}
-              <div className="grid grid-cols-2 gap-2 bg-[#161617] p-1 rounded-xl border border-slate-900">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-[#161617] p-1 rounded-xl border border-slate-900">
                 <button
                   type="button"
                   onClick={() => {
                     setPaymentMethod('ONLINE');
                     setErrorMsg('');
                   }}
-                  className={`py-2.5 text-center text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                  className={`py-2.5 text-center text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                     paymentMethod === 'ONLINE'
                       ? 'bg-white text-slate-900 shadow-md font-extrabold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Kartu Kredit Instan
+                  Kartu Kredit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMethod('QRIS');
+                    setErrorMsg('');
+                  }}
+                  className={`py-2.5 text-center text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                    paymentMethod === 'QRIS'
+                      ? 'bg-amber-600 text-white shadow-md font-extrabold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  QRIS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMethod('M_BANKING');
+                    setErrorMsg('');
+                  }}
+                  className={`py-2.5 text-center text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                    paymentMethod === 'M_BANKING'
+                      ? 'bg-amber-600 text-white shadow-md font-extrabold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  M-Banking
                 </button>
                 <button
                   type="button"
@@ -693,13 +722,13 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
                     setPaymentMethod('MANUAL_ATM');
                     setErrorMsg('');
                   }}
-                  className={`py-2.5 text-center text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                  className={`py-2.5 text-center text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                     paymentMethod === 'MANUAL_ATM'
                       ? 'bg-amber-600 text-white shadow-md font-extrabold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Transfer ATM / Bukti
+                  Transfer ATM
                 </button>
               </div>
 
@@ -930,17 +959,17 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
                     
                     <div className="flex justify-between font-semibold font-sans">
                       <span className="text-slate-405">Nama Bank:</span>
-                      <span className="text-white font-black">Bank Syariah Indonesia (BSI) / MANDIRI</span>
+                      <span className="text-white font-black">Bank Mandiri</span>
                     </div>
                     
                     <div className="flex justify-between font-semibold font-sans">
                       <span className="text-slate-405">Nomor Rekening:</span>
-                      <span className="text-emerald-400 font-mono font-bold tracking-wider text-sm select-all">102-00-12821-232</span>
+                      <span className="text-emerald-400 font-mono font-bold tracking-wider text-sm select-all">127.00.1206116.2</span>
                     </div>
 
                     <div className="flex justify-between font-semibold font-sans">
                       <span className="text-slate-405">Atas Nama pemilik:</span>
-                      <span className="text-white font-bold text-xs">PT. SmaRtRw Solusi Indonesia</span>
+                      <span className="text-white font-bold text-xs">Annisa Putri Handayani</span>
                     </div>
                     
                     <div className="h-px bg-slate-900 my-2" />
@@ -979,14 +1008,22 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
                     />
                   </div>
 
-                  {/* File Upload mock clicker */}
+                  {/* File Upload clicker */}
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Lampiran Bukti Transfer (Foto/Struk ATM)</label>
-                    <div 
-                      onClick={() => {
-                        const simulatedName = `bukti_transfer_${Math.floor(1000 + Math.random() * 9000)}.jpg`;
-                        setPaymentProofFileName(simulatedName);
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/*,.pdf" 
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setPaymentProofFileName(e.target.files[0].name);
+                        }
                       }}
+                    />
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
                       className="w-full bg-[#141415] border-2 border-dashed border-slate-900 hover:border-slate-800 rounded-2xl p-6 text-center cursor-pointer hover:bg-slate-900/10 transition-all"
                     >
                       <div className="w-10 h-10 bg-slate-900 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-2 font-sans">
@@ -1000,8 +1037,8 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          <p className="text-xs text-slate-400 font-bold">Pilih foto atau file bukti transfer ATM</p>
-                          <p className="text-[10px] text-slate-600">Sistem otomatis me-link file untuk persetujuan admin</p>
+                          <p className="text-xs text-slate-400 font-bold cursor-pointer">Pilih foto atau file bukti transfer ATM</p>
+                          <p className="text-[10px] text-slate-600 cursor-pointer">Sistem otomatis me-link file untuk persetujuan admin</p>
                         </div>
                       )}
                     </div>
@@ -1014,7 +1051,11 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 mt-4 bg-white hover:bg-neutral-100 text-slate-900 font-extrabold uppercase tracking-widest text-xs rounded-2xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                className={`w-full py-5 mt-4 ${
+                  paymentMethod === 'ONLINE' 
+                    ? 'bg-white hover:bg-neutral-200 text-slate-900' 
+                    : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white'
+                } font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-xl active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer border border-black/5`}
               >
                 {isSubmitting ? (
                   <>

@@ -263,7 +263,7 @@ export const PLAN_CONFIG = {
     priceYearly: 550000, 
     features: [
       "Kapasitas Warga: Maksimal hingga 300 Warga.",
-      "Iuran Digital & PPOB: Integrasi pembayaran iuran warga secara digital dan fitur PPOB (Listrik, PDAM, dll) sebagai sumber income Kas RT.",
+      "Iuran Digital & PPOB: Integrasi pembayaran iuran warga secara digital dan fitur PPOB (Listrik, PDAM, dll) sebagai sumber income Kas RT.\n      NB : Bukan bagian dari paket (Kemitraan 50:50)",
       "Surat Digital & Keuangan: Manajemen surat menyurat digital dan pencatatan modul keuangan dasar.",
       "Booking Fasum: Fitur peminjaman fasilitas umum (lapangan, balai warga, dll).",
       "Keamanan Digital & SOS: Fitur tombol darurat (SOS) untuk keamanan lingkungan.",

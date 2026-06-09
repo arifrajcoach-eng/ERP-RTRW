@@ -65,12 +65,30 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
                 
                 <button
                   onClick={() => {
+                    alert('Layanan QRIS segera hadir.');
+                  }}
+                  className="w-full py-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 rounded-2xl font-black transition-all shadow-sm flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Bayar dengan QRIS
+                </button>
+                <button
+                  onClick={() => {
+                    alert('Layanan M-Banking segera hadir.');
+                  }}
+                  className="w-full py-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 rounded-2xl font-black transition-all shadow-sm flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Bayar via M-Banking
+                </button>
+                <button
+                  onClick={() => {
                     alert('Fitur Pembayaran Otomatis segera hadir. Silakan gunakan metode manual via WA untuk saat ini.');
                   }}
                   className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
                 >
                   <Zap className="w-4 h-4" />
-                  Pembayaran Otomatis (Segera Hadir)
+                  Pembayaran Otomatis via Kartu Kredit
                 </button>
                 <button
                   onClick={() => {

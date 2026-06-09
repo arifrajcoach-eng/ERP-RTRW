@@ -519,6 +519,16 @@ export default function App() {
               user.email?.toLowerCase().includes("handoko");
             let needsUpdate = false;
 
+            // Security: Authorization restriction based on allowed packages
+            const allowedStatuses = ["GRATIS", "STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE"];
+            const userStatus = userData.status?.toUpperCase() || "TRIAL";
+            if (!allowedStatuses.includes(userStatus) && user.email !== "arifrajcoach@gmail.com") {
+              await signOut(auth);
+              setCurrentUser(null);
+              showNotification("Akun Anda tidak memiliki paket yang diizinkan (Paket Gratis, Starter, Flash, Pro, Premium, Enterprise). Hubungi Admin untuk bantuan.", "error");
+              return;
+            }
+
             if (isTrihUser && userData.tenantId !== "rw26_berjuang") {
               userData.tenantId = "rw26_berjuang";
               userData.role = "RW";
@@ -651,12 +661,11 @@ export default function App() {
                 // Unauthorized session without a Firestore document
                 await signOut(auth);
                 setCurrentUser(null);
-                // Note: Ensure setDbError is available or available in scope.
-                // Based on lines 1147, it was available.
-                if (typeof setDbError === "function")
-                  setDbError(
-                    "Akun Google Anda belum terdaftar di sistem. Silakan mendaftar Trial atau minta Admin untuk mendaftarkan Anda.",
-                  );
+                // Note: Ensure showNotification is available or available in scope.
+                showNotification(
+                  "Akun Google Anda belum terdaftar di sistem. Silakan minta Admin RT/RW untuk mendaftarkan email Anda, atau gunakan login Warga/Verifikasi WA.",
+                  "error",
+                );
               }
             }
           }
@@ -685,8 +694,9 @@ export default function App() {
             } else {
               // Handle profile read denial explicitly
               setCurrentUser(null);
-              setDbError(
+              showNotification(
                 "Profil Anda belum aktif atau tidak memiliki izin akses. Hubungi Admin.",
+                "error",
               );
             }
           }

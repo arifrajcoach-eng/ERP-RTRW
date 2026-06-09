@@ -43,9 +43,11 @@ export default function PanduanAdminView() {
           // Robust sanitization for modern color functions (oklch, oklab) which crash html2canvas parser
           const sanitizeCSS = (css: string) => {
             if (!css) return '';
+            // More robust replacement for oklch and oklab.
+            // Matching any balanced parentheses content after the function name to be safe.
             return css
-              .replace(/oklch\([^)]+\)/g, '#475569')
-              .replace(/oklab\([^)]+\)/g, '#475569');
+              .replace(/oklch\([^)]+(\/[^)]+)?\)/gi, '#475569')
+              .replace(/oklab\([^)]+(\/[^)]+)?\)/gi, '#475569');
           };
 
           // 1. Sanitize all style tags

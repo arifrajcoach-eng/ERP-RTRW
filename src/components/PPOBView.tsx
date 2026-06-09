@@ -178,7 +178,7 @@ export function PPOBView({
           </div>
           <h2 className="text-3xl md:text-4xl font-black mb-4 tracking-tighter italic">Layanan <span className="text-blue-200">Digital & PPOB</span> Terpadu</h2>
           <p className="text-blue-50 text-sm font-bold max-w-2xl leading-relaxed opacity-90">
-            Bayar tagihan listrik, pulsa, PDAM, hingga tiket kereta api langsung dari genggaman. Nikmati kemudahan transaksi digital seraya berkontribusi pada <span className="bg-white/20 px-2 py-0.5 rounded-lg text-white">Kas RT/RW</span> melalui bagi hasil komisi otomatis di setiap transaksi!
+            Bayar tagihan listrik, pulsa, PDAM, hingga tiket kereta api langsung dari genggaman. Nikmati kemudahan transaksi digital seraya berkontribusi pada <span className="bg-white/20 px-2 py-0.5 rounded-lg text-white">Kas RT/RW</span> melalui bagi hasil komisi otomatis di setiap transaksi! (NB : Bukan bagian dari paket, Kemitraan 50:50)
           </p>
         </div>
         
