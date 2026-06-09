@@ -14,7 +14,8 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
     email: '', 
     hp: '', 
     rt: '01', 
-    voucher: '' 
+    voucher: '',
+    joiningDate: new Date().toISOString().split('T')[0]
   });
   const [clientIdSuggestions, setClientIdSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -136,6 +137,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
         namaPIC: formData.nama,
         followUpStatus: 'NEW',
         paymentStatus: payStatus,
+        joiningDate: formData.joiningDate,
         // Manual ATM payment verification fields
         paymentProofSenderName: paymentMethod === 'MANUAL_ATM' ? senderName : null,
         paymentProofSenderBank: paymentMethod === 'MANUAL_ATM' ? senderBank : null,
@@ -526,6 +528,13 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
               <div className="relative group">
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                 <input required type="tel" placeholder="WhatsApp (Contoh: 0812...)" value={formData.hp} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold text-slate-700" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanggal Bergabung</label>
+                <div className="relative group">
+                  <input required type="date" value={formData.joiningDate} onChange={e => setFormData({...formData, joiningDate: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold text-slate-700" />
+                </div>
               </div>
             </div>
           </div>

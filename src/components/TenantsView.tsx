@@ -237,6 +237,7 @@ export default function TenantsView({
     const rtCount = parseInt((formData.get("rtCount") as string) || "1");
     const rwNumber = (formData.get("rwNumber") as string) || "26";
     const isActive = formData.get("isActive") === "true";
+    const joiningDate = formData.get("joiningDate") as string;
 
     if (!editingTenant && (!password || password.length < 6)) {
       showNotification("Password admin minimal 6 karakter.", "error");
@@ -261,7 +262,7 @@ export default function TenantsView({
       addons,
       rtTarget: rtCount,
       rwTarget: rwNumber,
-      createdAt: editingTenant ? editingTenant.createdAt || new Date().toISOString() : new Date().toISOString()
+      createdAt: joiningDate ? new Date(joiningDate).toISOString() : (editingTenant ? editingTenant.createdAt || new Date().toISOString() : new Date().toISOString())
     };
 
     setIsLoadingDB(true);
@@ -402,6 +403,9 @@ export default function TenantsView({
                   Detail Tenant
                 </th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+                  Tanggal Bergabung
+                </th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
                   Admin Utama
                 </th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
@@ -419,7 +423,7 @@ export default function TenantsView({
               {tenantsData.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-8 py-20 text-center text-slate-400 italic font-medium"
                   >
                     <div className="flex flex-col items-center gap-4">
@@ -483,6 +487,11 @@ export default function TenantsView({
                         )}
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-xs font-bold text-slate-600">
+                      {tenant.createdAt ? new Date(tenant.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "Tidak tercatat"}
+                    </p>
                   </td>
                   <td className="px-6 py-4">
                     <p
@@ -760,6 +769,18 @@ export default function TenantsView({
                   rows={2}
                   placeholder="Alamat lengkap organisasi..."
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                />
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
+                  Tanggal Bergabung
+                </label>
+                <input
+                  name="joiningDate"
+                  type="date"
+                  defaultValue={editingTenant?.createdAt ? new Date(editingTenant.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
                 />
               </div>
 
