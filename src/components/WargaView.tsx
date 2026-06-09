@@ -802,7 +802,7 @@ function WargaView(props: WargaViewProps) {
               onClick={() => setShowSuiteMenu(!showSuiteMenu)}
               className="px-6 py-4.5 bg-[#0d1527] dark:bg-slate-900 hover:bg-[#121c33] text-white border-2 border-indigo-500/30 hover:border-indigo-500 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-lg shadow-indigo-500/10 active:scale-95 cursor-pointer relative group overflow-hidden"
             >
-              <Database className="w-4.5 h-4.5 text-indigo-400 group-hover:rotate-12 transition-transform duration-300" />
+              <Database className="w-4.5 h-4.5 text-[#fffefe] group-hover:rotate-12 transition-transform duration-300 border border-[#8181c1]" />
               <span>Menu Kelola Warga & Ekspor</span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${showSuiteMenu ? 'rotate-180' : ''}`} />
