@@ -25,6 +25,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
 
   // Custom states for Manual ATM proof upload
   const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'MANUAL_ATM'>('ONLINE');
+  const [duration, setDuration] = useState<number>(1);
   const [senderName, setSenderName] = useState('');
   const [senderBank, setSenderBank] = useState('');
   const [paymentProofFileName, setPaymentProofFileName] = useState('');
@@ -138,6 +139,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
         followUpStatus: 'NEW',
         paymentStatus: payStatus,
         joiningDate: formData.joiningDate,
+        expiredAt: initialPlan === 'TRIAL' ? null : new Date(new Date().setMonth(new Date().getMonth() + duration)).toISOString(),
         // Manual ATM payment verification fields
         paymentProofSenderName: paymentMethod === 'MANUAL_ATM' ? senderName : null,
         paymentProofSenderBank: paymentMethod === 'MANUAL_ATM' ? senderBank : null,
@@ -178,7 +180,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       // Write to subscriptions collection to keep SubscriptionGuard synchronized
       if (initialPlan !== 'TRIAL') {
         const nextBilling = new Date();
-        nextBilling.setDate(nextBilling.getDate() + 30);
+        nextBilling.setMonth(nextBilling.getMonth() + duration);
         batchOp.set(doc(db, 'subscriptions', tenantId), {
           plan: initialPlan.toLowerCase(),
           status: paymentMethod === 'ONLINE' ? 'Active' : 'Inactive',
@@ -187,13 +189,13 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
           paymentDetails: paymentMethod === 'ONLINE' ? {
             fullName: formData.nama,
             country: 'Indonesia',
-            cycle: 'monthly',
-            pricePaid: 0,
+            cycle: duration === 1 ? 'monthly' : duration === 3 ? 'quarterly' : 'yearly',
+            pricePaid: priceAmount * duration,
             cardNumberMasked: '**** **** **** xxxx'
           } : {
             fullName: formData.nama,
             country: 'Indonesia',
-            cycle: 'monthly',
+            cycle: duration === 1 ? 'monthly' : duration === 3 ? 'quarterly' : 'yearly',
             paymentMethod: 'MANUAL_ATM',
             senderName,
             senderBank,
@@ -328,11 +330,23 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Paket Dipilih</span>
               <span className="text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full uppercase">{initialPlan}</span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Durasi</span>
+              <select 
+                value={duration} 
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className="text-xs font-black text-slate-800 bg-white border border-slate-200 px-2 py-1 rounded-lg"
+              >
+                <option value={1}>1 Bulan</option>
+                <option value={3}>3 Bulan</option>
+                <option value={12}>12 Bulan</option>
+              </select>
+            </div>
             <div className="h-px bg-slate-200/65" />
             <div className="flex justify-between items-baseline">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Tagihan</span>
               <span className="text-sm font-black text-slate-800 tracking-tight">
-                {priceAmount === 0 ? 'GRATIS / TRIAL' : formatRupiah(priceAmount)}
+                {priceAmount === 0 ? 'GRATIS / TRIAL' : formatRupiah(priceAmount * duration)}
               </span>
             </div>
           </div>

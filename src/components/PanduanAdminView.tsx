@@ -3,10 +3,12 @@ import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriang
 import { motion, AnimatePresence } from 'motion/react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { applyColorSanitization } from '../lib/pdfUtils';
 
 export default function PanduanAdminView() {
   const [activeTab, setActiveTab] = useState<'fitur' | 'action' | 'peringatan' | 'sosialisasi'>('fitur');
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const tabs = [
     { id: 'fitur', label: 'Fitur Aplikasi', icon: Info, color: 'from-blue-500 to-indigo-600', activeBg: 'bg-indigo-600' },
@@ -40,62 +42,30 @@ export default function PanduanAdminView() {
         logging: false,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
-          // Robust sanitization for modern color functions (oklch, oklab) which crash html2canvas parser
-          const sanitizeCSS = (css: string) => {
-            if (!css) return '';
-            // More robust replacement for oklch and oklab.
-            // Matching any balanced parentheses content after the function name to be safe.
-            return css
-              .replace(/oklch\([^)]+(\/[^)]+)?\)/gi, '#475569')
-              .replace(/oklab\([^)]+(\/[^)]+)?\)/gi, '#475569');
-          };
+            applyColorSanitization(clonedDoc);
 
-          // 1. Sanitize all style tags
-          const styleTags = clonedDoc.getElementsByTagName('style');
-          for (let i = 0; i < styleTags.length; i++) {
-            try {
-              if (styleTags[i].innerHTML) {
-                styleTags[i].innerHTML = sanitizeCSS(styleTags[i].innerHTML);
+            // 3. Force visibility for specific print-only elements
+            const hiddenPrintElements = clonedDoc.querySelectorAll('.hidden.print\\:block');
+            hiddenPrintElements.forEach((el) => {
+              (el as HTMLElement).style.setProperty('display', 'block', 'important');
+              (el as HTMLElement).style.setProperty('visibility', 'visible', 'important');
+              (el as HTMLElement).style.setProperty('opacity', '1', 'important');
+            });
+
+            // 4. Inject a normalization print stylesheet
+            const normalizationStyle = clonedDoc.createElement('style');
+            normalizationStyle.innerHTML = `
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
               }
-              if (styleTags[i].textContent) {
-                styleTags[i].textContent = sanitizeCSS(styleTags[i].textContent);
-              }
-            } catch (e) {
-              console.warn('Failed to sanitize style tag:', e);
-            }
+              body { background: white !important; }
+              .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+            `;
+            clonedDoc.head.appendChild(normalizationStyle);
           }
-
-          // 2. Sanitize inline styles on all elements
-          const allElements = clonedDoc.querySelectorAll('*');
-          allElements.forEach((el) => {
-            const styleAttr = el.getAttribute('style');
-            if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
-              el.setAttribute('style', sanitizeCSS(styleAttr));
-            }
-          });
-
-          // 3. Force visibility for specific print-only elements
-          const hiddenPrintElements = clonedDoc.querySelectorAll('.hidden.print\\:block');
-          hiddenPrintElements.forEach((el) => {
-            (el as HTMLElement).style.setProperty('display', 'block', 'important');
-            (el as HTMLElement).style.setProperty('visibility', 'visible', 'important');
-            (el as HTMLElement).style.setProperty('opacity', '1', 'important');
-          });
-
-          // 4. Inject a normalization print stylesheet
-          const normalizationStyle = clonedDoc.createElement('style');
-          normalizationStyle.innerHTML = `
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-            }
-            body { background: white !important; }
-            .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
-          `;
-          clonedDoc.head.appendChild(normalizationStyle);
-        }
-      });
+        });
       
       const imgData = canvas.toDataURL('image/png', 1.0);
       const pdf = new jsPDF({
@@ -748,51 +718,71 @@ export default function PanduanAdminView() {
             )}
 
             {activeTab === 'action' && (
-              <div className="bg-white border text-emerald-800 border-slate-200 p-6 md:p-8 rounded-2xl shadow-sm print:border-none print:shadow-none print:p-0">
-                <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100 print:border-slate-900 print:mb-8">
-                  <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600 print:hidden">
-                    <Star className="h-6 w-6" />
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <h3 className="text-2xl font-black text-slate-800 mb-8 tracking-tight">Action Plan Implementasi</h3>
+                <div className="relative space-y-8">
+                  {/* Connector Line */}
+                  <div className="absolute left-[34px] top-6 bottom-6 w-0.5 bg-emerald-100" />
+                  
+                  {[
+                    { id: 1, title: 'Pelajari Fitur', desc: 'Pelajari tombol & fungsi aplikasi.' },
+                    { id: 2, title: 'Ajak Pengurus', desc: 'Internal pengurus harus menggunakan.' },
+                    { id: 3, title: 'Sosialisasi Warga', desc: 'Kenalkan aplikasi ke seluruh warga.' },
+                    { id: 4, title: 'Data Warga', desc: 'Langkah fondasi: Input KK/NIK.' },
+                    { id: 5, title: 'Administrasi', desc: 'Surat, Keluhan, Booking Fasilitas.' },
+                    { id: 6, title: 'Keuangan', desc: 'Fitur Iuran bagi warga & pengurus.' },
+                    { id: 7, title: 'Fitur Lanjutan', desc: 'Gunakan fitur: SOS, LAPAK, dll.' },
+                  ].map((step, idx) => (
+                    <motion.div
+                      key={step.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="relative flex items-center gap-6"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-white border-4 border-emerald-500 flex items-center justify-center font-black text-lg text-emerald-600 shadow-md z-10 shrink-0">
+                        {step.id}
+                      </div>
+                      <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 flex-grow hover:border-emerald-300 transition-colors">
+                        <h4 className="font-bold text-emerald-900 text-lg mb-1">{step.title}</h4>
+                        <p className="text-emerald-700">{step.desc}</p>
+                      </div>
+                    </motion.div>
+                  ))}
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-800 print:text-2xl print:font-black print:uppercase">Action Plan Implementasi</h3>
-                    <p className="text-sm text-slate-500 mt-1 print:text-slate-700">Langkah praktis mengajak warga menggunakan aplikasi</p>
+
+                  {/* WA Tips Section */}
+                  <div className="mt-10 pt-8 border-t border-slate-100">
+                    <h3 className="text-xl font-black text-slate-800 mb-6 tracking-tight">Tips Sosialisasi (WhatsApp)</h3>
+                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                      <h4 className="font-bold text-slate-800 mb-2">Halo Warga [Nama Lingkungan]! Kini Layanan RT/ RW Jadi Lebih Mudah!</h4>
+                      <p className="text-sm text-slate-600 mb-4 whitespace-pre-line">
+                        Halo Bapak/Ibu Warga [Nama Lingkungan] yang kami hormati, Untuk meningkatkan kenyamanan dan transparansi layanan di lingkungan kita, sekarang [Nama Lingkungan] telah hadir di SmarTRW AI! Mulai sekarang, pengurusan layanan warga jadi jauh lebih praktis. Bapak/Ibu bisa langsung melalui aplikasi tanpa perlu bolak-balik ke rumah pengurus: 
+                        ✅ Ajukan Surat Pengantar (domisili, usaha, dll langsung dari HP) 
+                        ✅ Lapor Keluhan Lingkungan (langsung terpantau pengurus) 
+                        ✅ Booking Fasilitas Umum (cepat & bebas antri) 
+                        ✅ Info Info Terkini & Transparansi Keuangan (bisa dipantau kapan saja)
+
+                        Yuk, segera akses layanan kita: 
+                        👉 [Masukkan Link Aplikasi/QR Code di sini] Mari kita sukseskan lingkungan yang lebih modern, transparan, dan teratur bersama!
+
+                        Salam hangat, Pengurus [RT/RW/Lingkungan]
+                      </p>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`Halo Warga [Nama Lingkungan]! Kini Layanan RT/ RW Jadi Lebih Mudah!\n\nHalo Bapak/Ibu Warga [Nama Lingkungan] yang kami hormati, Untuk meningkatkan kenyamanan dan transparansi layanan di lingkungan kita, sekarang [Nama Lingkungan] telah hadir di SmarTRW AI! Mulai sekarang, pengurusan layanan warga jadi jauh lebih praktis. Bapak/Ibu bisa langsung melalui aplikasi tanpa perlu bolak-balik ke rumah pengurus: \n✅ Ajukan Surat Pengantar (domisili, usaha, dll langsung dari HP) \n✅ Lapor Keluhan Lingkungan (langsung terpantau pengurus) \n✅ Booking Fasilitas Umum (cepat & bebas antri) \n✅ Info Info Terkini & Transparansi Keuangan (bisa dipantau kapan saja)\n\n Yuk, segera akses layanan kita: \n👉 [Masukkan Link Aplikasi/QR Code di sini] Mari kita sukseskan lingkungan yang lebih modern, transparan, dan teratur bersama!\n\nSalam hangat, Pengurus [RT/RW/Lingkungan]`);
+                          setIsCopied(true);
+                          setTimeout(() => setIsCopied(false), 2000);
+                        }}
+                        className={`px-4 py-2 ${isCopied ? 'bg-emerald-700' : 'bg-emerald-600'} text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2`}
+                      >
+                        <CheckCircle2 className={`h-4 w-4 ${isCopied ? 'block' : 'hidden'}`} />
+                        {isCopied ? 'Tersalin!' : 'Salin Pesan WhatsApp'}
+                      </button>
+                    </div>
                   </div>
                 </div>
-                
-                <ol className="relative border-l-2 border-emerald-100 ml-4 md:ml-6 space-y-8">
-                  <li className="pl-8 relative">
-                    <span className="absolute -left-[17px] bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-white">1</span>
-                    <h4 className="font-bold text-slate-800 mb-1">Memasukkan Data Warga & Sosialisasi</h4>
-                    <p className="text-sm text-slate-600">Mulailah dengan memasukkan data KK & NIK warga ke dalam menu "Data Warga", lalu sebarkan link aplikasi atau panduan install kepada warga melalui grup WhatsApp lingkungan.</p>
-                  </li>
-                  <li className="pl-8 relative">
-                    <span className="absolute -left-[17px] bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-white">2</span>
-                    <h4 className="font-bold text-slate-800 mb-1">Warga Inisiasi Pendaftaran</h4>
-                    <p className="text-sm text-slate-600">Arahkan warga untuk melakukan pendaftaran akun baru menggunakan NIK & No. KK mereka melalui link aplikasi.</p>
-                  </li>
-                  <li className="pl-8 relative">
-                    <span className="absolute -left-[17px] bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-white">3</span>
-                    <h4 className="font-bold text-slate-800 mb-1">Admin Melakukan Verifikasi</h4>
-                    <p className="text-sm text-slate-600">Pendaftaran warga akan masuk ke menu "Verifikasi Warga". Segera verifikasi agar akun mereka aktif.</p>
-                  </li>
-                  <li className="pl-8 relative">
-                    <span className="absolute -left-[17px] bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-white">4</span>
-                    <h4 className="font-bold text-slate-800 mb-1">Aplikasi Siap Digunakan</h4>
-                    <p className="text-sm text-slate-600">Warga bisa login pakai NIK & KK. Agar lebih mudah, mereka juga bisa <strong>Masuk dengan Google</strong> jika email Google warga sudah terdata.</p>
-                  </li>
-                  <li className="pl-8 relative">
-                    <span className="absolute -left-[17px] bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-white">5</span>
-                    <h4 className="font-bold text-slate-800 mb-1">Uji Coba Fitur (First Action)</h4>
-                    <p className="text-sm text-slate-600">Arahkan warga untuk melakukan aktivitas pertama mereka, seperti mengecek tagihan iuran lewat dashboard, membuat surat pengantar, atau menyapa <em>Chaty AI</em>.</p>
-                  </li>
-                  <li className="pl-8 relative">
-                    <span className="absolute -left-[17px] bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-white">6</span>
-                    <h4 className="font-bold text-slate-800 mb-1">Pendampingan Khusus</h4>
-                    <p className="text-sm text-slate-600">Kenalkan <em>Tombol Darurat (SOS)</em>. Mintalah beberapa warga (Kader/Pemuda) yang melek teknologi untuk mendampingi warga lansia menggunakan aplikasi.</p>
-                  </li>
-                </ol>
-              </div>
-            )}
+              )}
 
             {activeTab === 'peringatan' && (
               <div className="bg-white border border-rose-200 p-6 md:p-8 rounded-2xl shadow-sm print:border-none print:shadow-none print:p-0">

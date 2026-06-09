@@ -240,6 +240,8 @@ export default function TenantsView({
     const rwNumber = (formData.get("rwNumber") as string) || "26";
     const isActive = formData.get("isActive") === "true";
     const joiningDate = formData.get("joiningDate") as string;
+    const expiredAt = formData.get("expiredAt") as string;
+
 
     if (!editingTenant && (!password || password.length < 6)) {
       showNotification("Password admin minimal 6 karakter.", "error");
@@ -264,7 +266,8 @@ export default function TenantsView({
       addons,
       rtTarget: rtCount,
       rwTarget: rwNumber,
-      createdAt: joiningDate ? new Date(joiningDate).toISOString() : (editingTenant ? editingTenant.createdAt || new Date().toISOString() : new Date().toISOString())
+      createdAt: joiningDate ? new Date(joiningDate).toISOString() : (editingTenant ? editingTenant.createdAt || new Date().toISOString() : new Date().toISOString()),
+      expiredAt: expiredAt ? new Date(expiredAt).toISOString() : (editingTenant ? editingTenant.expiredAt || null : null)
     };
 
     setIsLoadingDB(true);
@@ -782,6 +785,18 @@ export default function TenantsView({
                   name="joiningDate"
                   type="date"
                   defaultValue={editingTenant?.createdAt ? new Date(editingTenant.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
+                />
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
+                  Masa Aktif (Expired At)
+                </label>
+                <input
+                  name="expiredAt"
+                  type="date"
+                  defaultValue={editingTenant?.expiredAt ? new Date(editingTenant.expiredAt).toISOString().split('T')[0] : ""}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
                 />
               </div>
