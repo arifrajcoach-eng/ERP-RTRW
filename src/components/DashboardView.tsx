@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
   MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot, LayoutGrid,
-  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap, ChevronRight, Sparkles,
+  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap, ChevronRight, Sparkles, Eye, EyeOff,
   PieChart as PieIcon
 } from 'lucide-react';
 import { 
@@ -86,6 +86,13 @@ export default function DashboardView({
   const [piePeriod, setPiePeriod] = useState('30days');
   const [linkForm, setLinkForm] = useState({ nik: '', pin: '' });
   const [showAIChat, setShowAIChat] = useState(false);
+  const [hideSubscriptionInfo, setHideSubscriptionInfo] = useState<boolean>(() => {
+    return localStorage.getItem('hideSubscriptionInfo') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('hideSubscriptionInfo', String(hideSubscriptionInfo));
+  }, [hideSubscriptionInfo]);
 
   const isWarga = userRole === 'WARGA';
 
@@ -522,61 +529,70 @@ export default function DashboardView({
             
             {timeLeft && (
               <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex flex-col items-center justify-center leading-none">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 text-slate-400 mb-1.5">
-                    {isPaidPremium ? "Sisa Masa Langganan" : "Sisa Masa Trial"}
+                <div className="flex flex-col items-center justify-center leading-none relative">
+                  <p 
+                    className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 text-slate-400 mb-1.5 flex items-center gap-2 cursor-pointer hover:text-white transition-colors" 
+                    onClick={() => setHideSubscriptionInfo(!hideSubscriptionInfo)}
+                  >
+                    {!hideSubscriptionInfo 
+                      ? (isPaidPremium ? "Sisa Masa Langganan" : "Sisa Masa Trial")
+                      : "Sisa Masa (Tersembunyi)"
+                    }
+                    {hideSubscriptionInfo ? <EyeOff size={10} /> : <Eye size={10} />}
                   </p>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col items-center">
-                    <motion.span 
-                      key={timeLeft.days}
-                      initial={{ y: 5, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      className="text-3xl font-black tabular-nums text-white"
-                    >
-                      {timeLeft.days.toString().padStart(2, '0')}
-                    </motion.span>
-                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Hari</span>
+                {!hideSubscriptionInfo && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center">
+                      <motion.span 
+                        key={timeLeft.days}
+                        initial={{ y: 5, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-3xl font-black tabular-nums text-white"
+                      >
+                        {timeLeft.days.toString().padStart(2, '0')}
+                      </motion.span>
+                      <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Hari</span>
+                    </div>
+                    <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
+                    <div className="flex flex-col items-center">
+                      <motion.span 
+                        key={timeLeft.hours}
+                        initial={{ y: 5, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-3xl font-black tabular-nums text-amber-400"
+                      >
+                        {timeLeft.hours.toString().padStart(2, '0')}
+                      </motion.span>
+                      <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Jam</span>
+                    </div>
+                    <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
+                    <div className="flex flex-col items-center">
+                      <motion.span 
+                        key={timeLeft.minutes}
+                        initial={{ y: 5, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-3xl font-black tabular-nums text-rose-400"
+                      >
+                        {timeLeft.minutes.toString().padStart(2, '0')}
+                      </motion.span>
+                      <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Min</span>
+                    </div>
+                    <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
+                    <div className="flex flex-col items-center">
+                      <motion.span 
+                        key={timeLeft.seconds}
+                        initial={{ scale: 1.2, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="text-3xl font-black tabular-nums text-white"
+                      >
+                        {timeLeft.seconds.toString().padStart(2, '0')}
+                      </motion.span>
+                      <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Det</span>
+                    </div>
                   </div>
-                  <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
-                  <div className="flex flex-col items-center">
-                    <motion.span 
-                      key={timeLeft.hours}
-                      initial={{ y: 5, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      className="text-3xl font-black tabular-nums text-amber-400"
-                    >
-                      {timeLeft.hours.toString().padStart(2, '0')}
-                    </motion.span>
-                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Jam</span>
-                  </div>
-                  <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
-                  <div className="flex flex-col items-center">
-                    <motion.span 
-                      key={timeLeft.minutes}
-                      initial={{ y: 5, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      className="text-3xl font-black tabular-nums text-rose-400"
-                    >
-                      {timeLeft.minutes.toString().padStart(2, '0')}
-                    </motion.span>
-                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Min</span>
-                  </div>
-                  <span className="text-xl font-black text-slate-700 mt-[-14px]">:</span>
-                  <div className="flex flex-col items-center">
-                    <motion.span 
-                      key={timeLeft.seconds}
-                      initial={{ scale: 1.2, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="text-3xl font-black tabular-nums text-white"
-                    >
-                      {timeLeft.seconds.toString().padStart(2, '0')}
-                    </motion.span>
-                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Det</span>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
