@@ -181,6 +181,10 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       if (initialPlan !== 'TRIAL') {
         const nextBilling = new Date();
         nextBilling.setMonth(nextBilling.getMonth() + duration);
+        const planKey = String(initialPlan).toUpperCase();
+        const planConfigObj = (PLAN_CONFIG as any)[planKey] || (PLAN_CONFIG as any)[Object.keys(PLAN_CONFIG).find(k => k.toLowerCase() === planKey.toLowerCase()) || 'PRO'];
+        const priceAmount = planConfigObj ? planConfigObj.priceMonthly : 0;
+
         batchOp.set(doc(db, 'subscriptions', tenantId), {
           plan: initialPlan.toLowerCase(),
           status: paymentMethod === 'ONLINE' ? 'Active' : 'Inactive',
