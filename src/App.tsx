@@ -5723,7 +5723,7 @@ function SelfRegistrationView({
                   }
                   className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
-                  {["01", "02", "03", "04", "05", "06", "07", "08"].map(
+                  {Array.from({ length: 100 }, (_, i) => String(i + 1).padStart(2, "0")).map(
                     (rt) => (
                       <option key={rt} value={rt}>
                         RT {rt}
