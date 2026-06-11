@@ -9,6 +9,8 @@ import { GoogleGenAI, Modality } from "@google/genai";
 dotenv.config();
 
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
+import firebaseConfig from "./firebase-applet-config.json";
 import cron from "node-cron";
 
 // Initialize Firebase Admin (Only if credentials provided, otherwise fallback)
@@ -55,6 +57,59 @@ async function startServer() {
       console.log("Triggering self-healing supervisor restart...");
       process.exit(1);
     }, 200);
+  });
+
+  app.get("/api/debug-warga", async (req, res) => {
+    try {
+      const firebaseApps = (admin as any).apps || (admin as any).default?.apps || [];
+      if (!firebaseApps.length) {
+        const initFn = admin.initializeApp || (admin as any).default?.initializeApp;
+        if (initFn) {
+          initFn({
+            projectId: firebaseConfig.projectId
+          });
+        } else {
+          throw new Error("Could not find initializeApp function in firebase-admin module");
+        }
+      }
+      const db = getFirestore(firebaseConfig.firestoreDatabaseId); // We initialize the firestore db correctly
+      const results: any = { data_warga: [], verifikasi_warga: [], searchByName: [] };
+
+      // Query data_warga by NIK
+      const wargaSnap = await db.collection("data_warga").where("nik", "==", "1234567890987654").get();
+      wargaSnap.forEach(doc => {
+        results.data_warga.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Query verifikasi_warga by NIK
+      const verifSnap = await db.collection("verifikasi_warga").where("nik", "==", "1234567890987654").get();
+      verifSnap.forEach(doc => {
+        results.verifikasi_warga.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Search and match "arif" in name
+      const allWarga = await db.collection("data_warga").get();
+      allWarga.forEach(doc => {
+        const data = doc.data();
+        const nama = String(data.nama || "").toLowerCase();
+        if (nama.includes("arif")) {
+          results.searchByName.push({ source: "data_warga", id: doc.id, ...data });
+        }
+      });
+
+      const allVerif = await db.collection("verifikasi_warga").get();
+      allVerif.forEach(doc => {
+        const data = doc.data();
+        const nama = String(data.nama || "").toLowerCase();
+        if (nama.includes("arif")) {
+          results.searchByName.push({ source: "verifikasi_warga", id: doc.id, ...data });
+        }
+      });
+
+      res.json({ success: true, results });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message, stack: err.stack });
+    }
   });
 
   // Messaging Helpers

@@ -61,6 +61,7 @@ export default function UsersView({
       nik: formData.get("nik") as string,
       status: formData.get("status") as "AKTIF" | "NONAKTIF",
       isSuperAdmin: formData.get("isSuperAdmin") === "true",
+      allow_warga_inventaris: formData.get("allow_warga_inventaris") === "true",
       tenantId,
       created_at: editingUser?.created_at || new Date().toISOString(),
     };
@@ -475,6 +476,23 @@ export default function UsersView({
                     placeholder="16 Digit NIK"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold"
                   />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                    Izin Khusus Fitur Inventaris
+                  </label>
+                  <select
+                    name="allow_warga_inventaris"
+                    defaultValue={editingUser?.allow_warga_inventaris ? "true" : "false"}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold"
+                  >
+                    <option value="false">Tidak Diizinkan Mengakses Inventaris (Bawaan)</option>
+                    <option value="true">Diizinkan Mengakses Inventaris</option>
+                  </select>
+                  <p className="text-[9px] text-slate-400 mt-1 italic">
+                    Khusus untuk pengguna dengan Peran (Role) WARGA.
+                  </p>
                 </div>
 
                 <div className="col-span-2">

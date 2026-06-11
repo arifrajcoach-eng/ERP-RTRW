@@ -1363,6 +1363,25 @@ export default function PengaturanView({
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all"
                 />
               </div>
+              <div className="p-4 bg-yellow-50/50 rounded-xl border border-yellow-100 mb-2">
+                <label className="text-[10px] font-black text-yellow-700 uppercase mb-2 block tracking-wider">
+                  Akses Fitur Inventaris untuk Warga
+                </label>
+                <select
+                  name="allow_warga_inventaris"
+                  defaultValue={settings.allow_warga_inventaris || "false"}
+                  className="w-full px-4 py-3 bg-white border border-yellow-200 rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 transition-all font-bold text-slate-800 shadow-sm"
+                >
+                  <option value="false">Tidak Diizinkan (Standard Bawaan)</option>
+                  <option value="true">Diizinkan (Akses Terbuka untuk Seluruh Warga)</option>
+                </select>
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="w-1 h-1 rounded-full bg-yellow-400 mt-1.5 shrink-0"></div>
+                  <p className="text-[10px] text-slate-500 italic leading-tight">
+                    Secara bawaan (default), warga tidak diperbolehkan mengakses fitur Inventaris demi keamanan aset wilayah, kecuali diaktifkan secara eksplisit oleh admin tenan di sini.
+                  </p>
+                </div>
+              </div>
               <div className="pt-4 flex justify-end">
                 <button
                   type="submit"

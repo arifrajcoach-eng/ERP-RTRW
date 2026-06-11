@@ -2784,7 +2784,16 @@ export default function App() {
 
         const allowed = rolePermissions[role] || ["dashboard"];
         if (item.id === "organisasi" && role !== "WARGA" && role !== "TAMU" && role !== "VIEWER") return true;
-        return allowed.includes(item.id);
+        
+        let hasAccess = allowed.includes(item.id);
+        if (item.id === "inventaris" && role === "WARGA") {
+          const allowedGlobally = settings?.allow_warga_inventaris === "true" || settings?.allow_warga_inventaris === true;
+          const allowedIndividually = currentUser?.allow_warga_inventaris === true || currentUser?.allow_warga_inventaris === "true";
+          if (!allowedGlobally && !allowedIndividually) {
+            hasAccess = false;
+          }
+        }
+        return hasAccess;
       })
       .map((item) => {
         const role = (currentUser?.role || "TAMU").toUpperCase();
@@ -2879,7 +2888,7 @@ export default function App() {
   if (isSelfRegistering) {
     return (
       <SelfRegistrationView
-        tenantId={currentUser?.tenantId || "rw26_berjuang"}
+        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"}
         onClose={() => setIsSelfRegistering(false)}
         handleFileUpload={handleFileUpload}
         showNotification={showNotification}
@@ -3922,25 +3931,44 @@ export default function App() {
                 </button>
               </div>
             ))}
-          {activeTab === "inventaris" && (
-            <InventarisView
-              inventarisData={inventarisData}
-              setInventarisData={setInventarisData}
-              inventarisLogs={inventarisLogs}
-              setInventarisLogs={setInventarisLogs}
-              inventarisKategori={inventarisKategori}
-              inventarisLokasi={inventarisLokasi}
-              inventarisSupplier={inventarisSupplier}
-              userRole={currentUser.role}
-              currentUser={currentUser}
-              tenantId={currentUser.tenantId || "rw26_berjuang"}
-              setIsLoadingDB={setIsLoadingDB}
-              handleFirestoreError={handleFirestoreError}
-              showNotification={showNotification}
-              handleFileUpload={handleFileUpload}
-              setConfirmConfig={setConfirmConfig}
-            />
-          )}
+          {activeTab === "inventaris" && (() => {
+            const role = (currentUser?.role || "TAMU").toUpperCase();
+            const allowedGlobally = settings?.allow_warga_inventaris === "true" || settings?.allow_warga_inventaris === true;
+            const allowedIndividually = currentUser?.allow_warga_inventaris === true || currentUser?.allow_warga_inventaris === "true";
+            
+            if (role === "WARGA" && !allowedGlobally && !allowedIndividually) {
+              return (
+                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center max-w-md mx-auto my-12 shadow-sm">
+                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <X className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-2">Akses Ditolak</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Anda tidak memiliki izin dari Admin untuk mengakses fitur Inventaris di wilayah ini. Hubungi pengurus RT/RW Anda untuk mengaktifkan akses.
+                  </p>
+                </div>
+              );
+            }
+            return (
+              <InventarisView
+                inventarisData={inventarisData}
+                setInventarisData={setInventarisData}
+                inventarisLogs={inventarisLogs}
+                setInventarisLogs={setInventarisLogs}
+                inventarisKategori={inventarisKategori}
+                inventarisLokasi={inventarisLokasi}
+                inventarisSupplier={inventarisSupplier}
+                userRole={currentUser.role}
+                currentUser={currentUser}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                setIsLoadingDB={setIsLoadingDB}
+                handleFirestoreError={handleFirestoreError}
+                showNotification={showNotification}
+                handleFileUpload={handleFileUpload}
+                setConfirmConfig={setConfirmConfig}
+              />
+            );
+          })()}
           {activeTab === "kependudukan" && currentUser && (
             <KependudukanView
               kelahiranData={kelahiranData}
@@ -5313,6 +5341,33 @@ function SelfRegistrationView({
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
 
+  const [currentTenantId, setCurrentTenantId] = useState(tenantId || "rw26_berjuang");
+  const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
+  const [tenantExists, setTenantExists] = useState(true);
+
+  useEffect(() => {
+    if (currentTenantId) {
+      const trimmed = currentTenantId.trim();
+      getDoc(doc(db, "tenants", trimmed)).then((snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          setTenantNameForDisplay(data.name || data.nama || trimmed);
+          setTenantExists(true);
+        } else {
+          setTenantNameForDisplay("");
+          setTenantExists(false);
+        }
+      }).catch((err) => {
+        console.warn("Error fetching tenant display name:", err);
+        setTenantNameForDisplay("");
+        setTenantExists(false);
+      });
+    } else {
+      setTenantNameForDisplay("");
+      setTenantExists(false);
+    }
+  }, [currentTenantId]);
+
   useEffect(() => {
     if (!auth.currentUser) {
       signInAnonymously(auth).catch((err) =>
@@ -5329,6 +5384,10 @@ function SelfRegistrationView({
     });
 
     // Basic validation
+    if (!tenantExists || !currentTenantId) {
+      showNotification("Kode Area Wilayah (Tenant ID) tidak valid atau tidak terdaftar.", "error");
+      return;
+    }
     if (!formData.nik || formData.nik.length < 10) {
       showNotification("NIK harus diisi dengan benar (min. 10 digit)", "error");
       return;
@@ -5397,7 +5456,7 @@ function SelfRegistrationView({
       await setDoc(doc(db, "verifikasi_warga", id), {
         ...formData,
         id,
-        tenantId: tenantId || "",
+        tenantId: currentTenantId || "",
         ktpUrl,
         kkUrl,
         status: "Menunggu Persetujuan",
@@ -5472,6 +5531,41 @@ function SelfRegistrationView({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-10">
+          {/* Section 0: Konfigurasi Wilayah */}
+          <div className="p-6 bg-slate-50 border-4 border-dashed border-slate-200 rounded-[2rem] space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-black italic shadow-inner">
+                📌
+              </span>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                Konfigurasi Kode Wilayah (Tenant ID)
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 font-medium leading-normal">
+              Pastikan Kode Wilayah di bawah sesuai dengan nama komplek/perumahan RT/RW Anda agar data tidak masuk ke wilayah lain.
+            </p>
+            <div className="relative group">
+              <input
+                required
+                placeholder="Contoh: demo_rt100_rw100 atau rw26_berjuang"
+                value={currentTenantId}
+                onChange={(e) => setCurrentTenantId(e.target.value.toLowerCase().trim())}
+                className="w-full p-4 pl-6 bg-white border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all font-mono font-bold text-base text-slate-800"
+              />
+            </div>
+            <div className="flex items-center gap-2 text-xs font-bold px-1">
+              {tenantExists ? (
+                <span className="text-emerald-600 flex items-center gap-1 font-black">
+                  ✅ Wilayah Terdaftar: <span className="uppercase underline decoration-2">{tenantNameForDisplay || currentTenantId}</span>
+                </span>
+              ) : (
+                <span className="text-rose-500 flex items-center gap-1 font-black">
+                  ⚠️ Kode Wilayah "{currentTenantId}" tidak terdaftar di sistem. Harap periksa kembali.
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Section 1: Identitas Utama */}
           <div>
             <div className="flex items-center gap-3 mb-6">
@@ -6168,12 +6262,16 @@ function LoginView({
       try {
         // A. Try direct Document ID lookup (NIK is standard docId, sometimes prefixed)
         const potentialIds = [cleanId, cleanPass].filter((k) => k.length >= 6);
+        const lastActiveTid = safeLocalStorage.getItem("lastActiveTenantId");
         const knownTenants = [
           "rw26_berjuang",
           "trihprw26",
           "rt01_rw26_berjuang",
           "MASTER",
         ];
+        if (lastActiveTid && !knownTenants.includes(lastActiveTid)) {
+          knownTenants.push(lastActiveTid);
+        }
 
         for (const idCandidate of potentialIds) {
           if (found) break;
@@ -6243,10 +6341,14 @@ function LoginView({
 
         // B. Query Discovery (as fallback) - Search for all fields that match cleanId or cleanPass
         if (!found) {
-          const searchTenantIds = [tenantId || ""];
+          const lastActiveTid = safeLocalStorage.getItem("lastActiveTenantId");
+          const searchTenantIds = [tenantId || lastActiveTid || ""];
+          if (lastActiveTid && !searchTenantIds.includes(lastActiveTid)) {
+            searchTenantIds.push(lastActiveTid);
+          }
           if (settings?.parentId) {
             searchTenantIds.push(settings.parentId);
-          } else if (tenantId.startsWith("rt") && tenantId.includes("_")) {
+          } else if (tenantId && tenantId.startsWith("rt") && tenantId.includes("_")) {
             const parent = tenantId.substring(tenantId.indexOf("_") + 1);
             if (parent) searchTenantIds.push(parent);
           }
@@ -6289,32 +6391,73 @@ function LoginView({
               for (const value of variants) {
                 if (found) break;
 
+                const activeFilters = searchTenantIds.filter(Boolean);
+
                 // 1. Check in data_warga
-                const qWarga = query(
-                  collection(db, "data_warga"),
-                  where(field, "==", value),
-                  where("tenantId", "in", searchTenantIds),
-                  limit(10),
-                );
-                const sWarga = await getDocs(qWarga);
+                let sWarga = null;
+                if (activeFilters.length > 0) {
+                  try {
+                    sWarga = await getDocs(query(
+                      collection(db, "data_warga"),
+                      where(field, "==", value),
+                      where("tenantId", "in", activeFilters),
+                      limit(10)
+                    ));
+                  } catch (e) {
+                    console.warn("Scoped data_warga query failed, falling back:", e);
+                  }
+                }
+                if (!sWarga || sWarga.empty) {
+                  sWarga = await getDocs(query(
+                    collection(db, "data_warga"),
+                    where(field, "==", value),
+                    limit(10)
+                  ));
+                }
 
                 // 2. Check in verifikasi_warga
-                const qVerif = query(
-                  collection(db, "verifikasi_warga"),
-                  where(field, "==", value),
-                  where("tenantId", "in", searchTenantIds),
-                  limit(10),
-                );
-                const sVerif = await getDocs(qVerif);
+                let sVerif = null;
+                if (activeFilters.length > 0) {
+                  try {
+                    sVerif = await getDocs(query(
+                      collection(db, "verifikasi_warga"),
+                      where(field, "==", value),
+                      where("tenantId", "in", activeFilters),
+                      limit(10)
+                    ));
+                  } catch (e) {
+                    console.warn("Scoped verifikasi_warga query failed, falling back:", e);
+                  }
+                }
+                if (!sVerif || sVerif.empty) {
+                  sVerif = await getDocs(query(
+                    collection(db, "verifikasi_warga"),
+                    where(field, "==", value),
+                    limit(10)
+                  ));
+                }
 
-                // 3. Fallback: Check in surat (since user mentioned making a letter)
-                const qSurat = query(
-                  collection(db, "surat"),
-                  where(field === "nama" ? "pemohon" : field, "==", value),
-                  where("tenantId", "in", searchTenantIds),
-                  limit(5),
-                );
-                const sSurat = await getDocs(qSurat);
+                // 3. Fallback: Check in surat
+                let sSurat = null;
+                if (activeFilters.length > 0) {
+                  try {
+                    sSurat = await getDocs(query(
+                      collection(db, "surat"),
+                      where(field === "nama" ? "pemohon" : field, "==", value),
+                      where("tenantId", "in", activeFilters),
+                      limit(5)
+                    ));
+                  } catch (e) {
+                    console.warn("Scoped surat query failed, falling back:", e);
+                  }
+                }
+                if (!sSurat || sSurat.empty) {
+                  sSurat = await getDocs(query(
+                    collection(db, "surat"),
+                    where(field === "nama" ? "pemohon" : field, "==", value),
+                    limit(5)
+                  ));
+                }
 
                 const allSnaps = [sWarga, sVerif, sSurat];
 
