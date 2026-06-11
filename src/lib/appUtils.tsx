@@ -66,6 +66,26 @@ export const getTenantId = (currentUser: any, currentTenant?: any): string => {
   return tId;
 };
 
+// URL Shortener Utility
+export const shortenUrl = async (longUrl: string): Promise<string> => {
+  try {
+    const response = await fetch("/api/shorten", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ long_url: longUrl })
+    });
+    const data = await response.json();
+    if (data.success && data.short_url) {
+      return data.short_url;
+    }
+    console.warn("URL Shortener Warning:", data.error || "Unknown error");
+    return longUrl; // Fallback to long URL on failure
+  } catch (error) {
+    console.error("URL Shortener Error:", error);
+    return longUrl; // Fallback to long URL on failure
+  }
+};
+
 // Shared Helper for Document Generation
 export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
   const displayRT = surat.rt || kop.rt || "...";

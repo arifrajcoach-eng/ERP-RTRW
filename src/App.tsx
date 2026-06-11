@@ -3366,7 +3366,7 @@ export default function App() {
               <div className="relative w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center p-3 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 group-hover/logo:scale-105 transition-all duration-500">
                 <AppLogo
                   size={12}
-                  className="w-12 h-12"
+                  className="w-14 h-14"
                   logoUrl={
                     currentTenant?.logo_url ||
                     settings?.tenant_system_logo ||

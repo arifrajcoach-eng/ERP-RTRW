@@ -427,6 +427,38 @@ async function startServer() {
     }
   });
 
+  app.post("/api/shorten", async (req, res) => {
+    try {
+      const { long_url } = req.body;
+      const token = process.env.BITLY_ACCESS_TOKEN;
+
+      if (!token) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "BITLY_ACCESS_TOKEN not configured. Please add it to your environment variables." 
+        });
+      }
+
+      const response = await fetch("https://api-ssl.bitly.com/v4/shorten", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ long_url })
+      });
+
+      const data = await response.json();
+      if (data && data.link) {
+        res.json({ success: true, short_url: data.link });
+      } else {
+        res.status(response.status).json({ success: false, error: data.message || "Failed to shorten URL" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // --- GEMINI AI SERVER-SIDE ENDPOINTS & PERSONAS ---
   const AISYAH_SYSTEM_INSTRUCTION = `
 ANDA ADALAH CHATY (Chaty - AI Asisten Warga).

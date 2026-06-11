@@ -19,10 +19,9 @@ export default defineConfig(({mode}) => {
           manualChunks: (id) => {
             if (id.includes('node_modules')) {
               if (id.includes('firebase')) return 'vendor-firebase';
-              if (id.includes('lucide') || id.includes('motion')) return 'vendor-ui';
               if (id.includes('recharts') || id.includes('d3')) return 'vendor-charts';
               if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('xlsx')) return 'vendor-docs';
-              if (id.includes('react')) return 'vendor-react';
+              // Keep react components and core together to avoid chunking issues
               return 'vendor';
             }
           }
