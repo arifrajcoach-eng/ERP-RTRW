@@ -6182,6 +6182,35 @@ function LoginView({
   const [nik, setNik] = useState("");
   const [kodeKeluarga, setKodeKeluarga] = useState("");
 
+  const [tenantInput, setTenantInput] = useState(() => {
+    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang";
+  });
+  const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
+  const [tenantExists, setTenantExists] = useState(true);
+
+  useEffect(() => {
+    if (tenantInput) {
+      const trimmed = tenantInput.trim().toLowerCase();
+      getDoc(doc(db, "tenants", trimmed)).then((snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          setTenantNameForDisplay(data.name || data.nama || trimmed);
+          setTenantExists(true);
+        } else {
+          setTenantNameForDisplay("");
+          setTenantExists(false);
+        }
+      }).catch((err) => {
+        console.warn("Error fetching tenant display name in login:", err);
+        setTenantNameForDisplay("");
+        setTenantExists(false);
+      });
+    } else {
+      setTenantNameForDisplay("");
+      setTenantExists(false);
+    }
+  }, [tenantInput]);
+
   // Trigger anonymous sign-in to allow fetching public/citizen data
   useEffect(() => {
     if (loginMode === "warga" && !auth.currentUser) {
@@ -6208,6 +6237,18 @@ function LoginView({
       return;
     }
 
+    const cleanTenant = String(tenantInput || "").trim().toLowerCase();
+    if (!cleanTenant) {
+      setError("Kode Area Wilayah (Tenant ID) harus diisi agar pencarian data tepat sasaran.");
+      setIsLoading(false);
+      return;
+    }
+    if (!tenantExists) {
+      setError(`Kode Area Wilayah "${cleanTenant}" tidak valid atau tidak terdaftar di sistem.`);
+      setIsLoading(false);
+      return;
+    }
+
     // Identitas: NIK / Nama / No HP
     const cleanId = String(nik || "").trim();
     const idDigits = cleanId.replace(/\D/g, "");
@@ -6220,6 +6261,9 @@ function LoginView({
 
     // 1. SEARCH IN MEMORY (Current Context)
     let found = wargaData.find((w) => {
+      const cTenantId = String(w.tenantId || "").trim().toLowerCase();
+      if (cTenantId !== cleanTenant) return false;
+
       const cNik = String(w.nik || "")
         .trim()
         .toLowerCase();
@@ -6264,6 +6308,7 @@ function LoginView({
         const potentialIds = [cleanId, cleanPass].filter((k) => k.length >= 6);
         const lastActiveTid = safeLocalStorage.getItem("lastActiveTenantId");
         const knownTenants = [
+          cleanTenant,
           "rw26_berjuang",
           "trihprw26",
           "rt01_rw26_berjuang",
@@ -6341,20 +6386,16 @@ function LoginView({
 
         // B. Query Discovery (as fallback) - Search for all fields that match cleanId or cleanPass
         if (!found) {
-          const lastActiveTid = safeLocalStorage.getItem("lastActiveTenantId");
-          const searchTenantIds = [tenantId || lastActiveTid || ""];
-          if (lastActiveTid && !searchTenantIds.includes(lastActiveTid)) {
-            searchTenantIds.push(lastActiveTid);
+          const searchTenantIds = [cleanTenant];
+          if (cleanTenant.startsWith("rt") && cleanTenant.includes("_")) {
+            const parent = cleanTenant.substring(cleanTenant.indexOf("_") + 1);
+            if (parent && !searchTenantIds.includes(parent)) {
+              searchTenantIds.push(parent);
+            }
           }
-          if (settings?.parentId) {
-            searchTenantIds.push(settings.parentId);
-          } else if (tenantId && tenantId.startsWith("rt") && tenantId.includes("_")) {
-            const parent = tenantId.substring(tenantId.indexOf("_") + 1);
-            if (parent) searchTenantIds.push(parent);
-          }
-          if (tenantId === "rw26_berjuang") {
+          if (cleanTenant === "rw26_berjuang") {
             searchTenantIds.push("rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang");
-          } else if (tenantId === "trihprw26") {
+          } else if (cleanTenant === "trihprw26") {
             searchTenantIds.push("rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26", "rt05_trihprw26");
           }
 
@@ -6516,6 +6557,8 @@ function LoginView({
         }
 
         const docId = found.docId || found.id || found.nik;
+        const resolvedTenantId = found.tenantId || cleanTenant || "rw26_berjuang";
+        safeLocalStorage.setItem("lastActiveTenantId", resolvedTenantId);
 
         // 1. Create/update user document FIRST for Firestore security rules support (getUserData() mapping)
         // This grants the anonymous user the tenant status of the resident they are linking to,
@@ -7127,6 +7170,35 @@ function LoginView({
                         <Eye className="h-5 w-5" />
                       )}
                     </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">
+                    KODE AREA WILAYAH (TENANT ID)
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-pink transition-colors">
+                      <span className="text-lg">📍</span>
+                    </div>
+                    <input
+                      required
+                      type="text"
+                      value={tenantInput}
+                      onChange={(e) => setTenantInput(e.target.value.toLowerCase().trim())}
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-mono font-bold text-base"
+                      placeholder="Contoh: demo_rt100_rw100"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-black px-3 mt-2">
+                    {tenantExists ? (
+                      <span className="text-emerald-600 flex items-center gap-1">
+                        ✅ Wilayah Terdaftar: <span className="underline decoration-2">{tenantNameForDisplay || tenantInput}</span>
+                      </span>
+                    ) : (
+                      <span className="text-rose-500 flex items-center gap-1">
+                        ⚠️ Kode Wilayah "{tenantInput || '(kosong)'}" tidak terdaftar.
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button
