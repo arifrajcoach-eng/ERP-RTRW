@@ -264,7 +264,7 @@ export function SuratView({
     // Map kopSettings to the variables used in the template
     const defaultLogoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
     const logoPemerintah = (kop.logo_url && kop.logo_url.length > 10) ? kop.logo_url : defaultLogoUrl;
-    const logoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : "/logo_rw.png"; 
+    const logoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : "/logosmartrwai.png"; 
     
     // User requirements: RT from data warga (surat.rt), RW from standard kop settings
     const displayRT = surat.rt || kop.rt || "03"; 

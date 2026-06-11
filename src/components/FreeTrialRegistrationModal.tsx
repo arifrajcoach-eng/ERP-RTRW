@@ -166,7 +166,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
 
       const newSettings = {
         org_name: formData.orgName,
-        logo_url: '/logo_rw.png',
+        logo_url: '/logosmartrwai.png',
         theme: 'light',
         ownerEmail: email.toLowerCase(),
         createdAt: new Date().toISOString()

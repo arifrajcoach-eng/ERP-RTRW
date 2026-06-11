@@ -116,7 +116,7 @@ export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
                     <p class="w-[347.242px] h-[23.2461px] text-[8px] leading-[11.14px]">Sekretariat : ${kop.alamat || "..."} | Email: ${kop.email || "..."} | Instagram: ${kop.instagram || "..."}</p>
                 </div>
                 <div class="flex items-center justify-start w-48">
-                    ${surat.show_logo !== "no" && (kop.logo_rw_url || "/logo_rw.png") ? `<img src="${kop.logo_rw_url || "/logo_rw.png"}" alt="Logo RW" class="w-[100px] h-[95px] object-contain ml-4" />` : ""}
+                    ${surat.show_logo !== "no" && (kop.logo_rw_url || "/logosmartrwai.png") ? `<img src="${kop.logo_rw_url || "/logosmartrwai.png"}" alt="Logo RW" class="w-[100px] h-[95px] object-contain ml-4" />` : ""}
                 </div>
            </div>
           <div class="border-b-4 border-black mt-2"></div>

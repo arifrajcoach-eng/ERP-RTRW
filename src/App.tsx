@@ -214,7 +214,7 @@ import {
 import { getPlanFeatures, generateSuratHTML, canCreate, canUpdate, canDelete, canView } from "./lib/appUtils";
 import { PLAN_FEATURES, PLAN_ALIASES, ADDON_CONFIG } from "./constants";
 
-const APP_LOGO = "/logo_rw.png";
+const APP_LOGO = "/logosmartrwai.png";
 
 const AppLogo = ({
   className,
@@ -226,7 +226,7 @@ const AppLogo = ({
   logoUrl?: string;
 }) => {
   const [hasError, setHasError] = useState(false);
-  const displayLogo = logoUrl || APP_LOGO;
+  const displayLogo = (!logoUrl || logoUrl === '/logosmartrwai.png' || logoUrl === '/logosmartrwai-1.png') ? APP_LOGO : logoUrl;
 
   useEffect(() => {
     setHasError(false);
@@ -2862,8 +2862,14 @@ export default function App() {
   if (isAuthInitializing && !isAuthHanging) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="relative mb-8">
-          <div className="w-20 h-20 border-4 border-slate-800 border-t-brand-blue rounded-full animate-spin"></div>
+        <div className="relative mb-8 pt-4">
+          <div className="w-24 h-24 border-8 border-brand-blue/10 border-t-brand-blue border-r-brand-pink rounded-full animate-spin"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <AppLogo
+              size={12}
+              className="w-12 h-12"
+            />
+          </div>
         </div>
         <h2 className="text-white font-bold tracking-widest text-[10px] uppercase">
           Menyiapkan Ekosistem Digital
@@ -3570,6 +3576,13 @@ export default function App() {
             >
               <Menu className="w-6 h-6" />
             </button>
+
+            {/* Mobile Logo */}
+            <div className="md:hidden flex items-center gap-2">
+              <div className="w-9 h-9 bg-white dark:bg-slate-800 rounded-xl p-1.5 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
+                <AppLogo size={6} className="w-6 h-6" logoUrl={currentTenant?.logo_url || settings?.logo_url} />
+              </div>
+            </div>
             
             <div className="hidden sm:flex items-center gap-3">
               <div className="flex items-center gap-2 group">
@@ -5449,13 +5462,18 @@ function SelfRegistrationView({
         <div className="p-6 sm:p-8 bg-gradient-to-r from-brand-blue to-blue-600 text-white shrink-0 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl translate-x-1/2 -translate-y-1/2"></div>
           <div className="relative z-10 flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-black tracking-tight">
-                Formulir Pendaftaran Warga Baru
-              </h2>
-              <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">
-                Lengkapi data Anda untuk verifikasi sistem
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white rounded-xl p-2 flex items-center justify-center shadow-lg">
+                <AppLogo size={8} className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight">
+                  Formulir Pendaftaran Warga Baru
+                </h2>
+                <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">
+                  Lengkapi data Anda untuk verifikasi sistem
+                </p>
+              </div>
             </div>
             <button
               type="button"
@@ -6735,8 +6753,8 @@ function LoginView({
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/20 via-brand-yellow/20 to-brand-pink/20 animate-spin-slow"></div>
             <div className="absolute inset-0.5 bg-white rounded-[2.9rem] -z-10"></div>
             <AppLogo
-              size={18}
-              className="w-18 h-18 relative z-10 transition-transform group-hover:scale-110 duration-500"
+              size={22}
+              className="w-[90px] h-[90px] relative z-10 transition-transform group-hover:scale-110 duration-500"
               logoUrl={settings?.org_logo_url || settings?.logo_url}
             />
           </div>
