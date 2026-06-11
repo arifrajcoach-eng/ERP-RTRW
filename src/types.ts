@@ -8,7 +8,8 @@ export interface EmergencyLog {
     lng: number;
   };
   status: 'pending' | 'responded' | 'resolved';
-  createdAt: string;
+  createdAt?: string;
+  timestamp: string;
   tenantId: string;
 }
 

@@ -183,7 +183,7 @@ export function BukuTamuView({
     <div className="space-y-10 animate-in fade-in duration-700">
       {/* CCTV & Status Security */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3 bg-slate-900 rounded-[3.5rem] p-6 shadow-2xl relative overflow-hidden aspect-video lg:aspect-auto h-[400px] border-8 border-slate-800 group">
+        <div className="lg:col-span-3 bg-slate-900 rounded-3xl sm:rounded-[3.5rem] p-4 sm:p-6 shadow-2xl relative overflow-hidden h-[250px] sm:h-[350px] lg:h-[400px] border-4 sm:border-8 border-slate-800 group w-full">
           <div className="absolute inset-0">
              {!showWebcam && (
                /* @ts-ignore */

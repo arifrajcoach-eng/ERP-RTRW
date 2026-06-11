@@ -1,8 +1,15 @@
 node_modules/
-dist/
 dist-ssr/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+
+# Custom ignores to reduce hashing load
+*.txt
+replace_*.js
+tmp*
+temp.txt
+users.json
+

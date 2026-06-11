@@ -81,6 +81,8 @@ export function WargaProfileView({
   const [uploadPct, setUploadPct] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>(wargaData || {});
+  const [sosHistory, setSosHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Update formData when wargaData arrives
   useEffect(() => {
@@ -88,6 +90,40 @@ export function WargaProfileView({
       setFormData(wargaData);
     }
   }, [wargaData]);
+  
+  useEffect(() => {
+    if (activeCitizenTab === 'riwayat' && tenantId) {
+      setLoadingHistory(true);
+      const qHistory = query(
+        collection(db, 'emergency_logs'),
+        where('tenantId', '==', tenantId)
+      );
+      
+      const unsubscribe = onSnapshot(qHistory, (snapshot) => {
+        const logs: any[] = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (
+             data.userId === wargaData.id || 
+             (wargaData.hp && data.userPhone === wargaData.hp) ||
+             (wargaData.telepon && data.userPhone === wargaData.telepon) ||
+             (wargaData.nama && data.userName === wargaData.nama)
+          ) {
+             logs.push({ id: doc.id, ...data });
+          }
+        });
+        
+        logs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setSosHistory(logs);
+        setLoadingHistory(false);
+      }, (err) => {
+        console.error("Error fetching SOS history:", err);
+        setLoadingHistory(false);
+      });
+      
+      return () => unsubscribe();
+    }
+  }, [activeCitizenTab, tenantId, wargaData]);
 
   const [files, setFiles] = useState<{ktp?: File, kk?: File}>({});
   const [uploading, setUploading] = useState(false);
@@ -394,7 +430,8 @@ export function WargaProfileView({
             <div className="mt-12 w-full space-y-3 pb-8 border-b border-slate-100 dark:border-slate-800">
                {[
                  { id: 'profil', label: 'Dashboard Utama', icon: User, gradient: 'from-brand-blue to-indigo-600' },
-                 { id: 'layanan', label: 'E-Administrasi', icon: FileText, gradient: 'from-purple-600 to-pink-600' }
+                 { id: 'layanan', label: 'E-Administrasi', icon: FileText, gradient: 'from-purple-600 to-pink-600' },
+                 { id: 'riwayat', label: 'Riwayat Aktivitas', icon: Clock, gradient: 'from-amber-500 to-orange-600' }
                ].map((item) => (
                 <motion.button 
                    key={item.id}
@@ -720,6 +757,61 @@ export function WargaProfileView({
                                   </div>
                                );
                             })}
+                         </div>
+                      )}
+                   </div>
+                </motion.div>
+             )}
+             {activeCitizenTab === 'riwayat' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="max-w-4xl mx-auto space-y-12">
+                   <div>
+                      <h1 className="text-[2.5rem] font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase font-elegant leading-none">Riwayat Aktivitas</h1>
+                      <p className="text-slate-500 font-bold mt-4 max-w-lg leading-relaxed">Catatan riwayat sinyal darurat (SOS) dan aktivitas esensial lainnya yang terhubung dengan akun Anda.</p>
+                   </div>
+                   
+                   <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/20 dark:shadow-none min-h-[300px]">
+                      <div className="flex items-center gap-4 mb-8">
+                         <div className="w-10 h-10 bg-amber-50 dark:bg-amber-500/10 rounded-2xl flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                         </div>
+                         <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest">Log Sinyal Darurat (SOS)</h3>
+                      </div>
+                      
+                      {loadingHistory ? (
+                         <div className="flex justify-center items-center h-48 opacity-50">
+                            <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+                         </div>
+                      ) : sosHistory.length > 0 ? (
+                         <div className="space-y-4">
+                            {sosHistory.map((log) => (
+                               <div key={log.id} className="p-5 border border-slate-100 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between group hover:border-amber-200 dark:hover:border-amber-900/50 transition-all">
+                                  <div className="flex items-center gap-4">
+                                     <div className={`w-3 h-3 rounded-full ${log.status === 'pending' ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+                                     <div>
+                                        <p className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">
+                                           {log.status === 'pending' ? 'Sos Aktif' : 'Telah Ditangani'}
+                                        </p>
+                                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{new Date(log.timestamp).toLocaleString('id-ID')}</p>
+                                     </div>
+                                  </div>
+                                  <div className="text-right">
+                                     {log.status === 'resolved' && (
+                                        <>
+                                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ditangani Oleh</p>
+                                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">{log.resolvedBy || '-'}</p>
+                                        </>
+                                     )}
+                                  </div>
+                               </div>
+                            ))}
+                         </div>
+                      ) : (
+                         <div className="flex flex-col items-center justify-center h-48 text-center px-4">
+                            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] flex items-center justify-center mb-4">
+                               <CheckCircle className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                            </div>
+                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Tidak ada riwayat SOS</p>
+                            <p className="text-[10px] text-slate-500 font-bold mt-2 max-w-xs leading-relaxed">Kondisi aman, Anda belum pernah memicu sinyal darurat SOS melalui tombol panik.</p>
                          </div>
                       )}
                    </div>

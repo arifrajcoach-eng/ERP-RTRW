@@ -32,10 +32,12 @@ async function startServer() {
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
 
-    console.log(`[REQUEST] ${req.method} ${req.url}`);
-    res.on("finish", () => {
-      console.log(`[RESPONSE] ${req.method} ${req.url} -> ${res.statusCode}`);
-    });
+    if (req.url.startsWith("/api")) {
+      console.log(`[REQUEST] ${req.method} ${req.url}`);
+      res.on("finish", () => {
+        console.log(`[RESPONSE] ${req.method} ${req.url} -> ${res.statusCode}`);
+      });
+    }
 
     if (req.method === "OPTIONS") {
       res.sendStatus(200);

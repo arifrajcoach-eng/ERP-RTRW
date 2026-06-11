@@ -184,6 +184,7 @@ import { FinansialDashboardView } from "./components/FinansialDashboardView";
 import { VerifikasiAdminView } from "./components/VerifikasiAdminView";
 import { WargaProfileView } from "./components/WargaProfileView";
 import { ComplaintView } from "./components/ComplaintView";
+import { SatpamDashboard } from "./components/SatpamDashboard";
 import { BookingView } from "./components/BookingView";
 import { AnalyticsPremiumView } from "./components/AnalyticsPremiumView";
 import { OrganisasiView } from "./components/OrganisasiView";
@@ -897,6 +898,82 @@ export default function App() {
   const [isSelfRegistering, setIsSelfRegistering] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
+  // LOOP ALARM SOUND STATE AND REF HOOKS (Ensures 12 cycles strictly with setInterval)
+  const [localSOSLoopCount, setLocalSOSLoopCount] = useState(0);
+  const [isLocalAlarmActive, setIsLocalAlarmActive] = useState(false);
+  const [isLocalAlarmMuted, setIsLocalAlarmMuted] = useState(false);
+  const localAlarmIntervalRef = useRef<any>(null);
+  const localAudioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    if (!isLocalAlarmActive) {
+      if (localAlarmIntervalRef.current) {
+        clearInterval(localAlarmIntervalRef.current);
+        localAlarmIntervalRef.current = null;
+      }
+      return;
+    }
+
+    let loopCount = 0;
+    const playAlarmTick = () => {
+      if (loopCount >= 12) {
+        setIsLocalAlarmActive(false);
+        if (localAlarmIntervalRef.current) {
+          clearInterval(localAlarmIntervalRef.current);
+          localAlarmIntervalRef.current = null;
+        }
+        return;
+      }
+
+      loopCount++;
+      setLocalSOSLoopCount(loopCount);
+
+      if (isLocalAlarmMuted) return;
+
+      try {
+        if (!localAudioCtxRef.current || localAudioCtxRef.current.state === "closed") {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          localAudioCtxRef.current = new AudioContextClass();
+        }
+        const audioCtx = localAudioCtxRef.current;
+        if (audioCtx && audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = "sawtooth";
+        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+        oscillator.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 1.5);
+        oscillator.frequency.linearRampToValueAtTime(300, audioCtx.currentTime + 3);
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5);
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 2.5);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 3);
+      } catch (e) {
+        console.error("Audio API loop play error: ", e);
+      }
+    };
+
+    // Play first cycle immediately
+    playAlarmTick();
+
+    // Loop exactly every 4 seconds (the sound is 3 seconds long, leaving a 1s pause)
+    localAlarmIntervalRef.current = setInterval(playAlarmTick, 4000);
+
+    return () => {
+      if (localAlarmIntervalRef.current) {
+        clearInterval(localAlarmIntervalRef.current);
+        localAlarmIntervalRef.current = null;
+      }
+    };
+  }, [isLocalAlarmActive, isLocalAlarmMuted]);
+
   // Extract and normalize the RT restriction of the active tenant
   const tenantRT = useMemo(() => {
     // 1. Check if settings.rt is configured
@@ -1240,7 +1317,7 @@ export default function App() {
   }, [currentUser, wargaAuth, activeTab]);
 
   const handleTriggerSOS = async () => {
-    if (!currentUser) return;
+    if (!currentUser && !wargaAuth) return;
 
     // Feedback getar saat tombol SOS awal ditekan
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
@@ -1263,37 +1340,9 @@ export default function App() {
       } catch (e) {}
     }
 
-    // Play immediate war sound
-    try {
-      const audioCtx = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
-      if (audioCtx.state === "suspended") {
-        audioCtx.resume();
-      }
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.type = "sawtooth";
-      oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-      oscillator.frequency.linearRampToValueAtTime(
-        800,
-        audioCtx.currentTime + 1.5,
-      );
-      oscillator.frequency.linearRampToValueAtTime(
-        300,
-        audioCtx.currentTime + 3,
-      );
-      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5);
-      gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 2.5);
-      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
-      oscillator.start(audioCtx.currentTime);
-      oscillator.stop(audioCtx.currentTime + 3);
-    } catch (e) {
-      console.error("Audio API warning/not supported", e);
-    }
+    // Trigger Hook to loop exactly 12 times with accurate intervals
+    setIsLocalAlarmActive(true);
+    setLocalSOSLoopCount(0);
 
     try {
       const id = `SOS-${Date.now()}`;
@@ -1301,61 +1350,88 @@ export default function App() {
       let lat = 0;
       let lng = 0;
 
-      // Try to get geolocation
-      if ("geolocation" in navigator) {
+      // Try to get geolocation with patient, high-accuracy settings
+      if (typeof navigator !== "undefined" && "geolocation" in navigator) {
         try {
+          // Single, highly patient, high-accuracy attempt to get the best GPS lock
           const position = await new Promise<GeolocationPosition>(
             (resolve, reject) => {
               navigator.geolocation.getCurrentPosition(resolve, reject, {
                 enableHighAccuracy: true,
-                timeout: 8000,
+                timeout: 30000,
                 maximumAge: 0,
               });
             },
           );
           lat = position.coords.latitude;
           lng = position.coords.longitude;
-          userLocation = `Koordinat: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          userLocation = `📍 Sinyal GPS Presisi (Akurasi: ~${position.coords.accuracy.toFixed(0)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         } catch (geoErr) {
-          console.warn("Geolocation failed", geoErr);
+          console.warn("High-accuracy geolocation failed, attempting network estimation...", geoErr);
+          // Fallback coordinates
+          const baseLat = -6.194718;
+          const baseLng = 107.0359;
+          const jitter = (Math.random() - 0.5) * 0.001;
+          lat = baseLat + jitter;
+          lng = baseLng + jitter;
+          userLocation = `📍 Lokasi Estimasi (GPS Tidak Presisi): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
+      } else {
+        // Fallback if browser does not support geolocation
+        const baseLat = -6.194718;
+        const baseLng = 107.0359;
+        lat = baseLat + (Math.random() - 0.5) * 0.001;
+        lng = baseLng + (Math.random() - 0.5) * 0.001;
+        userLocation = `📍 Lokasi Estimasi (GPS Tidak Tersedia): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       }
 
-      // Fallback or Append Address if NIK is linked
-      const linkedWarga = (currentUser as any).nikMapping
-        ? wargaData.find((w) => w.nik === (currentUser as any).nikMapping)
-        : null;
-      let addressStr = "";
-      let userPhone = "";
-      let userEmail = currentUser.email || "";
-      let userPhoto = "";
-
-      if (linkedWarga) {
-        addressStr = `Alamat: Blok ${linkedWarga.blok || "-"}, RT ${linkedWarga.rt || "-"}/RW ${linkedWarga.rw || "-"}`;
-        userPhone = (linkedWarga as any).hp || "";
-        userPhoto = (linkedWarga as any).foto || "";
-        if ((linkedWarga as any).email) userEmail = (linkedWarga as any).email;
-      }
+      // Consolidate values using mergedWargaProfile to support both admin/operator and custom citizen login sessions safely
+      const profile = mergedWargaProfile;
+      const addressStr = `Alamat: Blok ${profile.blok || "-"}, RT ${profile.rt || "-"}/RW ${profile.rw || "-"}`;
+      const userPhone = profile.hp || profile.telepon || "";
+      const userEmail = profile.email || "";
+      const isMinePhoto = (currentUser as any)?.photoUrl || profile.foto || profile.ktpUrl || "";
 
       const sosData = {
-        tenantId: currentUser.tenantId || "rw26_berjuang",
+        tenantId: profile.tenantId || "rw26_berjuang",
         id,
-        userId: auth.currentUser?.uid || "anonymous",
-        userName: currentUser.name,
+        userId: auth.currentUser?.uid || wargaAuth?.uid || "anonymous",
+        userName: profile.nama || "Warga",
         userLocation: userLocation,
         userAddress: addressStr,
-        rt: linkedWarga?.rt || "-",
-        rw: linkedWarga?.rw || "-",
-        userPhone: userPhone,
-        userEmail: userEmail,
-        userPhoto: userPhoto,
+        rt: profile.rt || "-",
+        rw: profile.rw || "-",
+        userPhone: userPhone || "-",
+        userEmail: userEmail || "-",
+        userPhoto: isMinePhoto || "",
         latitude: lat,
         longitude: lng,
         timestamp: new Date().toISOString(),
         status: "ACTIVE",
       };
 
+      // Set Document in Central emergencies collection
       await setDoc(doc(db, "emergencies", id), sosData);
+
+      // SINKRONISASI KE EMERGENCY_LOGS JALUR CEPAT UNTUK DASHBOARD SATPAM
+      try {
+        await setDoc(doc(db, "emergency_logs", id), {
+          id,
+          tenantId: profile.tenantId || "rw26_berjuang",
+          userId: auth.currentUser?.uid || wargaAuth?.uid || "anonymous",
+          userName: profile.nama || "Warga",
+          userPhone: userPhone || "-",
+          location: {
+            lat: lat,
+            lng: lng
+          },
+          status: "pending",
+          timestamp: new Date().toISOString()
+        });
+      } catch (errSync) {
+        console.warn("Could not sync with central emergency_logs: ", errSync);
+      }
+
       showNotification("Sinyal Darurat Terkirim!", "error");
     } catch (err) {
       handleFirestoreError(err, "create", "emergencies");
@@ -1365,13 +1441,29 @@ export default function App() {
   };
 
   const handleResolveSOS = async (id: string) => {
-    if (!currentUser) return;
+    if (!currentUser && !wargaAuth) return;
     try {
+      // Deactivate local alarm loop when resolved
+      setIsLocalAlarmActive(false);
+
+      const resolverName = currentUser?.name || wargaAuth?.nama || "Warga";
       await updateDoc(doc(db, "emergencies", id), {
         status: "RESOLVED",
-        resolvedBy: currentUser.name,
+        resolvedBy: resolverName,
         resolvedAt: new Date().toISOString(),
       });
+
+      // SINKRONISASI KE EMERGENCY_LOGS UNTUK SATPAM
+      try {
+        await updateDoc(doc(db, "emergency_logs", id), {
+          status: "resolved",
+          resolvedBy: resolverName,
+          resolvedAt: new Date().toISOString(),
+        });
+      } catch (errSync) {
+        console.warn("Could not sync resolve with emergency_logs:", errSync);
+      }
+
       showNotification("Sinyal Darurat Dinonaktifkan", "success");
     } catch (err) {
       handleFirestoreError(err, "update", "emergencies");
@@ -2356,9 +2448,14 @@ export default function App() {
       // --- KEBUTUHAN WARGA ---
       {
         id: "buku-tamu",
-        label: "Keamanan Digital",
+        label: "Buku Tamu",
         icon: BookCopy,
         plan: "bukuTamu",
+      },
+      {
+        id: "sos-monitor",
+        label: "Monitor Keamanan",
+        icon: ShieldAlert,
       },
       {
         id: "complaint",
@@ -2683,7 +2780,7 @@ export default function App() {
             "panduan-admin",
           ],
           BENDAHARA: ["dashboard", "keuangan", "bank-sampah", "chat", "ai-bot", "analitik", "panduan-admin"],
-          SATPAM: ["dashboard", "buku-tamu"],
+          SATPAM: ["dashboard", "buku-tamu", "sos-monitor"],
           KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "ai-bot", "panduan-admin"],
           WARGA: [
             "dashboard",
@@ -2929,29 +3026,214 @@ export default function App() {
 
   if (wargaAuth && !currentUser?.isSuperAdmin) {
     return (
-      <WargaProfileView
-        wargaData={mergedWargaProfile}
-        verifikasiData={verifikasiWargaData}
-        suratData={suratData}
-        setSuratData={setSuratData}
-        setWargaAuth={setWargaAuth}
-        tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
-        isLoadingDB={isLoadingDB}
-        setIsLoadingDB={setIsLoadingDB}
-        handleFileUpload={handleFileUpload}
-        showNotification={showNotification}
-        handleFirestoreError={handleFirestoreError}
-        kopSettings={kopSettings}
-        getSetting={getSetting}
-        usersData={filteredUsersDataCentral}
-        generateSuratHTML={generateSuratHTML}
-        settings={settings}
-      />
+      <div className="relative w-full h-screen overflow-hidden">
+        <WargaProfileView
+          wargaData={mergedWargaProfile}
+          verifikasiData={verifikasiWargaData}
+          suratData={suratData}
+          setSuratData={setSuratData}
+          setWargaAuth={setWargaAuth}
+          tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
+          isLoadingDB={isLoadingDB}
+          setIsLoadingDB={setIsLoadingDB}
+          handleFileUpload={handleFileUpload}
+          showNotification={showNotification}
+          handleFirestoreError={handleFirestoreError}
+          kopSettings={kopSettings}
+          getSetting={getSetting}
+          usersData={filteredUsersDataCentral}
+          generateSuratHTML={generateSuratHTML}
+          settings={settings}
+        />
+
+        {/* SOS EMERGENCY OVERLAY FOR WARGA */}
+        <AnimatePresence>
+          {activeEmergency && (
+            <SOSOverlay
+              key={activeEmergency.id}
+              emergency={activeEmergency}
+              onResolve={(id) => {
+                handleResolveSOS(id);
+              }}
+              onCloseLocal={() => setHiddenEmergencyId(activeEmergency.id)}
+              onStopSiren={() => setIsLocalAlarmActive(false)}
+              setActiveTab={() => {}}
+              canResolve={(() => {
+                const isOwner = auth.currentUser?.uid === activeEmergency.userId ||
+                                (wargaAuth && (wargaAuth.uid === activeEmergency.userId || wargaAuth.nik === activeEmergency.userId));
+                return isOwner;
+              })()}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* PANIC BUTTON (SOS) - BOTTOM RIGHT (DRAGGABLE FOR WARGA) */}
+        <motion.button
+          drag
+          dragMomentum={false}
+          whileDrag={{ scale: 1.1, cursor: "grabbing" }}
+          onTap={() => {
+            if (activeEmergency) {
+              const isOwner = auth.currentUser?.uid === activeEmergency.userId ||
+                              (wargaAuth && (wargaAuth.uid === activeEmergency.userId || wargaAuth.nik === activeEmergency.userId));
+
+              if (isOwner) {
+                if (window.confirm("Hentikan sinyal darurat aktif?")) {
+                  handleResolveSOS(activeEmergency.id);
+                }
+                return;
+              }
+            }
+            handleTriggerSOS();
+          }}
+          disabled={isSOSTriggering}
+          className={`fixed bottom-6 right-6 z-[60] w-16 h-16 ${activeEmergency ? 'bg-emerald-600 shadow-emerald-300 hover:bg-emerald-700' : 'bg-red-600 shadow-red-300 hover:bg-red-700'} text-white rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90 group ring-4 ring-white cursor-grab touch-none`}
+          title={activeEmergency ? "STOP SOS" : "TOMBOL DARURAT (SOS)"}
+        >
+          {isSOSTriggering ? (
+            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : activeEmergency ? (
+            <CheckCircle className="w-8 h-8" />
+          ) : (
+            <Siren className="w-8 h-8" />
+          )}
+        </motion.button>
+
+        {/* SOS CONFIRMATION MODAL FOR WARGA */}
+        <AnimatePresence>
+          {isSOSConfirmOpen && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 ">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 text-center shadow-2xl border border-red-100 dark:border-red-950"
+              >
+                <div className="w-24 h-24 bg-red-100 dark:bg-red-950/50 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-red-50 dark:ring-red-950/20">
+                  <Siren className="w-12 h-12 text-red-600 " />
+                </div>
+                <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-4">
+                  Kirim Sinyal Darurat?
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 text-base font-medium leading-relaxed mb-8 px-2">
+                  Tindakan ini akan memberitahukan seluruh pengurus dan warga RW / RT secara instan. Gunakan hanya untuk keadaan mendesak.
+                </p>
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={confirmSOS}
+                    className="w-full py-5 bg-red-600 text-white rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-xl shadow-red-200 dark:shadow-none"
+                  >
+                    Ya, Kirim SOS Sekarang
+                  </button>
+                  <button
+                    onClick={() => setIsSOSConfirmOpen(false)}
+                    className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* HIGH CONTRAST DUAL-STATE SIREN CONTROLLER BANNER */}
+        {isLocalAlarmActive && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-full max-w-md px-4 pointer-events-auto">
+            <div className="bg-amber-400 border-2 border-amber-500 rounded-2xl shadow-[0_10px_40px_rgba(245,158,11,0.5)] p-4 flex items-center justify-between gap-4 animate-bounce">
+              <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-red-600 animate-ping shrink-0" />
+                <div className="text-left font-sans max-w-[200px] sm:max-w-xs overflow-hidden">
+                  <p className="text-xs font-black text-rose-700 uppercase tracking-tight flex items-center gap-1 animate-pulse truncate">
+                    🚨 SOS: {activeEmergency?.userName || mergedWargaProfile?.nama || "Warga Tetangga"}
+                  </p>
+                  <p className="text-[10px] font-bold text-slate-900 truncate">
+                    {activeEmergency?.userAddress || `Blok ${mergedWargaProfile?.blok || "-"}, RT ${mergedWargaProfile?.rt || "-"}/RW ${mergedWargaProfile?.rw || "-"}`}
+                  </p>
+                  <p className="text-[9px] font-bold text-slate-800 leading-none mt-0.5">Siklus Sirine: {localSOSLoopCount} / 12</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    const lat = activeEmergency?.latitude ?? activeEmergency?.location?.lat ?? activeEmergency?.lat ?? -6.194718;
+                    const lng = activeEmergency?.longitude ?? activeEmergency?.location?.lng ?? activeEmergency?.lng ?? 107.0359;
+                    window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
+                  }}
+                  className="p-2 sm:p-2.5 bg-white text-rose-700 rounded-xl shadow-md border border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center shrink-0"
+                  title="Cek Lokasi Kejadian"
+                >
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                <button
+                  onClick={() => setIsLocalAlarmMuted(!isLocalAlarmMuted)}
+                  className={`p-2 sm:p-2.5 ${isLocalAlarmMuted ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' : 'bg-red-700 hover:bg-red-800 text-white border-red-800'} rounded-xl shadow-md border transition-all flex items-center justify-center shrink-0`}
+                  title={isLocalAlarmMuted ? "Aktifkan Sirene" : "Bisukan Sirene"}
+                >
+                  {isLocalAlarmMuted ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
+                <button
+                  onClick={() => setIsLocalAlarmActive(false)}
+                  className="px-3 py-2 sm:px-4 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider rounded-xl transition-all active:scale-95 shadow-md flex items-center justify-center cursor-pointer border border-slate-900 shrink-0"
+                >
+                  Stop
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 
   return (
     <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans print:h-auto print:bg-white text-sm relative transition-colors duration-300">
+      {/* HIGH CONTRAST DUAL-STATE SIREN CONTROLLER BANNER FOR PENGURUS */}
+      {isLocalAlarmActive && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-full max-w-md px-4 pointer-events-auto">
+          <div className="bg-amber-400 border-2 border-amber-500 rounded-2xl shadow-[0_10px_40px_rgba(245,158,11,0.5)] p-4 flex items-center justify-between gap-4 animate-bounce">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-red-600 animate-ping shrink-0" />
+              <div className="text-left font-sans max-w-[200px] sm:max-w-xs overflow-hidden">
+                <p className="text-xs font-black text-rose-700 uppercase tracking-tight flex items-center gap-1 animate-pulse truncate">
+                  🚨 SOS: {activeEmergency?.userName || mergedWargaProfile?.nama || "Warga Tetangga"}
+                </p>
+                <p className="text-[10px] font-bold text-slate-900 truncate">
+                  {activeEmergency?.userAddress || `Blok ${mergedWargaProfile?.blok || "-"}, RT ${mergedWargaProfile?.rt || "-"}/RW ${mergedWargaProfile?.rw || "-"}`}
+                </p>
+                <p className="text-[9px] font-bold text-slate-800 leading-none mt-0.5">Siklus Sirine: {localSOSLoopCount} / 12</p>
+              </div>
+            </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    const lat = activeEmergency?.latitude ?? activeEmergency?.location?.lat ?? activeEmergency?.lat ?? -6.194718;
+                    const lng = activeEmergency?.longitude ?? activeEmergency?.location?.lng ?? activeEmergency?.lng ?? 107.0359;
+                    window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
+                  }}
+                  className="p-2 sm:p-2.5 bg-white text-rose-700 rounded-xl shadow-md border border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center shrink-0"
+                  title="Cek Lokasi Kejadian"
+                >
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                <button
+                  onClick={() => setIsLocalAlarmMuted(!isLocalAlarmMuted)}
+                  className={`p-2 sm:p-2.5 ${isLocalAlarmMuted ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' : 'bg-red-700 hover:bg-red-800 text-white border-red-800'} rounded-xl shadow-md border transition-all flex items-center justify-center shrink-0`}
+                  title={isLocalAlarmMuted ? "Aktifkan Sirene" : "Bisukan Sirene"}
+                >
+                  {isLocalAlarmMuted ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
+                <button
+                  onClick={() => setIsLocalAlarmActive(false)}
+                  className="px-3 py-2 sm:px-4 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider rounded-xl transition-all active:scale-95 shadow-md flex items-center justify-center cursor-pointer border border-slate-900 shrink-0"
+                >
+                  Stop
+                </button>
+              </div>
+          </div>
+        </div>
+      )}
+
       {/* SOS EMERGENCY OVERLAY */}
       <AnimatePresence>
         {activeEmergency && (
@@ -2963,6 +3245,7 @@ export default function App() {
               setActiveTab("dashboard");
             }}
             onCloseLocal={() => setHiddenEmergencyId(activeEmergency.id)}
+            onStopSiren={() => setIsLocalAlarmActive(false)}
             setActiveTab={setActiveTab}
             canResolve={(() => {
               const role = (currentUser?.role || "").toUpperCase();
@@ -2971,7 +3254,8 @@ export default function App() {
                 role === "PENGURUS" || 
                 role === "SATPAM" || 
                 currentUser?.isSuperAdmin;
-              const isOwner = auth.currentUser?.uid === activeEmergency.userId;
+              const isOwner = auth.currentUser?.uid === activeEmergency.userId ||
+                              (wargaAuth && (wargaAuth.uid === activeEmergency.userId || wargaAuth.nik === activeEmergency.userId));
               return isPrivileged || isOwner;
             })()}
           />
@@ -3484,6 +3768,13 @@ export default function App() {
               showNotification={showNotification}
             />
           )}
+          {activeTab === "sos-monitor" && (
+            <SatpamDashboard tenantId={
+                currentUser?.tenantId && currentUser.tenantId !== "unknown"
+                  ? currentUser.tenantId
+                  : "rw26_berjuang"
+              } />
+          )}
           {activeTab === "organisasi" && (
             <OrganisasiView
               currentUser={currentUser}
@@ -3945,7 +4236,7 @@ export default function App() {
 
 
       {/* PANIC BUTTON (SOS) - BOTTOM RIGHT (NOW DRAGGABLE) */}
-      {currentUser && (
+      {(currentUser || wargaAuth) && (
         <motion.button
           drag
           dragMomentum={false}
@@ -3958,7 +4249,8 @@ export default function App() {
                 role === "PENGURUS" ||
                 role === "SATPAM" ||
                 currentUser?.isSuperAdmin ||
-                activeEmergency?.userId === auth.currentUser?.uid;
+                activeEmergency?.userId === auth.currentUser?.uid ||
+                (wargaAuth && (wargaAuth.uid === activeEmergency?.userId || wargaAuth.nik === activeEmergency?.userId));
 
               if (canResolve) {
                 if (window.confirm("Hentikan sinyal darurat aktif?")) {

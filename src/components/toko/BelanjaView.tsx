@@ -52,11 +52,339 @@ const QUICK_LINKS = [
   { label: 'Cek Kupon', icon: Tag, color: 'text-rose-500', bg: 'bg-rose-50' },
 ];
 
-const PRODUCTS = [];
+const PRODUCTS = [
+  {
+    id: "prod-1",
+    name: "Beras Cianjur Pandan Wangi 5kg",
+    category: "Sembako",
+    description: "Beras asli Cianjur, pulen, wangi pandan alami, tanpa pengawet atau pemutih kimia. Langsung dari petani binaan.",
+    price: 78000,
+    stock: 25,
+    image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=400",
+    discount: "Diskon 5%"
+  },
+  {
+    id: "prod-2",
+    name: "Minyak Goreng Sania 2L",
+    category: "Sembako",
+    description: "Minyak goreng kelapa sawit berkualitas tinggi, menghasilkan gorengan garing dan sehat. Kemasan pouch praktis.",
+    price: 36500,
+    stock: 40,
+    image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&q=80&w=400",
+    discount: ""
+  },
+  {
+    id: "prod-3",
+    name: "Set Keranjang Baju Lipat Aesthetic",
+    category: "Rumah tangga",
+    description: "Keranjang baju cucian serbaguna, bisa dilipat saat tidak digunakan. Bahan kanvas tebal tahan air bermotif minimalis.",
+    price: 45000,
+    stock: 12,
+    image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=400",
+    discount: ""
+  },
+  {
+    id: "prod-4",
+    name: "Nasi Goreng Spesial Pak RT 26",
+    category: "Makanan & minuman",
+    description: "Nasi goreng legenda dengan racikan bumbu rahasia Pak RT 26, dilengkapi telur mata sapi, suwiran ayam, acar dan kerupuk.",
+    price: 18000,
+    stock: 15,
+    image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&q=80&w=400",
+    discount: "Diskon 10%"
+  },
+  {
+    id: "prod-5",
+    name: "Servis AC Cuci Bersih Bergaransi",
+    category: "Servis",
+    description: "Jasa pembersihan AC indoor & outdoor oleh teknisi berpengalaman warga RT 26. Dingin maksimal, hemat listrik, garansi 30 hari.",
+    price: 75000,
+    stock: 5,
+    image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400",
+    discount: ""
+  },
+  {
+    id: "prod-6",
+    name: "Laundry Kilat 6 Jam Cuci Setrika",
+    category: "Laundry",
+    description: "Layanan cuci kering setrika kilat selesai dalam 6 jam. Harum, rapi, higienis, menggunakan deterjen ramah kulit.",
+    price: 12000,
+    stock: 10,
+    image: "https://images.unsplash.com/photo-1545173168-9f19072f1024?auto=format&fit=crop&q=80&w=400",
+    discount: ""
+  }
+];
 
-const RECENT_CHECKS = [];
+const RECENT_CHECKS = [
+  {
+    id: "prod-4",
+    name: "Nasi Goreng Spesial Pak RT 26",
+    label: "Kuliner",
+    image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&q=80&w=400"
+  },
+  {
+    id: "prod-5",
+    name: "Servis AC Cuci Bersih",
+    label: "Jasa Servis",
+    image: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&q=80&w=400"
+  },
+  {
+    id: "prod-1",
+    name: "Beras Cianjur Pandan Wangi",
+    label: "Sembako",
+    image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=400"
+  }
+];
 
-const BANNERS = [];
+const BANNERS = [
+  {
+    title: "Voucher Spesial Lapak 26",
+    subtitle: "POTONGAN 50%",
+    benefit: "Hingga Rp 20.000",
+    promoCode: "HEMATBGT",
+    image: "https://images.unsplash.com/photo-1629812456605-4a044aa38fbc?auto=format&fit=crop&q=80&w=800",
+    color: "from-emerald-600/90"
+  },
+  {
+    title: "Subsidi Ongkir Warga RT 26",
+    subtitle: "GRATIS ONGKIR",
+    benefit: "Belanja Antar Tetangga",
+    promoCode: "ONGKIRZERO",
+    image: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&q=80&w=800",
+    color: "from-blue-600/90"
+  },
+  {
+    title: "Cashback Koin Ekstra",
+    subtitle: "CASHBACK 10%",
+    benefit: "Koin Lapak 26",
+    promoCode: "CASHBACK10",
+    image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=800",
+    color: "from-rose-600/90"
+  }
+];
+
+const getPremiumStyle = (promoCode: string) => {
+  const styles: Record<string, { bg: string; border: string; glow: string; textGlow: string; accent: string; labelGold: string }> = {
+    HEMATBGT: {
+      bg: "from-[#1a0e3a] via-[#3d1263] to-[#6b1580] text-white",
+      border: "border-fuchsia-400/30 hover:border-fuchsia-400/60",
+      glow: "hover:shadow-[0_20px_50px_rgba(107,21,128,0.35)]",
+      textGlow: "text-fuchsia-200",
+      accent: "text-amber-400",
+      labelGold: "text-amber-300"
+    },
+    ONGKIRZERO: {
+      bg: "from-[#631e05] via-[#ea580c] to-[#ca8a04] text-white",
+      border: "border-amber-400/30 hover:border-amber-400/60",
+      glow: "hover:shadow-[0_20px_50px_rgba(234,88,12,0.35)]",
+      textGlow: "text-amber-200",
+      accent: "text-amber-300",
+      labelGold: "text-yellow-300"
+    },
+    CASHBACK10: {
+      bg: "from-[#022a4a] via-[#0284c7] to-[#0ea5e9] text-white",
+      border: "border-cyan-400/30 hover:border-sky-300/60",
+      glow: "hover:shadow-[0_20px_50px_rgba(2,132,199,0.35)]",
+      textGlow: "text-cyan-200",
+      accent: "text-sky-300",
+      labelGold: "text-[#38bdf8]"
+    },
+    MERDEKA82: {
+      bg: "from-[#4c0519] via-[#9f1239] to-[#be123c] text-white",
+      border: "border-rose-400/30 hover:border-red-400/60",
+      glow: "hover:shadow-[0_20px_50px_rgba(159,18,57,0.35)]",
+      textGlow: "text-rose-200",
+      accent: "text-amber-400",
+      labelGold: "text-yellow-300"
+    },
+    TAHUNBARU27: {
+      bg: "from-[#09090b] via-[#1c1917] to-[#451a03] text-white",
+      border: "border-amber-500/20 hover:border-amber-400/50",
+      glow: "hover:shadow-[0_20px_50px_rgba(69,26,3,0.35)]",
+      textGlow: "text-amber-200",
+      accent: "text-amber-400",
+      labelGold: "text-yellow-200"
+    },
+    GONGXIFACAI: {
+      bg: "from-[#450a0a] via-[#b91c1c] to-[#ea580c] text-white",
+      border: "border-amber-400/40 hover:border-amber-400/70",
+      glow: "hover:shadow-[0_20px_50px_rgba(185,28,28,0.35)]",
+      textGlow: "text-amber-300",
+      accent: "text-yellow-300",
+      labelGold: "text-[#fbbf24]"
+    },
+    HBDPAKRT26: {
+      bg: "from-[#042f2c] via-[#0d9488] to-[#14b8a6] text-white",
+      border: "border-teal-400/20 hover:border-teal-400/50",
+      glow: "hover:shadow-[0_20px_50px_rgba(13,148,136,0.3)]",
+      textGlow: "text-teal-200",
+      accent: "text-teal-300",
+      labelGold: "text-teal-100"
+    },
+    KEMBALIFITRI: {
+      bg: "from-[#043324] via-[#059669] to-[#4ade80] text-white",
+      border: "border-emerald-400/20 hover:border-emerald-400/50",
+      glow: "hover:shadow-[0_20px_50px_rgba(5,150,105,0.3)]",
+      textGlow: "text-emerald-200",
+      accent: "text-amber-300",
+      labelGold: "text-[#a7f3d0]"
+    },
+    LUCKY777: {
+      bg: "from-[#11053b] via-[#4c1d95] to-[#db2777] text-white",
+      border: "border-fuchsia-400/30 hover:border-fuchsia-300/50",
+      glow: "hover:shadow-[0_20px_50px_rgba(76,29,149,0.35)]",
+      textGlow: "text-purple-200",
+      accent: "text-fuchsia-300",
+      labelGold: "text-[#f0abfc]"
+    }
+  };
+  return styles[promoCode] || {
+    bg: "from-slate-900 via-slate-800 to-slate-950 text-white",
+    border: "border-white/10 hover:border-white/30",
+    glow: "hover:shadow-black/20",
+    textGlow: "text-slate-300",
+    accent: "text-amber-300",
+    labelGold: "text-amber-200"
+  };
+};
+
+const THEMATIC_VOUCHERS = [
+  {
+    title: "Voucher Spesial Lapak 26",
+    subtitle: "POTONGAN 50%",
+    benefit: "Hingga Rp 20.000",
+    promoCode: "HEMATBGT",
+    badge: "🔥 DISKON UTAMA",
+    tagline: "BELANJA SUPER HEMAT",
+    bg: "from-emerald-500 to-teal-600 text-white",
+    desc: "Voucher hemat andalan seluruh warga untuk belanja sembako dan kuliner.",
+    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=400", // Fashion
+    displayBrand: "🏷️ FASHION WEEK",
+    displayTitle: "UNTUNG KAMIS",
+    displayTag: "Pasti Ori!",
+    displayTagBg: "bg-fuchsia-500/30 text-fuchsia-200 border-fuchsia-400/30"
+  },
+  {
+    title: "Subsidi Ongkir Warga RT 26",
+    subtitle: "GRATIS ONGKIR",
+    benefit: "Belanja Antar Tetangga",
+    promoCode: "ONGKIRZERO",
+    badge: "🚚 BEBAS ONGKIR",
+    tagline: "ONGKIR RP 0",
+    bg: "from-blue-500 to-cyan-600 text-white",
+    desc: "Belanja hemat tanpa pusing ongkir khusus pengiriman antar warga RT/RW.",
+    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=400", // Food & Beverage
+    displayBrand: "🍔 FOOD & BEVERAGE",
+    displayTitle: "KULINER MANIA",
+    displayTag: "Bebas Ongkir!",
+    displayTagBg: "bg-amber-500/30 text-amber-200 border-amber-400/30"
+  },
+  {
+    title: "Cashback Koin Ekstra",
+    subtitle: "CASHBACK 10%",
+    benefit: "Koin Lapak 26",
+    promoCode: "CASHBACK10",
+    badge: "🪙 COIN BONUS",
+    tagline: "UNTUNG LIPAT GANDA",
+    bg: "from-rose-500 to-pink-600 text-white",
+    desc: "Dapatkan cashback koin untuk transaksi berikutnya di merchant mana saja.",
+    image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&q=80&w=400", // Perkakas
+    displayBrand: "🛠️ UTILITY & TOOLS",
+    displayTitle: "SUPER BRAND",
+    displayTag: "Sangat Berfungsi!",
+    displayTagBg: "bg-sky-500/30 text-sky-200 border-sky-400/30"
+  },
+  {
+    title: "Gebyar Hari Kemerdekaan",
+    subtitle: "DISKON 17%",
+    benefit: "Hingga Rp 45.000",
+    promoCode: "MERDEKA82",
+    badge: "🇮🇩 HUT RI 82",
+    tagline: "NKRI HARGA DISKON",
+    bg: "from-red-600 to-rose-500 text-white",
+    desc: "Voucher spesial menyambut Hari Kemerdekaan Republik Indonesia Ke-82.",
+    image: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&q=80&w=400", // Aksesoris
+    displayBrand: "👑 PREMIUM ACCESSORY",
+    displayTitle: "HUT MERDEKA",
+    displayTag: "Cinta NKRI!",
+    displayTagBg: "bg-rose-500/30 text-rose-200 border-rose-400/30"
+  },
+  {
+    title: "Tahun Baru Gemilang",
+    subtitle: "CASHBACK 27%",
+    benefit: "Hingga Rp 50.000",
+    promoCode: "TAHUNBARU27",
+    badge: "🎆 NEW YEAR 2027",
+    tagline: "SAMBUT AWAL YANG BARU",
+    bg: "from-amber-600 to-slate-800 text-white",
+    desc: "Mulai lembaran baru tahun 2027 dengan belanja hemat penuh sukacita.",
+    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=400", // Hp & Tablet
+    displayBrand: "📱 GADGET & PHONE",
+    displayTitle: "MEGA DEALS",
+    displayTag: "Terbaru & Canggih!",
+    displayTagBg: "bg-amber-500/30 text-amber-200 border-amber-400/30"
+  },
+  {
+    title: "Angpao Hoki Imlek",
+    subtitle: "POTONGAN RP 88K",
+    benefit: "Min. Belanja Rp 150rb",
+    promoCode: "GONGXIFACAI",
+    badge: "🧧 IMLEK HOKI",
+    tagline: "GONG XI FA CAI",
+    bg: "from-rose-600 to-amber-500 text-white",
+    desc: "Menyambut Imlek dengan keberuntungan berlimpah di Lapak Warga.",
+    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=400", // Tas, sepatu
+    displayBrand: "👞 SHOES & BAGS",
+    displayTitle: "ANGPAO HOKI",
+    displayTag: "Pasti Beruntung!",
+    displayTagBg: "bg-red-500/30 text-red-200 border-red-400/30"
+  },
+  {
+    title: "Ulang Tahun Pak RT 26",
+    subtitle: "DISKON RP 26K",
+    benefit: "Tanpa Minimal Belanja",
+    promoCode: "HBDPAKRT26",
+    badge: "🎂 ULTAL RT 26",
+    tagline: "TRAKTIRAN KEPALA WILAYAH",
+    bg: "from-emerald-600 to-teal-500 text-white",
+    desc: "Tumpeng dan diskon dari Pak RT untuk seluruh warga tercinta!",
+    image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&q=80&w=400", // Berenang Wisata
+    displayBrand: "🌊 POOL & HOLIDAYS",
+    displayTitle: "WISATA CERIA",
+    displayTag: "HBD Pak RT!",
+    displayTagBg: "bg-teal-500/30 text-teal-200 border-teal-400/30"
+  },
+  {
+    title: "Berkah Lebaran Fitri",
+    subtitle: "POTONGAN RP 50K",
+    benefit: "Sembako & Hampers Silaturahmi",
+    promoCode: "KEMBALIFITRI",
+    badge: "🌙 LEBARAN BERKAH",
+    tagline: "MINAL AIDIN WAL FAIZIN",
+    bg: "from-emerald-700 to-yellow-600 text-white",
+    desc: "Saling berbagi hampers dan sajian nikmat lebaran antar tetangga.",
+    image: "https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&q=80&w=400", // Hampers/Muslim Architectural vibe
+    displayBrand: "🌙 BARAKAH HARIAN",
+    displayTitle: "LEBARAN FITRI",
+    displayTag: "Pasti Berfaedah!",
+    displayTagBg: "bg-emerald-500/30 text-emerald-200 border-emerald-400/30"
+  },
+  {
+    title: "Kembar Cantik 777 (27-07-27)",
+    subtitle: "DISKON RP 77.000",
+    benefit: "Berlaku Khusus 27 Juli 2027",
+    promoCode: "LUCKY777",
+    badge: "🎰 HARI KEMBAR 777",
+    tagline: "TRIPLE SEVEN LUCKY DAY",
+    bg: "from-violet-600 to-fuchsia-700 text-white",
+    desc: "Momen langka tanggal 27, bulan 7, tahun 2027. Diskon paling heboh!",
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=80&w=400", // Gems / luxury
+    displayBrand: "💎 LUXURY GEMS",
+    displayTitle: "LUCKY 777",
+    displayTag: "Sangat Terbatas!",
+    displayTagBg: "bg-fuchsia-500/30 text-fuchsia-200 border-fuchsia-400/30"
+  }
+];
 
 export default function BelanjaView({ 
   products = [], 
@@ -310,118 +638,181 @@ export default function BelanjaView({
         
         {activeMainTab === "Home" && (
           <>
-            {BANNERS.length > 0 && (
-          <>
-            {/* Banner Section - Swipeable */}
-            <div className="relative group overflow-hidden rounded-3xl shadow-xl shadow-emerald-900/5">
-          <div className="absolute inset-y-0 left-4 z-10 flex items-center">
-            <button 
-              onClick={prevBanner}
-              className="p-2 bg-white/10 hover:bg-white/30 backdrop-blur-md rounded-full text-white transition-all opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0"
-            >
-              <Menu size={16} className="rotate-90" />
-            </button>
-          </div>
-          <div className="absolute inset-y-0 right-4 z-10 flex items-center">
-            <button 
-              onClick={nextBanner}
-              className="p-2 bg-white/10 hover:bg-white/30 backdrop-blur-md rounded-full text-white transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          <motion.div 
-            key={currentBanner}
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="w-full aspect-[21/9] relative cursor-grab active:cursor-grabbing"
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            onDragEnd={(_, info) => {
-              if (info.offset.x < -50) nextBanner();
-              if (info.offset.x > 50) prevBanner();
-            }}
-          >
-            <img 
-              src={BANNERS[currentBanner].image} 
-              alt="Banner"
-              className="w-full h-full object-cover"
-            />
-            <div className={`absolute inset-0 bg-gradient-to-r ${BANNERS[currentBanner].color} to-transparent flex flex-col justify-center p-8 text-white`}>
-              <motion.h2 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="text-2xl font-black italic tracking-tighter mb-2"
-              >
-                {BANNERS[currentBanner].title}
-              </motion.h2>
-              <motion.div 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="flex items-baseline gap-2"
-              >
-                <span className="text-4xl font-black">{BANNERS[currentBanner].subtitle}</span>
-                <span className="text-sm font-bold opacity-80 pl-2 border-l border-white/30">{BANNERS[currentBanner].benefit}</span>
-              </motion.div>
-              <motion.div 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="mt-4 flex items-center gap-3"
-              >
-                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Kode Promo:</span>
-                 <button 
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     handlePromoCode(BANNERS[currentBanner].promoCode);
-                   }}
-                   className="px-4 py-1.5 bg-white text-slate-900 rounded-md text-xs font-black tracking-wider hover:bg-emerald-50 transition-colors active:scale-95"
-                 >
-                   {BANNERS[currentBanner].promoCode}
-                 </button>
-              </motion.div>
-            </div>
-          </motion.div>
-
-          {/* Carousel Indicators */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-            {BANNERS.map((_, i) => (
-              <button 
-                key={i}
-                onClick={() => setCurrentBanner(i)}
-                className={`transition-all duration-300 ${currentBanner === i ? 'w-6 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/80'} rounded-full`}
-              />
-            ))}
-          </div>
-        </div>
-      </>
-        )}
-
-        {/* Quick Links Row */}
-        <div className="bg-white rounded-2xl p-2 flex items-center gap-2 border border-slate-100 overflow-x-auto no-scrollbar">
-          {QUICK_LINKS.map((link) => (
-            <button 
-              key={link.label} 
-              onClick={() => handleQuickLink(link.label)}
-              className="flex-1 min-w-[140px] flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors whitespace-nowrap border-r border-slate-50 last:border-none group"
-            >
-              <div className={`${link.bg} p-2 rounded-lg group-hover:scale-110 transition-transform`}>
-                <link.icon className={`w-5 h-5 ${link.color}`} />
+            {/* Unified Promo Section - Horizontally Scrollable Hero Module */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                    <span className="text-base">🎟️</span> Voucher & Kupon Spesial Warga
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Geser kanan-kiri untuk kupon eksklusif</p>
+                </div>
+                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse">
+                  Semua Voucher Aktif
+                </span>
               </div>
-              <span className="text-xs font-black text-slate-700 uppercase tracking-tight">{link.label}</span>
-            </button>
-          ))}
-          <div 
-            onClick={() => handleQuickLink("Modul Utama")}
-            className="px-4 flex items-center gap-2 text-emerald-600 cursor-pointer hover:scale-110 transition-transform"
+
+              <div className="flex gap-5 overflow-x-auto pb-6 pt-2 px-2 no-scrollbar scroll-smooth snap-x">
+                {THEMATIC_VOUCHERS.map((voucher, idx) => {
+                  const premium = getPremiumStyle(voucher.promoCode);
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`snap-start min-w-[340px] md:min-w-[370px] h-[195px] rounded-[28px] bg-gradient-to-br ${premium.bg} ${premium.border} ${premium.glow} shadow-lg shadow-black/15 overflow-hidden shrink-0 relative flex flex-row items-stretch group cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]`}
+                    >
+                      {/* Premium Thematic Illustration Background Image with mix-blend-overlay */}
+                      {voucher.image && (
+                        <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-10 opacity-15">
+                          <img 
+                            src={voucher.image} 
+                            alt={voucher.title}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover transition-all duration-1000 ease-out group-hover:scale-110" 
+                          />
+                        </div>
+                      )}
+
+                      {/* Interactive Glass Shine Sweeping Reflection */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] ease-out z-30 pointer-events-none"></div>
+
+                      {/* Luxurious Background Mesh Elements */}
+                      <div className="absolute right-0 top-0 w-36 h-36 bg-white/5 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700 pointer-events-none z-10"></div>
+                      <div className="absolute -left-10 -bottom-10 w-28 h-28 bg-black/20 rounded-full blur-2xl pointer-events-none z-10"></div>
+                      
+                      {/* Premium Dynamic Glitter Star */}
+                      <div className="absolute top-3.5 right-3.5 scale-75 opacity-25 group-hover:opacity-90 transition-opacity duration-500 pointer-events-none z-20">
+                        <Star size={16} className={`${premium.accent} fill-current animate-pulse`} />
+                      </div>
+
+                      {/* Ticket Perforation Notch Circles */}
+                      <div className="absolute -top-3.5 right-[112px] w-7 h-7 rounded-full bg-[#f8fafc] z-30 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.06)] pointer-events-none"></div>
+                      <div className="absolute -bottom-3.5 right-[112px] w-7 h-7 rounded-full bg-[#f8fafc] z-30 shadow-[inset_0_4px_6px_rgba(0,0,0,0.06)] pointer-events-none"></div>
+                      
+                      {/* Perforation Line */}
+                      <div className="absolute top-4 bottom-4 right-[125px] border-r border-dashed border-white/20 z-30 pointer-events-none"></div>
+
+                      {/* Floating Thematic Luxury Product Image / Mockup Item sitting on pedestal */}
+                      {voucher.image && (
+                        <div className="absolute right-[120px] bottom-1 select-none pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-112 group-hover:-translate-y-2.5 group-hover:rotate-6 z-25">
+                          <div className="w-[85px] h-[105px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 backdrop-blur-sm relative bg-black/15">
+                            <img 
+                              src={voucher.image} 
+                              alt={voucher.title}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108" 
+                            />
+                            {/* Beautiful sweeping reflection inside product card */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/15 to-white/0 pointer-events-none"></div>
+                          </div>
+                          {/* Top Tag */}
+                          <div className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 font-black text-[7px] px-1.5 py-0.5 rounded-full shadow-md flex items-center gap-0.5 border border-amber-300">
+                            <span>⚡</span> WOW
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Main Coupon Body Section */}
+                      <div className="flex-1 p-5 pr-1 flex flex-col justify-between relative z-20 text-white text-left">
+                        <div className="space-y-1">
+                          {/* Upper brand pill row */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[7.5px] font-black uppercase tracking-widest px-2 py-0.5 bg-black/30 backdrop-blur-md rounded-md border border-white/10">
+                              {voucher.displayBrand}
+                            </span>
+                          </div>
+
+                          {/* Massive bold heading text like UNTUNG KAMIS */}
+                          <div className="pt-1.5">
+                            <h4 className="text-[20px] md:text-[23px] font-extrabold tracking-tighter leading-none select-none text-white group-hover:translate-x-1 group-hover:brightness-110 transition-all duration-300 font-sans transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                              {voucher.displayTitle}
+                            </h4>
+                          </div>
+
+                          {/* Middle Tokopedia style "Pasti Ori" / "Bebas Ongkir" badge */}
+                          <div className="pt-1 flex">
+                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8.5px] font-black border uppercase tracking-wider backdrop-blur-md shadow-sm select-none ${voucher.displayTagBg}`}>
+                              <span>✓</span> {voucher.displayTag}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Lower description / benefit limitations */}
+                        <div className="flex items-center gap-1 border-t border-white/10 pt-1.5 mt-2">
+                          <span className="text-[7.5px] uppercase tracking-widest block opacity-70">BENEFIT:</span>
+                          <span className={`text-[8.5px] font-black ${premium.accent}`}>{voucher.benefit}</span>
+                        </div>
+                      </div>
+
+                      {/* Coupon Action Stub Section */}
+                      <div className="w-[125px] flex flex-col justify-between items-center p-4 pl-3 relative z-20 bg-black/15 text-white text-center border-l border-white/5">
+                        <div className="flex flex-col items-center justify-center my-auto">
+                          <span className="text-[7.5px] font-extrabold uppercase tracking-widest block opacity-70 mb-0.5">PROMO</span>
+                          <span className="text-[11px] font-black text-white leading-tight tracking-tighter uppercase whitespace-pre-wrap px-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+                            {voucher.subtitle}
+                          </span>
+                        </div>
+
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePromoCode(voucher.promoCode);
+                            showNotification?.(`Kupon ${voucher.promoCode} Berhasil Diklaim!`, "success");
+                          }}
+                          className="w-full py-2.5 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-yellow-400 hover:to-amber-500 text-slate-950 rounded-xl transition-all duration-300 font-extrabold text-[9px] tracking-widest uppercase active:scale-95 shadow-lg shadow-black/15 flex flex-col items-center justify-center gap-0.5 hover:shadow-yellow-500/10 hover:-translate-y-0.5"
+                        >
+                          <span className="leading-none">KLAIM</span>
+                          <span className="text-[7px] font-black tracking-normal opacity-90 block">
+                            [{voucher.promoCode}]
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+        {/* Quick Links Row - Customized to fit premium design with no-wrap */}
+        <div className="bg-white rounded-3xl p-2 flex items-center justify-between border border-slate-100 shadow-xl shadow-slate-200/50 relative z-30">
+          <button 
+            onClick={() => handleQuickLink("Bonus")}
+            className="flex-1 flex items-center gap-3 px-4 py-2.5 rounded-2xl hover:bg-orange-50/50 transition-all group"
           >
-             <div className="bg-emerald-50 p-2 rounded-lg">
-                <LayoutGrid size={20} />
-             </div>
+            <div className="bg-orange-50 p-2 rounded-xl group-hover:scale-110 transition-transform text-orange-500">
+              <Gift className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-black text-slate-700 uppercase tracking-wider">BONUS</span>
+          </button>
+          
+          <div className="h-6 w-[1px] bg-slate-100"></div>
+
+          <button 
+            onClick={() => handleQuickLink("GoPay & Coins")}
+            className="flex-1 flex items-center gap-3 px-4 py-2.5 rounded-2xl hover:bg-blue-50/50 transition-all group"
+          >
+            <div className="bg-blue-50 p-2 rounded-xl group-hover:scale-110 transition-transform text-blue-500">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-black text-slate-700 uppercase tracking-wider">GOPAY & COINS</span>
+          </button>
+
+          <div className="h-6 w-[1px] bg-slate-100"></div>
+
+          <div className="flex items-center gap-2 pr-1 pl-2">
+            <button 
+              onClick={() => handleQuickLink("Cek Kupon")}
+              className="bg-rose-50 hover:bg-rose-100 text-rose-500 p-2.5 rounded-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center relative shadow-sm"
+              title="Cek Kupon"
+            >
+              <Tag className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => handleQuickLink("Modul Utama")}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 p-2.5 rounded-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center relative shadow-sm"
+              title="Modul Utama"
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -440,6 +831,8 @@ export default function BelanjaView({
             </button>
           ))}
         </div>
+
+
 
         {/* Recent Checks Section */}
         {RECENT_CHECKS.length > 0 && (
@@ -869,7 +1262,8 @@ export default function BelanjaView({
                         description: newProduct.description,
                         category: "Sembako", // Default category for new products in demo
                         stock: 10,
-                        image: productImage || 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&q=80&w=400'
+                        image: productImage || 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&q=80&w=400',
+                        discount: ""
                       };
                       setLocalProducts([productToAdd, ...localProducts]);
                       showNotification?.("Produk berhasil ditambahkan!", "success");
@@ -1974,37 +2368,148 @@ export default function BelanjaView({
         )}
 
         {activeMainTab === "Cek Kupon" && (
-          <div className="flex flex-col space-y-4">
-            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2 px-2">Kupon Tersedia</h2>
-            
-            {[
-              { title: "Diskon Hemat s/d 50%", desc: "Maks. potongan 20rb. Min. belanja 50rb.", code: "HEMATBGT" },
-              { title: "Gratis Ongkir RT/RW", desc: "Berlaku untuk semua pembelian tetangga.", code: "ONGKIRZERO" },
-              { title: "Cashback Koin 10%", desc: "Maks. 500 koin untuk transaksi berikutnya.", code: "CASHBACK10" },
-            ].map((coupon, i) => (
-              <div key={i} className="bg-white rounded-2xl p-5 flex items-center justify-between border-2 border-emerald-100 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 bottom-0 left-0 w-2 bg-emerald-500 rounded-l-2xl"></div>
-                <div className="pl-4">
-                  <h3 className="text-lg font-bold text-slate-800">{coupon.title}</h3>
-                  <p className="text-sm text-slate-500 mb-2">{coupon.desc}</p>
-                  <div className="inline-block px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-mono font-bold tracking-widest uppercase">
-                    {coupon.code}
-                  </div>
-                </div>
-                <button 
-                  onClick={() => showNotification?.("Kupon berhasil disalin!", "success")}
-                  className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-100 transition-colors shrink-0"
-                >
-                  <Tag size={20} />
-                </button>
+          <div className="flex flex-col space-y-6">
+            <div className="flex justify-between items-center px-2">
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Kupon & Voucher Saya</h2>
+              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                Aktif
+              </span>
+            </div>
+
+            {/* All Vouchers unified inside Cek Kupon page in 1 scrollable place */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center px-1">
+                <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <span>✨</span> Semua Voucher & Kupon Aktif (Geser)
+                </h3>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Geser Kanan-Kiri</span>
               </div>
-            ))}
+
+              <div className="flex gap-5 overflow-x-auto pb-6 pt-2 px-2 no-scrollbar scroll-smooth snap-x">
+                {THEMATIC_VOUCHERS.map((voucher, idx) => {
+                  const premium = getPremiumStyle(voucher.promoCode);
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`snap-start min-w-[340px] md:min-w-[370px] h-[195px] rounded-[28px] bg-gradient-to-br ${premium.bg} ${premium.border} ${premium.glow} shadow-lg shadow-black/15 overflow-hidden shrink-0 relative flex flex-row items-stretch group cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]`}
+                    >
+                      {/* Premium Thematic Illustration Background Image with mix-blend-overlay */}
+                      {voucher.image && (
+                        <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-10 opacity-15">
+                          <img 
+                            src={voucher.image} 
+                            alt={voucher.title}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover transition-all duration-1000 ease-out group-hover:scale-110" 
+                          />
+                        </div>
+                      )}
+
+                      {/* Interactive Glass Shine Sweeping Reflection */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] ease-out z-30 pointer-events-none"></div>
+
+                      {/* Luxurious Background Mesh Elements */}
+                      <div className="absolute right-0 top-0 w-36 h-36 bg-white/5 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700 pointer-events-none z-10"></div>
+                      <div className="absolute -left-10 -bottom-10 w-28 h-28 bg-black/20 rounded-full blur-2xl pointer-events-none z-10"></div>
+                      
+                      {/* Premium Dynamic Glitter Star */}
+                      <div className="absolute top-3.5 right-3.5 scale-75 opacity-25 group-hover:opacity-90 transition-opacity duration-500 pointer-events-none z-20">
+                        <Star size={16} className={`${premium.accent} fill-current animate-pulse`} />
+                      </div>
+
+                      {/* Ticket Perforation Notch Circles */}
+                      <div className="absolute -top-3.5 right-[112px] w-7 h-7 rounded-full bg-[#f8fafc] z-30 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.06)] pointer-events-none"></div>
+                      <div className="absolute -bottom-3.5 right-[112px] w-7 h-7 rounded-full bg-[#f8fafc] z-30 shadow-[inset_0_4px_6px_rgba(0,0,0,0.06)] pointer-events-none"></div>
+                      
+                      {/* Perforation Line */}
+                      <div className="absolute top-4 bottom-4 right-[125px] border-r border-dashed border-white/20 z-30 pointer-events-none"></div>
+
+                      {/* Floating Thematic Luxury Product Image / Mockup Item sitting on pedestal */}
+                      {voucher.image && (
+                        <div className="absolute right-[120px] bottom-1 select-none pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-112 group-hover:-translate-y-2.5 group-hover:rotate-6 z-25">
+                          <div className="w-[85px] h-[105px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 backdrop-blur-sm relative bg-black/15">
+                            <img 
+                              src={voucher.image} 
+                              alt={voucher.title}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108" 
+                            />
+                            {/* Beautiful sweeping reflection inside product card */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/15 to-white/0 pointer-events-none"></div>
+                          </div>
+                          {/* Top Tag */}
+                          <div className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 font-black text-[7px] px-1.5 py-0.5 rounded-full shadow-md flex items-center gap-0.5 border border-amber-300">
+                            <span>⚡</span> WOW
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Main Coupon Body Section */}
+                      <div className="flex-1 p-5 pr-1 flex flex-col justify-between relative z-20 text-white text-left">
+                        <div className="space-y-1">
+                          {/* Upper brand pill row */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[7.5px] font-black uppercase tracking-widest px-2 py-0.5 bg-black/30 backdrop-blur-md rounded-md border border-white/10">
+                              {voucher.displayBrand}
+                            </span>
+                          </div>
+
+                          {/* Massive bold heading text like UNTUNG KAMIS */}
+                          <div className="pt-1.5">
+                            <h4 className="text-[20px] md:text-[23px] font-extrabold tracking-tighter leading-none select-none text-white group-hover:translate-x-1 group-hover:brightness-110 transition-all duration-300 font-sans transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                              {voucher.displayTitle}
+                            </h4>
+                          </div>
+
+                          {/* Middle Tokopedia style "Pasti Ori" / "Bebas Ongkir" badge */}
+                          <div className="pt-1 flex">
+                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8.5px] font-black border uppercase tracking-wider backdrop-blur-md shadow-sm select-none ${voucher.displayTagBg}`}>
+                              <span>✓</span> {voucher.displayTag}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Lower description / benefit limitations */}
+                        <div className="flex items-center gap-1 border-t border-white/10 pt-1.5 mt-2">
+                          <span className="text-[7.5px] uppercase tracking-widest block opacity-70">BENEFIT:</span>
+                          <span className={`text-[8.5px] font-black ${premium.accent}`}>{voucher.benefit}</span>
+                        </div>
+                      </div>
+
+                      {/* Coupon Action Stub Section */}
+                      <div className="w-[125px] flex flex-col justify-between items-center p-4 pl-3 relative z-20 bg-black/15 text-white text-center border-l border-white/5">
+                        <div className="flex flex-col items-center justify-center my-auto">
+                          <span className="text-[7.5px] font-extrabold uppercase tracking-widest block opacity-70 mb-0.5">PROMO</span>
+                          <span className="text-[11px] font-black text-white leading-tight tracking-tighter uppercase whitespace-pre-wrap px-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+                            {voucher.subtitle}
+                          </span>
+                        </div>
+
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePromoCode(voucher.promoCode);
+                            showNotification?.(`Voucher ${voucher.promoCode} Berhasil Disalin!`, "success");
+                          }}
+                          className="w-full py-2.5 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-yellow-400 hover:to-amber-500 text-slate-950 rounded-xl transition-all duration-300 font-extrabold text-[9px] tracking-widest uppercase active:scale-95 shadow-lg shadow-black/15 flex flex-col items-center justify-center gap-0.5 hover:shadow-yellow-500/10 hover:-translate-y-0.5"
+                        >
+                          <span className="leading-none">SALIN</span>
+                          <span className="text-[7px] font-black tracking-normal opacity-90 block">
+                            [{voucher.promoCode}]
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             
             <button 
               onClick={() => handleQuickLink("Home")}
               className="mt-6 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors mx-auto block max-w-[200px]"
             >
-              Kembali
+              Kembali Ke Beranda
             </button>
           </div>
         )}
@@ -2159,7 +2664,7 @@ export default function BelanjaView({
               </div>
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className="text-sm font-bold text-slate-800">Promo Khusus Warga RT 02</h3>
+                  <h3 className="text-sm font-bold text-slate-800">Promo Khusus Warga RT 26</h3>
                   <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap ml-2">2 Jam Lalu</span>
                 </div>
                 <p className="text-xs text-slate-600 font-medium line-clamp-2 mt-1">Dapatkan diskon 50% untuk servis AC, khusus hari ini! Klaim sekarang sebelum kehabisan.</p>
