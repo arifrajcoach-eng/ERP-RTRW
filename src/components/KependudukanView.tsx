@@ -220,7 +220,7 @@ export default function KependudukanView({
               <BarChart3 className="w-6 h-6 text-brand-blue" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white">Layanan Kependudukan</h2>
+              <h2 className="text-xl font-bold italic text-slate-900 dark:text-white font-outfit">LAYANAN SIPIL</h2>
               <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Digital & Otomatis</p>
             </div>
           </div>

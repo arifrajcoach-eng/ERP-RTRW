@@ -132,10 +132,14 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser?.tenantId) {
+      showNotification('Gagal mengirim keluhan: Tenant ID tidak ditemukan. Hubungi pihak pengurus.', 'error');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'complaints'), {
-        tenantId: currentUser.tenantId || 'rw26_berjuang',
+        tenantId: currentUser.tenantId,
         userId: currentUser.uid || 'anonymous',
         namaWarga: currentUser.name || currentUser.nama || 'Warga',
         jenisKeluhan,
@@ -162,7 +166,7 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
               <MessageSquare className="w-7 h-7" />
            </div>
            <div>
-              <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant leading-none">Lapor Keluhan</h2>
+              <h2 className="text-2xl font-outfit font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">Lapor Keluhan</h2>
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5 opacity-70">Sampaikan aspirasi demi kenyamanan bersama</p>
            </div>
         </div>
@@ -221,7 +225,7 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
 
       <div className="space-y-6">
         <div className="flex items-center gap-4 px-4 border-l-4 border-brand-blue">
-          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant">Arsip Laporan</h3>
+          <h3 className="text-xl font-outfit font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tight">Arsip Laporan</h3>
           <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{complaints.length} Laporan Terdata</p>
         </div>

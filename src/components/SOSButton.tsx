@@ -71,11 +71,16 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
       userLocation = `📍 Lokasi Estimasi (GPS Tidak Tersedia): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
 
+    if (!currentUser?.tenantId) {
+      alert("Error: Tenant ID tidak ditemukan. Tindakan SOS dibatalkan guna menjaga integritas wilayah.");
+      return;
+    }
+
     try {
       const id = `SOS-${Date.now()}`;
       
       const sosData = {
-        tenantId: currentUser.tenantId || 'rw26_berjuang',
+        tenantId: currentUser.tenantId,
         id,
         userId: currentUser.uid || 'anonymous',
         userName: currentUser.name || 'Warga',
@@ -95,8 +100,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
       try {
         await setDoc(doc(db, "emergency_logs", id), {
           id,
-          tenantId: currentUser.tenantId || "rw26_berjuang",
-          userId: currentUser.uid || "anonymous",
+          tenantId: currentUser.tenantId,          userId: currentUser.uid || "anonymous",
           userName: currentUser.name || "Warga",
           userPhone: currentUser.hp || "-",
           location: {

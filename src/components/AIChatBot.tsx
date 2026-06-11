@@ -82,7 +82,11 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     return new Blob([buffer], { type: 'audio/wav' });
   };
   
-  const tenantId = currentUser?.tenantId || 'rw26_berjuang';
+  const tenantId = currentUser?.tenantId;
+  if (!tenantId) {
+    console.error("Critical: Tenant ID missing in AIChatBot");
+    return null;
+  }
   const roleUpper = currentUser?.role?.toUpperCase();
   
   // Calculate weeklyLimit based on plan

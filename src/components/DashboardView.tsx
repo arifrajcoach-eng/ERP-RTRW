@@ -655,7 +655,7 @@ export default function DashboardView({
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-2">
                  <div className="w-1.5 h-8 bg-cyan-400 rounded-full"></div>
-                 <h2 className="text-[27px] font-black font-elegant tracking-tight">Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</h2>
+                 <h2 className="text-[20px] italic font-black font-elegant tracking-tight">Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</h2>
               </div>
               <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmaRtRw AI Dashboard</p>
                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

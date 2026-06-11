@@ -769,7 +769,7 @@ function WargaView(props: WargaViewProps) {
             <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
               <Users className="w-8 h-8 text-brand-blue" />
             </div>
-            <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">
+            <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
               DATA WARGA
             </h2>
           </div>

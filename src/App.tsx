@@ -4039,6 +4039,7 @@ export default function App() {
 
           {activeTab === "daftar-trial" && (
             <DaftarPendaftarTrialView 
+              currentUser={currentUser}
               onAdd={() => setShowFreeTrialModal(true)} 
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}

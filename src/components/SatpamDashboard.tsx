@@ -39,7 +39,7 @@ export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) =>
       setHistory(logs);
     });
     return () => unsubscribe();
-  }, []);
+  }, [tenantId]);
 
   const handleResolve = async (id: string) => {
     try {

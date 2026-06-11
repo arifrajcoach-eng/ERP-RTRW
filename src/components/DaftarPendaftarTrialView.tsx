@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { Mail, Phone, Users, UserPlus, CheckCircle2, Trash2, X, Send, AlertTriangle, Loader2, FileText, Check, ArrowRight, Clock, CreditCard, ShieldCheck, Eye, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -66,7 +66,7 @@ SmaRtRw Enterprise Partnership`
   }
 ];
 
-export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirestoreError }: any) {
+export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification, handleFirestoreError }: any) {
   const [registrants, setRegistrants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -86,10 +86,29 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
+    const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role?.toUpperCase() === 'SUPERADMIN';
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const q = query(collection(db, 'tenants'), orderBy('createdAt', 'desc'));
+    
+    // Filter at Firestore-level for registrationType, and sort client-side to prevent composite index requirements
+    const q = query(
+      collection(db, 'tenants'), 
+      where('registrationType', '==', 'AUTOMATED_SELF_SERVICE')
+    );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Sort client-side by createdAt descending
+      data.sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+
       const trialTenants = data.filter((t: any) => 
         t.id.startsWith('TRIAL_') || 
         t.status === 'TRIAL' || 
@@ -109,7 +128,19 @@ export function DaftarPendaftarTrialView({ onAdd, showNotification, handleFirest
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [handleFirestoreError]);
+  }, [handleFirestoreError, currentUser]);
+
+  if (!currentUser?.isSuperAdmin) {
+    return (
+      <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl m-6 max-w-xl mx-auto">
+        <ShieldCheck className="w-12 h-12 mx-auto text-red-500 mb-3" />
+        <h3 className="font-bold text-white text-base">Akses Ditolak</h3>
+        <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+          Halaman pendaftaran trial & verifikasi pembayaran ini bersifat sangat rahasia. Hanya akun **Super Admin** yang diizinkan untuk membukanya.
+        </p>
+      </div>
+    );
+  }
 
   // Handle template switch
   useEffect(() => {

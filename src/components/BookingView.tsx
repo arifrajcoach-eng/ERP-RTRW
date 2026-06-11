@@ -119,6 +119,10 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser?.tenantId) {
+      showNotification('Gagal melakukan booking: Tenant ID tidak ditemukan. Hubungi pihak pengurus.', 'error');
+      return;
+    }
     setIsSubmitting(true);
     try {
       if (!currentUser) {
@@ -127,7 +131,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
       }
 
       await addDoc(collection(db, 'bookings'), {
-        tenantId: currentUser.tenantId || 'rw26_berjuang',
+        tenantId: currentUser.tenantId,
         userId: currentUser.uid || currentUser.id_user || 'anonymous',
         namaWarga: currentUser.name || currentUser.nama || 'Warga',
         namaFasilitas,

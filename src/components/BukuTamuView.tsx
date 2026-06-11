@@ -251,7 +251,7 @@ export function BukuTamuView({
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-slate-800 dark:text-slate-100 text-2xl uppercase tracking-tighter font-elegant">Log Kunjungan</h3>
+              <h3 className="font-outfit font-bold italic text-slate-800 dark:text-slate-100 text-2xl uppercase tracking-tighter">Log Kunjungan</h3>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Daftar riwayat tamu hari ini</p>
             </div>
           </div>

@@ -134,8 +134,17 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const tenantId = currentUser.tenantId || 'rw26_berjuang';
+  const tenantId = currentUser?.tenantId;
   const previewRef = useRef<HTMLDivElement>(null);
+
+  if (!tenantId) {
+    return (
+      <div className="p-6 bg-amber-50 dark:bg-amber-950/25 border border-amber-200 dark:border-amber-800 rounded-3xl text-amber-800 dark:text-amber-200 text-center flex flex-col items-center justify-center gap-2">
+        <p className="font-bold">Akses Ditolak / Tenant Tidak Valid</p>
+        <p className="text-sm">Silakan hubungi super admin atau login kembali untuk memverifikasi akun Anda.</p>
+      </div>
+    );
+  }
 
   const handleCetak = () => {
     if (!previewRef.current) return;
@@ -645,9 +654,10 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
 function TemplateList({ currentUser, showNotification, handleFirestoreError }: { currentUser: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
   const [selectedCategory, setSelectedCategory] = useState('surat');
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-  const tenantId = currentUser.tenantId || 'rw26_berjuang';
+  const tenantId = currentUser?.tenantId;  
   
   useEffect(() => {
+    if (!tenantId) return;
     const unsub = onSnapshot(doc(db, 'tenant_settings', tenantId), (snap) => {
       if (snap.exists()) {
         setActiveTemplateId(snap.data().active_template || 'surat_pengantar');

@@ -269,6 +269,10 @@
   font-family: var(--font-serif);
 }
 
+.font-outfit {
+  font-family: "Outfit", sans-serif;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

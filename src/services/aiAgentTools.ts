@@ -250,6 +250,9 @@ export async function createSurat(data: {
   rw?: string
 }) {
   try {
+    if (!data.tenantId) {
+      throw new Error("Missing tenantId. Operation rejected to protect tenant integrity.");
+    }
     const finalRt = data.rt || '01';
     const finalRw = data.rw || '26';
     const docRef = await addDoc(collection(db, 'surat'), {
@@ -268,12 +271,15 @@ export async function createSurat(data: {
     return { success: true, id: docRef.id };
   } catch (e) {
     console.error("Failed createSurat", e);
-    return { success: false, error: 'Gagal membuat surat' };
+    return { success: false, error: 'Gagal membuat surat: Tenant ID tidak valid.' };
   }
 }
 
 export async function registerELapak(data: { tenantId: string, userId: string, namaToko: string, kategori: string }) {
   try {
+    if (!data.tenantId) {
+      throw new Error("Missing tenantId. Operation rejected to protect tenant integrity.");
+    }
     const docRef = await addDoc(collection(db, 'toko_products'), {
         ...data,
         status: 'PENDING',
@@ -282,13 +288,16 @@ export async function registerELapak(data: { tenantId: string, userId: string, n
     return { success: true, id: docRef.id };
   } catch (e) {
     console.error("Failed registerELapak", e);
-    return { success: false, error: 'Gagal mendaftar e-lapak' };
+    return { success: false, error: 'Gagal mendaftar e-lapak: Tenant ID tidak valid.' };
   }
 }
 
 // 12. KELUHAN & BOOKING
 export async function reportComplaint(data: { tenantId: string, userId: string, namaWarga: string, jenisKeluhan: string, deskripsi: string }) {
   try {
+    if (!data.tenantId) {
+      throw new Error("Missing tenantId. Operation rejected to protect tenant integrity.");
+    }
     const docRef = await addDoc(collection(db, 'complaints'), {
       ...data,
       status: 'PENDING',
@@ -297,12 +306,15 @@ export async function reportComplaint(data: { tenantId: string, userId: string, 
     return { success: true, id: docRef.id };
   } catch (e) {
     console.error("Failed reportComplaint", e);
-    return { success: false, error: 'Gagal mengirim keluhan' };
+    return { success: false, error: 'Gagal mengirim keluhan: Tenant ID tidak valid.' };
   }
 }
 
 export async function bookFacility(data: { tenantId: string, userId: string, namaWarga: string, namaFasilitas: string, tanggal: string, keperluan: string }) {
   try {
+    if (!data.tenantId) {
+      throw new Error("Missing tenantId. Operation rejected to protect tenant integrity.");
+    }
     const docRef = await addDoc(collection(db, 'bookings'), {
       ...data,
       status: 'PENDING',
@@ -311,12 +323,15 @@ export async function bookFacility(data: { tenantId: string, userId: string, nam
     return { success: true, id: docRef.id };
   } catch (e) {
     console.error("Failed bookFacility", e);
-    return { success: false, error: 'Gagal melakukan booking' };
+    return { success: false, error: 'Gagal melakukan booking: Tenant ID tidak valid.' };
   }
 }
 
 export async function reportKelahiran(data: { tenantId: string, namaBayi: string, tempatLahir: string, tanggalLahir: string, jenisKelamin: string, namaAyah: string, namaIbu: string, alamat?: string, rt?: string, rw?: string }) {
   try {
+    if (!data.tenantId) {
+      throw new Error("Missing tenantId. Operation rejected to protect tenant integrity.");
+    }
     const docRef = await addDoc(collection(db, 'kelahiran'), {
       ...data,
       tanggalLapor: new Date(),
@@ -325,12 +340,15 @@ export async function reportKelahiran(data: { tenantId: string, namaBayi: string
     return { success: true, id: docRef.id };
   } catch (e) {
     console.error("Failed reportKelahiran", e);
-    return { success: false, error: 'Gagal menlaporkan kelahiran' };
+    return { success: false, error: 'Gagal melaporkan kelahiran: Tenant ID tidak valid.' };
   }
 }
 
 export async function reportKematian(data: { tenantId: string, namaWarga: string, nikWarga: string, tanggalMati: string, tempatMati: string, penyebab?: string }) {
   try {
+    if (!data.tenantId) {
+      throw new Error("Missing tenantId. Operation rejected to protect tenant integrity.");
+    }
     const docRef = await addDoc(collection(db, 'kematian'), {
       ...data,
       tanggalLapor: new Date(),
@@ -339,7 +357,7 @@ export async function reportKematian(data: { tenantId: string, namaWarga: string
     return { success: true, id: docRef.id };
   } catch (e) {
     console.error("Failed reportKematian", e);
-    return { success: false, error: 'Gagal melaporkan kematian' };
+    return { success: false, error: 'Gagal melaporkan kematian: Tenant ID tidak valid.' };
   }
 }
 
