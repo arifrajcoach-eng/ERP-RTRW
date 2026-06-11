@@ -72,7 +72,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
   const [formLevel, setFormLevel] = useState<"TOP" | "MIDDLE" | "STAFF">("STAFF");
   const [formColor, setFormColor] = useState<string>("indigo");
 
-  const tenantId = currentUser?.tenantId || currentTenant?.id || "rw26_berjuang";
+  const tenantId = currentUser?.tenantId || currentTenant?.id || "";
 
   // Check if writing operations are allowed (RW/RT/Admin/SuperAdmin)
   const isPengurus = ["SUPER_ADMIN", "ADMIN", "RW", "RT"].includes(currentUser?.role?.toUpperCase() || "");

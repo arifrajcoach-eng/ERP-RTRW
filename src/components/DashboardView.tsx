@@ -405,10 +405,7 @@ export default function DashboardView({
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
-  const isPaidPremium = currentTenant?.id === 'rw26_berjuang' || 
-                        currentTenant?.id === 'trihprw26' || 
-                        (currentTenant?.id && currentTenant.id.endsWith('_rw26_berjuang')) ||
-                        ['FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC'].some(st => currentTenant?.status?.toUpperCase()?.includes(st));
+  const isPaidPremium = ['FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC'].some(st => currentTenant?.status?.toUpperCase()?.includes(st));
 
   const isStarter = !isPaidPremium && (!currentTenant?.status || 
                     ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE'].includes(currentTenant?.status?.toUpperCase()));
@@ -424,7 +421,7 @@ export default function DashboardView({
     // Determine the target end date for the countdown
     let createdAt = currentTenant?.createdAt;
     
-    if (!createdAt && (currentTenant?.id === 'rw26_berjuang' || currentTenant?.id === 'trihprw26')) {
+    if (!createdAt && currentTenant?.id && currentTenant.id.startsWith('DEMO_')) {
       // Mock for demo/master tenants to show the feature
       const demoStart = new Date('2026-06-05T00:00:00Z'); 
       createdAt = demoStart.toISOString();

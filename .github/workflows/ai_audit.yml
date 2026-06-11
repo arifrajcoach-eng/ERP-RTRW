@@ -1,267 +1,62 @@
-name: SmartRW AI — Guardian (Nightly Auto-Fix)
+name: SmartRW AI - Automated Security & Compliance Auditor (Claude Code with OpenRouter)
 
 on:
-  schedule:
-    - cron: '0 18 * * *'   # Setiap malam 01:00 WIB
   push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:        # Bisa dipanggil manual dari tab Actions
-
-permissions:
-  contents: write
-  pull-requests: write
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
 
 jobs:
-  guardian:
-    name: 🛡️ Security Audit + Auto-Fix
+  ai_audit:
+    name: Claude Code Security compliance check (via OpenRouter)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
     steps:
-
-      - name: 📥 Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: ⚙️ Setup Node.js 20
+      - name: Set up NodeJS 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: 📦 Install Dependencies
+      - name: Install Project Dependencies
         run: npm install
 
-      # ── AUDIT LOKAL ─────────────────────────────────────────────────────────
-      - name: 🔍 Jalankan Security Audit
-        id: audit
+      - name: Start Proxy and Run Claude Code Auditor
+        # Clones the popular elusznik/open-claude-router to act as a local proxy
+        # translating Claude Code's Anthropic requests into OpenRouter-compatible format.
+        # Spawning and running this in the same step guarantees the background process is kept alive.
         run: |
-          npx tsx scripts/verify-tenant.ts 2>&1 | tee audit-output.txt
-          echo "status=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      # ── SCAN POLA KRITIS ────────────────────────────────────────────────────
-      - name: 🔎 Scan Pola Berbahaya
-        id: scan
-        run: |
-          echo "=== SCAN RESULTS ===" > scan-results.txt
-          HAS_CRITICAL=false
-
-          # 1. Hardcoded tenant fallback
-          HARDCODED=$(grep -rn "|| 'rw[0-9]" src/ 2>/dev/null || true)
-          if [ -n "$HARDCODED" ]; then
-            echo "CRITICAL: Hardcoded tenant fallback:" >> scan-results.txt
-            echo "$HARDCODED" >> scan-results.txt
-            HAS_CRITICAL=true
-          fi
-
-          # 2. addDoc tanpa tenantId
-          python3 - << 'PYEOF' >> scan-results.txt
-          import os
-          for root, dirs, files in os.walk('src'):
-              for f in files:
-                  if not f.endswith(('.ts','.tsx')): continue
-                  path = os.path.join(root, f)
-                  lines = open(path).readlines()
-                  for i, line in enumerate(lines):
-                      if 'addDoc(' in line and not line.strip().startswith('//'):
-                          block = ''.join(lines[i:i+12])
-                          if 'tenantId' not in block:
-                              print(f"CRITICAL: addDoc tanpa tenantId di {path}:{i+1}")
-          PYEOF
-
-          # 3. useEffect dependency kosong tapi pakai tenantId
-          python3 - << 'PYEOF' >> scan-results.txt
-          import os, re
-          for root, dirs, files in os.walk('src'):
-              for f in files:
-                  if not f.endswith(('.ts','.tsx')): continue
-                  path = os.path.join(root, f)
-                  content = open(path).read()
-                  lines = content.split('\n')
-                  for i, line in enumerate(lines):
-                      if 'useEffect(' in line:
-                          block = '\n'.join(lines[i:i+20])
-                          if 'tenantId' in block and re.search(r'},\s*\[\]\)', block):
-                              print(f"HIGH: useEffect pakai tenantId tapi dep array kosong di {path}:{i+1}")
-          PYEOF
-
-          echo "has_critical=$HAS_CRITICAL" >> $GITHUB_OUTPUT
-          cat scan-results.txt
-
-      # ── KIRIM KE AI VIA OPENROUTER ──────────────────────────────────────────
-      - name: 🤖 OpenRouter AI — Generate Patch
-        id: ai_fix
-        if: steps.scan.outputs.has_critical == 'true' || steps.audit.outputs.status != '0'
-        run: |
-          AUDIT=$(cat audit-output.txt | head -120)
-          SCAN=$(cat scan-results.txt)
-
-          # Kumpulkan isi file bermasalah untuk konteks
-          FILES=""
-          for f in $(grep -rln "|| 'rw[0-9]" src/ 2>/dev/null | head -4); do
-            FILES="${FILES}\n\n--- FILE: $f ---\n$(head -100 $f)"
+          git clone https://github.com/elusznik/open-claude-router.git proxy
+          cd proxy
+          npm install
+          
+          # Configure secrets and parameters
+          # Using "google/gemini-2.5-flash" via OpenRouter for extremely fast, ultra-low cost, and token-saving audits.
+          echo "OPENROUTER_API_KEY=\"${{ secrets.OPENROUTER_API_KEY }}\"" > .dev.vars
+          echo "MODEL_OVERRIDE=\"google/gemini-2.5-flash\"" >> .dev.vars
+          
+          # Start wrangler locally on port 8787 in the background
+          # Using nohup guarantees the process is detached and doesn't capture terminal output
+          nohup npx wrangler dev --port 8787 --ip 127.0.0.1 > wrangler.log 2>&1 &
+          
+          # Wait up to 30 seconds for the proxy to become available
+          echo "Waiting for local Claude-to-OpenRouter proxy to boot..."
+          for i in {1..30}; do
+            if curl -s http://127.0.0.1:8787 >/dev/null; then
+              echo "Proxy booted successfully on http://127.0.0.1:8787!"
+              break
+            fi
+            sleep 1
           done
+          
+          # Move back to project root
+          cd ..
+          
+          # Run Claude Code with the custom base URL pointing to our background proxy
+          # Using the `--once` flag keeps execution linear and prevents CLI from hanging in CI/CD pipeline
+          export ANTHROPIC_BASE_URL="http://127.0.0.1:8787"
+          export ANTHROPIC_API_KEY="dummy-key-to-bypass-sdk-checks"
+          npx @anthropic-ai/claude-code --once "jalankan audit keamanan sesuai AGENTS.md"
 
-          # Tulis payload ke file (hindari masalah escape di shell)
-          python3 << PYEOF
-          import json, os
-
-          audit = open('audit-output.txt').read()[:3000]
-          scan = open('scan-results.txt').read()
-
-          # Kumpulkan file bermasalah
-          import subprocess
-          result = subprocess.run(['grep','-rln',"|| 'rw",  'src/'], capture_output=True, text=True)
-          files_content = ""
-          for fpath in result.stdout.strip().split('\n')[:4]:
-              if fpath and os.path.exists(fpath):
-                  content = open(fpath).read()[:2000]
-                  files_content += f"\n\n--- FILE: {fpath} ---\n{content}"
-
-          payload = {
-            "model": "google/gemini-2.5-flash",
-            "max_tokens": 3000,
-            "messages": [
-              {
-                "role": "system",
-                "content": """Kamu adalah SmartRW AI Security Guardian untuk aplikasi multi-tenant Indonesia.
-
-          ATURAN EMAS yang WAJIB dipatuhi:
-          1. Semua Firestore query WAJIB ada where('tenantId', '==', ...) filter
-          2. addDoc() WAJIB ada tenantId dalam payload
-          3. DILARANG ada || 'rw26_berjuang' atau hardcoded tenant fallback apapun
-          4. localStorage.clear() DILARANG
-          5. useEffect yang pakai tenantId WAJIB punya tenantId di dependency array
-
-          Format output WAJIB (jangan ada teks lain):
-          FILE: path/ke/file.tsx
-          SEARCH:
-          <kode lama exact minimal 3 baris>
-          REPLACE:
-          <kode baru yang aman>
-          END"""
-              },
-              {
-                "role": "user",
-                "content": f"Audit:\n{audit}\n\nScan:\n{scan}\n\nFile bermasalah:{files_content}\n\nBuat patch untuk semua temuan CRITICAL."
-              }
-            ]
-          }
-
-          with open('openrouter-request.json', 'w') as f:
-              json.dump(payload, f)
-          print("Request payload siap.")
-          PYEOF
-
-          # Panggil OpenRouter API
-          curl -s https://openrouter.ai/api/v1/chat/completions \
-            -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -H "HTTP-Referer: https://github.com/${{ github.repository }}" \
-            -d @openrouter-request.json > openrouter-response.json
-
-          # Ekstrak teks patch
-          python3 << 'PYEOF'
-          import json, sys
-          d = json.load(open('openrouter-response.json'))
-          if 'error' in d:
-              print("ERROR dari OpenRouter:", d['error'])
-              sys.exit(1)
-          text = d['choices'][0]['message']['content']
-          open('ai-patches.txt', 'w').write(text)
-          print("=== PATCH DIHASILKAN ===")
-          print(text[:1000])
-          PYEOF
-
-      # ── APPLY PATCH ─────────────────────────────────────────────────────────
-      - name: 🔧 Apply Patches ke Source Code
-        id: apply
-        if: steps.ai_fix.outcome == 'success'
-        run: |
-          python3 << 'PYEOF'
-          import re, os
-
-          try:
-              text = open('ai-patches.txt').read()
-          except:
-              print("Tidak ada patch.")
-              exit(0)
-
-          pattern = r'FILE:\s*(.+?)\nSEARCH:\n(.*?)\nREPLACE:\n(.*?)\nEND'
-          patches = re.findall(pattern, text, re.DOTALL)
-          print(f"Ditemukan {len(patches)} patch.")
-
-          applied = 0
-          for fpath, search, replace in patches:
-              fpath = fpath.strip()
-              search = search.strip()
-              replace = replace.strip()
-              if not os.path.exists(fpath):
-                  fpath = os.path.join(os.getcwd(), fpath)
-              if not os.path.exists(fpath):
-                  print(f"File tidak ditemukan: {fpath}")
-                  continue
-              content = open(fpath).read()
-              if search in content:
-                  open(fpath, 'w').write(content.replace(search, replace, 1))
-                  print(f"✅ Patched: {fpath}")
-                  applied += 1
-              else:
-                  print(f"⚠️  Tidak cocok: {fpath}")
-          print(f"Total: {applied} patch applied.")
-          PYEOF
-
-      # ── BUAT PULL REQUEST ───────────────────────────────────────────────────
-      - name: 🔀 Buat Pull Request
-        if: steps.apply.outcome == 'success'
-        run: |
-          git config user.name "SmartRW AI Guardian"
-          git config user.email "guardian@smartrw.ai"
-
-          BRANCH="auto-fix/guardian-$(date +%Y%m%d-%H%M)"
-          git checkout -b "$BRANCH"
-          git add -A
-
-          if git diff --staged --quiet; then
-            echo "✅ Sistem sudah bersih — tidak ada PR yang perlu dibuat."
-          else
-            git commit -m "fix(security): auto-patch $(date +%Y-%m-%d)
-
-          Patch otomatis oleh SmartRW AI Guardian.
-          Powered by OpenRouter (Gemini 2.5 Flash).
-
-          Yang diperbaiki:
-          - Hardcoded tenant fallback
-          - addDoc tanpa tenantId
-          - useEffect dependency array"
-
-            git push origin "$BRANCH"
-
-            curl -s -X POST \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              https://api.github.com/repos/${{ github.repository }}/pulls \
-              -d "{
-                \"title\": \"🛡️ [AUTO-FIX] Security Patch $(date +%Y-%m-%d)\",
-                \"body\": \"## SmartRW AI Guardian\\n\\nPatch otomatis dari audit nightly.\\n\\n**Review sebelum merge:**\\n1. Buka tab **Files Changed**\\n2. Pastikan tidak ada perubahan logika bisnis\\n3. Merge jika aman ✅\",
-                \"head\": \"$BRANCH\",
-                \"base\": \"main\"
-              }"
-
-            echo "✅ Pull Request berhasil dibuat."
-          fi
-
-      # ── SIMPAN LOG ──────────────────────────────────────────────────────────
-      - name: 📁 Simpan Log Audit
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: audit-log-${{ github.run_number }}
-          path: |
-            audit-output.txt
-            scan-results.txt
-            ai-patches.txt
-          retention-days: 14

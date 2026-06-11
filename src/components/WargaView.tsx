@@ -336,13 +336,7 @@ function WargaView(props: WargaViewProps) {
     setIsLoadingDB(true);
     console.log(`Starting bidirectional sync for RT "${detectedRT}" to/from parent RW...`);
     try {
-        const potentialParentIDs = (tenantId === "rw26_berjuang" || tenantId.endsWith("_rw26_berjuang")) 
-            ? ([currentTenant?.parentId].filter(Boolean) as string[])
-            : Array.from(new Set([
-                currentTenant?.parentId,
-                'rw26_berjuang',
-                'trihprw26'
-            ].filter(Boolean) as string[]));
+        const potentialParentIDs = [currentTenant?.parentId].filter(Boolean) as string[];
 
         console.log("Querying potential parent tenants:", potentialParentIDs);
 
@@ -430,7 +424,7 @@ function WargaView(props: WargaViewProps) {
         }
 
         // Perform Push (Write local citizens from this RT child tenant up to the parent RW)
-        const primaryParentID = currentTenant?.parentId || potentialParentIDs[0] || 'rw26_berjuang';
+        const primaryParentID = currentTenant?.parentId || (potentialParentIDs.length > 0 ? potentialParentIDs[0] : null);
         if (localDocs.length > 0 && primaryParentID) {
             const parentNIKs = new Set(allParentDocs.map(item => (item.data.nik || '').toString().trim()).filter(Boolean));
             const docsToPush = localDocs.filter(d => {

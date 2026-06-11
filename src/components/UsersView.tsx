@@ -352,7 +352,7 @@ export default function UsersView({
                     name="email"
                     required
                     defaultValue={editingUser?.email || ""}
-                    placeholder="admin@rw26.com"
+                    placeholder="admin@wilayah.com"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold"
                   />
                 </div>

@@ -4,6 +4,7 @@ import { db } from '../firebase';
 // 1. KEUANGAN
 export async function getFinancialSummary(tenantId: string) {
   try {
+    if (!tenantId) throw new Error("Tenant ID required");
     const q = query(
       collection(db, 'kas'), 
       where('tenantId', '==', tenantId),
@@ -28,6 +29,7 @@ export async function getFinancialSummary(tenantId: string) {
 // 2. WARGA
 export async function getWargaStats(tenantId: string) {
   try {
+    if (!tenantId) throw new Error("Tenant ID required");
     const q = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId));
     const snapshot = await getCountFromServer(q);
     return { totalWarga: snapshot.data().count };
@@ -39,6 +41,7 @@ export async function getWargaStats(tenantId: string) {
 
 // 3. KESEHATAN (POSYANDU & SAKIT)
 export async function getHealthSummary(tenantId: string) {
+  if (!tenantId) return { error: "Tenant ID required" };
   const collections = ['balita', 'ibu_hamil', 'lansia', 'warga_sakit'];
   const results: Record<string, any> = {};
   
@@ -69,6 +72,7 @@ export async function getHealthSummary(tenantId: string) {
 // 4. BANK SAMPAH
 export async function getWasteBankSummary(tenantId: string) {
   try {
+    if (!tenantId) throw new Error("Tenant ID required");
     const q = query(collection(db, 'sampah_setoran'), where('tenantId', '==', tenantId));
     const snapshot = await getDocs(query(q, limit(100)));
     let totalBerat = 0;
@@ -84,6 +88,7 @@ export async function getWasteBankSummary(tenantId: string) {
 // 5. BUKU TAMU
 export async function getGuestBookSummary(tenantId: string) {
   try {
+    if (!tenantId) throw new Error("Tenant ID required");
     const q = query(collection(db, 'buku_tamu'), where('tenantId', '==', tenantId));
     const snapshot = await getDocs(query(q, limit(100)));
     let inCount = 0;
@@ -102,6 +107,7 @@ export async function getGuestBookSummary(tenantId: string) {
 // 6. SURAT & PENGAJUAN
 export async function getLettersSummary(tenantId: string) {
   try {
+    if (!tenantId) throw new Error("Tenant ID required");
     const q = query(collection(db, 'surat'), where('tenantId', '==', tenantId));
     const countSnapshot = await getCountFromServer(q);
     const snapshot = await getDocs(query(q, limit(50)));

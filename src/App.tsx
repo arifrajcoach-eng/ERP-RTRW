@@ -271,14 +271,11 @@ export function getTrialStatus(tenant: any, currentUser?: any) {
     return { phase: "ACTIVE" as const, daysRemainingActive: 30, daysRemainingFrozen: 0 };
   }
   
-  if (currentUser?.isSuperAdmin || tenant.id === "MASTER" || tenant.id === "rw26_berjuang") {
+  if (currentUser?.isSuperAdmin || tenant.parentId === "MASTER" || tenant.id === "MASTER") {
     return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 0 };
   }
 
-  const isPaidPremium = tenant.id === "rw26_berjuang" || 
-                        tenant.id === "trihprw26" || 
-                        (tenant.id && tenant.id.endsWith("_rw26_berjuang")) ||
-                        ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
+  const isPaidPremium = ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
 
   const isStarter = !isPaidPremium && (!tenant.status || 
                     ["STARTER", "GRATIS", "FREE", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
@@ -585,7 +582,7 @@ export default function App() {
                 : "Warga (Anonymous)",
               role: overrideAdmin ? "SUPER_ADMIN" : "Warga",
               uid: user.uid,
-              tenantId: overrideAdmin ? "MASTER" : "rw26_berjuang",
+              tenantId: overrideAdmin ? "MASTER" : "",
               isSuperAdmin: overrideAdmin,
             });
           } else {
@@ -650,7 +647,7 @@ export default function App() {
                   username: user.email?.split("@")[0] || "user",
                   role: isMasterEmail ? "SUPER_ADMIN" : "RW",
                   email: user.email,
-                  tenantId: isMasterEmail ? "MASTER" : "rw26_berjuang",
+                  tenantId: isMasterEmail ? "MASTER" : "",
                   isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
@@ -1009,32 +1006,11 @@ export default function App() {
     const lowRw = globalRw.toLowerCase();
     const lowW = (w.tenantId || "").toLowerCase();
 
-    // Isolate developer master tenant and its sub-tenants from wildcard/keyword matching
-    const isRw26BerjuangSystem = (tIdId: string) => tIdId === "rw26_berjuang" || tIdId.endsWith("_rw26_berjuang");
-    if (isRw26BerjuangSystem(lowRw) || isRw26BerjuangSystem(lowW)) {
-       if (isRw26BerjuangSystem(lowRw) && isRw26BerjuangSystem(lowW)) {
-          if (lowRw === "rw26_berjuang") return true;
-          return lowW === lowRw || lowW === "rw26_berjuang";
-       }
-       return false;
-    }
-
-    // Isolation for Berjuang cluster RTs
-    // If filtering by a specific RT unit, it must match exactly or match the parent
-    if (lowRw.includes("rt") && lowRw.includes("berjuang")) {
-       return lowW === lowRw || lowW === "rw26_berjuang" || lowW === "rw_berjuang";
-    }
-
-    // Expansion for Berjuang cluster (Parent Dashboard View)
-    if ((lowRw === "rw26_berjuang" || lowRw === "rw_berjuang") && lowW.includes("berjuang")) return true;
-
-    // Expansion for Trih cluster
-    if (lowRw.includes("trih") && lowW.includes("trih")) return true;
-    // Expansion for RW26 smart cluster
-    if (lowRw.includes("rw26") && lowW.includes("rw26") && !lowRw.includes("berjuang") && !lowW.includes("berjuang")) return true;
-
+    // Standard multi-tenant isolation: exact match on tenantId or rw property
+    if (lowW === lowRw) return true;
+    
     if (isSpecialTenant(globalRw)) {
-      return (lowW === lowRw) || normalizeRwValue(w.rw) === globalRw;
+      return normalizeRwValue(w.rw) === globalRw;
     }
     return normalizeRwValue(w.rw) === globalRw;
   };
@@ -1138,7 +1114,7 @@ export default function App() {
   // Securely resolve active tenant IDs for filtering
   const activeTenantIds = useMemo(() => {
     const baseTenantId =
-      currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang";
+      currentUser?.tenantId || wargaAuth?.tenantId || "";
     
     // If SuperAdmin, default to an empty string to force selection if not already selected
     let tId = "";
@@ -1248,7 +1224,7 @@ export default function App() {
 
     // 1. A Tenant Admin must only see users that belong to their active tenant/sub-tenant group
     filtered = filtered.filter((u: any) => {
-      const userTenantId = u.tenantId || "rw26_berjuang";
+      const userTenantId = u.tenantId || "";
       return activeTenantIds.includes(userTenantId);
     });
 
@@ -1277,7 +1253,7 @@ export default function App() {
       email: linkedWarga?.email || wargaAuth?.email || currentUser?.email || "",
       rt: linkedWarga?.rt || wargaAuth?.rt || currentUser?.rt || "01",
       rw: linkedWarga?.rw || wargaAuth?.rw || currentUser?.rw || "26",
-      tenantId: linkedWarga?.tenantId || wargaAuth?.tenantId || currentUser?.tenantId || "rw26_berjuang",
+      tenantId: linkedWarga?.tenantId || wargaAuth?.tenantId || currentUser?.tenantId || "",
       terverifikasi: linkedWarga?.terverifikasi === true || wargaAuth?.terverifikasi === true || currentUser?.status === "Disetujui" || false
     };
   }, [linkedWarga, wargaAuth, currentUser]);
@@ -1393,7 +1369,7 @@ export default function App() {
       const isMinePhoto = (currentUser as any)?.photoUrl || profile.foto || profile.ktpUrl || "";
 
       const sosData = {
-        tenantId: profile.tenantId || "rw26_berjuang",
+        tenantId: profile.tenantId || "",
         id,
         userId: auth.currentUser?.uid || wargaAuth?.uid || "anonymous",
         userName: profile.nama || "Warga",
@@ -1417,7 +1393,7 @@ export default function App() {
       try {
         await setDoc(doc(db, "emergency_logs", id), {
           id,
-          tenantId: profile.tenantId || "rw26_berjuang",
+          tenantId: profile.tenantId || "",
           userId: auth.currentUser?.uid || wargaAuth?.uid || "anonymous",
           userName: profile.nama || "Warga",
           userPhone: userPhone || "-",
@@ -1484,8 +1460,12 @@ export default function App() {
       return;
     }
     const tIds = activeTenantIds;
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
 
+    if (!tId) {
+       setIsLoadingDB(false);
+       return;
+    }
     setIsLoadingDB(true);
     let loadedSections = 0;
     const requiredSections = 1; // Base settings
@@ -1561,7 +1541,8 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+    if (!tId) return;
     
     const found = tenantsData.find(t => t.id === tId)?.parentId;
     if (found) {
@@ -1589,7 +1570,8 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
+    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+    if (!tId) return;
     
     const unsubKopSettings = onSnapshot(doc(db, "tenant_settings", tId), (snap) => {
       let currentKop = snap.exists() ? snap.data() : {};
@@ -1820,7 +1802,9 @@ export default function App() {
       tIdsChunks.forEach(chunk => {
          unsubs.push(onSnapshot(query(collection(db, "voting_candidates"), where("tenantId", "in", chunk), limit(500)), snap => setVotingCandidates(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ docId: d.id, ...d.data() } as any))])));
       });
-      unsubs.push(onSnapshot(doc(db, "voting_config", activeTenantId), snap => snap.exists() && setVotingConfig(snap.data())));
+      if (activeTenantId) {
+        unsubs.push(onSnapshot(doc(db, "voting_config", activeTenantId), snap => snap.exists() && setVotingConfig(snap.data())));
+      }
       if (["ADMIN", "SUPER_ADMIN", "RT", "RW"].includes(currentUser?.role?.toUpperCase())) {
          tIdsChunks.forEach(chunk => {
             unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", chunk), limit(1000)), snap => setUserVotes(prev => [...prev.filter(p => !chunk.includes((p as any).tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
@@ -2220,7 +2204,7 @@ export default function App() {
   };
 
   // --- TENANT SPECIFIC LOCALSTORAGE PERSISTENCE (SECURE CONTEXT) ---
-  const activeTenantId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "rw26_berjuang");
+  const activeTenantId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
 
   // Effect to load data from tenant-specific cache when active tenant changing
   useEffect(() => {
@@ -2337,7 +2321,7 @@ export default function App() {
         currentTenant.status !== "PREMIUM" &&
         currentTenant.status !== "ENTERPRISE"
       ) {
-        const tId = currentUser.tenantId || "rw26_berjuang";
+        const tId = currentUser.tenantId || "";
         if (tId === "MASTER") return; // Skip virtual tenant update
         console.log("Auto-activating PREMIUM for dev account...");
         try {
@@ -2403,7 +2387,7 @@ export default function App() {
             role: "Warga",
             nik: warga.nik || "",
             name: nameToUse,
-            tenantId: warga.tenantId || currentTenant?.id || "rw26_berjuang",
+            tenantId: warga.tenantId || currentTenant?.id || "",
             linkedResidentId: warga.id || warga.id_warga || warga.nik || "",
             updatedAt: new Date().toISOString(),
           },
@@ -2925,7 +2909,7 @@ export default function App() {
           }}
           onShowPricing={() => setShowPricingModal(true)}
           settings={settings}
-          tenantId={currentUser?.tenantId || "rw26_berjuang"}
+          tenantId={currentUser?.tenantId || ""}
           initialEmail={prefilledEmail}
           initialMode={prefilledEmail ? "admin" : "admin"}
         />
@@ -3475,7 +3459,7 @@ export default function App() {
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-800 dark:text-slate-200 font-mono font-black truncate bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50 flex-1">
-                    {currentUser.tenantId || "rw26_berjuang"}
+                    {currentUser.tenantId || ""}
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-brand-green"></div>
                 </div>
@@ -3755,7 +3739,7 @@ export default function App() {
               currentTenant={currentTenant}
               setWargaData={setWargaData}
               userRole={currentUser.role}
-              tenantId={currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || "rw26_berjuang")}
+              tenantId={currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || "")}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -4345,7 +4329,7 @@ export default function App() {
       <RegistrationQRModal
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
-        tenantId={currentTenant?.id || currentUser?.tenantId || "rw26_berjuang"}
+        tenantId={currentTenant?.id || currentUser?.tenantId || ""}
         tenantName={currentTenant?.nama || getTranslatedLabel("Sistem RT/RW", settings?.themeMode)}
       />
       <AnimatePresence>
@@ -5413,7 +5397,7 @@ function SelfRegistrationView({
       await setDoc(doc(db, "verifikasi_warga", id), {
         ...formData,
         id,
-        tenantId: tenantId || "rw26_berjuang",
+        tenantId: tenantId || "",
         ktpUrl,
         kkUrl,
         status: "Menunggu Persetujuan",
@@ -5759,7 +5743,7 @@ function SelfRegistrationView({
                   }
                   className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900"
                 >
-                  {["26"].map((rw) => (
+                  {Array.from({ length: 100 }, (_, i) => String(i + 1).padStart(2, "0")).map((rw) => (
                     <option key={rw} value={rw}>
                       RW {rw}
                     </option>
@@ -6259,7 +6243,7 @@ function LoginView({
 
         // B. Query Discovery (as fallback) - Search for all fields that match cleanId or cleanPass
         if (!found) {
-          const searchTenantIds = [tenantId || "rw26_berjuang"];
+          const searchTenantIds = [tenantId || ""];
           if (settings?.parentId) {
             searchTenantIds.push(settings.parentId);
           } else if (tenantId.startsWith("rt") && tenantId.includes("_")) {
@@ -6507,49 +6491,14 @@ function LoginView({
           } else {
             throw new Error("Username valid, but no email set.");
           }
-        } else if (inputEmail.toLowerCase() === "trihprw26") {
-          loginEmail = "trihprw26@rw26.com";
-        } else if (inputEmail.toLowerCase() === "master") {
-          loginEmail = "arifrajcoach@gmail.com";
-        } else if (inputEmail.toLowerCase() === "rw26_smart") {
-          loginEmail = "admin@rw26.com";
         } else {
           throw new Error("Username tidak ditemukan.");
         }
       }
 
-      if (
-        loginEmail === "arifrajcoach@gmail.com" &&
-        targetPass === "4R1f080162a3"
-      ) {
-        try {
-          await signInWithEmailAndPassword(auth, loginEmail, targetPass);
-        } catch (adminErr: any) {
-          if (
-            adminErr.code === "auth/user-not-found" ||
-            adminErr.code === "auth/invalid-credential"
-          ) {
-            try {
-              await createUserWithEmailAndPassword(
-                auth,
-                loginEmail,
-                targetPass,
-              );
-            } catch (createErr: any) {
-              if (createErr.code === "auth/email-already-in-use") {
-                // If it already exists, then the original signIn failed because of wrong password
-                throw adminErr;
-              }
-              throw createErr;
-            }
-          } else {
-            throw adminErr;
-          }
-        }
-      } else {
-        try {
-          await signInWithEmailAndPassword(auth, loginEmail, targetPass);
-        } catch (loginErr: any) {
+      try {
+        await signInWithEmailAndPassword(auth, loginEmail, targetPass);
+      } catch (loginErr: any) {
           if (
             loginErr.code === "auth/user-not-found" ||
             loginErr.code === "auth/invalid-credential" ||
@@ -6592,7 +6541,6 @@ function LoginView({
             throw loginErr;
           }
         }
-      }
     } catch (err: any) {
       console.error("Login Error:", err);
       let msg = `Gagal masuk (${err.code || "ERR"}). Periksa kembali email dan password Anda.`;
@@ -6647,7 +6595,7 @@ function LoginView({
       const user = result.user;
 
       const isArif = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
-      let tenantId = "rw26_berjuang";
+      let tenantId = "";
       if (isArif) {
         tenantId = "MASTER";
       }

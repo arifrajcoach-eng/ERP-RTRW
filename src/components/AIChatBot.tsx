@@ -437,7 +437,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
                 userId: currentUser?.uid || currentUser?.id_user || currentUser?.id || null,
                 authUid: currentUser?.uid || currentUser?.id_user || currentUser?.id || null,
                 rt: params.rt || currentUser?.rt || '01',
-                rw: params.rw || currentUser?.rw || '26'
+                rw: params.rw || currentUser?.rw || (tenantId.split('_').pop()?.startsWith('rw') ? tenantId.split('_').pop()?.replace('rw', '') : '')
               });
               const msg = res.success ? (jsonAction.text || `Alhamdulillah kak, ${params.jenisSurat || 'surat'} berhasil dibuat (ID: ${res.id}).`) : 'Maaf kak, ada kendala saat membuat surat.';
               setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
