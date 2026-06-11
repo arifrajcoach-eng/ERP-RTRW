@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette, FileText, Printer, CheckCircle2, Heart, ShieldCheck, Zap, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
-import { applyColorSanitization } from '../lib/pdfUtils';
 
 export default function PanduanAdminView() {
   const [activeTab, setActiveTab] = useState<'fitur' | 'action' | 'peringatan' | 'sosialisasi'>('fitur');
@@ -19,95 +16,10 @@ export default function PanduanAdminView() {
 
   const handlePrint = async () => {
     if (isPrinting) return;
-
-    // We keep window.print() as a background-friendly option, 
-    // but we'll primarily use jsPDF + html2canvas for a direct file download
-    // which is more reliable in AI Studio's sandboxed iframe environment.
     
-    const elementId = activeTab === 'sosialisasi' ? 'print-sosialisasi-content' : `active-tab-content-${activeTab}`;
-    const element = document.getElementById(elementId);
-    
-    if (!element) {
-      window.print();
-      return;
-    }
-
-    try {
-      setIsPrinting(true);
-      
-      // Capture the element with high resolution
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-            applyColorSanitization(clonedDoc);
-
-            // 3. Force visibility for specific print-only elements
-            const hiddenPrintElements = clonedDoc.querySelectorAll('.hidden.print\\:block');
-            hiddenPrintElements.forEach((el) => {
-              (el as HTMLElement).style.setProperty('display', 'block', 'important');
-              (el as HTMLElement).style.setProperty('visibility', 'visible', 'important');
-              (el as HTMLElement).style.setProperty('opacity', '1', 'important');
-            });
-
-            // 4. Inject a normalization print stylesheet
-            const normalizationStyle = clonedDoc.createElement('style');
-            normalizationStyle.innerHTML = `
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              body { background: white !important; }
-              .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
-            `;
-            clonedDoc.head.appendChild(normalizationStyle);
-          }
-        });
-      
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-      
-      const imgWidth = 210; 
-      const pageHeight = 297; 
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pageHeight;
-      }
-
-      const fileName = `SmartRW_Admin_${activeTab}.pdf`;
-      const pdfBlob = pdf.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('PDF Export Error:', error);
-      // Fallback to window.print() if canvas capture fails
-      window.print();
-    } finally {
-      setIsPrinting(false);
-    }
+    // Fallback to native window.print. Native browser PDF export 
+    // preserves OKLCH colors, whereas html2canvas fails and breaks.
+    window.print();
   };
 
   return (

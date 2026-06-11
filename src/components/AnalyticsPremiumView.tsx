@@ -1,6 +1,4 @@
 import React, { useState, useRef, useMemo } from "react";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import {
   X,
   QrCode,
