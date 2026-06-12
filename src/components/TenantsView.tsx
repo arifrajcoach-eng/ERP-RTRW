@@ -266,6 +266,7 @@ export default function TenantsView({
       addons,
       rtTarget: rtCount,
       rwTarget: rwNumber,
+      syncMode: (formData.get("syncMode") as string) || "two_way",
       createdAt: joiningDate ? new Date(joiningDate).toISOString() : (editingTenant ? editingTenant.createdAt || new Date().toISOString() : new Date().toISOString()),
       expiredAt: expiredAt ? new Date(expiredAt).toISOString() : (editingTenant ? editingTenant.expiredAt || null : null)
     };
@@ -474,6 +475,19 @@ export default function TenantsView({
                               RW: {tenant.rwTarget}
                             </div>
                           )}
+                          <div className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-0.5 rounded-full w-fit border ${
+                            tenant.syncMode === "rw_to_rt" 
+                              ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400"
+                              : tenant.syncMode === "rt_to_rw"
+                                ? "bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400"
+                                : "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400"
+                          }`}>
+                            {tenant.syncMode === "rw_to_rt" 
+                              ? "⬇️ RW -> RT" 
+                              : tenant.syncMode === "rt_to_rw"
+                                ? "⬆️ RT -> RW"
+                                : "🔄 2-Arah"}
+                          </div>
                         </div>
                         {tenant.addons && tenant.addons.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
@@ -663,6 +677,23 @@ export default function TenantsView({
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
+                      Arah Sinkronisasi Data (Parent & Child)
+                    </label>
+                    <select
+                      name="syncMode"
+                      defaultValue={editingTenant?.syncMode || "two_way"}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-700"
+                    >
+                      <option value="two_way">🔄 Dua Arah (Saling Sinkronisasi)</option>
+                      <option value="rw_to_rt">⬇️ Satu Arah: RW ke RT saja (Tarik / Pull)</option>
+                      <option value="rt_to_rw">⬆️ Satu Arah: RT ke RW saja (Kirim / Push)</option>
+                    </select>
+                    <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                      Mengontrol arah pembaruan dokumen kependudukan/warga secara otomatis antara RT (Child) dan RW (Parent).
+                    </p>
                   </div>
                 </div>
               </div>

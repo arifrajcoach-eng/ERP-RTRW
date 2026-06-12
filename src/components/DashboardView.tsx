@@ -410,6 +410,9 @@ export default function DashboardView({
   const isStarter = !isPaidPremium && (!currentTenant?.status || 
                     ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE'].includes(currentTenant?.status?.toUpperCase()));
 
+  const adminRoles = ['SUPER_ADMIN', 'MASTER', 'KELURAHAN_ADMIN', 'ADMIN', 'RW', 'RT', 'OPERATOR', 'SEKRETARIS', 'BENDAHARA'];
+  const isAdminUser = adminRoles.includes(userRole?.toUpperCase() || '');
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -1045,7 +1048,7 @@ export default function DashboardView({
                   <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Iuran</span>
                 </button>
 
-                {currentTenant?.status !== 'STARTER' && (
+                {currentTenant?.status !== 'STARTER' && isAdminUser && (
                   <button 
                     onClick={() => setShowAIChat(true)}
                     className="w-full h-32 bg-purple-600/40 hover:bg-purple-600/60 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-purple-500/30 backdrop-blur-xl shadow-lg"
@@ -1057,7 +1060,7 @@ export default function DashboardView({
                   </button>
                 )}
 
-                {!isStarter && !isWarga && (
+                {!isStarter && isAdminUser && (
                   <button 
                     onClick={() => setActiveTab('analitik')}
                     className="w-full h-32 bg-indigo-600/40 hover:bg-indigo-600/60 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-indigo-500/30 backdrop-blur-xl shadow-lg"
@@ -1122,7 +1125,7 @@ export default function DashboardView({
       </div>
       
       {/* Floating AI Chat Button */}
-      {currentTenant?.status !== 'STARTER' && (
+      {currentTenant?.status !== 'STARTER' && isAdminUser && (
         <button
           onClick={() => setShowAIChat(!showAIChat)}
           className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-95"
@@ -1132,7 +1135,7 @@ export default function DashboardView({
       )}
 
       {/* AI Chat Window */}
-        {showAIChat && currentTenant?.status !== 'STARTER' && (
+        {showAIChat && currentTenant?.status !== 'STARTER' && isAdminUser && (
           <div
               className="fixed bottom-24 right-6 z-50 w-full max-w-md"
             >

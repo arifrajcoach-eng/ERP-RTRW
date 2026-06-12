@@ -43,6 +43,33 @@ const calculateAge = (tglLahir: string) => {
   return age;
 };
 
+const getTenantGroup = (tId: string): string => {
+  if (!tId) return "";
+  const id = tId.toLowerCase();
+  if (id.includes("berjuang")) return "berjuang";
+  if (id.includes("trih")) return "trih";
+  if (id.includes("rw26") || id.includes("rw_26")) return "rw26";
+  return id;
+};
+
+// Check if a child tenant ID relates strictly to its parent tenant ID to prevent cross-RW leaks
+const isBelongsToParent = (childId: string, parentId: string): boolean => {
+  if (!childId || !parentId) return false;
+  const child = childId.toLowerCase();
+  const parent = parentId.toLowerCase();
+  if (child === parent) return true;
+  
+  // Group check: they must belong to the exact same group
+  const childGroup = getTenantGroup(child);
+  const parentGroup = getTenantGroup(parent);
+  if (childGroup !== parentGroup) return false;
+  
+  // Prefix/Suffix search to ensure it is actually a parent-child structure
+  const isParentInChild = child.includes(parent) || parent.includes(child);
+  
+  return isParentInChild;
+};
+
 function WargaView(props: WargaViewProps) { 
   const { 
       wargaData, 
@@ -249,7 +276,20 @@ function WargaView(props: WargaViewProps) {
             tIdsToClean.push("rw26_berjuang", "trihprw26");
           }
         }
-        const uniqueTids = Array.from(new Set([...wargaData.map(w => w.tenantId), tenantId].filter(Boolean)));
+        let uniqueTids = Array.from(new Set([...wargaData.map(w => w.tenantId), tenantId].filter(Boolean))).filter(id => {
+            return id === tenantId || 
+                   id === currentTenant?.parentId || 
+                   isBelongsToParent(id, tenantId) || 
+                   (currentTenant?.parentId && isBelongsToParent(id, currentTenant.parentId));
+        });
+
+        // Strict isolation: if we are an RT tenant, we are absolutely forbidden from loading/modifying keys outside our own RT tenantId
+        const lowerTenantId = tenantId.toLowerCase();
+        const isRT = lowerTenantId.startsWith("rt") || lowerTenantId.includes("_rt") || !!detectedRT;
+        if (isRT) {
+            uniqueTids = uniqueTids.filter(id => id === tenantId);
+        }
+
         if (uniqueTids.length === 0) return;
 
         let docs: any[] = [];
@@ -335,26 +375,43 @@ function WargaView(props: WargaViewProps) {
     }
     
     setIsLoadingDB(true);
-    console.log(`Starting bidirectional sync for RT "${detectedRT}" to/from parent RW...`);
+    const currentSyncMode = currentTenant?.syncMode || tenantsData?.find(t => t.id === tenantId)?.syncMode || "two_way";
+    const allowPull = currentSyncMode === "two_way" || currentSyncMode === "rw_to_rt";
+    const allowPush = currentSyncMode === "two_way" || currentSyncMode === "rt_to_rw";
+    
+    console.log(`Starting sync for RT "${detectedRT}" to/from parent RW with mode: "${currentSyncMode}"`);
     try {
-        const potentialParentIDs = [currentTenant?.parentId].filter(Boolean) as string[];
+        const potentialParentIDs = [currentTenant?.parentId]
+            .filter(Boolean)
+            .filter(pId => isBelongsToParent(tenantId, pId)) as string[];
 
         console.log("Querying potential parent tenants:", potentialParentIDs);
 
         let allParentDocs: any[] = [];
-        for (const pId of potentialParentIDs) {
-            try {
-                const q = query(
-                    collection(db, 'data_warga'),
-                    where('tenantId', '==', pId)
-                );
-                const snapshot = await getDocs(q);
-                console.log(`Parent tenant "${pId}" returned ${snapshot.docs.length} citizen documents.`);
-                snapshot.docs.forEach(docSnap => {
-                    allParentDocs.push({ id: docSnap.id, data: docSnap.data(), parentId: pId });
-                });
-            } catch (err) {
-                console.warn(`Query for parent tenant "${pId}" failed (possible rules constraint):`, err);
+        if (allowPull) {
+            for (const pId of potentialParentIDs) {
+                const cleanRTNum = parseInt(detectedRT, 10);
+                const rtQueries = [detectedRT];
+                if (!isNaN(cleanRTNum) && cleanRTNum.toString() !== detectedRT) {
+                    rtQueries.push(cleanRTNum.toString());
+                }
+
+                for (const rtVal of rtQueries) {
+                    try {
+                        const q = query(
+                            collection(db, 'data_warga'),
+                            where('tenantId', '==', pId),
+                            where('rt', '==', rtVal)
+                        );
+                        const snapshot = await getDocs(q);
+                        console.log(`Parent tenant "${pId}" (RT filter "${rtVal}") returned ${snapshot.docs.length} citizen documents.`);
+                        snapshot.docs.forEach(docSnap => {
+                            allParentDocs.push({ id: docSnap.id, data: docSnap.data(), parentId: pId });
+                        });
+                    } catch (err) {
+                        console.warn(`Query for parent tenant "${pId}" with rt condition "${rtVal}" failed:`, err);
+                    }
+                }
             }
         }
 
@@ -369,7 +426,7 @@ function WargaView(props: WargaViewProps) {
         console.log(`Normalized target RT code to match is "${targetRTCode}" (from raw "${detectedRT}")`);
 
         // Filter parent documents with lenient and comprehensive matching rules
-        const parentDocsToPull = allParentDocs.filter(item => {
+        const parentDocsToPull = allowPull ? allParentDocs.filter(item => {
             const docRT = item.data.rt;
             if (!docRT) return false;
             
@@ -382,7 +439,7 @@ function WargaView(props: WargaViewProps) {
                 looseDocRT.includes(looseTargetRT) || 
                 looseTargetRT.includes(looseDocRT)
             );
-        });
+        }) : [];
 
         // B. Fetch local citizens in this RT tenant
         const localQuery = query(
@@ -397,7 +454,7 @@ function WargaView(props: WargaViewProps) {
         let pushCount = 0;
 
         // Perform Pull (Write from RW parent into this RT child tenant)
-        if (parentDocsToPull.length > 0) {
+        if (allowPull && parentDocsToPull.length > 0) {
             const localNIKs = new Set(localDocs.map(d => (d.nik || '').toString().trim()).filter(Boolean));
             const docsToPull = parentDocsToPull.filter(item => {
                 const nik = (item.data.nik || '').toString().trim();
@@ -426,7 +483,7 @@ function WargaView(props: WargaViewProps) {
 
         // Perform Push (Write local citizens from this RT child tenant up to the parent RW)
         const primaryParentID = currentTenant?.parentId || (potentialParentIDs.length > 0 ? potentialParentIDs[0] : null);
-        if (localDocs.length > 0 && primaryParentID) {
+        if (allowPush && localDocs.length > 0 && primaryParentID) {
             const parentNIKs = new Set(allParentDocs.map(item => (item.data.nik || '').toString().trim()).filter(Boolean));
             const docsToPush = localDocs.filter(d => {
                 const nik = (d.nik || '').toString().trim();
@@ -454,12 +511,26 @@ function WargaView(props: WargaViewProps) {
         }
 
         if (pullCount === 0 && pushCount === 0) {
-            showNotification(`Sinkronisasi selesai! Data warga sudah sama sepenuhnya dengan RW.`, "success");
+            if (!allowPull) {
+                showNotification(`Sinkronisasi selesai! Sinkronisasi satu arah (RT ke RW saja) berhasil diproses.`, "success");
+            } else if (!allowPush) {
+                showNotification(`Sinkronisasi selesai! Sinkronisasi satu arah (RW ke RT saja) berhasil diproses.`, "success");
+            } else {
+                showNotification(`Sinkronisasi selesai! Data warga sudah sama sepenuhnya dengan RW.`, "success");
+            }
         } else {
-            showNotification(`Sinkronisasi Dua Arah Sukses! Berhasil mengirim ${pushCount} warga ke RW, dan menarik ${pullCount} warga dari RW.`, 'success');
+            let msg = "";
+            if (currentSyncMode === "rw_to_rt") {
+                msg = `Sinkronisasi Satu Arah Sukses! Berhasil menarik ${pullCount} warga dari RW ke RT.`;
+            } else if (currentSyncMode === "rt_to_rw") {
+                msg = `Sinkronisasi Satu Arah Sukses! Berhasil mengirim ${pushCount} warga dari RT ke RW.`;
+            } else {
+                msg = `Sinkronisasi Dua Arah Sukses! Berhasil mengirim ${pushCount} warga ke RW, dan menarik ${pullCount} warga dari RW.`;
+            }
+            showNotification(msg, 'success');
         }
     } catch (e: any) {
-        console.error("Bidirectional sync error:", e);
+        console.error("Sync error:", e);
         handleFirestoreError(e, 'write', 'data_warga');
     } finally {
         setIsLoadingDB(false);
@@ -467,33 +538,72 @@ function WargaView(props: WargaViewProps) {
   };
 
   const syncWargaFromRTsToRW = async () => {
+    // SECURITY GUARD: Check if current tenant is actually an RT, and block if so to prevent cross-RT leakage
+    const lowerTenantId = tenantId.toLowerCase();
+    const isRT = lowerTenantId.startsWith("rt") || lowerTenantId.includes("_rt") || !!detectedRT;
+    if (isRT) {
+        showNotification("Akses ditolak: Tenant RT tidak diperkenankan melakukan sinkronisasi massal seluruh RT.", "error");
+        return;
+    }
+
     setIsLoadingDB(true);
     console.log(`Starting reverse sync from RTs to RW tenant "${tenantId}"...`);
     try {
-        let CHILD_TENANT_IDS = (tenantId === "rw26_berjuang" || tenantId.endsWith("_rw26_berjuang"))
-            ? []
-            : [
-                "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
-                "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang",
-                "rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26",
-                "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04"
-            ];
+        const fallbackChildIds = [
+            "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
+            "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang",
+            "rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26",
+            "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04"
+        ];
 
+        // Filter fallbackChildIds to only include child IDs that belong to the current parent tenantId
+        let CHILD_TENANT_IDS = fallbackChildIds.filter(id => isBelongsToParent(id, tenantId));
+
+        if (tenantId === "rw26_berjuang" || tenantId.endsWith("_rw26_berjuang")) {
+            CHILD_TENANT_IDS = [];
+        }
+
+        const childSyncModes = new Map<string, string>();
         try {
             const childTenantsSnapshot = await getDocs(
                 query(collection(db, 'tenants'), where('parentId', '==', tenantId))
             );
-            const dynamicChildren = childTenantsSnapshot.docs.map(doc => doc.id);
+            const dynamicChildren = childTenantsSnapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                childSyncModes.set(docSnap.id, data.syncMode || "two_way");
+                return docSnap.id;
+            });
             if (dynamicChildren.length > 0) {
                 CHILD_TENANT_IDS = Array.from(new Set([...CHILD_TENANT_IDS, ...dynamicChildren]));
             }
         } catch (err) {
             console.warn("Could not dynamically query child tenants:", err);
         }
+
+        // Apply strict safety fence: eliminate any child tenant ID that is not genuinely related to this RW parent
+        CHILD_TENANT_IDS = CHILD_TENANT_IDS.filter(childId => isBelongsToParent(childId, tenantId));
+
+        const getChildSyncMode = (childId: string): string => {
+            if (childSyncModes.has(childId)) {
+                return childSyncModes.get(childId)!;
+            }
+            const found = tenantsData?.find(t => t.id === childId);
+            return found?.syncMode || "two_way";
+        };
+
+        // Filter allowed child tenants based on directional settings
+        const allowedChildIDs = CHILD_TENANT_IDS.filter(childId => {
+            const mode = getChildSyncMode(childId);
+            const isAllowed = mode === "two_way" || mode === "rt_to_rw";
+            if (!isAllowed) {
+                console.log(`Child RT "${childId}" has syncMode "${mode}". Skipping citizen pull to RW parent.`);
+            }
+            return isAllowed;
+        });
         
         let allRTDocs: any[] = [];
         
-        for (const childId of CHILD_TENANT_IDS) {
+        for (const childId of allowedChildIDs) {
             console.log(`Fetching citizens from RT child: "${childId}"`);
             try {
                 const q = query(
@@ -509,7 +619,7 @@ function WargaView(props: WargaViewProps) {
             }
         }
         
-        console.log(`Found total of ${allRTDocs.length} citizens in all RTs.`);
+        console.log(`Found total of ${allRTDocs.length} citizens in all allowed RTs.`);
         
         if (allRTDocs.length === 0) {
             showNotification("Tidak ada data warga ditemukan di tenant-tenant RT anggota.", "info");
@@ -1135,12 +1245,16 @@ function WargaView(props: WargaViewProps) {
                                  <span className="text-2xl uppercase font-elegant" style={{ marginLeft: '0px', marginRight: '0px', marginBottom: '-28px' }}>{w.nama.charAt(0)}</span>
                                )}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
+                            {w.terverifikasi && (
+                              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg flex items-center justify-center">
+                                <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                              </div>
+                            )}
                          </div>
                          <div className={`space-y-1.5 ${idx === 7 ? 'hidden' : ''}`}>
                             <p className="text-[18px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-none group-hover:text-brand-blue transition-colors uppercase font-verdana">{w.nama}</p>
                             <div className="flex items-center gap-2 px-3 py-1 bg-slate-100/50 dark:bg-white/5 rounded-full w-fit">
-                              <ShieldCheck className="w-3.5 h-3.5 text-brand-blue" />
+                              <ShieldCheck className={`w-3.5 h-3.5 ${w.terverifikasi ? 'text-emerald-500' : 'text-slate-300'}`} />
                               <p className="text-[13px] font-black text-slate-500 dark:text-slate-400 font-mono tracking-widest">{w.nik}</p>
                             </div>
                          </div>
@@ -1309,7 +1423,11 @@ function WargaView(props: WargaViewProps) {
                                <span className="text-xl uppercase font-elegant" style={{ marginLeft: '0px', marginRight: '0px', marginBottom: '-28px' }}>{w.nama ? w.nama.charAt(0) : "W"}</span>
                              )}
                           </div>
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
+                          {w.terverifikasi && (
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg flex items-center justify-center">
+                               <ShieldCheck className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
                         </div>
                         
                         <div className="space-y-1 w-full px-1">
@@ -1559,6 +1677,7 @@ function WargaView(props: WargaViewProps) {
                           telepon: fd.get('telepon'),
                           email: fd.get('email'),
                           status: fd.get('status'),
+                          terverifikasi: fd.get('terverifikasi') === 'on',
                           fotoKTP: fotoKTPUrl,
                           fotoKK: fotoKKUrl,
                           tenantId,
@@ -1736,6 +1855,22 @@ function WargaView(props: WargaViewProps) {
                             </select>
                          </div>
                          
+                         <div className="flex flex-col text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status Verifikasi ID</label>
+                            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm border-emerald-100 dark:border-emerald-900/30">
+                               <input 
+                                 type="checkbox" 
+                                 name="terverifikasi" 
+                                 defaultChecked={editingWarga?.terverifikasi} 
+                                 className="w-5 h-5 rounded-lg border-emerald-200 text-emerald-500 focus:ring-emerald-500 transition-all cursor-pointer" 
+                               />
+                               <div className="flex flex-col">
+                                 <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Terverifikasi Admin</span>
+                                 <span className="text-[9px] text-slate-400 font-bold">Identitas warga dinyatakan sah</span>
+                               </div>
+                            </div>
+                         </div>
+                         
                          <div className="flex flex-col text-left border-t border-slate-100 pt-4 md:col-span-2"></div>
 
                          <div className="flex flex-col text-left">
@@ -1770,7 +1905,14 @@ function WargaView(props: WargaViewProps) {
                    <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center text-brand-blue text-4xl font-black shadow-inner mb-4 overflow-hidden">
                       {viewWarga.foto ? <img src={viewWarga.foto} className="w-full h-full object-cover" /> : viewWarga.nama.charAt(0)}
                    </div>
-                   <h3 className="text-xl font-black text-slate-800 tracking-tight">{viewWarga.nama}</h3>
+                   <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
+                      {viewWarga.nama}
+                      {viewWarga.terverifikasi && (
+                        <div className="bg-emerald-500 p-1 rounded-full text-white shadow-lg">
+                           <ShieldCheck size={12} />
+                        </div>
+                      )}
+                   </h3>
                    <p className="text-sm font-bold text-slate-400 font-mono tracking-widest">{viewWarga.nik}</p>
                    {viewWarga.kk && <p className="text-[10px] font-bold text-slate-400 font-mono tracking-widest mt-1">KK: {viewWarga.kk}</p>}
                    <div className="flex gap-2 mt-2">

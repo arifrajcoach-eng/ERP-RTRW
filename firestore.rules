@@ -51,38 +51,33 @@ service cloud.firestore {
         request.auth.uid == 'MKe94buSU4SMg8jiRbCcOLwJp9H3' ||
         request.auth.uid == 'zdXsW4N3qFcHpDoBynAoO2GgbYA2' ||
         
-        // Group access
+        // Exact Group Isolation to prevent cross-RW group leaks
         (
-          (
-            ('tenantId' in request.auth.token && request.auth.token.tenantId != null && (
-              isCommon ||
-              request.auth.token.tenantId.lower() in ['trihprw26', 'master'] ||
-              request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') ||
-              request.auth.token.tenantId.lower().matches('^rt[0-9]+_trih.*') ||
-              request.auth.token.tenantId.lower().matches('.*berjuang.*') ||
-              request.auth.token.tenantId.lower().matches('.*trih.*')
-            )) ||
-            ('email' in request.auth.token && request.auth.token.email != null && (
-              request.auth.token.email.lower().matches('^rt[0-9]+@rw26_berjuang\\.com$') ||
-              request.auth.token.email.lower().matches('^rt[0-9]+@trih.*') ||
-              request.auth.token.email.lower().matches('.*berjuang.*|.*trih.*')
-            ))
-          ) && (
-            isCommon ||
-            tenantId.lower() in ['trihprw26', 'master'] ||
-            tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') ||
-            tenantId.lower().matches('^rt[0-9]+_trih.*') ||
-            tenantId.lower().matches('.*berjuang.*') ||
-            tenantId.lower().matches('.*trih.*')
-          )
+          ('tenantId' in request.auth.token && request.auth.token.tenantId != null && (
+            // Both belong to 'berjuang' group strictly
+            (((request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') || request.auth.token.tenantId.lower() == 'rw26_berjuang' || request.auth.token.tenantId.lower().matches('.*berjuang.*')) &&
+              (tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') || tenantId.lower() == 'rw26_berjuang' || tenantId.lower().matches('.*berjuang.*')))) ||
+              
+            // Both belong to 'trih' group strictly
+            (((request.auth.token.tenantId.lower().matches('^rt[0-9]+_trih.*') || request.auth.token.tenantId.lower() == 'trihprw26' || request.auth.token.tenantId.lower().matches('.*trih.*')) &&
+              (tenantId.lower().matches('^rt[0-9]+_trih.*') || tenantId.lower() == 'trihprw26' || tenantId.lower().matches('.*trih.*')))) ||
+              
+            // Both belong to 'rw26' group strictly
+            (((request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26$') || request.auth.token.tenantId.lower() == 'rw26' || request.auth.token.tenantId.lower().matches('^rw26_rt[0-9]+$')) &&
+              (tenantId.lower().matches('^rt[0-9]+_rw26$') || tenantId.lower() == 'rw26' || tenantId.lower().matches('^rw26_rt[0-9]+$'))))
+          )) ||
+          
+          ('email' in request.auth.token && request.auth.token.email != null && (
+            (request.auth.token.email.lower().matches('.*berjuang.*') && tenantId.lower().matches('.*berjuang.*')) ||
+            (request.auth.token.email.lower().matches('.*trih.*') && tenantId.lower().matches('.*trih.*')) ||
+            (request.auth.token.email.lower().matches('.*rw26.*') && tenantId.lower().matches('.*rw26.*'))
+          ))
         ) ||
 
         ('firebase' in request.auth.token && 'sign_in_provider' in request.auth.token.firebase && request.auth.token.firebase.sign_in_provider == 'anonymous' && (
           isCommon ||
           tenantId.lower() in ['trihprw26', 'master'] ||
-          tenantId.lower().matches('^rt[0-9]+_trih.*') ||
-          tenantId.lower().matches('.*berjuang.*') ||
-          tenantId.lower().matches('.*trih.*')
+          tenantId.lower().matches('^rt[0-9]+_trih.*')
         )) ||
         
         ('tenantId' in request.auth.token && request.auth.token.tenantId != null && (
@@ -116,20 +111,63 @@ service cloud.firestore {
             getUserData().tenantId == tenantId || 
             getUserData().tenantId.lower() == tenantId.lower() || 
             
-            // Allow sub-tenant to read parent (flexible across ecosystem)
-            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') && (tenantId.lower() in ['trihprw26', 'rw26_berjuang'])) ||
-            (getUserData().tenantId.lower().matches('^rt[0-9]+_trih.*') && (tenantId.lower() in ['trihprw26'])) ||
+            // Allow sub-tenant to read parent (strictly within "berjuang" group)
+            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') && tenantId.lower() == 'rw26_berjuang') ||
+            (getUserData().tenantId.lower().matches('.*berjuang.*') && tenantId.lower() == 'rw26_berjuang') ||
+            
+            // Allow sub-tenant to read parent (strictly within "trih" group)
+            (getUserData().tenantId.lower().matches('^rt[0-9]+_trih.*') && tenantId.lower() == 'trihprw26') ||
+            (getUserData().tenantId.lower().matches('.*trih.*') && tenantId.lower() == 'trihprw26') ||
 
-            // Allow parent to access sub-tenants (bidirectional)
-            ((getUserData().tenantId.lower() in ['trihprw26', 'rw26_berjuang']) && (
-              tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') ||
-              tenantId.lower().matches('^rt[0-9]+_trih.*')
+            // Allow sub-tenant to read parent (strictly within "rw26" group)
+            (getUserData().tenantId.lower().matches('^rt[0-9]+_rw26$') && tenantId.lower() == 'rw26') ||
+            (getUserData().tenantId.lower().matches('^rw26_rt[0-9]+$') && tenantId.lower() == 'rw26') ||
+
+            // Allow parent to access sub-tenants (strictly within "berjuang" group)
+            (getUserData().tenantId.lower() == 'rw26_berjuang' && (
+              tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') || 
+              tenantId.lower().matches('.*berjuang.*')
             )) ||
 
-            (getUserData().tenantId == 'trihprw26' && (tenantId in ['trihprw26']))
+            // Allow parent to access sub-tenants (strictly within "trih" group)
+            (getUserData().tenantId.lower() == 'trihprw26' && (
+              tenantId.lower().matches('^rt[0-9]+_trih.*') || 
+              tenantId.lower().matches('.*trih.*')
+            )) ||
+
+            // Allow parent to access sub-tenants (strictly within "rw26" group)
+            (getUserData().tenantId.lower() == 'rw26' && (
+              tenantId.lower().matches('^rt[0-9]+_rw26$') || 
+              tenantId.lower().matches('^rw26_rt[0-9]+$')
+            ))
           )
         )
       ));
+    }
+
+    function getAuthenticatedUserTenantId() {
+      return (getUserData() != null && 'tenantId' in getUserData() && getUserData().tenantId != null) ? getUserData().tenantId : (
+        (request.auth != null && 'tenantId' in request.auth.token && request.auth.token.tenantId != null) ? request.auth.token.tenantId : ''
+      );
+    }
+
+    function isSubTenantQueryingParent(userTenantId, docTenantId) {
+      return userTenantId is string && docTenantId is string && userTenantId != docTenantId && userTenantId.lower().matches('^rt[0-9]+_.*');
+    }
+
+    function isMatchingRT(userTenantId, docRT) {
+      return userTenantId is string && docRT is string && (
+        (userTenantId.lower().matches('^rt01_.*') && (docRT == '01' || docRT == '1' || docRT.lower() == 'rt01' || docRT.lower() == 'rt 01')) ||
+        (userTenantId.lower().matches('^rt02_.*') && (docRT == '02' || docRT == '2' || docRT.lower() == 'rt02' || docRT.lower() == 'rt 02')) ||
+        (userTenantId.lower().matches('^rt03_.*') && (docRT == '03' || docRT == '3' || docRT.lower() == 'rt03' || docRT.lower() == 'rt 03')) ||
+        (userTenantId.lower().matches('^rt04_.*') && (docRT == '04' || docRT == '4' || docRT.lower() == 'rt04' || docRT.lower() == 'rt 04')) ||
+        (userTenantId.lower().matches('^rt05_.*') && (docRT == '05' || docRT == '5' || docRT.lower() == 'rt05' || docRT.lower() == 'rt 05')) ||
+        (userTenantId.lower().matches('^rt06_.*') && (docRT == '06' || docRT == '6' || docRT.lower() == 'rt06' || docRT.lower() == 'rt 06')) ||
+        (userTenantId.lower().matches('^rt07_.*') && (docRT == '07' || docRT == '7' || docRT.lower() == 'rt07' || docRT.lower() == 'rt 07')) ||
+        (userTenantId.lower().matches('^rt08_.*') && (docRT == '08' || docRT == '8' || docRT.lower() == 'rt08' || docRT.lower() == 'rt 08')) ||
+        (userTenantId.lower().matches('^rt09_.*') && (docRT == '09' || docRT == '9' || docRT.lower() == 'rt09' || docRT.lower() == 'rt 09')) ||
+        (userTenantId.lower().matches('^rt10_.*') && (docRT == '10' || docRT.lower() == 'rt10' || docRT.lower() == 'rt 10'))
+      );
     }
     
     function isPengurusStatic() {
@@ -254,25 +292,74 @@ service cloud.firestore {
     // --- Warga & Kependudukan ---
 
     match /data_warga/{docId} {
-      allow list: if isAdmin() || (isSignedIn() && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId));
-      allow get: if isAdmin() || (isSignedIn() && (resource == null || !('tenantId' in resource.data) || isTenantMember(resource.data.tenantId)));
+      allow list: if isAdmin() || (
+        isSignedIn() && 
+        'tenantId' in resource.data && 
+        isTenantMember(resource.data.tenantId) && (
+          !isSubTenantQueryingParent(getAuthenticatedUserTenantId(), resource.data.tenantId) || (
+            'rt' in resource.data && isMatchingRT(getAuthenticatedUserTenantId(), resource.data.rt)
+          )
+        )
+      );
+      allow get: if isAdmin() || (
+        isSignedIn() && (
+          resource == null || 
+          !('tenantId' in resource.data) || (
+            isTenantMember(resource.data.tenantId) && (
+              !isSubTenantQueryingParent(getAuthenticatedUserTenantId(), resource.data.tenantId) || (
+                'rt' in resource.data && isMatchingRT(getAuthenticatedUserTenantId(), resource.data.rt)
+              )
+            )
+          )
+        )
+      );
       allow create: if isSignedIn() && (
         isAdmin() || 
-        isAdminStatic() || 
-        ('tenantId' in request.resource.data && request.resource.data.tenantId is string && isTenantMember(request.resource.data.tenantId))
+        isAdminStatic() || (
+          'tenantId' in request.resource.data && 
+          request.resource.data.tenantId is string && 
+          isTenantMember(request.resource.data.tenantId) && (
+            !isSubTenantQueryingParent(getAuthenticatedUserTenantId(), request.resource.data.tenantId) || (
+              'rt' in request.resource.data && isMatchingRT(getAuthenticatedUserTenantId(), request.resource.data.rt)
+            )
+          )
+        )
       );
       allow update: if isSignedIn() && (
         isAdmin() || 
-        isAdminStatic() || 
-        (
-          ('tenantId' in request.resource.data && request.resource.data.tenantId is string && isTenantMember(request.resource.data.tenantId)) && 
-          (resource == null || !('tenantId' in resource.data) || resource.data.tenantId == null || (resource.data.tenantId is string && isTenantMember(resource.data.tenantId)))
+        isAdminStatic() || (
+          ('tenantId' in request.resource.data && request.resource.data.tenantId is string && isTenantMember(request.resource.data.tenantId) && (
+            !isSubTenantQueryingParent(getAuthenticatedUserTenantId(), request.resource.data.tenantId) || (
+              'rt' in request.resource.data && isMatchingRT(getAuthenticatedUserTenantId(), request.resource.data.rt)
+            )
+          )) && (
+            resource == null || 
+            !('tenantId' in resource.data) || 
+            resource.data.tenantId == null || (
+              resource.data.tenantId is string && 
+              isTenantMember(resource.data.tenantId) && (
+                !isSubTenantQueryingParent(getAuthenticatedUserTenantId(), resource.data.tenantId) || (
+                  'rt' in resource.data && isMatchingRT(getAuthenticatedUserTenantId(), resource.data.rt)
+                )
+              )
+            )
+          )
         )
       );
       allow delete: if isSignedIn() && (
         isAdmin() || 
-        isAdminStatic() || 
-        (resource == null || !('tenantId' in resource.data) || resource.data.tenantId == null || (resource.data.tenantId is string && isTenantMember(resource.data.tenantId)))
+        isAdminStatic() || (
+          resource == null || 
+          !('tenantId' in resource.data) || 
+          resource.data.tenantId == null || (
+            resource.data.tenantId is string && 
+            isTenantMember(resource.data.tenantId) && (
+              !isSubTenantQueryingParent(getAuthenticatedUserTenantId(), resource.data.tenantId) || (
+                'rt' in resource.data && isMatchingRT(getAuthenticatedUserTenantId(), resource.data.rt)
+              )
+            )
+          )
+        )
       );
     }
 

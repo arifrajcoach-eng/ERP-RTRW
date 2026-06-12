@@ -10,7 +10,8 @@ import {
   Eye, 
   Trash2, 
   X, 
-  ShieldAlert
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
 import { doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -209,6 +210,74 @@ export function VerifikasiAdminView({
     'Ditolak': 'bg-gradient-to-br from-rose-400 to-red-500 text-white border-transparent shadow-lg shadow-red-500/20'
   };
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+
+  const handleApproveAllSelected = async () => {
+    if (selectedIds.length === 0 || isBulkApproving) return;
+    
+    setIsBulkApproving(true);
+    let successCount = 0;
+    try {
+      const CHUNK_SIZE = 450;
+      for (let i = 0; i < selectedIds.length; i += CHUNK_SIZE) {
+        const chunk = selectedIds.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(db);
+        
+        for (const id of chunk) {
+          const item = filteredData.find(v => v.id === id);
+          if (!item || item.status === 'Disetujui' || item.isFinalized) continue;
+          
+          const vRef = doc(db, 'verifikasi_warga', id);
+          batch.update(vRef, {
+            status: 'Disetujui',
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser.name || 'Admin',
+            catatan: 'Disetujui secara masal'
+          });
+          
+          const recordTenantId = item.tenantId || tenantId;
+          const standardDocId = `${recordTenantId}_${item.nik}`;
+          const targetRef = doc(db, 'data_warga', standardDocId);
+          
+          // Simplified mass update for citizen data
+          batch.set(targetRef, {
+            tenantId: recordTenantId,
+            status: 'Warga Tetap',
+            nama: item.nama,
+            nik: item.nik,
+            rt: item.rt || "01",
+            rw: item.rw || "26",
+            terverifikasi: true,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          
+          successCount++;
+        }
+        await batch.commit();
+      }
+      showNotification(`${successCount} data berhasil disetujui secara masal.`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      console.error("Bulk Approve Error:", err);
+      showNotification("Gagal memproses persetujuan masal.", "error");
+    } finally {
+      setIsBulkApproving(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredData.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredData.filter(v => !v.isFinalized && v.status !== 'Disetujui').map(v => v.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
   const handleMassSync = async () => {
     const approvedNotSynced = verifikasiData.filter(v => v.status === 'Disetujui' && !v.isFinalized);
     if (approvedNotSynced.length === 0) {
@@ -307,6 +376,21 @@ export function VerifikasiAdminView({
         </div>
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 w-full md:w-auto">
+          {selectedIds.length > 0 && (
+            <motion.button
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              whileHover={{ y: -10, scale: 1.05, boxShadow: "0 25px 50px -12px rgba(16,185,129,0.5)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleApproveAllSelected}
+              disabled={isBulkApproving}
+              className="px-8 py-5 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 shadow-[0_20px_40px_-10px_rgba(16,185,129,0.4)] flex items-center gap-3 disabled:opacity-50 group ring-1 ring-white/20 whitespace-nowrap"
+            >
+              <CheckCircle className={`w-5 h-5 ${isBulkApproving ? 'animate-spin' : ''}`} />
+              {isBulkApproving ? 'PROSES...' : `SETUJUI (${selectedIds.length})`}
+            </motion.button>
+          )}
+          
           <motion.button 
             whileHover={{ y: -10, scale: 1.05, boxShadow: "0 25px 50px -12px rgba(79,70,229,0.5)" }}
             whileTap={{ scale: 0.95 }}
@@ -380,6 +464,14 @@ export function VerifikasiAdminView({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-gradient-to-r from-slate-50/80 to-transparent">
+                <th className="px-8 py-7 text-center">
+                  <input 
+                    type="checkbox" 
+                    onChange={toggleSelectAll} 
+                    checked={selectedIds.length > 0 && selectedIds.length === filteredData.filter(v => !v.isFinalized && v.status !== 'Disetujui').length}
+                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
                 <th className="px-8 py-7">Informasi Warga</th>
                 <th className="px-8 py-7">Agama</th>
                 <th className="px-8 py-7">Status Verifikasi</th>
@@ -403,6 +495,15 @@ export function VerifikasiAdminView({
               ) : (
                 filteredData.map((item: any, idx: number) => (
                   <tr key={`verif-row-${item.id || idx}-${idx}`} className="hover:bg-blue-50/20 transition-all duration-300 group border-b border-slate-50/50 last:border-0">
+                    <td className="px-8 py-6 text-center">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => toggleSelect(item.id)}
+                        disabled={item.isFinalized || item.status === 'Disetujui'}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-30 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/40 ring-4 ring-slate-50/30 group-hover:ring-blue-50 transition-all">
@@ -420,7 +521,10 @@ export function VerifikasiAdminView({
                       </span>
                     </td>
                     <td className="px-8 py-6">
-                      <span className={`px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg ${statusColors[item.status]}`}>
+                      <span className={`px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg flex items-center gap-2 w-fit ${statusColors[item.status]}`}>
+                        {item.status === 'Disetujui' && <CheckCircle className="w-3.5 h-3.5" />}
+                        {item.status === 'Ditolak' && <XCircle className="w-3.5 h-3.5" />}
+                        {item.status === 'Menunggu Persetujuan' && <Clock className="w-3.5 h-3.5" />}
                         {item.status}
                       </span>
                     </td>
