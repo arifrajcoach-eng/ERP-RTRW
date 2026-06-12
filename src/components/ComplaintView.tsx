@@ -133,7 +133,8 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser?.tenantId) {
-      showNotification('Gagal mengirim keluhan: Tenant ID tidak ditemukan. Hubungi pihak pengurus.', 'error');
+      showNotification('Gagal mengirim keluhan: data akun tidak lengkap. Silakan login ulang.', 'error');
+      console.error('[ComplaintView] DITOLAK: tenantId tidak ditemukan.');
       return;
     }
     setIsSubmitting(true);
