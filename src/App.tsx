@@ -328,7 +328,6 @@ export default function App() {
   
   // --- CORE SYSTEM STATES ---
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [tenantIdInput, setTenantIdInput] = useState("");
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbStatus, setDbStatus] = useState<
     "ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING"
@@ -6692,7 +6691,7 @@ function LoginView({
         const userProfileRef = doc(db, "users", user.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         const userData = userProfileSnap.data();
-        if (userData && userData.tenantId !== tenantIdInput) {
+        if (userData && userData.tenantId !== tenantInput) {
             await signOut(auth);
             throw new Error(`Tenant ID tidak sesuai. Harap pastikan Kode Area Wilayah benar.`);
         }
@@ -7069,8 +7068,8 @@ function LoginView({
                   <input
                     type="text"
                     required
-                    value={tenantIdInput}
-                    onChange={(e) => setTenantIdInput(e.target.value)}
+                    value={tenantInput}
+                    onChange={(e) => setTenantInput(e.target.value)}
                     className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base"
                     placeholder="Contoh: demo_rt100_rw100"
                   />
