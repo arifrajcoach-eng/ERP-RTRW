@@ -35,6 +35,12 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
   };
 
   const triggerSOS = async () => {
+    if (!currentUser?.tenantId) {
+      alert('Gagal mengirim SOS: data akun tidak lengkap. Silakan login ulang.');
+      console.error('[SOSButton] DITOLAK: tenantId tidak ditemukan.');
+      return;
+    }
+
     let lat = 0;
     let lng = 0;
     let userLocation = "Lokasi Tidak Diketahui";
@@ -100,7 +106,8 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
       try {
         await setDoc(doc(db, "emergency_logs", id), {
           id,
-          tenantId: currentUser.tenantId,          userId: currentUser.uid || "anonymous",
+          tenantId: currentUser.tenantId,
+          userId: currentUser.uid || "anonymous",
           userName: currentUser.name || "Warga",
           userPhone: currentUser.hp || "-",
           location: {
