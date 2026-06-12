@@ -86,30 +86,36 @@ export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification,
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    // GUARD: Hanya superAdmin yang boleh mengakses koleksi tenants
-    if (!currentUser?.isSuperAdmin) {
-      console.error('[DaftarPendaftarTrialView] DITOLAK: Akses hanya untuk superAdmin.');
+    const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role?.toUpperCase() === 'SUPERADMIN';
+    if (!isSuperAdmin) {
       setLoading(false);
       return;
     }
-
     setLoading(true);
-    // Filter langsung di Firestore — hanya ambil tenant registrasi mandiri
+    
+    // Filter at Firestore-level for registrationType, and sort client-side to prevent composite index requirements
     const q = query(
-      collection(db, 'tenants'),
-      where('registrationType', '==', 'AUTOMATED_SELF_SERVICE'),
-      orderBy('createdAt', 'desc')
+      collection(db, 'tenants'), 
+      where('registrationType', '==', 'AUTOMATED_SELF_SERVICE')
     );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Client-side filter sebagai lapisan kedua
-      const trialTenants = data.filter((t: any) =>
-        t.id.startsWith('TRIAL_') ||
-        t.status === 'TRIAL' ||
+      
+      // Sort client-side by createdAt descending
+      data.sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      const trialTenants = data.filter((t: any) => 
+        t.id.startsWith('TRIAL_') || 
+        t.status === 'TRIAL' || 
         t.status === 'PENDING_PAYMENT_APPROVAL' ||
-        t.paymentStatus === 'PENDING_MANUAL_PROOF' ||
+        t.paymentStatus === 'PENDING_MANUAL_PROOF' || 
         t.paymentStatus === 'PAID_MANUALLY_VERIFIED' ||
-        t.plan === 'TRIAL' ||
+        t.plan === 'TRIAL' || 
         t.registrationType === 'AUTOMATED_SELF_SERVICE'
       );
       setRegistrants(trialTenants);
@@ -307,19 +313,6 @@ export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification,
       setActionLoading(false);
     }
   };
-
-  // RENDER GUARD: Tampilkan akses ditolak jika bukan superAdmin
-  if (!currentUser?.isSuperAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center p-16 text-center">
-        <ShieldCheck className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-4" />
-        <h3 className="text-lg font-bold text-slate-600 dark:text-slate-400">Akses Dibatasi</h3>
-        <p className="text-sm text-slate-400 dark:text-slate-500 mt-2">
-          Halaman ini hanya dapat diakses oleh pemilik sistem.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto" id="trial-tenants-view">
