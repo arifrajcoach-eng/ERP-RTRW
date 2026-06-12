@@ -120,16 +120,12 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser?.tenantId) {
-      showNotification('Gagal melakukan booking: Tenant ID tidak ditemukan. Hubungi pihak pengurus.', 'error');
+      showNotification('Gagal melakukan booking: data akun tidak lengkap. Silakan login ulang.', 'error');
+      console.error('[BookingView] DITOLAK: tenantId tidak ditemukan.');
       return;
     }
     setIsSubmitting(true);
     try {
-      if (!currentUser) {
-        showNotification('Sesi anda telah berakhir. Silakan login kembali.', 'error');
-        return;
-      }
-
       await addDoc(collection(db, 'bookings'), {
         tenantId: currentUser.tenantId,
         userId: currentUser.uid || currentUser.id_user || 'anonymous',
