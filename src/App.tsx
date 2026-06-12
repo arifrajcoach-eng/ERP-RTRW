@@ -328,6 +328,7 @@ export default function App() {
   
   // --- CORE SYSTEM STATES ---
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [tenantIdInput, setTenantIdInput] = useState("");
   const [isLoadingDB, setIsLoadingDB] = useState(true);
   const [dbStatus, setDbStatus] = useState<
     "ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING"
@@ -6686,7 +6687,15 @@ function LoginView({
 
       try {
         await signOut(auth); // Ensure clean state before sign-in
-        await signInWithEmailAndPassword(auth, loginEmail, targetPass);
+        const userCredential = await signInWithEmailAndPassword(auth, loginEmail, targetPass);
+        const user = userCredential.user;
+        const userProfileRef = doc(db, "users", user.uid);
+        const userProfileSnap = await getDoc(userProfileRef);
+        const userData = userProfileSnap.data();
+        if (userData && userData.tenantId !== tenantIdInput) {
+            await signOut(auth);
+            throw new Error(`Tenant ID tidak sesuai. Harap pastikan Kode Area Wilayah benar.`);
+        }
       } catch (loginErr: any) {
           if (
             loginErr.code === "auth/user-not-found" ||
@@ -7047,6 +7056,24 @@ function LoginView({
                       <Eye className="h-5 w-5" />
                     )}
                   </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">
+                  KODE AREA WILAYAH (TENANT ID)
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <MapPin className="w-6 h-6 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={tenantIdInput}
+                    onChange={(e) => setTenantIdInput(e.target.value)}
+                    className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all font-bold text-base"
+                    placeholder="Contoh: demo_rt100_rw100"
+                  />
                 </div>
               </div>
               <button
