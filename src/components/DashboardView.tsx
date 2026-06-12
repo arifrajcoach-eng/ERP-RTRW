@@ -652,7 +652,7 @@ export default function DashboardView({
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-2">
                  <div className="w-1.5 h-8 bg-cyan-400 rounded-full"></div>
-                 <h2 className="text-[20px] italic font-black font-elegant tracking-tight">Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</h2>
+                 <h2 className="text-[20px] italic font-black font-elegant tracking-tight" style={{ fontFamily: "Outfit", fontStyle: "italic" }}><span style={{ fontFamily: "Outfit", fontStyle: "italic" }}>Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</span></h2>
               </div>
               <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmaRtRw AI Dashboard</p>
                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -690,7 +690,7 @@ export default function DashboardView({
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant">GoLive</h3>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant" style={{ fontFamily: "Outfit", fontSize: "22px" }}>GoLive</h3>
                   </div>
                   <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" style={{ marginLeft: '16px' }}>{currentTenant?.name || settings?.nama_rt || 'Digital Environment'}</p>
                 </div>
@@ -708,7 +708,16 @@ export default function DashboardView({
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase">Fitur Klik</h3>
           </div>
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
-            {allowedMenuItems.filter(item => !['dashboard', 'pengaturan', 'super-admin', 'users', 'kop-template'].includes(item.id)).map((item) => (
+            {allowedMenuItems
+              .filter(item => !['dashboard', 'pengaturan', 'super-admin', 'users', 'kop-template'].includes(item.id))
+              .filter(item => {
+                if (item.id === "sos-monitor") {
+                  const role = (currentUser?.role || '').toUpperCase();
+                  return ['ADMIN', 'PENGURUS', 'SATPAM'].includes(role) || currentUser?.isSuperAdmin;
+                }
+                return true;
+              })
+              .map((item) => (
               <button
                 key={item.id}
                 onClick={() => {

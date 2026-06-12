@@ -327,7 +327,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
               <Network className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 font-elegant flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2" style={{ fontFamily: 'Outfit' }}>
                 STRUKTUR ORGANISASI
                 <span className="text-[10px] uppercase font-black tracking-widest bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full px-3 py-1 font-sans">
                   Interactive

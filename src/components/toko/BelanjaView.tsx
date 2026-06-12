@@ -138,7 +138,7 @@ const RECENT_CHECKS = [
 
 const BANNERS = [
   {
-    title: "Voucher Spesial Lapak 26",
+    title: "Voucher Spesial Lapak +62",
     subtitle: "POTONGAN 50%",
     benefit: "Hingga Rp 20.000",
     promoCode: "HEMATBGT",
@@ -156,7 +156,7 @@ const BANNERS = [
   {
     title: "Cashback Koin Ekstra",
     subtitle: "CASHBACK 10%",
-    benefit: "Koin Lapak 26",
+    benefit: "Koin Lapak +62",
     promoCode: "CASHBACK10",
     image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=800",
     color: "from-rose-600/90"
@@ -250,7 +250,7 @@ const getPremiumStyle = (promoCode: string) => {
 
 const THEMATIC_VOUCHERS = [
   {
-    title: "Voucher Spesial Lapak 26",
+    title: "Voucher Spesial Lapak +62",
     subtitle: "POTONGAN 50%",
     benefit: "Hingga Rp 20.000",
     promoCode: "HEMATBGT",
@@ -282,7 +282,7 @@ const THEMATIC_VOUCHERS = [
   {
     title: "Cashback Koin Ekstra",
     subtitle: "CASHBACK 10%",
-    benefit: "Koin Lapak 26",
+    benefit: "Koin Lapak +62",
     promoCode: "CASHBACK10",
     badge: "🪙 COIN BONUS",
     tagline: "UNTUNG LIPAT GANDA",
@@ -383,6 +383,21 @@ const THEMATIC_VOUCHERS = [
     displayTitle: "LUCKY 777",
     displayTag: "Sangat Terbatas!",
     displayTagBg: "bg-fuchsia-500/30 text-fuchsia-200 border-fuchsia-400/30"
+  },
+  {
+    title: "Program Pa RW",
+    subtitle: "TEBUS MURAH",
+    benefit: "Tebus Murah JSM (Jumat Sabtu Minggu)",
+    promoCode: "PA_RW_JSM",
+    badge: "👨‍💼 PROGRAM PAK RW",
+    tagline: "MURAH MERIAH JSM",
+    bg: "from-blue-700 to-indigo-800 text-white",
+    desc: "Program spesial Pak RW untuk kebutuhan warga tiap akhir pekan.",
+    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=400",
+    displayBrand: "📢 PROGRAM PAK RW",
+    displayTitle: "TEBUS MURAH JSM",
+    displayTag: "Sangat Hemat!",
+    displayTagBg: "bg-blue-500/30 text-blue-200 border-blue-400/30"
   }
 ];
 
@@ -409,7 +424,7 @@ export default function BelanjaView({
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
   const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat" | "LiveChat" | "EmailSupport">("Main");
   const [chatMessages, setChatMessages] = useState<Array<{ id: number; text: string; sender: 'user' | 'agent'; time: string }>>([
-    { id: 1, text: "Halo Bapak/Ibu, saya Ratih dari Customer Support E-LAPAK26 (SmaRtRw AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
+    { id: 1, text: "Halo Bapak/Ibu, saya Ratih dari Customer Support E-LAPAK +62 (SmaRtRw AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatIsTyping, setChatIsTyping] = useState(false);
@@ -469,7 +484,7 @@ export default function BelanjaView({
       if (lowerText.includes("pesanan") || lowerText.includes("status") || lowerText.includes("sore")) {
         replyText = "Untuk melacak transaksi atau pesanan aktif Bapak, silakan periksa status pengiriman di tab 'Daftar Pesanan' di menu Toko / Lapak Anda.";
       } else if (lowerText.includes("iuran") || lowerText.includes("bayar")) {
-        replyText = "Setiap iuran bulanan warga RT 26/RW 04 dapat langsung dibayarkan otomatis memotong saldo dompet digital E-LAPAK26 Anda.";
+        replyText = "Setiap iuran bulanan warga RT 26/RW 04 dapat langsung dibayarkan otomatis memotong saldo dompet digital E-LAPAK +62 Anda.";
       } else if (lowerText.includes("saldo") || lowerText.includes("top-up") || lowerText.includes("gopay") || lowerText.includes("isi")) {
         replyText = "Anda dapat menambah saldo balance Anda secara instan dengan mengklik tombol 'Isi Saldo' di menu Dompet Aktif Anda.";
       } else if (lowerText.includes("halo") || lowerText.includes("pagi") || lowerText.includes("siang") || lowerText.includes("malam")) {
@@ -522,7 +537,7 @@ export default function BelanjaView({
     }
     const messages: Record<string, string> = {
       'Notifikasi': 'Memuat 5 notifikasi transaksi terbaru Anda.',
-      'Modul Utama': 'Mengalihkan ke Dashboard Modul Utama Lapak 26...'
+      'Modul Utama': 'Mengalihkan ke Dashboard Modul Utama Lapak +62...'
     };
 
     if (showNotification) {
@@ -572,11 +587,11 @@ export default function BelanjaView({
 
   return (
     <div className="bg-[#f8fafc] min-h-screen pb-24 animate-in fade-in duration-700 overflow-x-hidden">
-      {/* Lapak 26 Premium Header */}
+      {/* Lapak +62 Premium Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-8 pb-14 rounded-b-[3rem] shadow-lg shadow-emerald-900/10 mb-[-2rem] relative z-20">
          <div className="flex justify-between items-start mb-6">
             <div onClick={() => handleQuickLink("Home")} className="cursor-pointer hover:opacity-80 transition-opacity">
-               <h1 className="text-3xl font-black italic tracking-tighter mb-1 font-elegant">LAPAK 26</h1>
+               <h1 className="text-3xl font-black italic tracking-tighter mb-1 font-elegant">LAPAK +62</h1>
                <p className="text-xs font-bold text-emerald-100/80 uppercase tracking-[0.2em]">Pusat Niaga & UMKM Warga</p>
             </div>
             <div className="flex gap-4">
@@ -967,7 +982,7 @@ export default function BelanjaView({
              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                 <Store size={40} className="text-slate-200" />
              </div>
-             <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Lapak 26 Masih Kosong</h4>
+             <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Lapak +62 Masih Kosong</h4>
              <p className="text-slate-500 text-sm max-w-sm px-6 leading-relaxed">
                {PRODUCTS.length === 0 
                  ? "Belum ada warga yang membuka lapak di sini. Jadilah yang pertama memajukan ekonomi lingkungan dengan membuka toko Anda!" 
@@ -1000,7 +1015,7 @@ export default function BelanjaView({
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Store size={48} className="text-slate-300 mb-4" />
             <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Toko Anda Belum Aktif</h2>
-            <p className="text-sm text-slate-500 font-medium mb-6 max-w-xs">Buka toko gratis dan mulai berjualan ke seluruh warga Lapak 26.</p>
+            <p className="text-sm text-slate-500 font-medium mb-6 max-w-xs">Buka toko gratis dan mulai berjualan ke seluruh warga Lapak +62.</p>
             <button 
               onClick={() => handleQuickLink("Pendaftaran Toko")}
               className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-600/20 max-w-[250px] mx-auto"
@@ -1052,7 +1067,7 @@ export default function BelanjaView({
               <button 
                 onClick={() => {
                   if (showNotification) {
-                    showNotification("Toko berhasil dibuat! Selamat datang di Lapak 26.", "success");
+                    showNotification("Toko berhasil dibuat! Selamat datang di Lapak +62.", "success");
                   }
                   handleQuickLink("Toko Saya Aktif");
                 }}
@@ -2349,7 +2364,7 @@ export default function BelanjaView({
                   <Star size={24} className="fill-amber-500" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-500 uppercase">Koin Lapak 26</h3>
+                  <h3 className="text-sm font-bold text-slate-500 uppercase">Koin Lapak +62</h3>
                   <div className="text-xl font-black text-slate-800">4.500 Coins</div>
                 </div>
               </div>
@@ -2607,7 +2622,7 @@ export default function BelanjaView({
               </div>
 
               <div className="self-start bg-white border border-slate-200 text-slate-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] shadow-sm">
-                <p className="text-sm font-medium">Ya pak, beras premium 5kg ready. Bisa diantar sekarang. Langsung lewat Lapak 26 ya transaksinya pak biar gampang saya rekap.</p>
+                <p className="text-sm font-medium">Ya pak, beras premium 5kg ready. Bisa diantar sekarang. Langsung lewat Lapak +62 ya transaksinya pak biar gampang saya rekap.</p>
                 <span className="text-[10px] text-slate-400 block mt-1 font-bold">10:45</span>
               </div>
             </div>

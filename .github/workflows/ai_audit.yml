@@ -63,3 +63,26 @@ jobs:
           export ANTHROPIC_API_KEY="dummy-key-to-bypass-sdk-checks"
           npx @anthropic-ai/claude-code --once "jalankan audit keamanan sesuai AGENTS.md"
 
+      - name: Send Telegram Notification (Guardian Security Audit)
+        if: always() && secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != ''
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            COLOR="🟢"
+            TEXT_STATUS="SUKSES - Tidak ada ancaman kebocoran data terdeteksi!"
+          elif [ "$STATUS" = "failure" ]; then
+            COLOR="🔴"
+            TEXT_STATUS="PERINGATAN - Ada masalah keamanan/kegagalan terdeteksi!"
+          else
+            COLOR="🟡"
+            TEXT_STATUS="DIBATALKAN"
+          fi
+
+          MESSAGE="$COLOR *[SmartRW AI] Laporan Guardian Nightly* %0A%0A📌 *Status:* $TEXT_STATUS %0A📌 *Pemicu:* ${{ github.event_name }} oleh ${{ github.actor }} %0A📌 *Komit:* \`${{ github.sha }}\` %0A%0A🔗 [Klik untuk Lihat Log Kegiatan Audit di GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=$MESSAGE" \
+            -d "parse_mode=Markdown"
+
+

@@ -160,7 +160,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
               <Building2 className="w-8 h-8" />
            </div>
            <div>
-              <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant leading-none">Reservasi Fasilitas</h2>
+              <h2 className="text-2xl font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none" style={{ fontFamily: 'Outfit' }}>Reservasi Fasilitas</h2>
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-2 opacity-80 italic">Peminjaman Gedung & Inventaris Lingkungan</p>
            </div>
         </div>
@@ -224,7 +224,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
       <div className="space-y-8">
         <div className="flex items-center gap-5 px-6 border-l-8 border-emerald-500">
            <div>
-              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter font-elegant">Status Peminjaman</h3>
+              <h3 className="text-2xl font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tighter" style={{ fontFamily: 'Outfit' }}>Status Peminjaman</h3>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">{myBookings.length} Reservasi Terdaftar</p>
            </div>
         </div>

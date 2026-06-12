@@ -757,7 +757,7 @@ export function SuratView({
             <Sparkles className="w-3.5 h-3.5 text-pink-400 animate-pulse" /> SmaRtRW Document Suite
           </span>
           <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight font-elegant flex items-center gap-3">
-            <span>Administrasi Warga</span>
+            <span style={{ fontFamily: 'Outfit', fontWeight: 'bold', fontStyle: 'italic' }}>Administrasi Warga</span>
             <span className={`text-[9px] sm:text-[10px] px-3 py-1 font-black uppercase tracking-wider rounded-full flex items-center gap-1.5 border transition-colors ${
               activeSubTab === 'berjalan'
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
@@ -904,7 +904,7 @@ export function SuratView({
           <div>
             <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase font-elegant">
               <div className="w-2.5 h-8 bg-brand-blue rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-              {getTranslatedLabel("Layanan Administrasi", settings?.themeMode)}
+              <span style={{ fontFamily: 'Outfit', fontWeight: 'bold', fontStyle: 'italic' }}>{getTranslatedLabel("Layanan Administrasi", settings?.themeMode)}</span>
             </h3>
             <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2 ml-7">Verifikasi & Penerbitan {getTranslatedLabel("Surat", settings?.themeMode)}</p>
           </div>

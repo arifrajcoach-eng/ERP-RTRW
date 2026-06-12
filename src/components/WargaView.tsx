@@ -711,13 +711,30 @@ function WargaView(props: WargaViewProps) {
 
   const handleDeleteWarga = async () => {
     if (!wargaToDelete) return;
+    
+    // Construct the correct Firestore ID if docId is missing
+    let deleteId = wargaToDelete.docId || wargaToDelete.id;
+    
+    if (!deleteId && wargaToDelete.nik) {
+        // If NIK exists, try constructing the expected ID: tenantId_nik
+        deleteId = `${tenantId}_${wargaToDelete.nik}`;
+    }
+    
+    console.log("Deleting warga with ID:", deleteId);
+    
+    if (!deleteId) {
+        showNotification("Gagal: ID tidak ditemukan.", 'error');
+        return;
+    }
+    
     setIsDeletingWarga(true);
     try {
-      await deleteDoc(doc(db, 'data_warga', wargaToDelete.docId || wargaToDelete.id || wargaToDelete.nik));
+      await deleteDoc(doc(db, 'data_warga', deleteId));
       await logAuditEvent(currentUser?.uid || 'system', currentUser?.name || 'Aplikasi', 'DELETE_WARGA', 'data_warga', `Menghapus warga: ${wargaToDelete.nama || wargaToDelete.nik}`, tenantId);
       setWargaToDelete(null);
-      showNotification("Data warga berhasil dihapus");
+      showNotification("Data warga berhasil dihapus", 'success');
     } catch (error: any) {
+      console.error("Delete error:", error);
       handleFirestoreError(error, 'delete', `/data_warga`);
     } finally {
       setIsDeletingWarga(false);

@@ -125,6 +125,9 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
                     </div>
                  </div>
             </div>
+             <div className="mt-12 text-center text-[10px] font-semibold italic text-slate-800">
+                 {kop?.catatan}
+             </div>
         </div>
     );
 };

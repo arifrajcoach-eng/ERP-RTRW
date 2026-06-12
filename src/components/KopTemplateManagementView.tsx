@@ -124,7 +124,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
     instagram: settings?.instagram || '',
     kelurahan: settings?.kelurahan || '',
     kecamatan: settings?.kecamatan || '',
-    kabupaten: settings?.kabupaten || ''
+    kabupaten: settings?.kabupaten || '',
+    catatan: settings?.catatan || ''
   });
   const [logoUrl, setLogoUrl] = useState('');
   const [logoRwUrl, setLogoRwUrl] = useState('');
@@ -269,7 +270,8 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
             instagram: data.instagram || '',
             kelurahan: data.kelurahan || '',
             kecamatan: data.kecamatan || '',
-            kabupaten: data.kabupaten || ''
+            kabupaten: data.kabupaten || '',
+            catatan: data.catatan || ''
         });
         setLogoUrl(data.logo_url || '');
         setLogoRwUrl(data.logo_rw_url || '');
@@ -403,6 +405,7 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
         signature_rt_url: signatureRtUrl,
         signature_rw_url: signatureRwUrl,
         bg_kertas_url: bgKertasUrl,
+        catatan: formData.catatan,
         tenantId 
       }, { merge: true });
       showNotification("Branding berhasil disimpan", 'success');
@@ -575,6 +578,11 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
             <div className="space-y-2 md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700">Papan Nama RT/RW</label>
                 <input name="nama_rt" value={formData.nama_rt} onChange={handleChange} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Contoh: RUKUN TETANGGA 03 / RUKUN WARGA 26" />
+            </div>
+            
+            <div className="space-y-2 md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700">Catatan Tambahan (Cetak Surat)</label>
+                <input name="catatan" value={formData.catatan} onChange={handleChange} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Photocopy 3 Lembar Surat Pengantar" />
             </div>
             
             <div className="space-y-2">

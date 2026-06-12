@@ -2455,7 +2455,7 @@ export default function App() {
       },
       {
         id: "etoko",
-        label: "E-LAPAK26",
+        label: "E-LAPAK +62",
         icon: ShoppingBag,
         plan: "eLapak",
       },
@@ -3622,10 +3622,10 @@ export default function App() {
 
             <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1 hidden md:block"></div>
             
-            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 capitalize tracking-tight hidden lg:block font-elegant">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-400 dark:from-white dark:to-slate-500">
+            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 capitalize tracking-tight hidden lg:block font-elegant" style={{ fontFamily: "Verdana", fontStyle: "italic" }}>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-400 dark:from-white dark:to-slate-500" style={{ fontFamily: "Verdana", fontStyle: "italic" }}>
                 {activeTab === "etoko"
-                  ? "E-LAPAK26"
+                  ? "E-LAPAK +62"
                   : activeTab === "posyandu"
                     ? "Care Center"
                     : activeTab.replace("-", " ")}
@@ -3775,11 +3775,13 @@ export default function App() {
             />
           )}
           {activeTab === "sos-monitor" && (
-            <SatpamDashboard tenantId={
+            (currentUser?.role === 'ADMIN' || currentUser?.role === 'PENGURUS' || currentUser?.role === 'SATPAM' || currentUser?.isSuperAdmin) ? (
+              <SatpamDashboard tenantId={
                 currentUser?.tenantId && currentUser.tenantId !== "unknown"
                   ? currentUser.tenantId
                   : "rw26_berjuang"
               } />
+            ) : <div className="p-10 text-center text-slate-500">Anda tidak memiliki akses ke fitur ini.</div>
           )}
           {activeTab === "organisasi" && (
             <OrganisasiView
@@ -7072,7 +7074,7 @@ function LoginView({
                   </p>
                 </div>
                 <p className="text-xs text-emerald-600 font-medium leading-relaxed">
-                  Gunakan Google Login untuk akses penuh fitur {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()}: E-LAPAK26,
+                  Gunakan Google Login untuk akses penuh fitur {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()}: E-LAPAK +62,
                   Surat Digital, Keuangan, dan Pengaduan.
                 </p>
               </div>
