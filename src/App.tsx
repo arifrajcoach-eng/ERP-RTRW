@@ -6685,6 +6685,7 @@ function LoginView({
       }
 
       try {
+        await signOut(auth); // Ensure clean state before sign-in
         await signInWithEmailAndPassword(auth, loginEmail, targetPass);
       } catch (loginErr: any) {
           if (
