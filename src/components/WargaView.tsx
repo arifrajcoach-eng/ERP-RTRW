@@ -162,9 +162,10 @@ function WargaView(props: WargaViewProps) {
   }, [wargaData, filterRT, filterRW, filterKategoriUmur, searchQuery]);
 
   const canEdit = useMemo(() => {
-    const role = userRole?.toUpperCase();
+    if (currentUser?.isSuperAdmin) return true;
+    const role = (userRole || currentUser?.role || "").toUpperCase();
     return ["ADMIN", "RT", "RW", "SUPER_ADMIN", "BENDAHARA", "KADER"].includes(role);
-  }, [userRole]);
+  }, [userRole, currentUser]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -1191,7 +1192,7 @@ function WargaView(props: WargaViewProps) {
                         > 
                           <Eye size={20} /> 
                         </motion.button>
-                        {(['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(currentUser?.role) || currentUser?.isSuperAdmin) && (
+                        {canEdit && (
                           <>
                             <motion.button 
                               whileHover={{ scale: 1.1, backgroundColor: 'rgba(16, 185, 129, 1)', color: 'white' }}
@@ -1202,7 +1203,6 @@ function WargaView(props: WargaViewProps) {
                             > 
                               <Edit2 size={20} /> 
                             </motion.button>
-                                                        {/*
                             <motion.button 
                               whileHover={{ scale: 1.1, backgroundColor: 'rgba(244, 63, 94, 1)', color: 'white' }}
                               whileTap={{ scale: 0.9 }}
@@ -1212,7 +1212,6 @@ function WargaView(props: WargaViewProps) {
                             > 
                               <Trash2 size={20} /> 
                             </motion.button>
-                            */}
                           </>
                         )}
                       </div>
@@ -1279,7 +1278,7 @@ function WargaView(props: WargaViewProps) {
                           > 
                             <Eye size={16} /> 
                           </button>
-                          {(['SUPER_ADMIN', 'ADMIN', 'RW', 'RT'].includes(currentUser?.role) || currentUser?.isSuperAdmin) && (
+                           {canEdit && (
                             <>
                               <button 
                                 onClick={() => startEdit(w)} 
@@ -1288,7 +1287,6 @@ function WargaView(props: WargaViewProps) {
                               > 
                                 <Edit2 size={16} /> 
                               </button>
-                                                            {/*
                               <button 
                                 onClick={() => setWargaToDelete(w)} 
                                 className="p-2 text-rose-500 bg-rose-50 border border-rose-100 rounded-xl transition-all dark:bg-white/5"
@@ -1296,7 +1294,6 @@ function WargaView(props: WargaViewProps) {
                               > 
                                 <Trash2 size={16} /> 
                               </button>
-                              */}
                             </>
                           )}
                         </div>
@@ -1452,6 +1449,42 @@ function WargaView(props: WargaViewProps) {
             </div>
           )}
       </div>
+
+      {/* FLOATING BULK ACTION BANNER */}
+      <AnimatePresence>
+        {selectedWargaIds.length > 0 && canEdit && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 dark:bg-slate-950/95 backdrop-blur-md px-6 py-4 rounded-3xl shadow-2xl border border-rose-500/30 flex items-center gap-6 z-[90] min-w-[280px] sm:min-w-[420px] justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+              <div className="text-left">
+                <p className="text-[11px] font-black tracking-wider text-rose-400 uppercase">Tindakan Massal</p>
+                <p className="text-xs text-white font-medium">{selectedWargaIds.length} Data Terpilih</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setSelectedWargaIds([])}
+                className="px-4 py-2 text-[10px] font-black text-slate-400 hover:text-white uppercase transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={promptBulkDelete}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md shadow-rose-900/30"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Sekaligus</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ADD / EDIT WARGA MODAL */}
       <AnimatePresence>

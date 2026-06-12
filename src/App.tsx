@@ -6332,7 +6332,7 @@ function LoginView({
             try {
               const dSnap = await getDoc(dRef);
               if (dSnap.exists()) {
-                const candidate = { docId: dSnap.id, ...dSnap.data() } as any;
+                const candidate = { docId: dSnap.id, ...(dSnap.data() as any || {}) } as any;
                 const cNik = String(candidate.nik || "")
                   .trim()
                   .toLowerCase();
