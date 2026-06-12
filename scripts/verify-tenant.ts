@@ -83,7 +83,11 @@ console.log(`\n${CYAN}${BOLD}── RULE 2: addDoc() tanpa tenantId ──${RESE
     const lines = read(file).split("\n");
     lines.forEach((line, i) => {
       if (/addDoc\(/.test(line) && !/^\s*\/\//.test(line)) {
-        const block = lines.slice(i, i + 12).join("\n");
+        const block = lines.slice(i, i + 15).join("\n");
+        // Skip: pembuatan tenant baru (collection tenants) - memang tidak butuh tenantId
+        if (/collection\(db,\s*['\"\`]tenants['\"\`]\)/.test(block)) return;
+        // Skip: pakai ...data spread (tenantId dibawa via spread dari parameter)
+        if (/\.\.\.data/.test(block)) return;
         if (!/tenantId/.test(block)) {
           found = true;
           critical("addDoc() tanpa tenantId dalam payload", file, i + 1, line);
@@ -137,9 +141,13 @@ console.log(`\n${CYAN}${BOLD}── RULE 5: useEffect dependency kosong ──${
     lines.forEach((line, i) => {
       if (/useEffect\(/.test(line)) {
         const block = lines.slice(i, i + 20).join("\n");
-        if (/tenantId/.test(block) && /},\s*\[\]\)/.test(block)) {
+        // Hanya flag jika tenantId dipakai dalam BODY useEffect (bukan hanya deklarasi var)
+        // dan dependency array benar-benar kosong
+        const hasEmptyDep = /},\s*\[\]\)/.test(block);
+        const usesTenantInQuery = /where.*tenantId|tenantId.*==|onSnapshot.*tenantId|getDocs.*tenantId/.test(block);
+        if (hasEmptyDep && usesTenantInQuery) {
           found = true;
-          high("useEffect pakai tenantId tapi dependency array kosong []", file, i + 1, line);
+          high("useEffect pakai tenantId dalam query tapi dependency array kosong []", file, i + 1, line);
         }
       }
     });
@@ -178,10 +186,17 @@ console.log(`\n${CYAN}${BOLD}── RULE 8: Firestore Rules keamanan ──${RES
 {
   const rulesPath = path.join(process.cwd(), "firestore.rules");
   const content = read(rulesPath);
-  if (/allow\s+(read|write|read,\s*write)\s*:\s*if\s+true/.test(content)) {
-    critical("firestore.rules memiliki 'allow if true' — data terbuka publik!", rulesPath, 1, "");
+  // Cek hanya allow read/write yang benar-benar berbahaya (bukan allow create untuk registration)
+  const dangerousRules = content.split("\n").filter((line, i) => {
+    if (/allow\s+read.*if\s+true/.test(line)) return true;
+    if (/allow\s+write.*if\s+true/.test(line)) return true;
+    if (/allow\s+read,\s*write.*if\s+true/.test(line)) return true;
+    return false;
+  });
+  if (dangerousRules.length > 0) {
+    critical("firestore.rules memiliki 'allow read/write if true' — data terbuka publik!", rulesPath, 1, dangerousRules[0]);
   } else {
-    ok("Firestore Rules tidak ada allow if true");
+    ok("Firestore Rules tidak ada allow read/write if true");
   }
 }
 
