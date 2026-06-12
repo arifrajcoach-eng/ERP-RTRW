@@ -2777,6 +2777,7 @@ export default function App() {
             "complaint",
             "booking",
             "inventaris",
+            "organisasi",
           ],
           TAMU: ["dashboard", "etoko"],
           VIEWER: ["dashboard", "etoko"],
@@ -6306,31 +6307,22 @@ function LoginView({
     // 2. DIRECT DISCOVERY (Across Tenants via Firestore)
     if (!found) {
       try {
-        // A. Try direct Document ID lookup (NIK is standard docId, sometimes prefixed)
+        // A. Try direct Document ID lookup (NIK is standard docId, prefixed with tenant)
         const potentialIds = [cleanId, cleanPass].filter((k) => k.length >= 6);
-        const lastActiveTid = safeLocalStorage.getItem("lastActiveTenantId");
-        const knownTenants = [
-          cleanTenant,
-          "rw26_berjuang",
-          "trihprw26",
-          "rt01_rw26_berjuang",
-          "MASTER",
-        ];
-        if (lastActiveTid && !knownTenants.includes(lastActiveTid)) {
-          knownTenants.push(lastActiveTid);
+        const searchTenantIds = [cleanTenant];
+        if (cleanTenant.startsWith("rt") && cleanTenant.includes("_")) {
+          const parent = cleanTenant.substring(cleanTenant.indexOf("_") + 1);
+          if (parent && !searchTenantIds.includes(parent)) {
+            searchTenantIds.push(parent);
+          }
         }
 
         for (const idCandidate of potentialIds) {
           if (found) break;
 
-          // Try common docId patterns
-          const candidateRefs = [
-            doc(db, "data_warga", idCandidate),
-            doc(db, "verifikasi_warga", idCandidate),
-          ];
-
-          // Try with tenant prefixes
-          knownTenants.forEach((t) => {
+          const candidateRefs: any[] = [];
+          // RESTRICTED: Only search within the intended tenant context
+          searchTenantIds.forEach((t) => {
             candidateRefs.push(doc(db, "data_warga", `${t}_${idCandidate}`));
             candidateRefs.push(doc(db, "verifikasi_warga", `${t}_${idCandidate}`));
           });
@@ -6386,7 +6378,7 @@ function LoginView({
           }
         }
 
-        // B. Query Discovery (as fallback) - Search for all fields that match cleanId or cleanPass
+        // B. Query Discovery - Search only within intended tenant context
         if (!found) {
           const searchTenantIds = [cleanTenant];
           if (cleanTenant.startsWith("rt") && cleanTenant.includes("_")) {
@@ -6394,11 +6386,6 @@ function LoginView({
             if (parent && !searchTenantIds.includes(parent)) {
               searchTenantIds.push(parent);
             }
-          }
-          if (cleanTenant === "rw26_berjuang") {
-            searchTenantIds.push("rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang", "rt05_rw26_berjuang");
-          } else if (cleanTenant === "trihprw26") {
-            searchTenantIds.push("rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26", "rt05_trihprw26");
           }
 
           const tokens = [cleanId, cleanPass].filter((k) => k.length >= 3);
@@ -6436,7 +6423,7 @@ function LoginView({
 
                 const activeFilters = searchTenantIds.filter(Boolean);
 
-                // 1. Check in data_warga
+                // 1. Check in data_warga (Scoped search ONLY)
                 let sWarga = null;
                 if (activeFilters.length > 0) {
                   try {
@@ -6447,18 +6434,11 @@ function LoginView({
                       limit(10)
                     ));
                   } catch (e) {
-                    console.warn("Scoped data_warga query failed, falling back:", e);
+                    console.warn("Scoped data_warga query failed:", e);
                   }
                 }
-                if (!sWarga || sWarga.empty) {
-                  sWarga = await getDocs(query(
-                    collection(db, "data_warga"),
-                    where(field, "==", value),
-                    limit(10)
-                  ));
-                }
 
-                // 2. Check in verifikasi_warga
+                // 2. Check in verifikasi_warga (Scoped search ONLY)
                 let sVerif = null;
                 if (activeFilters.length > 0) {
                   try {
@@ -6469,18 +6449,11 @@ function LoginView({
                       limit(10)
                     ));
                   } catch (e) {
-                    console.warn("Scoped verifikasi_warga query failed, falling back:", e);
+                    console.warn("Scoped verifikasi_warga query failed:", e);
                   }
                 }
-                if (!sVerif || sVerif.empty) {
-                  sVerif = await getDocs(query(
-                    collection(db, "verifikasi_warga"),
-                    where(field, "==", value),
-                    limit(10)
-                  ));
-                }
 
-                // 3. Fallback: Check in surat
+                // 3. Check in surat (Scoped search ONLY)
                 let sSurat = null;
                 if (activeFilters.length > 0) {
                   try {
@@ -6491,15 +6464,8 @@ function LoginView({
                       limit(5)
                     ));
                   } catch (e) {
-                    console.warn("Scoped surat query failed, falling back:", e);
+                    console.warn("Scoped surat query failed:", e);
                   }
-                }
-                if (!sSurat || sSurat.empty) {
-                  sSurat = await getDocs(query(
-                    collection(db, "surat"),
-                    where(field === "nama" ? "pemohon" : field, "==", value),
-                    limit(5)
-                  ));
                 }
 
                 const allSnaps = [sWarga, sVerif, sSurat];

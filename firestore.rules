@@ -182,7 +182,8 @@ service cloud.firestore {
     }
 
     match /tenants/{tenantId} {
-      allow read: if true;
+      allow get: if true; // Needed for login tenant validation
+      allow list: if isAdmin();
       allow create: if true; // Allow anyone to initiate registration
       allow update: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
       allow delete: if isAdmin();
@@ -253,8 +254,8 @@ service cloud.firestore {
     // --- Warga & Kependudukan ---
 
     match /data_warga/{docId} {
-      allow list: if isSignedIn();
-      allow get: if isSignedIn() || resource == null;
+      allow list: if isAdmin() || (isSignedIn() && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId));
+      allow get: if isAdmin() || (isSignedIn() && (resource == null || !('tenantId' in resource.data) || isTenantMember(resource.data.tenantId)));
       allow create: if isSignedIn() && (
         isAdmin() || 
         isAdminStatic() || 
@@ -276,7 +277,7 @@ service cloud.firestore {
     }
 
     match /verifikasi_warga/{docId} {
-      allow list: if isSignedIn();
+      allow list: if isAdmin() || (isSignedIn() && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId));
       allow get: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn();
@@ -301,7 +302,7 @@ service cloud.firestore {
     }
 
     match /surat/{docId} {
-      allow list: if isSignedIn();
+      allow list: if isAdmin() || (isSignedIn() && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId));
       allow get: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin() || isAdminStatic() || (

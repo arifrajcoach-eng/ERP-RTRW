@@ -165,19 +165,8 @@ export function VerifikasiAdminView({
     
     const isAlreadyApproved = item.status === 'Disetujui';
     const isModalOpen = selectedItem && selectedItem.id === item.id;
-    let reason = isModalOpen ? catatan.trim() : "";
+    let reason = catatan.trim() || "Ditolak oleh admin";
     
-    if (!reason) {
-      if (!isModalOpen) {
-        setSelectedItem(item);
-        showNotification("Harap isi Catatan Verifikasi sebelum menolak data.", "info");
-        return;
-      } else {
-        showNotification("Harap isi Catatan Verifikasi di atas untuk alasan penolakan.", "error");
-        return;
-      }
-    }
-
     setActionLoading(true);
     try {
       const batch = writeBatch(db);

@@ -792,20 +792,7 @@ function WargaView(props: WargaViewProps) {
         <div className="flex flex-wrap gap-3 items-center">
           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={(e) => { if (e.target.files?.[0]) processImport(e.target.files[0]); }} />
           
-          <AnimatePresence>
-            {selectedWargaIds.length > 0 && canEdit && (
-              <motion.button 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                onClick={promptBulkDelete} 
-                className="bg-rose-50 text-rose-600 border border-rose-100 px-5 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all hover:bg-rose-100 shadow-sm cursor-pointer"
-              >
-                <Trash size={18} /> Hapus ({selectedWargaIds.length})
-              </motion.button>
-            )}
-          </AnimatePresence>
-
+          
           {/* PREMIUM RESIDENT & DOCUMENT SUITE DROP-DOWN MENU */}
           <div className="relative">
             <button 
@@ -1215,6 +1202,7 @@ function WargaView(props: WargaViewProps) {
                             > 
                               <Edit2 size={20} /> 
                             </motion.button>
+                                                        {/*
                             <motion.button 
                               whileHover={{ scale: 1.1, backgroundColor: 'rgba(244, 63, 94, 1)', color: 'white' }}
                               whileTap={{ scale: 0.9 }}
@@ -1224,6 +1212,7 @@ function WargaView(props: WargaViewProps) {
                             > 
                               <Trash2 size={20} /> 
                             </motion.button>
+                            */}
                           </>
                         )}
                       </div>
@@ -1299,6 +1288,7 @@ function WargaView(props: WargaViewProps) {
                               > 
                                 <Edit2 size={16} /> 
                               </button>
+                                                            {/*
                               <button 
                                 onClick={() => setWargaToDelete(w)} 
                                 className="p-2 text-rose-500 bg-rose-50 border border-rose-100 rounded-xl transition-all dark:bg-white/5"
@@ -1306,6 +1296,7 @@ function WargaView(props: WargaViewProps) {
                               > 
                                 <Trash2 size={16} /> 
                               </button>
+                              */}
                             </>
                           )}
                         </div>
