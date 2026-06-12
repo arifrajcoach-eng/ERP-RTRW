@@ -1,3 +1,11 @@
+/**
+ * PATCH: src/firebase.ts (FULL REPLACEMENT)
+ * 
+ * Perubahan:
+ * - setPersistence dipindah ke module level (bukan di useEffect App.tsx)
+ * - Import setPersistence + browserLocalPersistence ditambah
+ */
+
 import { initializeApp } from 'firebase/app';
 import { 
   initializeFirestore, 
@@ -5,7 +13,7 @@ import {
   persistentMultipleTabManager,
   memoryLocalCache 
 } from 'firebase/firestore';                
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -39,6 +47,15 @@ export const db = initializeFirestore(app, {
   localCache: cacheConfig,
 }, firebaseConfig.firestoreDatabaseId);                
 console.log("DB Loaded with Firestore ID:", firebaseConfig.firestoreDatabaseId);
+
 export const auth = getAuth(app);
 auth.useDeviceLanguage();
+
+// [FIX] Set persistence di module level — SEBELUM onAuthStateChanged pertama fired
+// Jangan set ini di useEffect React karena bisa race condition dengan listener pertama
+setPersistence(auth, browserLocalPersistence).catch(err => {
+  // Non-fatal — fallback ke session persistence jika local tidak tersedia
+  console.warn('[firebase] Could not set browserLocalPersistence, falling back:', err);
+});
+
 export const storage = getStorage(app);
