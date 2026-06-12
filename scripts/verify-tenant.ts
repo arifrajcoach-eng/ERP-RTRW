@@ -2,96 +2,223 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * SmartRW AI - Tenant & Code Integrity Verification Engine
- * Runs static code analysis to guarantee Parent-Child tenancy and Self-Healing integrity.
+ * SmartRW AI — Security & Integrity Verification Engine v2
+ * =========================================================
+ * Dijalankan oleh: npm run verify  (dan GitHub Actions CI)
+ * Exit 0 = PASSED | Exit 1 = FAILED
  */
 
-const RED = "\x1b[31m";
-const GREEN = "\x1b[32m";
+const RED    = "\x1b[31m";
+const GREEN  = "\x1b[32m";
 const YELLOW = "\x1b[33m";
-const RESET = "\x1b[0m";
+const CYAN   = "\x1b[36m";
+const BOLD   = "\x1b[1m";
+const RESET  = "\x1b[0m";
 
-let hasErrors = false;
+interface Finding { rule: string; file: string; line: number; snippet: string; }
+const criticalFindings: Finding[] = [];
+const highFindings: Finding[] = [];
+let passed = 0;
 
-function checkRule(name: string, assertion: () => boolean, failureMessage: string) {
-  console.log(`Checking [${name}]...`);
-  try {
-    if (assertion()) {
-      console.log(`${GREEN}✔ Passed: ${name}${RESET}`);
-    } else {
-      console.error(`${RED}✘ Failed: ${name}${RESET}`);
-      console.error(`${YELLOW}Reason: ${failureMessage}${RESET}`);
-      hasErrors = true;
-    }
-  } catch (err: any) {
-    console.error(`${RED}✘ Verification Exited with Error: ${err.message}${RESET}`);
-    hasErrors = true;
+const SRC = path.join(process.cwd(), "src");
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+
+function getAllFiles(dir: string): string[] {
+  const out: string[] = [];
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...getAllFiles(full));
+    else if (/\.(tsx?|jsx?)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+function read(p: string) {
+  try { return fs.readFileSync(p, "utf-8"); } catch { return ""; }
+}
+
+function rel(p: string) { return p.replace(process.cwd() + "/", ""); }
+
+function ok(rule: string) {
+  passed++;
+  console.log(`${GREEN}✔${RESET} ${rule}`);
+}
+
+function critical(rule: string, file: string, line: number, snippet: string) {
+  criticalFindings.push({ rule, file, line, snippet });
+  console.log(`${RED}${BOLD}✘ [CRITICAL]${RESET} ${rule}`);
+  console.log(`  ${YELLOW}${rel(file)}:${line}${RESET}`);
+  console.log(`  ${snippet.trim().slice(0, 120)}`);
+}
+
+function high(rule: string, file: string, line: number, snippet: string) {
+  highFindings.push({ rule, file, line, snippet });
+  console.log(`${YELLOW}${BOLD}✘ [HIGH]${RESET} ${rule}`);
+  console.log(`  ${rel(file)}:${line} — ${snippet.trim().slice(0, 100)}`);
+}
+
+// ─── RULE 1: Hardcoded tenant fallback ──────────────────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 1: Hardcoded Tenant Fallback ──${RESET}`);
+{
+  const pattern = /\|\|\s*['"`]rw\d+_[a-z_]+['"`]/;
+  let found = false;
+  for (const file of getAllFiles(SRC)) {
+    read(file).split("\n").forEach((line, i) => {
+      if (pattern.test(line)) {
+        found = true;
+        critical("Hardcoded tenant fallback", file, i + 1, line);
+      }
+    });
+  }
+  if (!found) ok("Tidak ada hardcoded tenant fallback");
+}
+
+// ─── RULE 2: addDoc tanpa tenantId ──────────────────────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 2: addDoc() tanpa tenantId ──${RESET}`);
+{
+  let found = false;
+  for (const file of getAllFiles(SRC)) {
+    const lines = read(file).split("\n");
+    lines.forEach((line, i) => {
+      if (/addDoc\(/.test(line) && !/^\s*\/\//.test(line)) {
+        const block = lines.slice(i, i + 12).join("\n");
+        if (!/tenantId/.test(block)) {
+          found = true;
+          critical("addDoc() tanpa tenantId dalam payload", file, i + 1, line);
+        }
+      }
+    });
+  }
+  if (!found) ok("Semua addDoc() memiliki tenantId");
+}
+
+// ─── RULE 3: localStorage.clear() berbahaya ─────────────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 3: localStorage.clear() berbahaya ──${RESET}`);
+{
+  let found = false;
+  for (const file of getAllFiles(SRC)) {
+    const lines = read(file).split("\n");
+    lines.forEach((line, i) => {
+      if (/localStorage\.clear\(\)/.test(line)) {
+        const ctx = lines.slice(Math.max(0, i - 3), i + 3).join("\n");
+        if (!/safe|SAFE|ErrorBoundary/.test(ctx)) {
+          found = true;
+          critical("localStorage.clear() tanpa proteksi — menghapus kunci auth & tenant", file, i + 1, line);
+        }
+      }
+    });
+  }
+  if (!found) ok("Tidak ada localStorage.clear() berbahaya");
+}
+
+// ─── RULE 4: API Key literal ─────────────────────────────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 4: API Key literal di source ──${RESET}`);
+{
+  let found = false;
+  for (const file of getAllFiles(SRC)) {
+    read(file).split("\n").forEach((line, i) => {
+      if (/AIza[0-9A-Za-z_-]{35}/.test(line) || /sk-[a-zA-Z0-9]{48}/.test(line)) {
+        found = true;
+        critical("API Key ditemukan dalam source code", file, i + 1, "***REDACTED***");
+      }
+    });
+  }
+  if (!found) ok("Tidak ada API Key literal");
+}
+
+// ─── RULE 5: useEffect dependency array ──────────────────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 5: useEffect dependency kosong ──${RESET}`);
+{
+  let found = false;
+  for (const file of getAllFiles(SRC)) {
+    const lines = read(file).split("\n");
+    lines.forEach((line, i) => {
+      if (/useEffect\(/.test(line)) {
+        const block = lines.slice(i, i + 20).join("\n");
+        if (/tenantId/.test(block) && /},\s*\[\]\)/.test(block)) {
+          found = true;
+          high("useEffect pakai tenantId tapi dependency array kosong []", file, i + 1, line);
+        }
+      }
+    });
+  }
+  if (!found) ok("Semua useEffect dependency array sudah benar");
+}
+
+// ─── RULE 6: ErrorBoundary melindungi kunci tenant ───────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 6: ErrorBoundary protection ──${RESET}`);
+{
+  const ebPath = path.join(SRC, "components", "ErrorBoundary.tsx");
+  const content = read(ebPath);
+  const keys = ["impersonatedTenantId", "currentTenant", "parentTenant", "firebase:auth"];
+  const missing = keys.filter(k => !content.includes(k));
+  if (missing.length > 0) {
+    critical("ErrorBoundary tidak melindungi kunci tenant: " + missing.join(", "), ebPath, 1, "");
+  } else {
+    ok("ErrorBoundary melindungi semua kunci tenant");
   }
 }
 
-// 1. Check ErrorBoundary exists and protects impersonated state
-checkRule(
-  "ErrorBoundary Self-Healing Key Protection",
-  () => {
-    const errorBoundaryPath = path.join(process.cwd(), "src", "components", "ErrorBoundary.tsx");
-    if (!fs.existsSync(errorBoundaryPath)) return false;
-    const content = fs.readFileSync(errorBoundaryPath, "utf-8");
-    
-    // It must keep crucial tenant keys safe during cache purge
-    const keys = ["impersonatedTenantId", "currentTenant", "parentTenant", "firebase:auth"];
-    return keys.every(key => content.includes(key));
-  },
-  "The ErrorBoundary component is missing or lacks protection for crucial resident session/tenant keys."
-);
+// ─── RULE 7: Global ErrorBoundary di main.tsx ────────────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 7: Global ErrorBoundary ──${RESET}`);
+{
+  const mainPath = path.join(SRC, "main.tsx");
+  const content = read(mainPath);
+  if (!content.includes("<ErrorBoundary>") || !content.includes("</ErrorBoundary>")) {
+    critical("Global <ErrorBoundary> tidak ada di main.tsx", mainPath, 1, "");
+  } else {
+    ok("Global ErrorBoundary ada di main.tsx");
+  }
+}
 
-// 2. Check main app renders the custom ErrorBoundary wrapper around App component inside main.tsx
-checkRule(
-  "Global ErrorBoundary Wrapper in main.tsx",
-  () => {
-    const mainPath = path.join(process.cwd(), "src", "main.tsx");
-    if (!fs.existsSync(mainPath)) return false;
-    const content = fs.readFileSync(mainPath, "utf-8");
-    return content.includes("<ErrorBoundary>") && content.includes("</ErrorBoundary>");
-  },
-  "The global React entry (src/main.tsx) does not wrap the main App component inside <ErrorBoundary>, which breaks error recovery."
-);
+// ─── RULE 8: Firestore rules tidak ada 'allow if true' ───────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 8: Firestore Rules keamanan ──${RESET}`);
+{
+  const rulesPath = path.join(process.cwd(), "firestore.rules");
+  const content = read(rulesPath);
+  if (/allow\s+(read|write|read,\s*write)\s*:\s*if\s+true/.test(content)) {
+    critical("firestore.rules memiliki 'allow if true' — data terbuka publik!", rulesPath, 1, "");
+  } else {
+    ok("Firestore Rules tidak ada allow if true");
+  }
+}
 
-// 3. Ensure Firestore queries include Tenant Segregation safeguards
-checkRule(
-  "Firestore Tenant Filter Pattern Safeguard",
-  () => {
-    const appPath = path.join(process.cwd(), "src", "App.tsx");
-    if (!fs.existsSync(appPath)) return false;
-    const content = fs.readFileSync(appPath, "utf-8");
-    
-    // Check that we reference parentId and tenantId consistently
-    return content.includes("parentId") && content.includes("tenantId");
-  },
-  "The core Application code (src/App.tsx) appears to have broken reference properties for parentId or tenantId structures."
-);
+// ─── RULE 9: parentId + tenantId konsistensi App.tsx ────────────────────────
+console.log(`\n${CYAN}${BOLD}── RULE 9: Konsistensi parentId/tenantId ──${RESET}`);
+{
+  const appPath = path.join(SRC, "App.tsx");
+  const content = read(appPath);
+  if (!content.includes("parentId") || !content.includes("tenantId")) {
+    high("parentId atau tenantId tidak ditemukan di App.tsx — hierarki tenant bisa rusak", appPath, 1, "");
+  } else {
+    ok("parentId dan tenantId ada di App.tsx");
+  }
+}
 
-// 4. Ensure no unauthorized localStorage.clear() exists that wipes critical session rules
-checkRule(
-  "No Unsafe localStorage Clears",
-  () => {
-    const appPath = path.join(process.cwd(), "src", "App.tsx");
-    if (!fs.existsSync(appPath)) return true; // If not exists, passes
-    const content = fs.readFileSync(appPath, "utf-8");
-    
-    // Check if there is an un-bracketed or un-checked call to localStorage.clear() inside React handlers
-    const unsafeClear = content.includes("localStorage.clear()") && !content.includes("ErrorBoundary");
-    return !unsafeClear;
-  },
-  "Detected a generic localStorage.clear() in src/App.tsx which will wipe clean the necessary parent-child impersonation keys."
-);
+// ─── SUMMARY ─────────────────────────────────────────────────────────────────
+console.log(`\n${"═".repeat(50)}`);
+console.log(`${BOLD}SMARTRW AI — VERIFICATION SUMMARY${RESET}`);
+console.log(`${"═".repeat(50)}`);
+console.log(`${GREEN}  PASSED   : ${passed}${RESET}`);
+console.log(`${YELLOW}  HIGH     : ${highFindings.length}${RESET}`);
+console.log(`${RED}  CRITICAL : ${criticalFindings.length}${RESET}`);
+console.log(`${"═".repeat(50)}`);
 
-console.log("\n=============================================");
-if (hasErrors) {
-  console.error(`${RED}STATUS: FAILED. Integrity checks failed.${RESET}`);
-  console.log("=============================================");
+// Tulis JSON output untuk dikonsumsi GitHub Actions
+const report = {
+  timestamp: new Date().toISOString(),
+  summary: { passed, high: highFindings.length, critical: criticalFindings.length },
+  critical: criticalFindings,
+  high: highFindings,
+};
+fs.writeFileSync("audit-report.json", JSON.stringify(report, null, 2));
+
+if (criticalFindings.length > 0 || highFindings.length > 0) {
+  console.error(`\n${RED}${BOLD}STATUS: FAILED — ${criticalFindings.length} CRITICAL, ${highFindings.length} HIGH${RESET}`);
   process.exit(1);
 } else {
-  console.log(`${GREEN}STATUS: PASSED. Code architecture is pristine!${RESET}`);
-  console.log("=============================================");
+  console.log(`\n${GREEN}${BOLD}STATUS: PASSED — Sistem aman ✅${RESET}`);
   process.exit(0);
 }
