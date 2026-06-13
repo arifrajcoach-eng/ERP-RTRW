@@ -519,7 +519,7 @@ export default function App() {
             let userData = userDoc.data() as any;
             const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
             let needsUpdate = false;
-            const allowedStatuses = ["GRATIS", "STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE"];
+            const allowedStatuses = ["GRATIS", "STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE", "AKTIF"];
             const userStatus = userData.status?.toUpperCase() || "TRIAL";
             
             if (!allowedStatuses.includes(userStatus) && user.email !== "arifrajcoach@gmail.com") {
@@ -6164,6 +6164,17 @@ function LoginView({
   );
 
   useEffect(() => {
+    // If Auth state says no user, but we are loading, it means they were rejected
+    // or signed out by backend rules. Cancel the spinner so it doesn't freeze.
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user && isLoading) {
+        setIsLoading(false);
+      }
+    });
+    return () => unsub();
+  }, [isLoading]);
+
+  useEffect(() => {
     if (initialEmail) {
       setEmail(initialEmail);
       setLoginMode("admin");
@@ -6604,6 +6615,10 @@ function LoginView({
 
       // If the input doesn't contain '@', search for a username in public_usernames
       if (!inputEmail.includes("@")) {
+        // If it's a 16-digit NIK, provide a helpful error
+        if (/^\d{16}$/.test(inputEmail)) {
+          throw new Error("NIK_DETECTED");
+        }
         console.log(
           "Checking username in public_usernames:",
           inputEmail.toLowerCase(),
@@ -6662,6 +6677,9 @@ function LoginView({
             await signOut(auth);
             throw new Error(`Tenant ID tidak sesuai. Akun Anda terdaftar di wilayah ${userData.tenantId}, bukan ${tenantInput}. Harap periksa Kode Area Wilayah.`);
         }
+        
+        // Ensure the spinner stops
+        setIsLoading(false);
       } catch (loginErr: any) {
           if (
             loginErr.code === "auth/user-not-found" ||
@@ -6694,7 +6712,9 @@ function LoginView({
       console.error("Login Error:", err);
       let msg = `Gagal masuk (${err.code || "ERR"}). Periksa kembali email dan password Anda.`;
 
-      if (err.message === "Username tidak ditemukan.") {
+      if (err.message === "NIK_DETECTED") {
+        msg = "PENGGUNAAN NIK TERDETEKSI: Jika Anda ingin masuk sebagai Warga menggunakan NIK, silakan pilih tab 'NIK & KK' (Verifikasi Warga) di atas.";
+      } else if (err.message === "Username tidak ditemukan.") {
         msg = "Gagal masuk (ERR). Username tidak ditemukan.";
       } else if (err.message === "DATABASE_UNAVAILABLE") {
         msg = "KONEKSI DATABASE GAGAL: Tidak dapat menjangkau server Firestore. Silakan periksa koneksi internet Anda atau coba lagi beberapa saat lagi.";
@@ -7058,9 +7078,10 @@ function LoginView({
                 </p>
               </div>
               <button
+                type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
-                className="w-full py-6 bg-white border-2 border-slate-100 text-slate-700 rounded-[2rem] font-black flex items-center justify-center gap-4 hover:bg-slate-50 hover:border-brand-green/30 transition-all active:scale-[0.98] shadow-sm text-base group"
+                className="w-full py-6 bg-white border-2 border-slate-100 text-slate-700 rounded-[2rem] font-black flex items-center justify-center gap-4 hover:bg-slate-50 hover:border-brand-green/30 transition-all active:scale-[0.98] shadow-sm text-base group disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="w-6 h-6 border-4 border-slate-200 border-t-brand-green rounded-full animate-spin"></div>
@@ -7205,8 +7226,10 @@ function LoginView({
               </div>
 
               <button
+                type="button"
                 onClick={onSelfRegister}
-                className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-brand-blue font-black text-xs uppercase tracking-widest hover:border-brand-blue/40 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                disabled={isLoading}
+                className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-brand-blue font-black text-xs uppercase tracking-widest hover:border-brand-blue/40 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <UserPlus className="w-4 h-4" /> Warga Baru? Daftar Mandiri
               </button>
