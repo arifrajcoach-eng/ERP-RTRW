@@ -5,7 +5,7 @@ import {
   persistentMultipleTabManager,
   memoryLocalCache 
 } from 'firebase/firestore';                
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -41,4 +41,7 @@ export const db = initializeFirestore(app, {
 console.log("DB Loaded with Firestore ID:", firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 auth.useDeviceLanguage();
+setPersistence(auth, browserLocalPersistence).catch(err => {
+  console.warn('[firebase] Could not set auth persistence:', err);
+});
 export const storage = getStorage(app);

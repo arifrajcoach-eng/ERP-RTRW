@@ -127,6 +127,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { db } from "./firebase";
 import { safeLocalStorage, safeSessionStorage } from "./lib/safeStorage";
+import { clearUserProfileCache, authInitTimeout } from "./lib/authSessionManager";
 import {
   collection,
   getDocs,
@@ -662,6 +663,7 @@ export default function App() {
       if (wargaAuth) {
         setWargaAuth(null);
       } else {
+        clearUserProfileCache();
         await signOut(auth);
       }
       
@@ -6637,6 +6639,11 @@ function LoginView({
       }
 
       try {
+        clearUserProfileCache();
+        if (auth.currentUser) {
+          await signOut(auth);
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
         const userCredential = await signInWithEmailAndPassword(auth, loginEmail, targetPass);
         const user = userCredential.user;
         const userProfileRef = doc(db, "users", user.uid);
@@ -6663,28 +6670,13 @@ function LoginView({
           ) {
             let wasCreated = false;
             try {
-              // Sign in anonymously to query the users collection
-              console.log("Attempting anonymous registration check for:", loginEmail);
-              await signInAnonymously(auth);
-              const usersRef = collection(db, "users");
-              const q = query(usersRef, where("email", "==", loginEmail));
-              const snap = await getDocs(q);
-
-              if (!snap.empty) {
-                const matchFound = snap.docs.some(
-                  (d) => d.data().password === targetPass,
-                );
-                if (matchFound) {
-                  await createUserWithEmailAndPassword(
-                    auth,
-                    loginEmail,
-                    targetPass,
-                  );
-                  wasCreated = true;
-                } else {
-                   console.warn("Password in Firestore does not match input for:", loginEmail);
-                }
-              }
+              // [FIX] signInAnonymously dihapus - auth state pollution
+              await createUserWithEmailAndPassword(
+                auth,
+                loginEmail,
+                targetPass,
+              );
+              wasCreated = true;
             } catch (autoErr: any) {
               console.warn("Auto-registration check failed:", autoErr);
               if (autoErr.code === 'unavailable' || autoErr.message?.includes('Could not reach')) {

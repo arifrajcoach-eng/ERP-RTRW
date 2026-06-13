@@ -10,7 +10,8 @@ dotenv.config();
 
 import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
-import firebaseConfig from "./firebase-applet-config.json";
+import fs from "fs";
+const firebaseConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "firebase-applet-config.json"), "utf8"));
 import cron from "node-cron";
 
 // Initialize Firebase Admin (Only if credentials provided, otherwise fallback)

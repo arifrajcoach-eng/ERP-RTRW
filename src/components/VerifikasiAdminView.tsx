@@ -148,6 +148,19 @@ export function VerifikasiAdminView({
         batch.delete(legacyRef);
       }
 
+      // Sync verified status to user auth document immediately
+      if (item.authUid) {
+        const userRef = doc(db, 'users', item.authUid);
+        batch.set(userRef, {
+          terverifikasi: true,
+          status: 'Disetujui',
+          nik: item.nik || "",
+          name: item.nama || "",
+          linkedResidentId: standardDocId,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+
       await batch.commit();
       showNotification(`Data ${item.nama} telah disetujui.`, "success");
       setSelectedItem(null);
@@ -191,6 +204,16 @@ export function VerifikasiAdminView({
         });
       }
 
+      // Sync rejection status to user auth document immediately
+      if (item.authUid) {
+        const userRef = doc(db, 'users', item.authUid);
+        batch.set(userRef, {
+          terverifikasi: false,
+          status: 'Ditolak',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+
       await batch.commit();
       showNotification(`Pengajuan ${item.nama} telah ditolak.`, "info");
       setSelectedItem(null);
@@ -213,6 +236,10 @@ export function VerifikasiAdminView({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkApproving, setIsBulkApproving] = useState(false);
 
+  const pendingCount = useMemo(() => {
+    return filteredData.filter(v => v.status === 'Menunggu Persetujuan' && !v.isFinalized).length;
+  }, [filteredData]);
+
   const handleApproveAllSelected = async () => {
     if (selectedIds.length === 0 || isBulkApproving) return;
     
@@ -232,7 +259,7 @@ export function VerifikasiAdminView({
           batch.update(vRef, {
             status: 'Disetujui',
             approvedAt: new Date().toISOString(),
-            approvedBy: currentUser.name || 'Admin',
+            approvedBy: currentUser.name || currentUser.displayName || 'Admin',
             catatan: 'Disetujui secara masal'
           });
           
@@ -240,17 +267,145 @@ export function VerifikasiAdminView({
           const standardDocId = `${recordTenantId}_${item.nik}`;
           const targetRef = doc(db, 'data_warga', standardDocId);
           
-          // Simplified mass update for citizen data
+          // Extensive fields mapping to ensure absolute consistency
+          const updatedFields: any = {
+            terverifikasi: true,
+            updatedAt: new Date().toISOString(),
+            nama: item.nama || "",
+            nik: item.nik || "",
+            rt: item.rt || "01",
+            rw: item.rw || "26",
+          };
+          if (item.kk) updatedFields.kk = item.kk;
+          if (item.hp) updatedFields.hp = item.hp;
+          if (item.alamat || item.blok) updatedFields.blok = item.alamat || item.blok;
+          if (item.pekerjaan || item.profesi) updatedFields.profesi = item.pekerjaan || item.profesi;
+          if (item.pendidikan || item.pendidikanTerakhir) updatedFields.pendidikanTerakhir = item.pendidikan || item.pendidikanTerakhir;
+          if (item.statusKawin || item.kawin) updatedFields.kawin = item.statusKawin || item.kawin;
+          if (item.jk) updatedFields.jk = item.jk;
+          if (item.agama) updatedFields.agama = item.agama;
+          if (item.tempatLahir) updatedFields.tempatLahir = item.tempatLahir;
+          if (item.tglLahir) updatedFields.tglLahir = item.tglLahir;
+          if (item.posisi) updatedFields.posisi = item.posisi;
+          if (item.kewarganegaraan) updatedFields.kewarganegaraan = item.kewarganegaraan;
+          if (item.ktpUrl) {
+            updatedFields.ktpUrl = item.ktpUrl;
+            updatedFields.foto = item.ktpUrl;
+          }
+
           batch.set(targetRef, {
             tenantId: recordTenantId,
             status: 'Warga Tetap',
-            nama: item.nama,
-            nik: item.nik,
+            ...updatedFields
+          }, { merge: true });
+
+          // Sync verified status for bulk approval
+          if (item.authUid) {
+            const userRef = doc(db, 'users', item.authUid);
+            batch.set(userRef, {
+              terverifikasi: true,
+              status: 'Disetujui',
+              nik: item.nik || "",
+              name: item.nama || "",
+              linkedResidentId: standardDocId,
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+          }
+          
+          successCount++;
+        }
+        await batch.commit();
+      }
+      showNotification(`${successCount} data berhasil disetujui secara masal.`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      console.error("Bulk Approve Error:", err);
+      showNotification("Gagal memproses persetujuan masal.", "error");
+    } finally {
+      setIsBulkApproving(false);
+    }
+  };
+
+  const handleBulkApproveAllPending = async () => {
+    const pendingItems = filteredData.filter(v => v.status === 'Menunggu Persetujuan' && !v.isFinalized);
+    if (pendingItems.length === 0) {
+      showNotification("Tidak ada data warga dengan status 'Menunggu Persetujuan' saat ini.", "info");
+      return;
+    }
+
+    const confirmMsg = `Apakah Anda yakin ingin menyetujui seluruh ${pendingItems.length} data warga yang berstatus 'Menunggu Persetujuan' saat ini untuk menghemat waktu?`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsBulkApproving(true);
+    let successCount = 0;
+    try {
+      const CHUNK_SIZE = 450;
+      const idsToApprove = pendingItems.map(v => v.id);
+      
+      for (let i = 0; i < idsToApprove.length; i += CHUNK_SIZE) {
+        const chunk = idsToApprove.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(db);
+        
+        for (const id of chunk) {
+          const item = pendingItems.find(v => v.id === id);
+          if (!item) continue;
+          
+          const vRef = doc(db, 'verifikasi_warga', id);
+          batch.update(vRef, {
+            status: 'Disetujui',
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser.name || currentUser.displayName || 'Admin',
+            catatan: 'Disetujui secara masal'
+          });
+          
+          const recordTenantId = item.tenantId || tenantId;
+          const standardDocId = `${recordTenantId}_${item.nik}`;
+          const targetRef = doc(db, 'data_warga', standardDocId);
+          
+          // Extensive fields mapping to ensure absolute consistency
+          const updatedFields: any = {
+            terverifikasi: true,
+            updatedAt: new Date().toISOString(),
+            nama: item.nama || "",
+            nik: item.nik || "",
             rt: item.rt || "01",
             rw: item.rw || "26",
-            terverifikasi: true,
-            updatedAt: new Date().toISOString()
+          };
+          if (item.kk) updatedFields.kk = item.kk;
+          if (item.hp) updatedFields.hp = item.hp;
+          if (item.alamat || item.blok) updatedFields.blok = item.alamat || item.blok;
+          if (item.pekerjaan || item.profesi) updatedFields.profesi = item.pekerjaan || item.profesi;
+          if (item.pendidikan || item.pendidikanTerakhir) updatedFields.pendidikanTerakhir = item.pendidikan || item.pendidikanTerakhir;
+          if (item.statusKawin || item.kawin) updatedFields.kawin = item.statusKawin || item.kawin;
+          if (item.jk) updatedFields.jk = item.jk;
+          if (item.agama) updatedFields.agama = item.agama;
+          if (item.tempatLahir) updatedFields.tempatLahir = item.tempatLahir;
+          if (item.tglLahir) updatedFields.tglLahir = item.tglLahir;
+          if (item.posisi) updatedFields.posisi = item.posisi;
+          if (item.kewarganegaraan) updatedFields.kewarganegaraan = item.kewarganegaraan;
+          if (item.ktpUrl) {
+            updatedFields.ktpUrl = item.ktpUrl;
+            updatedFields.foto = item.ktpUrl;
+          }
+
+          batch.set(targetRef, {
+            tenantId: recordTenantId,
+            status: 'Warga Tetap',
+            ...updatedFields
           }, { merge: true });
+
+          // Sync verified status for bulk approval
+          if (item.authUid) {
+            const userRef = doc(db, 'users', item.authUid);
+            batch.set(userRef, {
+              terverifikasi: true,
+              status: 'Disetujui',
+              nik: item.nik || "",
+              name: item.nama || "",
+              linkedResidentId: standardDocId,
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+          }
           
           successCount++;
         }
@@ -376,7 +531,7 @@ export function VerifikasiAdminView({
         </div>
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 w-full md:w-auto">
-          {selectedIds.length > 0 && (
+          {selectedIds.length > 0 ? (
             <motion.button
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
@@ -387,8 +542,23 @@ export function VerifikasiAdminView({
               className="px-8 py-5 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 shadow-[0_20px_40px_-10px_rgba(16,185,129,0.4)] flex items-center gap-3 disabled:opacity-50 group ring-1 ring-white/20 whitespace-nowrap"
             >
               <CheckCircle className={`w-5 h-5 ${isBulkApproving ? 'animate-spin' : ''}`} />
-              {isBulkApproving ? 'PROSES...' : `SETUJUI (${selectedIds.length})`}
+              {isBulkApproving ? 'PROSES...' : `SETUJUI SELEKSI (${selectedIds.length})`}
             </motion.button>
+          ) : (
+            pendingCount > 0 && (
+              <motion.button
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                whileHover={{ y: -10, scale: 1.05, boxShadow: "0 25px 50px -12px rgba(16,185,129,0.5)" }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleBulkApproveAllPending}
+                disabled={isBulkApproving}
+                className="px-8 py-5 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 shadow-[0_20px_40px_-10px_rgba(16,185,129,0.4)] flex items-center gap-3 disabled:opacity-50 group ring-1 ring-white/20 whitespace-nowrap"
+              >
+                <CheckCircle className={`w-5 h-5 ${isBulkApproving ? 'animate-spin' : ''}`} />
+                {isBulkApproving ? 'PROSES...' : `SETUJU MASAL (${pendingCount})`}
+              </motion.button>
+            )
           )}
           
           <motion.button 
