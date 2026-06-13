@@ -6664,21 +6664,36 @@ function LoginView({
         const userProfileRef = doc(db, "users", user.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         const userData = userProfileSnap.data();
-        
-        // Save the intended tenant ID to local storage to maintain session context across reloads
-        if (tenantInput) {
-            safeLocalStorage.setItem("lastActiveTenantId", tenantInput);
-        }
-        
-        // SuperAdmin (MASTER) or specific admin accounts bypass tenant ID restriction check
-        const isMaster = userData?.role?.toUpperCase() === "SUPER_ADMIN" || userData?.tenantId === "MASTER" || userData?.isSuperAdmin === true;
 
-        if (userData && !isMaster && userData.tenantId !== tenantInput) {
-            await signOut(auth);
-            throw new Error(`Tenant ID tidak sesuai. Akun Anda terdaftar di wilayah ${userData.tenantId}, bukan ${tenantInput}. Harap periksa Kode Area Wilayah.`);
+        // [FIX-A] Normalise kedua sisi — cegah gagal login karena huruf besar/kecil atau spasi
+        const normalizedInputTenant = String(tenantInput || "").trim().toLowerCase();
+        const normalizedUserTenant  = String(userData?.tenantId || "").trim().toLowerCase();
+
+        // Simpan tenant ke localStorage
+        if (normalizedInputTenant) {
+            safeLocalStorage.setItem("lastActiveTenantId", normalizedInputTenant);
         }
-        
-        // Ensure the spinner stops
+
+        // [FIX-B] Guard: userData tidak ada di Firestore → tunggu onAuthStateChanged
+        if (!userData) {
+            console.warn("[Login] Auth OK tapi dokumen users/" + user.uid + " belum ada. Menunggu onAuthStateChanged...");
+            setIsLoading(false);
+            return;
+        }
+
+        // SuperAdmin bypass tenant check
+        const isMaster = normalizedUserTenant === "master" ||
+                         userData?.role?.toUpperCase() === "SUPER_ADMIN" ||
+                         userData?.isSuperAdmin === true;
+
+        // [FIX-C] Bandingkan versi lowercase dari kedua sisi
+        if (!isMaster && normalizedUserTenant !== normalizedInputTenant) {
+            await signOut(auth);
+            throw new Error(`Tenant ID tidak sesuai. Akun Anda terdaftar di wilayah "${userData.tenantId}", bukan "${tenantInput}". Harap periksa Kode Area Wilayah.`);
+        }
+
+        // [FIX-D] Set currentUser langsung — jangan tunggu onAuthStateChanged cycle berikutnya
+        setCurrentUser({ uid: user.uid, ...userData });
         setIsLoading(false);
       } catch (loginErr: any) {
           if (
