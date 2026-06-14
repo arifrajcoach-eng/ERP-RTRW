@@ -176,7 +176,7 @@ export default function EnterpriseGovDashboard({
                 setIsLoading(false);
               }
             }}
-            className="px-8 py-4 bg-indigo-600 disabled:bg-slate-300 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 disabled:cursor-not-allowed transition-all flex items-center gap-3"
+            className="px-8 py-4 bg-sky-400 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none text-white rounded-[2rem] font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-sky-200/50 hover:bg-sky-500 hover:shadow-sky-200/70 hover:scale-[1.03] active:scale-[0.98] disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-3 border border-sky-300/30 cursor-pointer"
           >
             {isLoading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />

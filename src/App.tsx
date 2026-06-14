@@ -7193,7 +7193,7 @@ function LoginView({
                       type="text"
                       value={tenantInput}
                       onChange={(e) => setTenantInput(e.target.value.toLowerCase().trim())}
-                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-mono font-bold text-base"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-[2.11111px] border-double border-[#30891a] rounded-[1.5rem] text-slate-800 focus:bg-white focus:outline-none focus:border-brand-pink/30 focus:ring-4 focus:ring-brand-pink/10 transition-all font-mono font-bold text-base"
                       placeholder="Contoh: demo_rt100_rw100"
                     />
                   </div>
@@ -7235,9 +7235,14 @@ function LoginView({
                 type="button"
                 onClick={onSelfRegister}
                 disabled={isLoading}
-                className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-brand-blue font-black text-xs uppercase tracking-widest hover:border-brand-blue/40 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-gradient-to-r from-sky-50 via-sky-100/50 to-sky-100/70 border border-sky-200 hover:border-sky-350 rounded-[1.25rem] text-sky-800 hover:text-sky-900 font-bold text-xs uppercase tracking-wider hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 shadow-sm shadow-sky-100/50 hover:shadow-md hover:shadow-sky-200/60 disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
               >
-                <UserPlus className="w-4 h-4" /> Warga Baru? Daftar Mandiri
+                <span className="p-1 px-1.5 bg-sky-200/60 group-hover:bg-sky-200 rounded-lg transition-colors flex items-center justify-center">
+                  <UserPlus className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform duration-300" />
+                </span>
+                <span className="flex items-center gap-1.5 font-bold">
+                  Warga Baru? <span className="text-sky-600 font-black">Daftar Mandiri ✨</span>
+                </span>
               </button>
             </div>
           )}
@@ -7299,41 +7304,74 @@ function LoginView({
 
             <div className="flex flex-col items-center gap-3 mt-6 w-full max-w-sm">
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ 
+                  scale: 1.05, 
+                  y: -3,
+                  boxShadow: "0 20px 25px -5px rgba(56, 189, 248, 0.25), 0 8px 10px -6px rgba(56, 189, 248, 0.25)"
+                }}
+                whileTap={{ scale: 0.97 }}
                 onClick={onShowPricing}
-                className="w-full py-4 bg-white/50 backdrop-blur-sm border-2 border-slate-200 text-slate-600 rounded-2xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:border-brand-blue hover:text-brand-blue transition-all"
+                className="w-full py-4 bg-gradient-to-r from-sky-400 via-sky-400 to-sky-500 hover:from-sky-450 hover:to-sky-550 border-2 border-sky-300 text-white rounded-3xl flex items-center justify-center gap-2.5 shadow-lg shadow-sky-200/50 hover:shadow-sky-300/40 transition-all duration-300 relative overflow-hidden group cursor-pointer font-bold"
               >
-                <Tag className="w-4 h-4" />
-                <span className="text-[11px] font-black uppercase tracking-widest">
-                  Pilih Paket & List Fitur
+                {/* Visual depth decorative mesh/waves */}
+                <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2),transparent_60%)] -z-10 group-hover:scale-125 transition-transform duration-700" />
+                
+                {/* Infinite rotating light background sheen */}
+                <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-40 group-hover:animate-shine" />
+                
+                <span className="p-1 px-1.5 bg-white/20 rounded-lg flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-all duration-300">
+                  <Sparkles className="w-4 h-4 text-[#111111] animate-pulse" />
+                </span>
+                
+                <span className="text-[11px] font-black uppercase tracking-widest text-[#060606] drop-shadow-sm flex items-center gap-1">
+                  Pilih Paket & List Fitur <span className="text-sky-950 group-hover:translate-x-0.5 transition-transform duration-300">⚡</span>
                 </span>
               </motion.button>
 
               <div className="grid grid-cols-2 gap-3 w-full">
                 <motion.a
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ 
+                    scale: 1.05, 
+                    y: -2,
+                    boxShadow: "0 15px 20px -7px rgba(249, 115, 22, 0.45)"
+                  }}
+                  whileTap={{ scale: 0.95 }}
                   href="https://smartrwai.vercel.app/"
                   target="_blank"
-                  className="py-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl flex items-center justify-center gap-2 hover:bg-brand-blue/5 hover:text-brand-blue hover:border-brand-blue/20 transition-all"
+                  className="py-4 bg-gradient-to-tr from-amber-400 via-orange-350 to-orange-500 hover:from-amber-500 hover:via-orange-400 hover:to-orange-600 border border-amber-300 rounded-[1.25rem] flex items-center justify-center gap-2.5 transition-all duration-300 relative overflow-hidden group cursor-pointer font-bold shadow-md shadow-orange-100"
                 >
-                  <Globe className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">
-                    Website
+                  {/* Interactive shine sheen overlay */}
+                  <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.25),transparent_60%)] -z-10 group-hover:scale-125 transition-transform duration-700" />
+                  
+                  <span className="p-1 px-1.5 bg-white/20 rounded-lg flex items-center justify-center group-hover:rotate-12 transition-all duration-300">
+                    <Globe className="w-3.5 h-3.5 text-[#111111] group-hover:scale-110 transition-transform" />
+                  </span>
+                  
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#000000] drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
+                    Website ✨
                   </span>
                 </motion.a>
 
                 <motion.a
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ 
+                    scale: 1.05, 
+                    y: -2,
+                    boxShadow: "0 15px 20px -7px rgba(16, 185, 129, 0.45)"
+                  }}
+                  whileTap={{ scale: 0.95 }}
                   href="https://wa.me/087726741143"
                   target="_blank"
-                  className="py-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all"
+                  className="py-4 bg-gradient-to-tr from-emerald-250 via-teal-100 to-green-300 hover:from-emerald-350 hover:via-teal-200 hover:to-green-400 border border-emerald-300/60 rounded-[1.25rem] flex items-center justify-center gap-2.5 transition-all duration-300 relative overflow-hidden group cursor-pointer font-bold shadow-md shadow-emerald-100/50"
                 >
-                  <Phone className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">
-                    WA Admin
+                  {/* Interactive shine sheen overlay */}
+                  <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.35),transparent_60%)] -z-10 group-hover:scale-125 transition-transform duration-700" />
+                  
+                  <span className="p-1 px-1.5 bg-[#01360e]/10 rounded-lg flex items-center justify-center group-hover:rotate-12 transition-all duration-300">
+                    <Phone className="w-3.5 h-3.5 text-[#030303] group-hover:scale-110 transition-transform" />
+                  </span>
+                  
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#0d0d0d] drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
+                    WA Admin ✨
                   </span>
                 </motion.a>
               </div>
