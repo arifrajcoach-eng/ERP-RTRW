@@ -102,11 +102,16 @@ export default function PengaturanView({
   const [generateMsg, setGenerateMsg] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState(settings?.themeMode || "rt_rw");
+  const [logoUrl, setLogoUrl] = useState(currentTenant?.logo_url || settings?.tenant_system_logo || "");
 
-  // Sync previewMode when settings change (e.g. after save)
+  // Sync previewMode and logoUrl when settings change (e.g. after save)
   useEffect(() => {
     if (settings?.themeMode) setPreviewMode(settings.themeMode);
   }, [settings?.themeMode]);
+
+  useEffect(() => {
+    setLogoUrl(currentTenant?.logo_url || settings?.tenant_system_logo || "");
+  }, [currentTenant?.logo_url, settings?.tenant_system_logo]);
 
   const handleSaveSettings = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -139,7 +144,7 @@ export default function PengaturanView({
 
       // Build tenant update object
       const tenantUpdate: any = {};
-      if (newSettings.tenant_system_logo) {
+      if (newSettings.tenant_system_logo !== undefined) {
         tenantUpdate.logo_url = newSettings.tenant_system_logo;
       }
       if (newSettings.nama_rt) {
@@ -1275,51 +1280,58 @@ export default function PengaturanView({
                   Logo Aplikasi (Sidebar)
                 </label>
                 <div className="flex gap-3 items-center">
-                  <input type="hidden" name="tenant_system_logo" id="tenant_system_logo_input" defaultValue={currentTenant?.logo_url || ""} />
+                  <input type="hidden" name="tenant_system_logo" value={logoUrl} />
                   <input
                     type="file"
                     accept="image/*"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
+                        const localUrl = URL.createObjectURL(file);
+                        setLogoUrl(localUrl);
                         try {
                           const url = await handleFileUpload(
                             file,
                             "system_logo",
                           );
-                          const input = document.getElementById(
-                            "tenant_system_logo_input",
-                          ) as HTMLInputElement;
-                          if (input) {
-                            input.value = url;
-                            showNotification(
-                              "Logo Sistem berhasil diupload. Simpan untuk menerapkan.",
-                              "info",
-                            );
-                          }
+                          setLogoUrl(url);
+                          showNotification(
+                            "Logo Sistem berhasil diunggah. Klik 'Simpan Semua Pengaturan' untuk menerapkan.",
+                            "info",
+                          );
                         } catch (err) {
-                          showNotification("Gagal upload logo sistem", "error");
+                          showNotification("Gagal mengunggah logo sistem", "error");
                         }
                       }
                     }}
                     className="flex-1 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
                   />
-                  <input
-                    name="tenant_system_logo"
-                    id="tenant_system_logo_input"
-                    type="hidden"
-                    defaultValue={currentTenant?.logo_url}
-                  />
-                  <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                    {currentTenant?.logo_url ? (
+                  <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 hover:scale-105 transition-transform duration-200 cursor-pointer">
+                    {logoUrl ? (
                       <img
-                        src={currentTenant.logo_url}
+                        src={logoUrl}
+                        referrerPolicy="no-referrer"
                         className="w-full h-full object-contain"
                       />
                     ) : (
                       <span className="text-[8px] font-black text-slate-300">Logo</span>
                     )}
                   </div>
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLogoUrl("");
+                        showNotification(
+                          "Logo di-reset ke bawaan developer. Simpan pengaturan Anda untuk menerapkan.",
+                          "info"
+                        );
+                      }}
+                      className="px-3 py-1.5 text-xs font-bold leading-none bg-rose-50 text-rose-600 rounded-lg border border-rose-100 hover:bg-rose-100 transition duration-150 shrink-0"
+                    >
+                      Reset Logo
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
