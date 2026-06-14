@@ -645,8 +645,9 @@ export default function TenantsView({
                       defaultValue={editingTenant?.id}
                       readOnly={!!editingTenant}
                       required
-                      placeholder="Contoh: RT01_WARGA"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold text-blue-600"
+                      placeholder="Contoh: rt01_warga"
+                      onChange={(e) => e.target.value = e.target.value.toLowerCase()}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-mono font-bold text-blue-600 lowercase"
                     />
                   </div>
                   <div>
