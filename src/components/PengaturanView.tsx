@@ -1275,6 +1275,7 @@ export default function PengaturanView({
                   Logo Aplikasi (Sidebar)
                 </label>
                 <div className="flex gap-3 items-center">
+                  <input type="hidden" name="tenant_system_logo" id="tenant_system_logo_input" defaultValue={currentTenant?.logo_url || ""} />
                   <input
                     type="file"
                     accept="image/*"
