@@ -35,6 +35,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
+import HealthSummaryView from "./HealthSummaryView";
 
 interface PosyanduViewProps {
   balitaData: any[];
@@ -121,6 +122,7 @@ export default function PosyanduView({
     | "posbindu"
     | "timeline"
     | "ibuhamil_detail"
+  | "kesehatan"
   >("dashboard");
   const [showSuiteMenu, setShowSuiteMenu] = useState(false);
   const [showBalitaForm, setShowBalitaForm] = useState(false);
@@ -530,6 +532,7 @@ export default function PosyanduView({
                         { id: "balita", label: "Data Balita", desc: "Tinggi & berat badan, rekam imunisasi & tumbuh kembang anak", icon: Baby },
                         { id: "ibuhamil", label: "Ibu Hamil", desc: "Nutrisi, vitamin tambahan, masa kehamilan, & kesehatan janin", icon: User },
                         { id: "posbindu", label: "Posbindu (Umum & Lansia)", desc: "Pemeriksaan gula darah, kolesterol, tensi, & lansia terpadu", icon: HeartPulse },
+                        { id: "kesehatan", label: "Kesehatan Umum", desc: "Ringkasan kesehatan warga lansia dan balita", icon: Activity },
                         { id: "timeline", label: "Riwayat & Agenda Kegiatan", desc: "Histori kunjungan posyandu, linimasa imunisasi, & jadwal pos", icon: History },
                       ].map((tab) => {
                         const Icon = tab.icon;
@@ -858,6 +861,10 @@ export default function PosyanduView({
                </div>
             </div>
          </div>
+      )}
+
+      {activeSubTab === "kesehatan" && (
+         <HealthSummaryView tenantId={tenantId} />
       )}
 
       {/* TIMELINE RIWAYAT VIEW - Simplified for common list */}

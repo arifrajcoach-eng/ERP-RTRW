@@ -42,33 +42,25 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
     // Try to get geolocation with patient, high-accuracy settings
     if (typeof navigator !== "undefined" && "geolocation" in navigator) {
       try {
-        // Single, highly patient, high-accuracy attempt to get the best GPS lock
+        // High-accuracy attempt to get the best GPS lock
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 60000, // Wait up to 60s for a satellite lock
+            timeout: 15000, 
             maximumAge: 0,
           });
         });
         lat = position.coords.latitude;
         lng = position.coords.longitude;
-        userLocation = `📍 Sinyal GPS Presisi (Akurasi: ~${position.coords.accuracy.toFixed(0)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        userLocation = `📍 Sinyal GPS Presisi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       } catch (e) {
-        console.warn("High accuracy GPS failed, falling back to network estimation:", e);
-        // Fallback coordinates (-6.194718, 107.0359) from user's current location link
-        const baseLat = -6.194718;
-        const baseLng = 107.0359;
-        const jitter = (Math.random() - 0.5) * 0.001; // Tiny jitter for uniqueness
-        lat = baseLat + jitter;
-        lng = baseLng + jitter;
-        userLocation = `📍 Lokasi Estimasi (GPS Tidak Presisi): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        console.error("GPS lock failed:", e);
+        alert("Gagal mendapatkan lokasi GPS akurat. Pastikan izin lokasi aktif dan sinyal kuat.");
+        return; 
       }
     } else {
-      const baseLat = -6.194718;
-      const baseLng = 107.0359;
-      lat = baseLat + (Math.random() - 0.5) * 0.001;
-      lng = baseLng + (Math.random() - 0.5) * 0.001;
-      userLocation = `📍 Lokasi Estimasi (GPS Tidak Tersedia): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      alert("Fitur lokasi tidak didukung di perangkat ini.");
+      return;
     }
 
     if (!currentUser?.tenantId) {
