@@ -22,15 +22,7 @@ import {
   Cell,
 } from "recharts";
 
-// Assuming textToSpeech utility is available or defined elsewhere
-// If not, it should be passed as a prop or imported from a common utilities file
-// For now, I'll add a placeholder if it's not provided
-async function textToSpeech(text: string, isPremium: boolean = true) {
-  // This is a placeholder for the actual textToSpeech implementation
-  // In a real app, this would call a cloud function or external API
-  console.log("TTS Request:", text, isPremium);
-  return null;
-}
+import { generateRegionalInsight, textToSpeech } from "../services/aiService";
 
 export default function EnterpriseGovDashboard({
   tenantId,
@@ -171,8 +163,20 @@ export default function EnterpriseGovDashboard({
         </div>
         <div className="flex gap-4">
           <button
+            id="btn-generate-regional-insight"
             disabled={isLoading}
-            className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-3"
+            onClick={async () => {
+              try {
+                setIsLoading(true);
+                const result = await generateRegionalInsight(monitoringData);
+                setInsight(result);
+              } catch (error) {
+                console.error("Failed to generate insight:", error);
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            className="px-8 py-4 bg-indigo-600 disabled:bg-slate-300 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 disabled:cursor-not-allowed transition-all flex items-center gap-3"
           >
             {isLoading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />

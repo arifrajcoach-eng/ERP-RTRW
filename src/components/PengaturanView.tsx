@@ -103,6 +103,8 @@ export default function PengaturanView({
   const [isSaving, setIsSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState(settings?.themeMode || "rt_rw");
   const [logoUrl, setLogoUrl] = useState(currentTenant?.logo_url || settings?.tenant_system_logo || "");
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [resetUnderstandCheck, setResetUnderstandCheck] = useState(false);
 
   // Sync previewMode and logoUrl when settings change (e.g. after save)
   useEffect(() => {
@@ -1248,8 +1250,18 @@ export default function PengaturanView({
                     name="rw"
                     defaultValue={settings.rw}
                     placeholder="09"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold"
+                    readOnly={!!currentTenant?.parentId}
+                    className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all font-bold ${
+                      currentTenant?.parentId
+                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                        : "bg-slate-50 border border-slate-200 focus:bg-white"
+                    }`}
                   />
+                  {currentTenant?.parentId && (
+                    <p className="text-[9px] text-slate-400 mt-1 italic">
+                      Terkunci (Diwarisi dari Parent RW)
+                    </p>
+                  )}
                 </div>
               </div>
               <div>
@@ -1260,8 +1272,18 @@ export default function PengaturanView({
                   name="kelurahan"
                   defaultValue={settings.kelurahan}
                   placeholder="Kebalen"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-bold"
+                  readOnly={!!currentTenant?.parentId}
+                  className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all font-bold ${
+                    currentTenant?.parentId
+                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                      : "bg-slate-50 border border-slate-200 focus:bg-white"
+                  }`}
                 />
+                {currentTenant?.parentId && (
+                  <p className="text-[9px] text-slate-400 mt-1 italic">
+                    Terkunci (Diwarisi dari Parent RW)
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
@@ -1340,18 +1362,35 @@ export default function PengaturanView({
               <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">
                 Koneksi Pihak Ketiga & Integrasi
               </h4>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
-                  Token WhatsApp (Gateway)
-                </label>
-                <input
-                  name="TOKEN_WA"
-                  type="password"
-                  defaultValue={settings.TOKEN_WA}
-                  placeholder="••••••••••••••••"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-mono"
-                />
-              </div>
+              {!currentTenant?.parentId ? (
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
+                    Token WhatsApp (Gateway)
+                  </label>
+                  <input
+                    name="TOKEN_WA"
+                    type="password"
+                    defaultValue={settings.TOKEN_WA}
+                    placeholder="••••••••••••••••"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all font-mono"
+                  />
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Token WhatsApp (Gateway)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                    <span className="text-xs font-bold text-slate-600">
+                      Terkunci (Diwarisi dari Global / Parent RW)
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic leading-normal">
+                    RT mewarisi koneksi API gateway otomatis sehingga tidak memerlukan konfigurasi token WhatsApp mandiri.
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
                   Nominal Iuran Rutin Bulanan
@@ -1416,49 +1455,112 @@ export default function PengaturanView({
       </div>
 
       <div className="bg-red-50 p-6 rounded-xl border border-red-200">
-        <h4 className="text-sm font-bold text-red-800 mb-2">
+        <h4 className="text-sm font-bold text-red-800 mb-2 flex items-center gap-2">
+          <Shield className="w-4 h-4 text-red-600 shrink-0" />
           Peringatan: Reset Data {getTranslatedLabel("Warga", settings?.themeMode)}
         </h4>
         <p className="text-xs text-red-600 mb-4">
           Fitur ini akan menghapus <strong>SELURUH</strong> data {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()} di
-          sistem. Data yang sudah dihapus tidak bisa dikembalikan. Gunakan
-          dengan sangat hati-hati.
+          sistem untuk wilayah tenan <strong>{tenantId}</strong>. Data yang sudah dihapus tidak bisa dikembalikan.
         </p>
-        <button
-          onClick={async () => {
-            if (
-              confirm(
-                "Apakah Anda yakin ingin menghapus SELURUH data warga? Tindakan ini tidak dapat dibatalkan!",
-              )
-            ) {
-              try {
-                // Delete batch
-                const { collection, getDocs, writeBatch, doc, query, where } =
-                  await import("firebase/firestore");
-                const q = query(
-                  collection(db, "data_warga"),
-                  where("tenantId", "==", currentUser?.tenantId),
-                );
-                const wargaSnapshot = await getDocs(q);
-                const batch = writeBatch(db);
-                wargaSnapshot.forEach((docSnapshot) =>
-                  batch.delete(docSnapshot.ref),
-                );
-                await batch.commit();
-                showNotification(
-                  "Seluruh data warga berhasil dihapus.",
-                  "success",
-                );
-              } catch (e) {
-                console.error(e);
-                showNotification("Gagal menghapus data.", "error");
-              }
-            }
-          }}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
-        >
-          Hapus Semua Data {getTranslatedLabel("Warga", settings?.themeMode)}
-        </button>
+
+        {!(currentUser?.isSuperAdmin || ["SUPER_ADMIN", "OWNER", "SUPER ADMIN"].includes(userRole?.toUpperCase())) ? (
+          <div className="p-4 bg-red-100 border border-red-200 rounded-lg flex items-start gap-2">
+            <X className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs text-red-800 font-bold">
+                Akses Dibatasi Ketat
+              </p>
+              <p className="text-[11px] text-red-700 mt-0.5">
+                Tombol instan ditiadakan. Hanya akun Pemilik Wilayah Utama (OWNER) atau SUPER ADMIN yang diizinkan untuk menginisiasi proses pembersihan data warga.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 pt-2 border-t border-red-100">
+            <div className="flex items-start gap-2.5">
+              <input
+                id="checkbox-understand-danger"
+                type="checkbox"
+                checked={resetUnderstandCheck}
+                onChange={(e) => setResetUnderstandCheck(e.target.checked)}
+                className="w-4 h-4 mt-0.5 text-red-600 border-red-300 rounded focus:ring-red-500 cursor-pointer text-xs"
+              />
+              <label htmlFor="checkbox-understand-danger" className="text-xs text-red-700 select-none cursor-pointer">
+                Saya paham bahwa seluruh data {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()} akan terhapus <strong>secara permanen</strong> dan semua status iuran, kependudukan, serta history akan hilang selamanya.
+              </label>
+            </div>
+
+            <div className="space-y-1.55">
+              <label className="block text-[10px] font-bold text-red-800 uppercase tracking-wider">
+                Ketik kalimat konfirmasi di bawah untuk membuka kunci:
+              </label>
+              <div className="font-mono text-xs text-red-600 bg-red-100/50 px-3 py-1.5 rounded border border-red-200 select-all inline-block">
+                HAPUS DATA WARGA {tenantId.toUpperCase()}
+              </div>
+              <input
+                id="input-reset-confirmation"
+                type="text"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder="Ketik kalimat konfirmasi sesuai contoh di atas..."
+                className="w-full px-3 py-2 bg-white border border-red-300 rounded-lg text-xs font-mono text-slate-800 focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none transition-all placeholder:font-sans placeholder:text-slate-400"
+              />
+            </div>
+
+            <button
+              id="btn-execute-reset-data"
+              disabled={!resetUnderstandCheck || resetConfirmText !== `HAPUS DATA WARGA ${tenantId.toUpperCase()}`}
+              onClick={async () => {
+                if (resetConfirmText !== `HAPUS DATA WARGA ${tenantId.toUpperCase()}`) return;
+                
+                if (
+                  confirm(
+                    "TINDAKAN AKHIR: Apakah Anda benar-benar yakin ingin menghapus SELURUH data warga? Ini benar-benar kesempatan terakhir untuk membatalkan.",
+                  )
+                ) {
+                  try {
+                    // Delete batch
+                    const { collection, getDocs, writeBatch, query, where } =
+                      await import("firebase/firestore");
+                    const q = query(
+                      collection(db, "data_warga"),
+                      where("tenantId", "==", currentUser?.tenantId),
+                    );
+                    const wargaSnapshot = await getDocs(q);
+                    
+                    if (wargaSnapshot.empty) {
+                      showNotification("Tidak ada data warga untuk dihapus.", "success");
+                      return;
+                    }
+
+                    const batch = writeBatch(db);
+                    wargaSnapshot.forEach((docSnapshot) =>
+                      batch.delete(docSnapshot.ref)
+                    );
+                    await batch.commit();
+
+                    showNotification(
+                      "Seluruh data warga berhasil dihapus permanen.",
+                      "success",
+                    );
+                    
+                    // Reset inputs
+                    setResetConfirmText("");
+                    setResetUnderstandCheck(false);
+                  } catch (e: any) {
+                    console.error(e);
+                    handleFirestoreError(e, "delete", "data_warga");
+                    showNotification("Gagal menghapus data.", "error");
+                  }
+                }
+              }}
+              className="px-4 py-2.5 bg-red-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-all shadow-sm focus:ring-2 focus:ring-red-500 focus:ring-offset-2 hover:shadow-md"
+            >
+              Hapus Semua Data {getTranslatedLabel("Warga", settings?.themeMode)}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Database Schema Map Info */}

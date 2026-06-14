@@ -772,6 +772,7 @@ export default function App() {
   const [usersData, setUsersData] = useState<any[]>([]);
   const [tenantsData, setTenantsData] = useState<any[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
+  const [parentSettings, setParentSettings] = useState<Record<string, any>>({});
   const [kopSettings, setKopSettings] = useState<Record<string, any>>({});
 
   const [notification, setNotification] = useState<{
@@ -1534,6 +1535,25 @@ export default function App() {
     }
   }, [currentUser?.uid, wargaAuth?.tenantId, selectedTenantId, tenantsData]);
 
+  // Real-time listener for parent general settings (inheriting database fallbacks)
+  useEffect(() => {
+    const parentIdToFetch = activeParentTenantId || currentTenant?.parentId;
+    if (!parentIdToFetch) {
+      setParentSettings({});
+      return;
+    }
+    const unsub = onSnapshot(doc(db, "settings", parentIdToFetch), (snap) => {
+      if (snap.exists()) {
+        setParentSettings(snap.data());
+      } else {
+        setParentSettings({});
+      }
+    }, (err) => {
+      console.warn("[App] Gagal memuat pengaturan induk:", err);
+    });
+    return () => unsub();
+  }, [activeParentTenantId, currentTenant?.parentId]);
+
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
@@ -1983,7 +2003,7 @@ export default function App() {
 
   // --- CENTRAL CONFIG HELPERS ---
   const getSetting = (key: string) => {
-    return settings[key] || "";
+    return settings[key] || parentSettings[key] || "";
   };
 
   const kirimWhatsApp = (nomor: string, nama: string) => {
@@ -2501,15 +2521,11 @@ export default function App() {
         id: "monitoring",
         label: "MONITORING",
         icon: LayoutGrid,
-        plan: "multiRegion",
-        minPlan: "PRO",
       },
       {
         id: "audit",
         label: "GOVERNANCE",
         icon: Shield,
-        plan: "governance",
-        minPlan: "PRO",
       },
       {
         id: "analitik",
@@ -2693,6 +2709,7 @@ export default function App() {
             "kependudukan",
             "organisasi",
             "panduan-admin",
+            "audit",
           ],
           OPERATOR: [
             "dashboard",
@@ -4182,41 +4199,17 @@ export default function App() {
               </div>
             ))}
 
-          {activeTab === "monitoring" &&
-            (getPlanFeatures(currentTenant).multiRegion ? (
-              <EnterpriseGovDashboard
-                tenantId={currentUser.tenantId}
-                wargaData={wargaData}
-                currentUser={currentUser}
-                wargaAuth={wargaAuth}
-              />
-            ) : (
-              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
-                <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Globe className="w-8 h-8 text-indigo-600" />
-                </div>
-                <h3 className="text-lg font-bold">Smart Monitoring Region</h3>
-                <p className="text-slate-500 mt-2">
-                  Fitur monitoring multi-wilayah hanya tersedia untuk paket 🏛️
-                  ENTERPRISE.
-                </p>
-              </div>
-            ))}
-          {activeTab === "audit" &&
-            (getPlanFeatures(currentTenant).governance === "HIGH" ? (
-              <AuditLogView logs={auditLogs} />
-            ) : (
-              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-8 h-8 text-slate-400" />
-                </div>
-                <h3 className="text-lg font-bold">Governance & Audit Log</h3>
-                <p className="text-slate-500 mt-2">
-                  Transparansi tata kelola dan log aktivitas admin tersedia di
-                  paket 🏛️ ENTERPRISE.
-                </p>
-              </div>
-            ))}
+          {activeTab === "monitoring" && (
+            <EnterpriseGovDashboard
+              tenantId={currentUser.tenantId}
+              wargaData={wargaData}
+              currentUser={currentUser}
+              wargaAuth={wargaAuth}
+            />
+          )}
+          {activeTab === "audit" && (
+            <AuditLogView logs={auditLogs} />
+          )}
         </div>
       </main>
 
