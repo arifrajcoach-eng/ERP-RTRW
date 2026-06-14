@@ -961,12 +961,26 @@ export function IuranView({
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Alokasi / Jenis Pembayaran</label>
                 <select value={jenisPembayaran} onChange={(e) => setJenisPembayaran(e.target.value)} name="jenis" className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm">
-                  <option value="Iuran Warga">Iuran Wajib Bulanan Warga</option>
-                  <option value="Retribusi Sampah / Keamanan">Retribusi Sampah / Keamanan</option>
-                  <option value="Pajak Bumi Bangunan">Pembayaran Pajak (PBB)</option>
-                  <option value="Listrik, Air & Fasum">Biaya Listrik, Air & Fasilititas Umum</option>
-                  <option value="Donasi / ZIS / Qurban">Donasi / Zakat / Qurban</option>
-                  <option value="Lainnya">Lainnya (Insidentil)</option>
+                  <option value="Iuran RT">Iuran RT</option>
+                  <option value="Iuran RW">Iuran RW</option>
+                  <option value="Iuran Warga">Iuran Warga</option>
+                  <option value="Iuran Sampah">Iuran Sampah</option>
+                  <option value="Iuran 17 an">Iuran 17 an</option>
+                  <option value="Iuran PBB">Iuran PBB</option>
+                  <option value="Iuran Pembangunan/ Renovasi Balai">Iuran Pembangunan/ Renovasi Balai</option>
+                  <option value="Iuran Pembangunan/ Renovasi Kantor">Iuran Pembangunan/ Renovasi Kantor</option>
+                  <option value="Iuran Pembangunan/ Renovasi Pos Ronda">Iuran Pembangunan/ Renovasi Pos Ronda</option>
+                  <option value="Iuran Fasum">Iuran Fasum</option>
+                  <option value="Iuran Keamanan">Iuran Keamanan</option>
+                  <option value="Organisasi">Organisasi</option>
+                  <option value="Sumbangan">Sumbangan</option>
+                  <option value="Donasi">Donasi</option>
+                  <option value="Pembelian ATK">Pembelian ATK</option>
+                  <option value="Pembelian Aset">Pembelian Aset</option>
+                  <option value="Pembelian Elektronik">Pembelian Elektronik</option>
+                  <option value="Pembelian Furniture">Pembelian Furniture</option>
+                  <option value="Pembelian Alat Olahraga">Pembelian Alat Olahraga</option>
+                  <option value="Pembayaran Wifi">Pembayaran Wifi</option>
                 </select>
               </div>
 

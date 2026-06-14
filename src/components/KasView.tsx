@@ -25,6 +25,9 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  QrCode,
+  Store,
+  ShieldCheck,
 } from "lucide-react";
 import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -81,16 +84,49 @@ export function KasView({
   const [trxType, setTrxType] = useState<"Masuk" | "Keluar">("Masuk");
   const [isScanning, setIsScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [kasToDelete, setKasToDelete] = useState<any>(null);
+  const [editingKas, setEditingKas] = useState<any>(null);
+  const [viewingKas, setViewingKas] = useState<any>(null);
+  const [isDeletingKas, setIsDeletingKas] = useState(false);
+  const [isSavingKas, setIsSavingKas] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   // Default values for scanned data
   const [scannedData, setScannedData] = useState<any>(null);
 
+  const [selectedWargaId, setSelectedWargaId] = useState("");
+  const [jenisPembayaran, setJenisPembayaran] = useState("Iuran RT");
+  const [uploading, setUploading] = useState(false);
+
+  // For simulation PG modal like IuranView.tsx
+  const [showPgModal, setShowPgModal] = useState(false);
+  const [pgStep, setPgStep] = useState(1);
+  const [pgMethod, setPgMethod] = useState("");
+  const [pgVirtualAccount, setPgVirtualAccount] = useState("");
+  const [pgFormState, setPgFormState] = useState<any>(null);
+
+  const sanitizeForFirestore = (obj: any) => {
+    return JSON.parse(JSON.stringify(obj, (key, value) => 
+      value === undefined ? null : value
+    ));
+  };
+
+  useEffect(() => {
+    if (wargaData && wargaData.length > 0 && currentUser && showMasukForm && !editingKas) {
+      const u = wargaData.find(w => w.nik === currentUser.nik || w.id === currentUser.id_user || w.id === currentUser.uid);
+      if (u) {
+        setSelectedWargaId(u.docId || u.id || u.nik);
+      }
+    }
+  }, [wargaData, currentUser, showMasukForm, editingKas]);
+
   useEffect(() => {
     if (!showMasukForm) {
       setStrukUrl("");
       setScannedData(null);
+      setSelectedWargaId("");
+      setJenisPembayaran("Iuran RT");
     }
   }, [showMasukForm]);
 
@@ -110,11 +146,6 @@ export function KasView({
   ];
 
   const [years] = useState([2024, 2025, 2026, 2027]);
-  const [kasToDelete, setKasToDelete] = useState<any>(null);
-  const [editingKas, setEditingKas] = useState<any>(null);
-  const [viewingKas, setViewingKas] = useState<any>(null);
-  const [isDeletingKas, setIsDeletingKas] = useState(false);
-  const [isSavingKas, setIsSavingKas] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -449,6 +480,167 @@ export function KasView({
     }
   };
 
+  const handleEditKas = (trx: any) => {
+    setEditingKas(trx);
+    setTrxType(trx.tipe);
+    setStrukUrl(trx.strukUrl || "");
+    
+    // Find matching wargaId for the dropdown
+    if (wargaData && wargaData.length > 0) {
+      const matchingWarga = wargaData.find(w => 
+        (trx.nik && w.nik === trx.nik) || 
+        (trx.userId && (w.id === trx.userId || w.uid === trx.userId || w.docId === trx.userId)) ||
+        (trx.nama?.toLowerCase() === w.nama?.toLowerCase())
+      );
+      if (matchingWarga) {
+        setSelectedWargaId(matchingWarga.docId || matchingWarga.id || matchingWarga.nik);
+      } else {
+        setSelectedWargaId("");
+      }
+    } else {
+      setSelectedWargaId("");
+    }
+    
+    // Set Alokasi / Jenis select
+    setJenisPembayaran(trx.transaksi || "Iuran RT");
+    
+    setShowMasukForm(true);
+  };
+
+  const handleOpenNewKas = () => {
+    setEditingKas(null);
+    setTrxType("Masuk");
+    setStrukUrl("");
+    setSelectedWargaId("");
+    setJenisPembayaran("Iuran RT");
+    setShowMasukForm(true);
+  };
+
+  const handleStartPg = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    
+    if (!formRef.current) {
+      showNotification("Sistem Error: Form tidak ditemukan", "error");
+      return;
+    }
+    
+    const formData = new FormData(formRef.current);
+    const nominalRaw = parseInt((formData.get('nominal') as string)?.replace(/\D/g, '') || "0");
+    
+    if (nominalRaw <= 0) {
+      showNotification("Silakan masukkan nominal pembayaran", "error");
+      return;
+    }
+
+    const wargaId = formData.get('wargaId') as string;
+    const namaPenytorVal = formData.get('namaPenyetor') as string;
+    const jenis = jenisPembayaran || "Iuran RT";
+    const tanggal = formData.get('tanggal') as string;
+    const keterangan = formData.get('keterangan') as string;
+    
+    if (isPengurus && !wargaId && !namaPenytorVal) {
+      showNotification("Harap pilih warga atau isi nama penyetor", "error");
+      return;
+    }
+
+    setPgFormState({
+      tanggal,
+      nominal: nominalRaw,
+      jenis,
+      keterangan,
+      wargaId,
+      namaPenyetor: namaPenytorVal
+    });
+    setPgStep(1);
+    setPgMethod('');
+    setShowPgModal(true);
+  };
+
+  const handlePgSuccess = async () => {
+    const id = `IURAN-${Date.now()}`;
+    const dateObj = (pgFormState.tanggal && !isNaN(new Date(pgFormState.tanggal).getTime())) ? new Date(pgFormState.tanggal) : new Date();
+    
+    let nik = (currentUser?.nik || currentUser?.uid || currentUser?.id_user || "-").toString();
+    let nama = currentUser?.nama || currentUser?.name || "Warga";
+    let alamat = "-";
+    let targetUserId = currentUser?.uid || currentUser?.id_user || null;
+
+    if (isPengurus && pgFormState.wargaId) {
+      const selectedWarga = wargaData.find((w:any) => w.id === pgFormState.wargaId || w.docId === pgFormState.wargaId || w.nik === pgFormState.wargaId);
+      if (selectedWarga) {
+        nik = (selectedWarga.nik || "-").toString();
+        nama = selectedWarga.nama || "Warga";
+        alamat = selectedWarga.alamat || selectedWarga.blok || "-";
+        targetUserId = selectedWarga.id || selectedWarga.uid || selectedWarga.id_user || null;
+      }
+    } else if (isPengurus && pgFormState.namaPenyetor) {
+      nama = pgFormState.namaPenyetor;
+      nik = "-";
+    }
+
+    const payload = sanitizeForFirestore({
+      id,
+      tenantId: tenantId || "MASTER",
+      rt: (currentUser?.rt || '01').toString(),
+      tanggal: dateObj.toISOString(),
+      jenis: pgFormState.jenis || "Iuran RT",
+      nominal: pgFormState.nominal || 0,
+      keterangan: pgFormState.keterangan || `Pembayaran ${pgFormState.jenis || 'Iuran'} (via ${pgMethod})`,
+      nik: nik || "-",
+      namaPenyetor: nama || "Warga",
+      alamat: alamat || "-",
+      buktiUrl: `PG-${pgMethod} Digital Receipt`,
+      status: 'Lunas',
+      userId: targetUserId || null,
+      verifiedBy: 'Sistem',
+      verifiedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    setIsLoadingDB(true);
+    try {
+      await setDoc(doc(db, 'iuran', id), payload);
+      setIuranData((prev: any) => {
+        if (prev.some((i: any) => i.id === id)) return prev;
+        return [payload, ...prev];
+      });
+      
+      const kasId = `TRX-${Date.now()}`;
+      const kasPayload = {
+        id: kasId,
+        tenantId: tenantId || "MASTER",
+        rt: payload.rt,
+        tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        tipe: 'Masuk',
+        transaksi: payload.jenis,
+        nama: payload.namaPenyetor,
+        keterangan: payload.keterangan,
+        debit: payload.nominal,
+        kredit: 0,
+        strukUrl: `Simulasi PG ${pgMethod}`,
+        iuranId: id
+      };
+      await setDoc(doc(db, 'kas', kasId), kasPayload);
+      setKasData((prev: any) => {
+        if (prev.some((k: any) => k.id === kasId)) return prev;
+        return [kasPayload, ...prev];
+      });
+      
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_IURAN_ONLINE", "iuran", `Iuran Online: RP ${payload.nominal} - ${payload.namaPenyetor}`, tenantId);
+      
+      showNotification('Pembayaran Online Berhasil!', 'success');
+      setShowPgModal(false);
+      setShowMasukForm(false);
+      setStrukUrl('');
+      setJenisPembayaran('Iuran RT');
+    } catch (e: any) {
+      handleFirestoreError(e, 'create', `iuran/${id}`);
+      showNotification('Gagal mencatat pembayaran online', 'error');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
   const handleSaveKas = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSavingKas) return;
@@ -487,8 +679,39 @@ export function KasView({
       (formData.get("nominal") as string).replace(/\D/g, "") || "0",
     );
 
-    const transaksi = formData.get("transaksi") as string;
-    const nama = formData.get("nama") as string;
+    let nik = "-";
+    let nama = "";
+    let alamat = "-";
+    let targetUserId = null;
+
+    if (isPengurus) {
+      const selectedWargaIdFromForm = formData.get('wargaId') as string;
+      const w = wargaData.find((item: any) => 
+        (item.docId || item.id || item.nik) === selectedWargaIdFromForm
+      );
+      
+      if (w) {
+        nik = (w.nik || "-").toString();
+        nama = w.nama || "Warga";
+        alamat = w.alamat || "-";
+        targetUserId = w.id || w.uid || w.id_user || null;
+      } else {
+        const manualNama = formData.get('namaPenyetor') as string;
+        if (manualNama) {
+          nama = manualNama;
+        } else {
+          nama = trxType === "Masuk" ? "Penyetor Luar Warga" : "Penerima Luar Warga";
+        }
+      }
+    } else {
+       nik = (currentUser?.nik || currentUser?.uid || currentUser?.id_user || "-").toString();
+       nama = currentUser?.nama || currentUser?.name || "Warga";
+       const foundCurrent = wargaData.find((w: any) => (w.nik === nik && nik !== "-") || (currentUser?.uid && w.id === currentUser.uid));
+       if (foundCurrent) alamat = foundCurrent.alamat || "-";
+       targetUserId = currentUser?.uid || currentUser?.id_user || null;
+    }
+
+    const transaksi = jenisPembayaran || "Iuran RT";
     const keterangan = formData.get("keterangan") as string;
 
     const newTrx = {
@@ -499,7 +722,9 @@ export function KasView({
       tipe: trxType,
       transaksi: transaksi,
       nama: nama,
-      alamat: (formData.get("alamat") as string) || "-",
+      nik: nik,
+      alamat: alamat,
+      userId: targetUserId,
       keterangan: keterangan,
       debit: trxType === "Masuk" ? nominal : 0,
       kredit: trxType === "Keluar" ? nominal : 0,
@@ -694,7 +919,7 @@ export function KasView({
                   </button>
                   
                   <button
-                    onClick={() => { setTrxType("Masuk"); setShowMasukForm(true); }}
+                    onClick={handleOpenNewKas}
                     className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-tr from-brand-blue to-indigo-700 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-brand-blue/20 active:scale-95 shadow-xl shadow-brand-blue/20 group"
                   >
                     <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> 
@@ -773,7 +998,7 @@ export function KasView({
                         <button onClick={() => setViewingKas(trx)} className="p-3 text-white bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl shadow-lg shadow-amber-500/20 transform hover:scale-110 active:scale-95 transition-all border border-white/10 outline-none"><Eye className="w-4 h-4" /></button>
                         {isPengurus && (
                           <>
-                            <button onClick={() => { setEditingKas(trx); setTrxType(trx.tipe); setStrukUrl(trx.strukUrl || ""); setShowMasukForm(true); }} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
+                            <button onClick={() => handleEditKas(trx)} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
                             <button onClick={() => setKasToDelete(trx)} className="p-3 text-rose-600 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white hover:scale-110 active:scale-95 transition-all outline-none"><Trash2 className="w-4 h-4" /></button>
                           </>
                         )}
@@ -895,7 +1120,7 @@ export function KasView({
               <form
                 onSubmit={handleSaveKas}
                 ref={formRef}
-                className="px-10 pt-0 pb-0 h-[300px] overflow-y-auto space-y-8"
+                className="p-10 overflow-y-auto space-y-8 flex-1"
               >
                 {scannedData && (
                   <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex items-center gap-3 animate-pulse">
@@ -909,24 +1134,54 @@ export function KasView({
                 <div className="p-1.5 bg-slate-100/50 rounded-2xl flex gap-1.5 border border-slate-200/50 shadow-inner">
                   <button
                     type="button"
-                    onClick={() => setTrxType("Masuk")}
+                    onClick={() => { setTrxType("Masuk"); setJenisPembayaran("Iuran RT"); }}
                     className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${trxType === "Masuk" ? "bg-white text-emerald-600 shadow-lg border border-emerald-50 scale-[1.02]" : "text-slate-400 hover:text-slate-600"}`}
                   >
                     Pemasukan (+)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTrxType("Keluar")}
+                    onClick={() => { setTrxType("Keluar"); setJenisPembayaran("Fasum"); }}
                     className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${trxType === "Keluar" ? "bg-white text-rose-600 shadow-lg border border-rose-50 scale-[1.02]" : "text-slate-400 hover:text-slate-600"}`}
                   >
                     Pengeluaran (-)
                   </button>
                 </div>
 
+                {isPengurus && (
+                  <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-6 rounded-[2rem] border border-blue-100/50 space-y-4 shadow-inner">
+                    <label className="block text-[10px] font-black text-blue-800 uppercase tracking-[0.3em] ml-1 mb-2">
+                      {trxType === "Masuk" ? "Identitas Penyetor (Admin Otoritas)" : "Identitas Penerima (Admin Otoritas)"}
+                    </label>
+                    <select 
+                      name="wargaId" 
+                      value={selectedWargaId} 
+                      onChange={(e) => setSelectedWargaId(e.target.value)}
+                      className="w-full px-5 py-4 border border-blue-100 rounded-2xl text-sm font-black text-slate-700 bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                    >
+                      <option value="">-- Bukan warga terdaftar (User Umum) --</option>
+                      {[...wargaData].sort((a: any, b: any) => (a.nama || '').localeCompare(b.nama || '')).map((w:any, index: number) => (
+                        <option key={`w-kas-opt-${w.docId || w.id || w.nik || index}-${index}`} value={w.docId || w.id || w.nik}>
+                          {w.nama} ({w.nik})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        name="namaPenyetor" 
+                        defaultValue={editingKas?.nama || ""} 
+                        placeholder={trxType === "Masuk" ? "Atau ketik manual nama penyetor luar warga..." : "Atau ketik manual nama penerima luar warga..."} 
+                        className="w-full px-5 py-4 border border-blue-100 rounded-2xl text-sm font-bold text-slate-600 bg-white outline-none focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-300 transition-all shadow-sm" 
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
-                      Tanggal Log
+                      Tanggal Transaksi
                     </label>
                     <input
                       name="tanggal"
@@ -943,7 +1198,7 @@ export function KasView({
                   </div>
                   <div className="space-y-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
-                      Nominal (IDR)
+                      Nominal Pembayaran (IDR)
                     </label>
                     <div className="relative">
                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">Rp</span>
@@ -952,10 +1207,10 @@ export function KasView({
                         type="text"
                         defaultValue={
                           editingKas
-                            ? editingKas.debit || editingKas.kredit
+                            ? (editingKas.debit || editingKas.kredit)
                             : scannedData?.nominal || ""
                         }
-                        placeholder="0"
+                        placeholder="50.000"
                         className="w-full pl-12 pr-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                         required
                       />
@@ -965,128 +1220,125 @@ export function KasView({
 
                 <div className="space-y-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
-                    Kategori & Jenis Transaksi
+                    Alokasi / Jenis Pembayaran
                   </label>
-                  <input
-                    name="transaksi"
-                    type="text"
-                    defaultValue={editingKas?.transaksi || scannedData?.transaksi || ""}
-                    placeholder={
-                      trxType === "Masuk"
-                        ? "Misal: Iuran Warga, Donasi, dll"
-                        : "Misal: Perbaikan Fasum, Listrik, dll"
-                    }
+                  <select 
+                    value={jenisPembayaran} 
+                    onChange={(e) => setJenisPembayaran(e.target.value)} 
+                    name="jenis" 
                     className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
-                      Nama / Entitas
-                    </label>
-                    <input
-                      name="nama"
-                      type="text"
-                      defaultValue={editingKas?.nama || scannedData?.nama || ""}
-                      placeholder="Bpk. Budi / Toko Maju"
-                      className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
-                      Blok / Alamat (Opsional)
-                    </label>
-                    <input
-                      name="alamat"
-                      type="text"
-                      defaultValue={editingKas?.alamat || ""}
-                      placeholder="Blok A No. 1"
-                      className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
-                    />
-                  </div>
+                  >
+                    <option value="Iuran RT">Iuran RT</option>
+                    <option value="Iuran RW">Iuran RW</option>
+                    <option value="Iuran Warga">Iuran Warga</option>
+                    <option value="Iuran Sampah">Iuran Sampah</option>
+                    <option value="Iuran 17 an">Iuran 17 an</option>
+                    <option value="Iuran PBB">Iuran PBB</option>
+                    <option value="Iuran Pembangunan/ Renovasi Balai">Iuran Pembangunan/ Renovasi Balai</option>
+                    <option value="Iuran Pembangunan/ Renovasi Kantor">Iuran Pembangunan/ Renovasi Kantor</option>
+                    <option value="Iuran Pembangunan/ Renovasi Pos Ronda">Iuran Pembangunan/ Renovasi Pos Ronda</option>
+                    <option value="Iuran Fasum">Iuran Fasum</option>
+                    <option value="Iuran Keamanan">Iuran Keamanan</option>
+                    <option value="Organisasi">Organisasi</option>
+                    <option value="Sumbangan">Sumbangan</option>
+                    <option value="Donasi">Donasi</option>
+                    <option value="Pembelian ATK">Pembelian ATK</option>
+                    <option value="Pembelian Aset">Pembelian Aset</option>
+                    <option value="Pembelian Elektronik">Pembelian Elektronik</option>
+                    <option value="Pembelian Furniture">Pembelian Furniture</option>
+                    <option value="Pembelian Alat Olahraga">Pembelian Alat Olahraga</option>
+                    <option value="Pembayaran Wifi">Pembayaran Wifi</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
-                    Detail Keterangan
+                    Catatan / Keterangan (Opsional)
                   </label>
                   <textarea
                     name="keterangan"
                     defaultValue={editingKas?.keterangan || scannedData?.keterangan || ""}
                     rows={2}
-                    placeholder="Penjelasan rincian penggunaan/sumber dana secara mendetail..."
-                    className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-bold text-slate-600 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm resize-none"
+                    placeholder="Berikan detail tambahan jika diperlukan..."
+                    className="w-full px-5 py-4 border border-slate-100 bg-slate-50/50 rounded-2xl text-sm font-bold text-slate-600 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm resize-none"
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex justify-between">
-                    <span>Lampiran Struk / Invoice</span>
-                    <span className="text-[8px] text-blue-500">Maksimal 5MB</span>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex justify-between items-center">
+                    <span>Lampiran Bukti / Struk Fisik</span>
+                    <span className="text-blue-500 text-[8px] font-black">Maksimal 5MB</span>
                   </label>
-                  <div className="flex gap-4 items-center">
-                    {(strukUrl || editingKas?.strukUrl) ? (
-                      <div className="relative w-24 h-24 rounded-2xl border-2 border-blue-100 overflow-hidden shrink-0 group">
-                        <img
-                          src={strukUrl || editingKas?.strukUrl}
-                          className="w-full h-full object-cover"
-                        />
-                        <button type="button" onClick={() => setStrukUrl('')} className="absolute inset-0 bg-rose-600/60 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                           <X className="w-5 h-5" />
-                        </button>
+                  {strukUrl ? (
+                    <div className="relative w-full aspect-video bg-slate-50 rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-inner group">
+                      <img src={strukUrl} alt="Bukti" className="w-full h-full object-contain" />
+                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                         <button type="button" onClick={() => setStrukUrl('')} className="bg-white text-rose-600 px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/20">
+                           <Trash2 className="w-4 h-4" /> HAPUS FOTO
+                         </button>
                       </div>
-                    ) : (
-                      <div className="flex-1">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          id="kas-struk-upload"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              try {
-                                const url = await handleFileUpload(file, "kas_struk");
-                                setStrukUrl(url);
-                              } catch (err) {
-                                showNotification("Gagal upload struk", "error");
-                              }
-                            }
-                          }}
-                        />
-                        <button 
-                           type="button" 
-                           onClick={() => document.getElementById('kas-struk-upload')?.click()}
-                           className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black text-slate-400 hover:bg-slate-50 hover:border-blue-300 hover:text-blue-600 transition-all"
-                        >
-                           <Upload className="w-4 h-4" /> UNGGAH BUKTI FISIK
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="w-full">
+                      <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setUploading(true);
+                          try {
+                            const url = await handleFileUpload(e.target.files[0], 'kas_struk');
+                            if (url) setStrukUrl(url);
+                          } catch (err) {
+                            showNotification("Gagal upload bukti", "error");
+                          }
+                          setUploading(false);
+                        }
+                      }} />
+                      <button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className="w-full py-10 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-400 hover:bg-blue-50/50 hover:border-blue-300 hover:text-blue-600 transition-all flex flex-col items-center justify-center gap-4 bg-slate-50/30 outline-none group focus:ring-4 focus:ring-blue-500/10 disabled:opacity-50 disabled:cursor-wait">
+                        {uploading ? (
+                          <div className="w-10 h-10 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
+                        ) : (
+                          <>
+                            <div className="p-4 bg-white rounded-2xl shadow-lg shadow-slate-100 border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+                               <Upload className="w-8 h-8 text-blue-500" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs font-black uppercase tracking-widest text-slate-500">Klik Untuk Unggah Dokumen</p>
+                              <p className="text-[10px] text-slate-400 mt-1">Format: JPG, PNG, WEBP</p>
+                            </div>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                  <button
-                    type="submit"
-                    className={`flex-[2] py-5 text-[11px] font-black uppercase tracking-widest rounded-2xl shadow-2xl transition-all active:scale-95 text-white flex items-center justify-center gap-3 ${trxType === "Masuk" ? "bg-gradient-to-r from-emerald-500 to-teal-600 shadow-emerald-500/30" : "bg-gradient-to-r from-rose-500 to-red-700 shadow-rose-500/30"}`}
+                  <button 
+                    type="submit" 
+                    disabled={uploading}
+                    className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                   >
                     <CheckCircle2 className="w-5 h-5" />
-                    {editingKas ? "SIMPAN PERUBAHAN" : `KONFIRMASI ${trxType.toUpperCase()}`}
+                    {editingKas ? 'SIMPAN PERUBAHAN' : trxType === "Masuk" ? 'CATAT PEMBAYARAN TUNAI' : 'CATAT PENGELUARAN TUNAI'}
                   </button>
-                   <button
-                    type="button"
-                    onClick={() => {
-                      setShowMasukForm(false);
-                      setEditingKas(null);
-                    }}
-                    className="flex-1 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] bg-white border border-slate-100 rounded-[1.5rem] hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
-                  >
-                    BATAL
-                  </button>
+                  {!editingKas && trxType === "Masuk" ? (
+                    <button 
+                      type="button" 
+                      onClick={handleStartPg} 
+                      className="flex-1 bg-gradient-to-r from-indigo-600 to-violet-700 text-white px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                    >
+                      <QrCode className="w-5 h-5" />
+                      BAYAR ONLINE (QRIS/VA)
+                    </button>
+                  ) : (
+                    <button 
+                      type="button" 
+                      onClick={() => { setShowMasukForm(false); setEditingKas(null); }}
+                      className="flex-1 bg-white border border-slate-200 text-slate-500 px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] hover:bg-slate-50 active:scale-95 transition-all flex items-center justify-center gap-3"
+                    >
+                      BATAL
+                    </button>
+                  )}
                 </div>
               </form>
             </motion.div>
@@ -1237,6 +1489,99 @@ export function KasView({
             cancelText="Batal"
             isLoading={isDeletingKas}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Simulation Payment Gateway Modal */}
+      <AnimatePresence>
+        {showPgModal && (
+          <div className="fixed inset-0 bg-slate-900/60 flex justify-center items-center z-[120] p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative"
+            >
+              <div className="bg-blue-600 p-6 flex flex-col items-center justify-center text-white relative">
+                <button onClick={() => setShowPgModal(false)} className="absolute top-4 right-4 text-blue-200 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+                <h3 className="font-black tracking-widest uppercase text-xs text-blue-200 mb-1">Simulasi Payment Gateway</h3>
+                <div className="text-3xl font-black font-mono">
+                  Rp {new Intl.NumberFormat('id-ID').format(pgFormState?.nominal || 0)}
+                </div>
+              </div>
+
+              <div className="p-6 overflow-y-auto">
+                {pgStep === 1 && (
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Pilih Metode Pembayaran</p>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => { setPgMethod('QRIS'); setPgVirtualAccount(''); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                          <QrCode className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-black text-slate-700">QRIS</span>
+                      </button>
+                      <button onClick={() => { setPgMethod('VA BCA'); setPgVirtualAccount('014' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                          <Wallet className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-black text-slate-700">VA BCA</span>
+                      </button>
+                      <button onClick={() => { setPgMethod('VA Mandiri'); setPgVirtualAccount('895' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                          <Wallet className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-black text-slate-700">VA Mandiri</span>
+                      </button>
+                      <button onClick={() => { setPgMethod('Alfamart'); setPgVirtualAccount('ALF' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0')); setPgStep(2); }} className="p-4 border-2 border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 group">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-500 group-hover:text-blue-600">
+                          <Store className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-black text-slate-700">Alfamart</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {pgStep === 2 && (
+                  <div className="space-y-6 flex flex-col items-center">
+                    <div className="text-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{pgMethod}</p>
+                      <p className="text-sm font-bold text-slate-800 mt-1">Selesaikan Pembayaran</p>
+                    </div>
+
+                    {pgMethod === 'QRIS' ? (
+                      <div className="w-48 h-48 bg-slate-100 rounded-2xl border-4 border-white shadow-xl flex items-center justify-center p-4">
+                        <QrCode className="w-full h-full text-slate-800" />
+                      </div>
+                    ) : (
+                      <div className="w-full bg-slate-50 rounded-2xl border border-slate-200 p-4 text-center">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nomor Virtual Account</p>
+                        <p className="text-2xl font-mono font-black text-blue-600 tracking-wider select-all">{pgVirtualAccount}</p>
+                      </div>
+                    )}
+
+                    <div className="w-full pt-4 border-t border-slate-100">
+                      <button onClick={handlePgSuccess} className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
+                        <CheckCircle2 className="w-5 h-5" /> Simulasi Bayar Sukses
+                      </button>
+                      <button onClick={() => setPgStep(1)} className="w-full mt-3 py-3 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                        Kembali Pilih Metode
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="py-3 bg-slate-50 text-center border-t border-slate-100">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Powered by Tripay Simulation
+                </span>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
