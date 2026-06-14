@@ -483,7 +483,7 @@ export function WargaProfileView({
                              setFormData(currentData);
                              setIsEditing(true);
                           }}
-                          className="flex items-center gap-4 px-8 py-5 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.25em] text-slate-600 dark:text-slate-300 hover:border-brand-blue/30 hover:text-brand-blue hover:shadow-2xl hover:shadow-brand-blue/10 transition-all shadow-sm group"
+                          className="flex items-center gap-4 px-8 py-5 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.25em] text-white hover:shadow-2xl hover:shadow-indigo-500/30 transition-all duration-300 group"
                        >
                           <Edit className="w-5 h-5 group-hover:rotate-12 transition-transform" /> 
                           Pembaruan Berkas
@@ -1172,15 +1172,21 @@ export function WargaProfileView({
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">RT</label>
                                    <div className="relative">
-                                      <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" value={formData.rt || ''} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <select value={formData.rt || '01'} onChange={e => setFormData({...formData, rt: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none appearance-none">
+                                          {Array.from({length: 100}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
+                                             <option key={rt} value={rt}>{`RT ${rt}`}</option>
+                                          ))}
+                                      </select>
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">RW</label>
                                    <div className="relative">
-                                      <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
-                                      <input type="text" value={formData.rw || ''} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all" />
+                                      <select value={formData.rw || '01'} onChange={e => setFormData({...formData, rw: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none appearance-none">
+                                          {Array.from({length: 100}, (_, i) => String(i+1).padStart(2, '0')).map(rw => (
+                                             <option key={rw} value={rw}>{`RW ${rw}`}</option>
+                                          ))}
+                                      </select>
                                    </div>
                                 </div>
                              </div>
