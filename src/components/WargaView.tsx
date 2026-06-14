@@ -1105,7 +1105,7 @@ function WargaView(props: WargaViewProps) {
                               ) : (
                                 <>
                                   <option value="Semua">RT SEMUA</option>
-                                  {Array.from({length: 15}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
+                                  {Array.from({length: 100}, (_, i) => String(i+1).padStart(2, '0')).map(rt => (
                                     <option key={rt} value={rt}>{`RT ${rt}`}</option>
                                   ))}
                                 </>
@@ -1125,7 +1125,7 @@ function WargaView(props: WargaViewProps) {
                               className="w-full bg-slate-900 border border-slate-800 text-[10px] font-black text-slate-300 rounded-lg p-2.5 outline-none appearance-none cursor-pointer focus:border-indigo-500/50 tracking-wider uppercase"
                             >
                               <option value="Semua">RW SEMUA</option>
-                              {Array.from({length: 30}, (_, i) => String(i+1).padStart(2, '0')).map(rw => (
+                              {Array.from({length: 100}, (_, i) => String(i+1).padStart(2, '0')).map(rw => (
                                 <option key={rw} value={rw}>{`RW ${rw}`}</option>
                               ))}
                             </select>

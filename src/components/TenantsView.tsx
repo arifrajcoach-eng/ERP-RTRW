@@ -62,68 +62,68 @@ export default function TenantsView({
       
       const defaultTenants = [
         {
-          id: "rw26_berjuang",
-          name: "RW 26 Berjuang",
+          id: "rw62_bersatu",
+          name: "RW 62 Bersatu",
           parentId: "",
-          adminEmail: "rw26@berjuang.com",
+          adminEmail: "rw62@bersatu.com",
           adminPhone: "081234567890",
           status: "PREMIUM",
           isActive: true,
           maxWarga: 1000,
           addons: ["chat", "ai_bot", "financial_analytics", "surat_digital", "voting_online"],
-          rwTarget: "26"
+          rwTarget: "62"
         },
         {
-          id: "rt01_rw26_berjuang",
-          name: "RT 01 / RW 26 Berjuang",
-          parentId: "rw26_berjuang",
-          adminEmail: "rt01@rw26_berjuang.com",
+          id: "rt01_rw62_bersatu",
+          name: "RT 01 / RW 62 Bersatu",
+          parentId: "rw62_bersatu",
+          adminEmail: "rt01@rw62_bersatu.com",
           adminPhone: "081234567891",
           status: "BASIC",
           isActive: true,
           maxWarga: 200,
           addons: ["chat"],
           rtTarget: "1",
-          rwTarget: "26"
+          rwTarget: "62"
         },
         {
-          id: "rt02_rw26_berjuang",
-          name: "RT 02 / RW 26 Berjuang",
-          parentId: "rw26_berjuang",
-          adminEmail: "rt02@rw26_berjuang.com",
+          id: "rt02_rw62_bersatu",
+          name: "RT 02 / RW 62 Bersatu",
+          parentId: "rw62_bersatu",
+          adminEmail: "rt02@rw62_bersatu.com",
           adminPhone: "081234567892",
           status: "BASIC",
           isActive: true,
           maxWarga: 200,
           addons: ["chat"],
           rtTarget: "2",
-          rwTarget: "26"
+          rwTarget: "62"
         },
         {
-          id: "rt03_rw26_berjuang",
-          name: "RT 03 / RW 26 Berjuang",
-          parentId: "rw26_berjuang",
-          adminEmail: "rt03@rw26_berjuang.com",
+          id: "rt03_rw62_bersatu",
+          name: "RT 03 / RW 62 Bersatu",
+          parentId: "rw62_bersatu",
+          adminEmail: "rt03@rw62_bersatu.com",
           adminPhone: "081234567893",
           status: "BASIC",
           isActive: true,
           maxWarga: 200,
           addons: ["chat"],
           rtTarget: "3",
-          rwTarget: "26"
+          rwTarget: "62"
         },
         {
-          id: "rt04_rw26_berjuang",
-          name: "RT 04 / RW 26 Berjuang",
-          parentId: "rw26_berjuang",
-          adminEmail: "rt04@rw26_berjuang.com",
+          id: "rt04_rw62_bersatu",
+          name: "RT 04 / RW 62 Bersatu",
+          parentId: "rw62_bersatu",
+          adminEmail: "rt04@rw62_bersatu.com",
           adminPhone: "081234567894",
           status: "BASIC",
           isActive: true,
           maxWarga: 200,
           addons: ["chat"],
           rtTarget: "4",
-          rwTarget: "26"
+          rwTarget: "62"
         }
       ];
 
@@ -143,7 +143,7 @@ export default function TenantsView({
       }
 
       await batch.commit();
-      showNotification("Berhasil memulihkan default tenants (rw26_berjuang & sub-tenant RT01-04)!", "success");
+      showNotification("Berhasil memulihkan default tenants (rw62_bersatu & sub-tenant RT01-04)!", "success");
     } catch (error: any) {
       console.error("Failed to restore default tenants:", error);
       showNotification("Gagal memulihkan default tenants.", "error");

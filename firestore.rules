@@ -43,7 +43,7 @@ service cloud.firestore {
     
     function isTenantMemberStatic(tenantId) {
       let isString = tenantId is string;
-      let isCommon = isString && tenantId in ['trihprw26', 'MASTER', 'master', 'rt01_rw26_berjuang', 'rt02_rw26_berjuang', 'rt03_rw26_berjuang', 'rt04_rw26_berjuang', 'rt05_rw26_berjuang'];
+      let isCommon = isString && tenantId in ['trihprw26', 'MASTER', 'master', 'rt01_rw62_bersatu', 'rt02_rw62_bersatu', 'rt03_rw62_bersatu', 'rt04_rw62_bersatu', 'rt05_rw62_bersatu'];
       return isSignedIn() && isString && (
         isAdminStatic() ||
         ('email' in request.auth.token && request.auth.token.email != null && request.auth.token.email.lower() == 'arifrajcoach@gmail.com') || 
@@ -54,9 +54,9 @@ service cloud.firestore {
         // Exact Group Isolation to prevent cross-RW group leaks
         (
           ('tenantId' in request.auth.token && request.auth.token.tenantId != null && (
-            // Both belong to 'berjuang' group strictly
-            (((request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') || request.auth.token.tenantId.lower() == 'rw26_berjuang' || request.auth.token.tenantId.lower().matches('.*berjuang.*')) &&
-              (tenantId.lower().matches('^rt[0-9]+_rw26_berjuang$') || tenantId.lower() == 'rw26_berjuang' || tenantId.lower().matches('.*berjuang.*')))) ||
+            // Both belong to 'bersatu' group strictly
+            (((request.auth.token.tenantId.lower().matches('^rt[0-9]+_rw62_bersatu$') || request.auth.token.tenantId.lower() == 'rw62_bersatu' || request.auth.token.tenantId.lower().matches('.*bersatu.*')) &&
+              (tenantId.lower().matches('^rt[0-9]+_rw62_bersatu$') || tenantId.lower() == 'rw62_bersatu' || tenantId.lower().matches('.*bersatu.*')))) ||
               
             // Both belong to 'trih' group strictly
             (((request.auth.token.tenantId.lower().matches('^rt[0-9]+_trih.*') || request.auth.token.tenantId.lower() == 'trihprw26' || request.auth.token.tenantId.lower().matches('.*trih.*')) &&
@@ -68,7 +68,7 @@ service cloud.firestore {
           )) ||
           
           ('email' in request.auth.token && request.auth.token.email != null && (
-            (request.auth.token.email.lower().matches('.*berjuang.*') && tenantId.lower().matches('.*berjuang.*')) ||
+            (request.auth.token.email.lower().matches('.*bersatu.*') && tenantId.lower().matches('.*bersatu.*')) ||
             (request.auth.token.email.lower().matches('.*trih.*') && tenantId.lower().matches('.*trih.*')) ||
             (request.auth.token.email.lower().matches('.*rw26.*') && tenantId.lower().matches('.*rw26.*'))
           ))

@@ -7113,6 +7113,18 @@ function LoginView({
                   </>
                 )}
               </button>
+              
+              <div className="mt-4">
+                <input
+                  type="text"
+                  placeholder="KODE AREA WILAYAH (TENANT ID)"
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) => {
+                    // Simpan tenant ID di local storage seperti yang diarahkan di aturan 1
+                    localStorage.setItem('tempTenantId', e.target.value);
+                  }}
+                />
+              </div>
             </div>
           )}
 
