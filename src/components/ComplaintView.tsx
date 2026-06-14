@@ -13,8 +13,8 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
   const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
   
   const complaints = isAtLeastPengurus 
-    ? complaintsData 
-    : complaintsData.filter((c: any) => c.userId === currentUser.uid || c.userId === currentUser.id_user);
+    ? (complaintsData || [])
+    : (complaintsData || []).filter((c: any) => c.userId === currentUser.uid || c.userId === currentUser.id_user);
 
   const handleUpdateStatus = async (complaintId: string, newStatus: string) => {
     try {

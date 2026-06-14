@@ -184,6 +184,7 @@ import { BukuTamuView } from "./components/BukuTamuView";
 import { FinansialDashboardView } from "./components/FinansialDashboardView";
 import { VerifikasiAdminView } from "./components/VerifikasiAdminView";
 import { WargaProfileView } from "./components/WargaProfileView";
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ComplaintView } from "./components/ComplaintView";
 import { SatpamDashboard } from "./components/SatpamDashboard";
 import { BookingView } from "./components/BookingView";

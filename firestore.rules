@@ -428,7 +428,15 @@ service cloud.firestore {
     }
 
     match /emergencies/{docId} {
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && isTenantMember(getAuthenticatedUserTenantId());
+      allow get: if isTenantMember(resource.data.tenantId);
+      allow create: if isSignedIn();
+      allow update: if isTenantMember(resource.data.tenantId) || 
+                       (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /emergency_logs/{docId} {
+      allow list: if isSignedIn() && isTenantMember(getAuthenticatedUserTenantId());
       allow get: if isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn();
       allow update: if isTenantMember(resource.data.tenantId) || 
