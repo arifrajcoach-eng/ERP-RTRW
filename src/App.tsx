@@ -886,6 +886,10 @@ export default function App() {
                 await updateDoc(emRef, {
                   latitude: lat,
                   longitude: lng,
+                  location: {
+                    lat: lat,
+                    lng: lng
+                  },
                   userLocation: userLocation,
                   updatedAt: new Date().toISOString()
                 });
@@ -894,6 +898,10 @@ export default function App() {
                  await updateDoc(logRef, {
                   latitude: lat,
                   longitude: lng,
+                  location: {
+                    lat: lat,
+                    lng: lng
+                  },
                   userLocation: userLocation,
                   updatedAt: new Date().toISOString()
                 }).catch(() => {});
@@ -3473,8 +3481,8 @@ export default function App() {
                   const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
 
                   const mapsUrl = hasCoords
-                    ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activeEmergency?.userName ? activeEmergency.userName + " " : "") + (activeEmergency?.userAddress || "RW 26"))}`;
+                    ? `https://www.google.com/maps?q=loc:${lat},${lng}&z=19`
+                    : `https://www.google.com/maps?q=${encodeURIComponent((activeEmergency?.userName ? activeEmergency.userName + " " : "") + (activeEmergency?.userAddress || "RW 26"))}`;
 
                   const handleShare = () => {
                     const text = `🚨 DARURAT SOS! 🚨\nSistem SmaRtRw AI Mengirim Peringatan:\n\nWarga: ${activeEmergency?.userName || mergedWargaProfile?.nama || "Warga Tetangga"}\nAlamat: ${activeEmergency?.userAddress || "Lihat Profil"}\nKoordinat: ${mapsUrl}\n\nMohon segera di cek!`;
@@ -3563,8 +3571,8 @@ export default function App() {
                   const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
 
                   const mapsUrl = hasCoords
-                    ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activeEmergency?.userName ? activeEmergency.userName + " " : "") + (activeEmergency?.userAddress || "RW 26"))}`;
+                    ? `https://www.google.com/maps?q=loc:${lat},${lng}&z=19`
+                    : `https://www.google.com/maps?q=${encodeURIComponent((activeEmergency?.userName ? activeEmergency.userName + " " : "") + (activeEmergency?.userAddress || "RW 26"))}`;
 
                   const handleShare = () => {
                     const text = `🚨 DARURAT SOS! 🚨\nSistem SmaRtRw AI Mengirim Peringatan:\n\nWarga: ${activeEmergency?.userName || mergedWargaProfile?.nama || "Warga Tetangga"}\nAlamat: ${activeEmergency?.userAddress || "Lihat Profil"}\nKoordinat: ${mapsUrl}\n\nMohon segera di cek!`;

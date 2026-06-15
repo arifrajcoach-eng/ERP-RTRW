@@ -120,14 +120,20 @@ export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) =>
                     </p>
                     
                     <div className="pt-2">
-                      <a 
-                        href={`https://www.google.com/maps?q=loc:${emergency.location?.lat || 0},${emergency.location?.lng || 0}&z=19`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-xs font-bold bg-slate-800/80 hover:bg-red-900/40 text-blue-400 hover:text-red-300 border border-slate-700/50 hover:border-red-900/40 px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
-                      >
-                        <MapPin size={14} className="text-red-400" /> Lihat Lokasi GPS
-                      </a>
+                      {(() => {
+                        const lat = emergency.location?.lat ?? (emergency as any).latitude ?? (emergency as any).lat ?? 0;
+                        const lng = emergency.location?.lng ?? (emergency as any).longitude ?? (emergency as any).lng ?? 0;
+                        return (
+                          <a 
+                            href={`https://www.google.com/maps?q=loc:${lat},${lng}&z=19`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-xs font-bold bg-slate-800/80 hover:bg-red-900/40 text-blue-400 hover:text-red-300 border border-slate-700/50 hover:border-red-900/40 px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
+                          >
+                            <MapPin size={14} className="text-red-400" /> Lihat Lokasi GPS
+                          </a>
+                        );
+                      })()}
                     </div>
                 </div>
                 
