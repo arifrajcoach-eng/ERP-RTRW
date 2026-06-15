@@ -42,11 +42,10 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
     // Try to get geolocation with patient, high-accuracy settings
     if (typeof navigator !== "undefined" && "geolocation" in navigator) {
       try {
-        // High-accuracy attempt to get the best GPS lock
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 15000, 
+            timeout: 10000, 
             maximumAge: 0,
           });
         });
@@ -54,13 +53,21 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
         lng = position.coords.longitude;
         userLocation = `📍 Sinyal GPS Presisi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       } catch (e) {
-        console.error("GPS lock failed:", e);
-        alert("Gagal mendapatkan lokasi GPS akurat. Pastikan izin lokasi aktif dan sinyal kuat.");
-        return; 
+        console.warn("GPS lock failed:", e);
       }
-    } else {
-      alert("Fitur lokasi tidak didukung di perangkat ini.");
-      return;
+    }
+    
+    // Always prioritize custom calibrated coordinates if they exist
+    const customLat = localStorage.getItem("custom_sos_lat");
+    const customLng = localStorage.getItem("custom_sos_lng");
+    if (customLat && customLng) {
+      lat = parseFloat(customLat);
+      lng = parseFloat(customLng);
+      userLocation = `📍 Sinyal GPS Terkalibrasi (Kustom): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } else if (lat === 0 && lng === 0) {
+      // Allow sending SOS even without location.
+      userLocation = `📍 Lokasi Tidak Diketahui / GPS Dinonaktifkan`;
+      console.warn("Mengirim SOS tanpa lokasi.");
     }
 
     if (!currentUser?.tenantId) {

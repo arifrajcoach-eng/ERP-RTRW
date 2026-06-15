@@ -82,10 +82,10 @@ export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) =>
                     </h2>
                     <p className="text-slate-400 mt-1">{emergency.userPhone}</p>
                     <a 
-                    href={`https://www.google.com/maps?q=${emergency.location.lat},${emergency.location.lng}`} 
+                    href={`https://www.google.com/maps?q=loc:${emergency.location?.lat || 0},${emergency.location?.lng || 0}&z=19`} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-blue-400 mt-2 hover:underline"
+                    className="flex items-center gap-2 text-blue-400 mt-2 hover:underline cursor-pointer"
                     >
                     <MapPin size={16} /> Lihat Lokasi
                     </a>

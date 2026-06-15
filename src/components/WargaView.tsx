@@ -1725,7 +1725,7 @@ function WargaView(props: WargaViewProps) {
                    }}>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="flex flex-col text-left">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">NIK <span className="text-red-500">*</span></label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-[17px]">NIK <span className="text-red-500">*</span></label>
                             <input required name="nik" defaultValue={editingWarga?.nik} readOnly={!!showEditForm} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          <div className="flex flex-col text-left">

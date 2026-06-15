@@ -108,6 +108,7 @@ import PanduanAdminView from "./components/PanduanAdminView";
 import ETokoView from "./components/toko/ETokoView";
 import { EVotingView } from "./components/EVotingView";
 import { AIDocumentSuiteMenu } from "./components/AIDocumentSuiteMenu";
+import { MapPicker } from "./components/MapPicker";
 import Webcam from "react-webcam";
 import {
   BarChart,
@@ -768,6 +769,35 @@ export default function App() {
   const [bookingsData, setBookingsData] = useState<any[]>([]);
   const [isSOSTriggering, setIsSOSTriggering] = useState(false);
   const [hiddenEmergencyId, setHiddenEmergencyId] = useState<string | null>(null);
+  const [useCustomSOSCoords, setUseCustomSOSCoords] = useState<boolean>(() => {
+    return safeLocalStorage.getItem("custom_sos_lat") !== null;
+  });
+  const [customSOSLat, setCustomSOSLat] = useState<string>(() => {
+    return safeLocalStorage.getItem("custom_sos_lat") || "";
+  });
+  const [customSOSLng, setCustomSOSLng] = useState<string>(() => {
+    return safeLocalStorage.getItem("custom_sos_lng") || "";
+  });
+  const [isCalibratingSOS, setIsCalibratingSOS] = useState(false);
+
+  // Automatically pull calibrated GPS coordinates from citizen profile database when available
+  useEffect(() => {
+    if (mergedWargaProfile?.latitude && mergedWargaProfile?.longitude) {
+      const dbLat = mergedWargaProfile.latitude.toString();
+      const dbLng = mergedWargaProfile.longitude.toString();
+      const savedLat = safeLocalStorage.getItem("custom_sos_lat");
+      const savedLng = safeLocalStorage.getItem("custom_sos_lng");
+      
+      if (dbLat !== savedLat || dbLng !== savedLng) {
+        setCustomSOSLat(dbLat);
+        setCustomSOSLng(dbLng);
+        setUseCustomSOSCoords(true);
+        safeLocalStorage.setItem("custom_sos_lat", dbLat);
+        safeLocalStorage.setItem("custom_sos_lng", dbLng);
+        console.log("SmaRtRw AI: Loaded pinpoint calibration coordinates from profile database:", dbLat, dbLng);
+      }
+    }
+  }, [mergedWargaProfile?.latitude, mergedWargaProfile?.longitude]);
 
   const [usersData, setUsersData] = useState<any[]>([]);
   const [tenantsData, setTenantsData] = useState<any[]>([]);
@@ -846,6 +876,69 @@ export default function App() {
   useEffect(() => {
     // Redundant - audio logic is in SOSOverlay
   }, [activeEmergency?.id]);
+
+  // Real-time GPS Tracking logic for active SOS triggered by this user
+  useEffect(() => {
+    let watchId: number | null = null;
+    const currentUserId = auth.currentUser?.uid || wargaAuth?.uid;
+
+    if (activeEmergency?.userId === currentUserId && activeEmergency?.status === "ACTIVE") {
+      const savedLat = safeLocalStorage.getItem("custom_sos_lat");
+      const savedLng = safeLocalStorage.getItem("custom_sos_lng");
+
+      if (savedLat && savedLng) {
+        console.log("GPS Terkalibrasi Aktif: Melewati tracking real-time untuk mencegah penimpaan dengan lokasi yang tidak akurat.");
+        // Skip watching position if custom calibrated coords exist
+        return;
+      }
+
+      if (typeof navigator !== "undefined" && "geolocation" in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+          async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const userLocation = `📍 Sinyal GPS Real-Time (Akurasi: ~${position.coords.accuracy.toFixed(0)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            
+            try {
+              if (activeEmergency.id) {
+                const emRef = doc(db, "emergencies", activeEmergency.id);
+                await updateDoc(emRef, {
+                  latitude: lat,
+                  longitude: lng,
+                  userLocation: userLocation,
+                  updatedAt: new Date().toISOString()
+                });
+                
+                const logRef = doc(db, "emergency_logs", activeEmergency.id);
+                 await updateDoc(logRef, {
+                  latitude: lat,
+                  longitude: lng,
+                  userLocation: userLocation,
+                  updatedAt: new Date().toISOString()
+                }).catch(() => {});
+              }
+            } catch (err) {
+              console.warn("Gagal update GPS real-time:", err);
+            }
+          },
+          (err) => {
+            console.warn("GPS tracking error:", err);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      }
+    }
+
+    return () => {
+      if (watchId !== null && typeof navigator !== "undefined" && "geolocation" in navigator) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [activeEmergency?.id, activeEmergency?.status, activeEmergency?.userId, auth.currentUser?.uid, wargaAuth?.uid]);
 
   const showNotification = (
     message: string,
@@ -1292,39 +1385,59 @@ export default function App() {
       let lat = 0;
       let lng = 0;
 
-      // Try to get geolocation with patient, high-accuracy settings
-      if (typeof navigator !== "undefined" && "geolocation" in navigator) {
-        try {
-          // Single, highly patient, high-accuracy attempt to get the best GPS lock
-          const position = await new Promise<GeolocationPosition>(
-            (resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true,
-                timeout: 30000,
-                maximumAge: 0,
-              });
-            },
-          );
-          lat = position.coords.latitude;
-          lng = position.coords.longitude;
-          userLocation = `📍 Sinyal GPS Presisi (Akurasi: ~${position.coords.accuracy.toFixed(0)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        } catch (geoErr) {
-          console.warn("High-accuracy geolocation failed, attempting network estimation...", geoErr);
-          // Fallback coordinates
-          const baseLat = -6.194718;
-          const baseLng = 107.0359;
-          const jitter = (Math.random() - 0.5) * 0.001;
-          lat = baseLat + jitter;
-          lng = baseLng + jitter;
-          userLocation = `📍 Lokasi Estimasi (GPS Tidak Presisi): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        }
+      // Check if custom, calibrated coordinates are defined in safeLocalStorage BEFORE tracking
+      const savedLat = safeLocalStorage.getItem("custom_sos_lat");
+      const savedLng = safeLocalStorage.getItem("custom_sos_lng");
+      
+      if (savedLat && savedLng) {
+        lat = parseFloat(savedLat);
+        lng = parseFloat(savedLng);
+        userLocation = `📍 Sinyal GPS Terkalibrasi (Kustom): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       } else {
-        // Fallback if browser does not support geolocation
-        const baseLat = -6.194718;
-        const baseLng = 107.0359;
-        lat = baseLat + (Math.random() - 0.5) * 0.001;
-        lng = baseLng + (Math.random() - 0.5) * 0.001;
-        userLocation = `📍 Lokasi Estimasi (GPS Tidak Tersedia): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        // Only Try to get geolocation if no custom coords exist
+        if (typeof navigator !== "undefined" && "geolocation" in navigator) {
+          try {
+            // Single, highly patient, high-accuracy attempt to get the best GPS lock
+            const position = await new Promise<GeolocationPosition>(
+              (resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                  enableHighAccuracy: true,
+                  timeout: 10000,
+                  maximumAge: 0,
+                });
+              },
+            );
+            lat = position.coords.latitude;
+            lng = position.coords.longitude;
+            userLocation = `📍 Sinyal GPS Presisi (Akurasi: ~${position.coords.accuracy.toFixed(0)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          } catch (geoErr) {
+            console.warn("High-accuracy geolocation failed, attempting low accuracy...", geoErr);
+            try {
+               const position = await new Promise<GeolocationPosition>(
+                (resolve, reject) => {
+                  navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: false,
+                    timeout: 8000,
+                    maximumAge: 60000,
+                  });
+                },
+               );
+              lat = position.coords.latitude;
+              lng = position.coords.longitude;
+              userLocation = `📍 Sinyal GPS Standar : ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            } catch (geoErr2) {
+              console.warn("Geolocation failed completely", geoErr2);
+              lat = 0;
+              lng = 0;
+              userLocation = `📍 Akeses Lokasi Ditolak. Harap izinkan akses lokasi (GPS) di pengaturan browser Anda.`;
+            }
+          }
+        } else {
+          // Fallback if browser does not support geolocation
+          lat = 0;
+          lng = 0;
+          userLocation = `📍 Fitur Lokasi (GPS) Tidak Tersedia di Perangkat/Browser Ini.`;
+        }
       }
 
       // Consolidate values using mergedWargaProfile to support both admin/operator and custom citizen login sessions safely
@@ -3117,9 +3230,167 @@ export default function App() {
                 <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-4">
                   Kirim Sinyal Darurat?
                 </h2>
-                <p className="text-slate-600 dark:text-slate-400 text-base font-medium leading-relaxed mb-8 px-2">
+                <p className="text-slate-600 dark:text-slate-400 text-base font-medium leading-relaxed mb-6 px-2">
                   Tindakan ini akan memberitahukan seluruh pengurus dan warga RW / RT secara instan. Gunakan hanya untuk keadaan mendesak.
                 </p>
+
+                {/* ADVANCED GPS ACCURACY CALIBRATION FOR OFF-TRACK COORDINATES */}
+                <div className="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-left font-sans">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                      Akurasi Lokasi SOS
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsCalibratingSOS(!isCalibratingSOS)}
+                      className="text-[10px] font-black text-rose-600 hover:text-rose-700 uppercase tracking-tight underline border-none bg-transparent cursor-pointer"
+                    >
+                      {isCalibratingSOS ? "Tutup" : "Kalibrasi GPS"}
+                    </button>
+                  </div>
+                  
+                  {!isCalibratingSOS ? (
+                    <div>
+                      {useCustomSOSCoords ? (
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            GPS Terkalibrasi Aktif
+                          </p>
+                          <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                            Lat: {customSOSLat} | Lng: {customSOSLng}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                            GPS Otomatis (Browser)
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                            Mengikuti sistem pencarian satelit perangkat Anda. Jika meleset / geser ke wilayah Slipi/Katalia, harap lakukan **Kalibrasi GPS**.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-3 space-y-3">
+                      <div className="flex flex-col gap-2">
+                        <label className="block text-[9px] font-black text-slate-500 uppercase mb-0.5">Pilih Lokasi Akurat Anda</label>
+                        <MapPicker 
+                          lat={parseFloat(customSOSLat) || 0} 
+                          lng={parseFloat(customSOSLng) || 0} 
+                          onChange={(newLat, newLng) => {
+                            setCustomSOSLat(newLat.toString());
+                            setCustomSOSLng(newLng.toString());
+                          }}
+                        />
+                        {(customSOSLat && customSOSLng) && (
+                          <div className="grid grid-cols-2 gap-2 mt-1">
+                             <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-800">
+                               <p className="text-[8px] font-bold text-slate-400 uppercase">Latitude</p>
+                               <p className="text-[10px] font-mono font-medium text-slate-700 dark:text-slate-300 truncate">{customSOSLat}</p>
+                             </div>
+                             <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-800">
+                               <p className="text-[8px] font-bold text-slate-400 uppercase">Longitude</p>
+                               <p className="text-[10px] font-mono font-medium text-slate-700 dark:text-slate-300 truncate">{customSOSLng}</p>
+                             </div>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-tight">
+                        💡 **Tips**: Geser pin merah di peta untuk menentukan koordinat presisi rumah Anda. Ini menjadi lokasi acuan jika terjadi SOS darurat!
+                      </p>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!customSOSLat || !customSOSLng) {
+                              alert("Harap isi Latitude dan Longitude!");
+                              return;
+                            }
+                            const latNum = parseFloat(customSOSLat);
+                            const lngNum = parseFloat(customSOSLng);
+                            
+                            safeLocalStorage.setItem("custom_sos_lat", customSOSLat.trim());
+                            safeLocalStorage.setItem("custom_sos_lng", customSOSLng.trim());
+                            setUseCustomSOSCoords(true);
+                            setIsCalibratingSOS(false);
+                            
+                            // Back up to Cloud Database synchronously
+                            try {
+                              const citizenDocId = mergedWargaProfile?.docId;
+                              if (citizenDocId) {
+                                await updateDoc(doc(db, "data_warga", citizenDocId), {
+                                  latitude: latNum,
+                                  longitude: lngNum
+                                });
+                              }
+                              if (currentUser?.uid) {
+                                await updateDoc(doc(db, "users", currentUser.uid), {
+                                  latitude: latNum,
+                                  longitude: lngNum
+                                });
+                              }
+                            } catch (err) {
+                              console.warn("Failed to backup GPS coordinates to database:", err);
+                            }
+
+                            setNotification({
+                              message: "Lokasi GPS berhasil dikalibrasi & disimpan ke awan!",
+                              type: "success"
+                            });
+                            setTimeout(() => setNotification(null), 2500);
+                          }}
+                          className="flex-1 py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all text-center border-none cursor-pointer"
+                        >
+                          Simpan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            safeLocalStorage.removeItem("custom_sos_lat");
+                            safeLocalStorage.removeItem("custom_sos_lng");
+                            setCustomSOSLat("");
+                            setCustomSOSLng("");
+                            setUseCustomSOSCoords(false);
+                            setIsCalibratingSOS(false);
+                            
+                            // Remove from Cloud Database as well
+                            try {
+                              const citizenDocId = mergedWargaProfile?.docId;
+                              if (citizenDocId) {
+                                await updateDoc(doc(db, "data_warga", citizenDocId), {
+                                  latitude: null,
+                                  longitude: null
+                                });
+                              }
+                              if (currentUser?.uid) {
+                                await updateDoc(doc(db, "users", currentUser.uid), {
+                                  latitude: null,
+                                  longitude: null
+                                });
+                              }
+                            } catch (err) {
+                              console.warn("Failed to clear GPS coordinates from database:", err);
+                            }
+
+                            setNotification({
+                              message: "Kembali menggunakan GPS otomatis bawaan browser.",
+                              type: "info"
+                            });
+                            setTimeout(() => setNotification(null), 2500);
+                          }}
+                          className="py-1.5 px-2 bg-slate-250 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-all text-center border-none cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-col gap-4">
                   <button
                     onClick={confirmSOS}
@@ -3156,17 +3427,56 @@ export default function App() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <button
-                  onClick={() => {
-                    const lat = activeEmergency?.latitude ?? activeEmergency?.location?.lat ?? activeEmergency?.lat ?? -6.194718;
-                    const lng = activeEmergency?.longitude ?? activeEmergency?.location?.lng ?? activeEmergency?.lng ?? 107.0359;
-                    window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
-                  }}
-                  className="p-2 sm:p-2.5 bg-white text-rose-700 rounded-xl shadow-md border border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center shrink-0"
-                  title="Cek Lokasi Kejadian"
-                >
-                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
+                {(() => {
+                  const rawLat = activeEmergency?.latitude ?? activeEmergency?.location?.latitude ?? activeEmergency?.location?.lat ?? activeEmergency?.lat ?? 0;
+                  const rawLng = activeEmergency?.longitude ?? activeEmergency?.location?.longitude ?? activeEmergency?.location?.lng ?? activeEmergency?.lng ?? 0;
+                  const lat = typeof rawLat === "string" ? parseFloat(rawLat) : Number(rawLat || 0);
+                  const lng = typeof rawLng === "string" ? parseFloat(rawLng) : Number(rawLng || 0);
+                  const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+
+                  const mapsUrl = hasCoords
+                    ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activeEmergency?.userName ? activeEmergency.userName + " " : "") + (activeEmergency?.userAddress || "RW 26"))}`;
+
+                  const handleShare = () => {
+                    const text = `🚨 DARURAT SOS! 🚨\nSistem SmaRtRw AI Mengirim Peringatan:\n\nWarga: ${activeEmergency?.userName || mergedWargaProfile?.nama || "Warga Tetangga"}\nAlamat: ${activeEmergency?.userAddress || "Lihat Profil"}\nKoordinat: ${mapsUrl}\n\nMohon segera di cek!`;
+                    if (navigator.share) {
+                      navigator.share({
+                        title: 'Darurat SOS!',
+                        text: text,
+                        url: mapsUrl
+                      }).catch(() => {});
+                    } else {
+                      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
+                    }
+                  };
+
+                  return (
+                    <>
+                      <button
+                        onClick={handleShare}
+                        className="p-2 sm:p-2.5 bg-white text-blue-600 rounded-xl shadow-md border border-blue-200 hover:bg-blue-50 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                        title="Bagikan Lokasi SOS"
+                      >
+                        <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 sm:p-2.5 bg-white text-rose-700 rounded-xl shadow-md border border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                        title={hasCoords ? "Cek Lokasi Kejadian (GPS Coords)" : "Cek Lokasi Kejadian (Pencarian Alamat)"}
+                        onClick={() => {
+                          if (!hasCoords) {
+                            showNotification?.("Membuka koordinat berbasis pencarian alamat karena GPS real-time tidak tersedia.", "info");
+                          }
+                        }}
+                      >
+                        <MapPin className={`w-4 h-4 sm:w-5 sm:h-5 ${hasCoords ? "text-rose-700 animate-pulse" : "text-amber-600"}`} />
+                      </a>
+                    </>
+                  );
+                })()}
                 <button
                   onClick={() => setIsLocalAlarmMuted(!isLocalAlarmMuted)}
                   className={`p-2 sm:p-2.5 ${isLocalAlarmMuted ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' : 'bg-red-700 hover:bg-red-800 text-white border-red-800'} rounded-xl shadow-md border transition-all flex items-center justify-center shrink-0`}
@@ -3206,18 +3516,57 @@ export default function App() {
                 <p className="text-[9px] font-bold text-slate-800 leading-none mt-0.5">Siklus Sirine: {localSOSLoopCount} / 12</p>
               </div>
             </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <button
-                  onClick={() => {
-                    const lat = activeEmergency?.latitude ?? activeEmergency?.location?.lat ?? activeEmergency?.lat ?? -6.194718;
-                    const lng = activeEmergency?.longitude ?? activeEmergency?.location?.lng ?? activeEmergency?.lng ?? 107.0359;
-                    window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
-                  }}
-                  className="p-2 sm:p-2.5 bg-white text-rose-700 rounded-xl shadow-md border border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center shrink-0"
-                  title="Cek Lokasi Kejadian"
-                >
-                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {(() => {
+                  const rawLat = activeEmergency?.latitude ?? activeEmergency?.location?.latitude ?? activeEmergency?.location?.lat ?? activeEmergency?.lat ?? 0;
+                  const rawLng = activeEmergency?.longitude ?? activeEmergency?.location?.longitude ?? activeEmergency?.location?.lng ?? activeEmergency?.lng ?? 0;
+                  const lat = typeof rawLat === "string" ? parseFloat(rawLat) : Number(rawLat || 0);
+                  const lng = typeof rawLng === "string" ? parseFloat(rawLng) : Number(rawLng || 0);
+                  const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+
+                  const mapsUrl = hasCoords
+                    ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activeEmergency?.userName ? activeEmergency.userName + " " : "") + (activeEmergency?.userAddress || "RW 26"))}`;
+
+                  const handleShare = () => {
+                    const text = `🚨 DARURAT SOS! 🚨\nSistem SmaRtRw AI Mengirim Peringatan:\n\nWarga: ${activeEmergency?.userName || mergedWargaProfile?.nama || "Warga Tetangga"}\nAlamat: ${activeEmergency?.userAddress || "Lihat Profil"}\nKoordinat: ${mapsUrl}\n\nMohon segera di cek!`;
+                    if (navigator.share) {
+                      navigator.share({
+                        title: 'Darurat SOS!',
+                        text: text,
+                        url: mapsUrl
+                      }).catch(() => {});
+                    } else {
+                      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
+                    }
+                  };
+
+                  return (
+                    <>
+                      <button
+                        onClick={handleShare}
+                        className="p-2 sm:p-2.5 bg-white text-blue-600 rounded-xl shadow-md border border-blue-200 hover:bg-blue-50 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                        title="Bagikan Lokasi SOS"
+                      >
+                        <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 sm:p-2.5 bg-white text-rose-700 rounded-xl shadow-md border border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                        title={hasCoords ? "Cek Lokasi Kejadian (GPS Coords)" : "Cek Lokasi Kejadian (Pencarian Alamat)"}
+                        onClick={() => {
+                          if (!hasCoords) {
+                            showNotification?.("Membuka koordinat berbasis pencarian alamat karena GPS real-time tidak tersedia.", "info");
+                          }
+                        }}
+                      >
+                        <MapPin className={`w-4 h-4 sm:w-5 sm:h-5 ${hasCoords ? "text-rose-700 animate-pulse" : "text-amber-600"}`} />
+                      </a>
+                    </>
+                  );
+                })()}
                 <button
                   onClick={() => setIsLocalAlarmMuted(!isLocalAlarmMuted)}
                   className={`p-2 sm:p-2.5 ${isLocalAlarmMuted ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' : 'bg-red-700 hover:bg-red-800 text-white border-red-800'} rounded-xl shadow-md border transition-all flex items-center justify-center shrink-0`}
@@ -6770,6 +7119,7 @@ function LoginView({
       let preRegisteredRole = "Viewer";
       let preRegisteredTenant = tenantId;
       let isPreRegistered = false;
+      let userDataExtra = {};
 
       // 2. If standard UID document doesn't exist, search if Super Admin pre-registered this email
       if (!userDoc.exists() && user.email) {
@@ -6788,6 +7138,30 @@ function LoginView({
           if (matchedUser.id !== user.uid) {
             await deleteDoc(doc(db, "users", matchedUser.id));
           }
+        } else {
+          // AUTO-REGISTRATION BRIDGE FOR CITIZENS (No manual admin action required!)
+          // Check if their Google email matches any registered email in 'data_warga' directory (loaded by Admin / imported)
+          const targetEmail = user.email.toLowerCase().trim();
+          const emailVariations = [
+            user.email,
+            targetEmail,
+            user.email.toUpperCase()
+          ].filter((v, i, a) => a.indexOf(v) === i);
+
+          const wargaRef = collection(db, "data_warga");
+          const qw = query(wargaRef, where("email", "in", emailVariations));
+          const wargaSnapshot = await getDocs(qw);
+
+          if (!wargaSnapshot.empty) {
+            isPreRegistered = true;
+            const matchedWarga = wargaSnapshot.docs[0].data();
+            preRegisteredRole = "Warga";
+            preRegisteredTenant = matchedWarga.tenantId || tenantId;
+            userDataExtra = {
+              nik: matchedWarga.nik || "",
+              linkedResidentId: wargaSnapshot.docs[0].id,
+            };
+          }
         }
       }
 
@@ -6798,7 +7172,7 @@ function LoginView({
       if (!userDoc.exists() && !isPreRegistered && !isArif && !isTrihUser) {
         await signOut(auth);
         setError(
-          "Akun Google Anda belum terdaftar di sistem. Silakan minta Admin RT/RW untuk mendaftarkan email Anda, atau gunakan login Warga/Verifikasi WA.",
+          "Akun Google Anda belum terdaftar di sistem. Silakan hubungi Admin Wilayah untuk mendaftarkan email Anda di form Data Warga.",
         );
         setIsLoading(false);
         return;
@@ -6823,6 +7197,7 @@ function LoginView({
         createdAt: userDoc.exists()
           ? userDoc.data()?.createdAt || new Date().toISOString()
           : new Date().toISOString(),
+        ...userDataExtra
       };
 
       // Always ensure the role and tenant are set
@@ -7106,18 +7481,6 @@ function LoginView({
                   </>
                 )}
               </button>
-              
-              <div className="mt-4">
-                <input
-                  type="text"
-                  placeholder="KODE AREA WILAYAH (TENANT ID)"
-                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  onChange={(e) => {
-                    // Simpan tenant ID di local storage seperti yang diarahkan di aturan 1
-                    localStorage.setItem('tempTenantId', e.target.value);
-                  }}
-                />
-              </div>
             </div>
           )}
 

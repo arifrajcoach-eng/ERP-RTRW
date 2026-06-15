@@ -11,6 +11,7 @@ import {
   BellOff,
   Signal,
   Radio,
+  Share2,
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -501,20 +502,24 @@ export default function SOSOverlay({
                     🛰️ GPS Lock: Active
                   </span>
                 </div>
-                {emergency.latitude && emergency.longitude ? (
+                {(() => {
+                  const lat = emergency.latitude ?? emergency.location?.lat ?? emergency.lat;
+                  const lng = emergency.longitude ?? emergency.location?.lng ?? emergency.lng;
+                  return (lat !== undefined && lng !== undefined && lat !== 0) ? (
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${emergency.latitude},${emergency.longitude}`}
+                    href={`https://www.google.com/maps?q=loc:${lat},${lng}&z=19`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-bold truncate underline hover:text-white/80 transition-colors"
                   >
                     {emergency.userLocation} ↗
                   </a>
-                ) : (
+                  ) : (
                   <p className="text-sm font-bold truncate">
                     {emergency.userLocation}
                   </p>
-                )}
+                  );
+                })()}
                 {emergency.userAddress && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     <p className="text-sm font-black bg-white/20 px-3 py-1.5 rounded-xl inline-block w-fit uppercase tracking-tight">
@@ -550,24 +555,56 @@ export default function SOSOverlay({
         </p>
 
         {/* SOS Action Button Group */}
-        <button
-          onClick={() => {
-            const lat = emergency.latitude ?? emergency.location?.lat ?? emergency.lat ?? -6.194718;
-            const lng = emergency.longitude ?? emergency.location?.lng ?? emergency.lng ?? 107.0359;
-            window.open(
-              `https://www.google.com/maps?q=${lat},${lng}`,
-              "_blank",
-            )
-          }}
-          className="px-10 py-5 bg-white text-red-600 border-2 border-red-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-red-50 transition-all active:scale-95 shadow-2xl mb-2 flex items-center justify-center gap-2"
-        >
-          <MapPin className="w-6 h-6" />
-          CEK LOKASI KEJADIAN
-        </button>
-        
+        {(() => {
+          const lat = emergency.latitude ?? emergency.location?.lat ?? emergency.lat ?? 0;
+          const lng = emergency.longitude ?? emergency.location?.lng ?? emergency.lng ?? 0;
+          const hasCoords = lat !== 0 || lng !== 0;
+
+          const handleShareSOS = () => {
+             const mapsUrl = `https://www.google.com/maps?q=loc:${lat},${lng}&z=19`;
+             const text = `🚨 DARURAT SOS! 🚨\n\nWarga: ${emergency.userName}\nAlamat: ${emergency.userAddress}\nLaporan Tambahan: ${emergency.userLocation}\nKoordinat: ${mapsUrl}\n\nMohon warga/satpam terdekat segera menuju lokasi!`;
+             if (navigator.share) {
+               navigator.share({ title: 'Darurat SOS!', text: text, url: mapsUrl }).catch(() => {});
+             } else {
+               window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
+             }
+          };
+
+          return hasCoords ? (
+            <div className="flex flex-col gap-3 w-full mb-2">
+              <a
+                href={`https://www.google.com/maps?q=loc:${lat},${lng}&z=19`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-10 py-5 bg-white text-red-600 border-2 border-red-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-red-50 transition-all active:scale-95 shadow-2xl flex items-center justify-center gap-2 cursor-pointer text-center"
+              >
+                <MapPin className="w-6 h-6 animate-pulse" />
+                CEK LOKASI KEJADIAN
+              </a>
+              <button
+                type="button"
+                onClick={handleShareSOS}
+                className="px-6 py-4 bg-red-800 text-white border-none rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2 cursor-pointer text-center"
+              >
+                <Share2 className="w-5 h-5" />
+                BAGIKAN KE GRUP WA
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => alert("Menunggu kordinat lokasi dari pengguna...")}
+              className="px-10 py-5 bg-slate-100 text-slate-400 border-2 border-slate-200 rounded-2xl font-black uppercase text-sm w-full tracking-widest cursor-pointer mb-2 flex items-center justify-center gap-2"
+            >
+              <MapPin className="w-6 h-6" />
+              CEK LOKASI KEJADIAN
+            </button>
+          );
+        })()}
+
         {emergency.userLocation && (
           <p className="text-center text-xs text-white/70 font-medium mb-6">
-            {emergency.userLocation.includes("Estimasi") || emergency.userLocation.includes("Jaringan") ? "⚠️ Lokasi: Estimasi (GPS Tidak Presisi)" : "✅ Lokasi: GPS Presisi"}
+            {emergency.userLocation.includes("Ditolak") || emergency.userLocation.includes("Gagal") ? "⚠️ Lokasi: Gagal Dimuat. Pengirim Tidak Mengizinkan Lokasi." : "✅ Lokasi: Transmisi Sinyal Diterima"}
           </p>
         )}
 

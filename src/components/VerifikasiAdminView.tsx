@@ -117,6 +117,7 @@ export function VerifikasiAdminView({
 
       const updatedData = {
         nama: item.nama || targetSnap.data()?.nama || legacyData?.nama || "",
+        email: item.email || targetSnap.data()?.email || legacyData?.email || "",
         kk: item.kk || targetSnap.data()?.kk || legacyData?.kk || "",
         blok: item.alamat || item.blok || targetSnap.data()?.blok || legacyData?.blok || "",
         hp: item.hp || targetSnap.data()?.hp || legacyData?.hp || "",
@@ -277,6 +278,7 @@ export function VerifikasiAdminView({
             rw: item.rw || "26",
           };
           if (item.kk) updatedFields.kk = item.kk;
+          if (item.email) updatedFields.email = item.email;
           if (item.hp) updatedFields.hp = item.hp;
           if (item.alamat || item.blok) updatedFields.blok = item.alamat || item.blok;
           if (item.pekerjaan || item.profesi) updatedFields.profesi = item.pekerjaan || item.profesi;
@@ -372,6 +374,7 @@ export function VerifikasiAdminView({
             rw: item.rw || "26",
           };
           if (item.kk) updatedFields.kk = item.kk;
+          if (item.email) updatedFields.email = item.email;
           if (item.hp) updatedFields.hp = item.hp;
           if (item.alamat || item.blok) updatedFields.blok = item.alamat || item.blok;
           if (item.pekerjaan || item.profesi) updatedFields.profesi = item.pekerjaan || item.profesi;
@@ -453,6 +456,7 @@ export function VerifikasiAdminView({
         batch.set(wargaRef, {
           nama: item.nama || "",
           nik: item.nik,
+          email: item.email || "",
           kk: item.kk || "",
           hp: item.hp || "",
           blok: item.blok || item.alamat || "",
