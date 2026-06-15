@@ -11,6 +11,7 @@ export interface EmergencyLog {
   createdAt?: string;
   timestamp: string;
   tenantId: string;
+  resolvedAt?: string;
 }
 
 export interface VisitorLog {

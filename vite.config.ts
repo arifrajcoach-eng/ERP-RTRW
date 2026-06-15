@@ -14,6 +14,42 @@ export default defineConfig(({mode}) => {
       outDir: 'dist',
       emptyOutDir: true,
       chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('firebase')) {
+                return 'vendor-firebase';
+              }
+              if (id.includes('jspdf') || id.includes('jspdf-autotable') || id.includes('html2canvas')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('xlsx')) {
+                return 'vendor-excel';
+              }
+              if (id.includes('recharts') || id.includes('d3')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('leaflet')) {
+                return 'vendor-maps';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+              if (id.includes('motion')) {
+                return 'vendor-animations';
+              }
+              return 'vendor-others';
+            }
+            if (id.includes('src/components/')) {
+              const parts = id.split('/');
+              const file = parts[parts.length - 1];
+              const name = file.split('.')[0];
+              return `comp-${name.toLowerCase()}`;
+            }
+          }
+        }
+      }
     },
     resolve: {
       alias: {

@@ -39,6 +39,7 @@ import {
 import { doc, setDoc, updateDoc, onSnapshot, query, where, collection, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { jsPDF } from 'jspdf';
+import { MapPicker } from './MapPicker';
 
 interface WargaProfileViewProps {
   wargaData: any;
@@ -84,9 +85,15 @@ export function WargaProfileView({
   const [sosHistory, setSosHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Update formData when wargaData arrives
+  const [isProfileCalibrating, setIsProfileCalibrating] = useState(false);
+  const [profileLat, setProfileLat] = useState<string>(wargaData?.latitude?.toString() || "");
+  const [profileLng, setProfileLng] = useState<string>(wargaData?.longitude?.toString() || "");
+
+  // Update profile coordinates when wargaData changes
   useEffect(() => {
     if (wargaData) {
+      setProfileLat(wargaData.latitude?.toString() || "");
+      setProfileLng(wargaData.longitude?.toString() || "");
       setFormData(wargaData);
     }
   }, [wargaData]);
@@ -577,6 +584,28 @@ export function WargaProfileView({
                              <div>
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Identification Number (KK)</label>
                                 <p className="text-sm font-black text-slate-700 dark:text-slate-300 font-mono tracking-widest">{wargaData.kk || '-'}</p>
+                              </div>
+                              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Koordinat Rumah (GPS SOS)</label>
+                                 {wargaData.latitude && wargaData.longitude ? (
+                                    <p className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                       {parseFloat(wargaData.latitude).toFixed(6)}, {parseFloat(wargaData.longitude).toFixed(6)}
+                                    </p>
+                                 ) : (
+                                    <p className="text-xs font-bold text-rose-500 flex items-center gap-1 uppercase italic tracking-wide">
+                                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                                       Lokasi Belum Dikalibrasi (Geser Pin Peta)
+                                    </p>
+                                 )}
+                                 <button
+                                    type="button"
+                                    onClick={() => setIsProfileCalibrating(true)}
+                                    className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-450 border border-slate-200 dark:border-slate-750 rounded-xl text-[10px] font-extrabold uppercase tracking-wide cursor-pointer transition-all"
+                                 >
+                                    <MapPin className="w-3.5 h-3.5" />
+                                    {wargaData.latitude ? "Atur Ulang Lokasi" : "Kalibrasi Lokasi"}
+                                 </button>
                              </div>
                           </div>
                        </motion.div>
@@ -1041,6 +1070,104 @@ export function WargaProfileView({
                           </button>
                        </div>
                     </form>
+                 </motion.div>
+              </div>
+           )}
+        </AnimatePresence>
+
+        {/* Modal Kalibrasi GPS Mandiri */}
+        <AnimatePresence>
+           {isProfileCalibrating && (
+              <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsProfileCalibrating(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+                 <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }} 
+                    animate={{ scale: 1, opacity: 1 }} 
+                    exit={{ scale: 0.95, opacity: 0 }} 
+                    className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 p-6 border border-slate-100 dark:border-slate-850 flex flex-col gap-4 text-slate-800 dark:text-slate-100 animate-fade-in"
+                 >
+                     <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                              <MapPin className="w-5 h-5 text-rose-500 animate-pulse" />
+                           </div>
+                           <div>
+                              <h3 className="text-base font-black text-slate-850 dark:text-white uppercase tracking-tight">Kalibrasi Lokasi Rumah</h3>
+                              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Penetapan koordinat untuk pengiriman SOS</p>
+                           </div>
+                        </div>
+                        <button onClick={() => setIsProfileCalibrating(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl text-slate-400 hover:text-slate-600 transition-colors border-none bg-transparent cursor-pointer">
+                           <X className="w-4 h-4" />
+                        </button>
+                     </div>
+
+                     <div className="text-[11px] text-slate-600 dark:text-slate-350 leading-relaxed font-semibold uppercase tracking-wide bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-850">
+                        📌 **Sangat Penting**: Peta interaktif di bawah dapat disesuaikan secara manual. Geser pin merah/ketuk peta pada area rumah Anda yang sebenarnya agar Satpam / Petugas dapat mengetahui arah yang tepat jika terjadi darurat.
+                     </div>
+
+                     <div className="font-bold">
+                        <MapPicker 
+                           lat={parseFloat(profileLat) || -6.1843} 
+                           lng={parseFloat(profileLng) || 106.7975} 
+                           onChange={(newLat, newLng) => {
+                             setProfileLat(newLat.toString());
+                             setProfileLng(newLng.toString());
+                           }}
+                        />
+                     </div>
+
+                     <div className="flex gap-2 font-black mt-2">
+                        <button
+                           type="button"
+                           onClick={async () => {
+                             if (!profileLat || !profileLng) {
+                               alert("Harap tentukan lokasi Anda pada peta terlebih dahulu!");
+                               return;
+                             }
+                             const latVal = parseFloat(profileLat);
+                             const lngVal = parseFloat(profileLng);
+
+                             try {
+                               // Save to local storage for instant access
+                               localStorage.setItem("custom_sos_lat", profileLat.trim());
+                               localStorage.setItem("custom_sos_lng", profileLng.trim());
+
+                               // Update Doc in data_warga
+                               const targetId = wargaData.docId || wargaData.id;
+                               if (targetId) {
+                                 await updateDoc(doc(db, "data_warga", targetId), {
+                                   latitude: latVal,
+                                   longitude: lngVal
+                                 });
+                               }
+
+                               // Update Doc in user account
+                               if (auth.currentUser?.uid) {
+                                 await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                                   latitude: latVal,
+                                   longitude: lngVal
+                                 });
+                               }
+
+                               showNotification("Kalibrasi koordinat rumah berhasil disimpan!", "success");
+                               setIsProfileCalibrating(false);
+                             } catch (err) {
+                               console.error("Failed to update calibrated profile GPS:", err);
+                               alert("Gagal memperbarui koordinat. Pastikan koneksi atau izin server Anda aktif.");
+                             }
+                           }}
+                           className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs uppercase tracking-wider text-center border-none cursor-pointer transition-colors font-bold"
+                        >
+                           Simpan Lokasi Rumah
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setIsProfileCalibrating(false)}
+                           className="py-3 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-755 text-slate-700 dark:text-slate-350 rounded-2xl text-xs uppercase tracking-wider text-center border-none cursor-pointer transition-colors font-bold"
+                        >
+                           Batal
+                        </button>
+                     </div>
                  </motion.div>
               </div>
            )}

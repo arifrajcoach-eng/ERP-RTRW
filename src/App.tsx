@@ -780,25 +780,6 @@ export default function App() {
   });
   const [isCalibratingSOS, setIsCalibratingSOS] = useState(false);
 
-  // Automatically pull calibrated GPS coordinates from citizen profile database when available
-  useEffect(() => {
-    if (mergedWargaProfile?.latitude && mergedWargaProfile?.longitude) {
-      const dbLat = mergedWargaProfile.latitude.toString();
-      const dbLng = mergedWargaProfile.longitude.toString();
-      const savedLat = safeLocalStorage.getItem("custom_sos_lat");
-      const savedLng = safeLocalStorage.getItem("custom_sos_lng");
-      
-      if (dbLat !== savedLat || dbLng !== savedLng) {
-        setCustomSOSLat(dbLat);
-        setCustomSOSLng(dbLng);
-        setUseCustomSOSCoords(true);
-        safeLocalStorage.setItem("custom_sos_lat", dbLat);
-        safeLocalStorage.setItem("custom_sos_lng", dbLng);
-        console.log("SmaRtRw AI: Loaded pinpoint calibration coordinates from profile database:", dbLat, dbLng);
-      }
-    }
-  }, [mergedWargaProfile?.latitude, mergedWargaProfile?.longitude]);
-
   const [usersData, setUsersData] = useState<any[]>([]);
   const [tenantsData, setTenantsData] = useState<any[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
@@ -1317,6 +1298,25 @@ export default function App() {
     };
   }, [linkedWarga, wargaAuth, currentUser]);
 
+  // Automatically pull calibrated GPS coordinates from citizen profile database when available
+  useEffect(() => {
+    if (mergedWargaProfile?.latitude && mergedWargaProfile?.longitude) {
+      const dbLat = mergedWargaProfile.latitude.toString();
+      const dbLng = mergedWargaProfile.longitude.toString();
+      const savedLat = safeLocalStorage.getItem("custom_sos_lat");
+      const savedLng = safeLocalStorage.getItem("custom_sos_lng");
+      
+      if (dbLat !== savedLat || dbLng !== savedLng) {
+        setCustomSOSLat(dbLat);
+        setCustomSOSLng(dbLng);
+        setUseCustomSOSCoords(true);
+        safeLocalStorage.setItem("custom_sos_lat", dbLat);
+        safeLocalStorage.setItem("custom_sos_lng", dbLng);
+        console.log("SmaRtRw AI: Loaded pinpoint calibration coordinates from profile database:", dbLat, dbLng);
+      }
+    }
+  }, [mergedWargaProfile?.latitude, mergedWargaProfile?.longitude]);
+
   // Enforce Max Warga limit locally for UI based on Plan
   const cappedWargaData = useMemo(() => {
     if (!currentTenant) return filteredWargaDataCentral.slice(0, 50);
@@ -1426,17 +1426,50 @@ export default function App() {
               lng = position.coords.longitude;
               userLocation = `📍 Sinyal GPS Standar : ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             } catch (geoErr2) {
-              console.warn("Geolocation failed completely", geoErr2);
-              lat = 0;
-              lng = 0;
-              userLocation = `📍 Akeses Lokasi Ditolak. Harap izinkan akses lokasi (GPS) di pengaturan browser Anda.`;
+              console.warn("Geolocation failed completely, triggering IP lookup fallback...", geoErr2);
+              try {
+                const ipRes = await fetch("https://ipapi.co/json/");
+                if (ipRes.ok) {
+                  const ipData = await ipRes.json();
+                  if (ipData && ipData.latitude && ipData.longitude) {
+                    lat = ipData.latitude;
+                    lng = ipData.longitude;
+                    userLocation = `📍 Sinyal GPS IP Fallback (${ipData.city || 'Kota'}, IP: ${ipData.ip || ''}): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                  } else {
+                    throw new Error("No lat/lng from IP API");
+                  }
+                } else {
+                  throw new Error("API failed");
+                }
+              } catch (ipErr) {
+                console.warn("IP Geolocation fallback failed as well", ipErr);
+                lat = 0;
+                lng = 0;
+                userLocation = `📍 Akses Lokasi Ditolak. Harap kalibrasi GPS secara kustom atau aktifkan izin lokasi browser.`;
+              }
             }
           }
         } else {
           // Fallback if browser does not support geolocation
-          lat = 0;
-          lng = 0;
-          userLocation = `📍 Fitur Lokasi (GPS) Tidak Tersedia di Perangkat/Browser Ini.`;
+          try {
+            const ipRes = await fetch("https://ipapi.co/json/");
+            if (ipRes.ok) {
+              const ipData = await ipRes.json();
+              if (ipData && ipData.latitude && ipData.longitude) {
+                lat = ipData.latitude;
+                lng = ipData.longitude;
+                userLocation = `📍 Sinyal GPS IP Fallback (${ipData.city || 'Kota'}): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+              } else {
+                throw new Error("No coordinates");
+               }
+            } else {
+              throw new Error("Fail");
+            }
+          } catch {
+            lat = 0;
+            lng = 0;
+            userLocation = `📍 Fitur Lokasi (GPS) Tidak Tersedia di Perangkat/Browser Ini.`;
+          }
         }
       }
 
@@ -1748,6 +1781,10 @@ export default function App() {
     if (currentUser?.isSuperAdmin || ["ADMIN", "RW", "RT"].includes(currentUser?.role || "")) {
       if (currentUser?.isSuperAdmin) {
         unsubs.push(onSnapshot(query(collection(db, "users")), (snap) => {
+          setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
+        }));
+      } else if (currentUser?.tenantId) {
+        unsubs.push(onSnapshot(query(collection(db, "users"), where("tenantId", "==", currentUser.tenantId)), (snap) => {
           setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
         }));
       } else if (tIds.length > 0) {
@@ -2876,6 +2913,7 @@ export default function App() {
             "booking",
             "inventaris",
             "organisasi",
+            "kependudukan",
           ],
           TAMU: ["dashboard", "etoko"],
           VIEWER: ["dashboard", "etoko"],
@@ -7696,21 +7734,21 @@ function LoginView({
                   whileHover={{ 
                     scale: 1.05, 
                     y: -2,
-                    boxShadow: "0 15px 20px -7px rgba(249, 115, 22, 0.45)"
+                    boxShadow: "0 15px 20px -7px rgba(16, 185, 129, 0.45)"
                   }}
                   whileTap={{ scale: 0.95 }}
                   href="https://smartrwai.vercel.app/"
                   target="_blank"
-                  className="py-4 bg-gradient-to-tr from-amber-400 via-orange-350 to-orange-500 hover:from-amber-500 hover:via-orange-400 hover:to-orange-600 border border-amber-300 rounded-[1.25rem] flex items-center justify-center gap-2.5 transition-all duration-300 relative overflow-hidden group cursor-pointer font-bold shadow-md shadow-orange-100"
+                  className="py-4 bg-gradient-to-tr from-emerald-250 via-teal-100 to-green-300 hover:from-emerald-350 hover:via-teal-200 hover:to-green-400 border border-emerald-300/60 rounded-[1.25rem] flex items-center justify-center gap-2.5 transition-all duration-300 relative overflow-hidden group cursor-pointer font-bold shadow-md shadow-emerald-100/50"
                 >
                   {/* Interactive shine sheen overlay */}
                   <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.25),transparent_60%)] -z-10 group-hover:scale-125 transition-transform duration-700" />
                   
                   <span className="p-1 px-1.5 bg-white/20 rounded-lg flex items-center justify-center group-hover:rotate-12 transition-all duration-300">
-                    <Globe className="w-3.5 h-3.5 text-[#111111] group-hover:scale-110 transition-transform" />
+                    <Globe className="w-3.5 h-3.5 text-[#022869] group-hover:scale-110 transition-transform" />
                   </span>
                   
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#000000] drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#022869] drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
                     Website ✨
                   </span>
                 </motion.a>
@@ -7730,10 +7768,10 @@ function LoginView({
                   <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.35),transparent_60%)] -z-10 group-hover:scale-125 transition-transform duration-700" />
                   
                   <span className="p-1 px-1.5 bg-[#01360e]/10 rounded-lg flex items-center justify-center group-hover:rotate-12 transition-all duration-300">
-                    <Phone className="w-3.5 h-3.5 text-[#030303] group-hover:scale-110 transition-transform" />
+                    <Phone className="w-3.5 h-3.5 text-[#022869] group-hover:scale-110 transition-transform" />
                   </span>
                   
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#0d0d0d] drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#022869] drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
                     WA Admin ✨
                   </span>
                 </motion.a>

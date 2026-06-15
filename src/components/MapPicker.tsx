@@ -122,10 +122,28 @@ export const MapPicker: React.FC<MapPickerProps> = ({ lat, lng, onChange }) => {
         setDetecting(false);
         alert(`Berhasil mengunci GPS! Akurasi sistem sekitar ~${pos.coords.accuracy.toFixed(0)} meter.`);
       },
-      (err) => {
-        console.warn("GPS lock error:", err);
-        setDetecting(false);
-        alert("Gagal mendeteksi koordinat otomatis (Sinyal lemah atau izin ditolak). Silakan cari alamat atau klik/geser pin langsung di peta.");
+      async (err) => {
+        console.warn("GPS lock error, attempting IP lookup fallback...", err);
+        try {
+          const res = await fetch("https://ipapi.co/json/");
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.latitude && data.longitude) {
+              const newCoords = new L.LatLng(data.latitude, data.longitude);
+              setPosition(newCoords);
+              alert(`GPS dibantu IP Geolocation (${data.city || 'Kota'}, IP: ${data.ip || ''}): Berhasil mengunci lokasi sekitar Anda!`);
+            } else {
+              throw new Error("No lat/lng returned from IP api");
+            }
+          } else {
+            throw new Error("IP Geolocation API error");
+          }
+        } catch (ipErr) {
+          console.error("IP Geolocation fallback failed as well:", ipErr);
+          alert("Gagal mendeteksi koordinat otomatis (Sinyal lemah atau izin ditolak). Silakan cari alamat atau klik/geser pin langsung di peta.");
+        } finally {
+          setDetecting(false);
+        }
       },
       {
         enableHighAccuracy: true,
@@ -134,6 +152,15 @@ export const MapPicker: React.FC<MapPickerProps> = ({ lat, lng, onChange }) => {
       }
     );
   };
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return (
+    <div className="h-[250px] w-full flex items-center justify-center text-slate-400 font-bold uppercase text-[10px]">
+      Memuat Peta...
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-2.5 font-sans">
@@ -217,19 +244,25 @@ export const MapPicker: React.FC<MapPickerProps> = ({ lat, lng, onChange }) => {
 
       {/* Main Interactive Map Stage */}
       <div className="h-[250px] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md relative z-0">
-        <MapContainer
-          center={position || [-6.1843, 106.7975]} 
-          zoom={16}
-          className="h-full w-full relative z-0"
-          style={{ zIndex: 0 }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://osm.org/copyright">OSM</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <LocationMarker position={position} setPosition={setPosition} />
-          <MapFlyController center={position} />
-        </MapContainer>
+        {position ? (
+          <MapContainer
+            center={position} 
+            zoom={16}
+            className="h-full w-full relative z-0"
+            style={{ zIndex: 0 }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://osm.org/copyright">OSM</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <LocationMarker position={position} setPosition={setPosition} />
+            <MapFlyController center={position} />
+          </MapContainer>
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-slate-400 font-bold uppercase text-[10px]">
+            Memuat Peta...
+          </div>
+        )}
         
         {!position && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-rose-600/90 text-white px-3 py-1.5 rounded-full shadow-md text-[10px] font-black tracking-wide uppercase z-[1000] whitespace-nowrap animate-pulse">
