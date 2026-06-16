@@ -407,14 +407,16 @@ export default function BelanjaView({
   showNotification,
   onProductSelect,
   onBackToMain,
-  currentUser
+  currentUser,
+  onAddProduct
 }: { 
   products?: any[], 
   onAddToCart?: (p: any) => void,
   showNotification?: (msg: string, type?: "success" | "error" | "info" | "warning") => void,
   onProductSelect?: (p: any) => void,
   onBackToMain?: () => void,
-  currentUser?: any
+  currentUser?: any,
+  onAddProduct?: (product: any) => void
 }) {
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
@@ -1280,7 +1282,11 @@ export default function BelanjaView({
                         image: productImage || 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&q=80&w=400',
                         discount: ""
                       };
-                      setLocalProducts([productToAdd, ...localProducts]);
+                      if (onAddProduct) {
+                         onAddProduct(productToAdd);
+                      } else {
+                         setLocalProducts([productToAdd, ...localProducts]);
+                      }
                       showNotification?.("Produk berhasil ditambahkan!", "success");
                       setTokoSubTab("Main");
                       setNewProduct({ name: "", price: "", description: "" });

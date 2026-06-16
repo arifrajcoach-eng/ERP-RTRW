@@ -4351,7 +4351,7 @@ export default function App() {
               <VerifikasiAdminView
                 verifikasiData={filteredVerifikasiWargaDataCentral}
                 wargaData={filteredWargaDataCentral}
-                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 showNotification={showNotification}
@@ -4410,7 +4410,7 @@ export default function App() {
                 setImunisasiData={setImunisasiData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4444,7 +4444,7 @@ export default function App() {
                 sampahTarikSaldoData={sampahTarikSaldoData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
@@ -4498,7 +4498,7 @@ export default function App() {
                 inventarisSupplier={inventarisSupplier}
                 userRole={currentUser.role}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4512,7 +4512,7 @@ export default function App() {
               kelahiranData={kelahiranData}
               kematianData={kematianData}
               currentUser={currentUser}
-              tenantId={currentUser.tenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
@@ -4549,7 +4549,7 @@ export default function App() {
                 currentUser={currentUser}
                 getSetting={getSetting}
                 kopSettings={kopSettings}
-                tenantId={currentUser.tenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -4602,7 +4602,7 @@ export default function App() {
               wargaData={filteredWargaDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
-              tenantId={currentUser.tenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser}
@@ -4629,7 +4629,7 @@ export default function App() {
           )}
           {activeTab === "pengaturan" && (
             <PengaturanView
-              tenantId={currentUser.tenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || "rw26_berjuang"}
               currentTenant={currentTenant}
               wargaData={filteredWargaDataCentral}
               settings={settings}
@@ -4684,7 +4684,7 @@ export default function App() {
           {activeTab === "etoko" && (
             <ETokoView
               userRole={currentUser.role}
-              tenantId={currentUser.tenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || "rw26_berjuang"}
               products={tokoProducts}
               orders={tokoOrders}
               reviews={tokoReviews}
@@ -4701,7 +4701,7 @@ export default function App() {
           {activeTab === "analitik" &&
             (getPlanFeatures(currentTenant).analytics ? (
               <AnalyticsPremiumView
-                tenantId={currentUser.tenantId}
+                tenantId={activeTenantId || currentUser.tenantId}
                 kasData={filteredKasDataCentral}
                 wargaData={filteredWargaDataCentral}
                 iuranData={filteredIuranDataCentral}
@@ -4735,7 +4735,7 @@ export default function App() {
 
           {activeTab === "monitoring" && (
             <EnterpriseGovDashboard
-              tenantId={currentUser.tenantId}
+              tenantId={activeTenantId || currentUser.tenantId}
               wargaData={wargaData}
               currentUser={currentUser}
               wargaAuth={wargaAuth}

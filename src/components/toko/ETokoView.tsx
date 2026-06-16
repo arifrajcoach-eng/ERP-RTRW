@@ -306,6 +306,29 @@ export default function ETokoView({
     }
   };
 
+  const handleAddProductFromBuyer = async (product: any) => {
+    setIsLoading(true);
+    try {
+      const sellerId = wargaAuth?.nik || currentUser?.email || currentUser?.uid || "unknown";
+      const newId = `PROD-${Date.now()}`;
+      await setDoc(
+        doc(db, "toko_products", newId),
+        {
+          ...product,
+          id: newId,
+          tenantId,
+          sellerId,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+    } catch (err) {
+      handleFirestoreError?.(err, "write", "toko_products");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const deleteProduct = async (id: string) => {
     if (!confirm("Hapus produk ini?")) return;
     try {
@@ -537,6 +560,7 @@ export default function ETokoView({
                 setShowProductModal(true);
               }}
               currentUser={currentUser}
+              onAddProduct={handleAddProductFromBuyer}
             />
           )}
 
