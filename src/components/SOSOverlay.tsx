@@ -640,7 +640,7 @@ export default function SOSOverlay({
             className="px-10 py-5 bg-white text-rose-600 rounded-[2rem] font-black uppercase text-sm w-full tracking-widest hover:bg-rose-50 hover:scale-[1.02] transition-all active:scale-95 shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-4 flex items-center justify-center gap-3 border-2 border-white/50"
           >
             <CheckCircle className="w-6 h-6" />
-            STOP SOS & KEMBALI KE MENU UTAMA
+            OFF SOS & KEMBALI KE MENU UTAMA
           </button>
         )}
 
@@ -670,7 +670,7 @@ export default function SOSOverlay({
               onClick={() => setIsMuted(true)}
               className="px-6 py-4 bg-red-700/50 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <BellOff className="w-5 h-5" /> Stop Suara
+              <BellOff className="w-5 h-5" /> Off Suara
             </button>
           ) : (
             <button

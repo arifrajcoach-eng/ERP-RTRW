@@ -39,10 +39,48 @@
   --animate-float: float 6s ease-in-out infinite;
   --animate-scan: scan 4s ease-in-out infinite;
   --animate-spin-slow: spin-slow 12s linear infinite;
+  --animate-spin-zoom: spin-zoom 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  --animate-spin-zoom-reverse: spin-zoom-reverse 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  --animate-pulse-slow: pulse-slow 4s ease-in-out infinite;
   
   @keyframes spin-slow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+  
+  @keyframes spin-zoom {
+    0% {
+      transform: rotate(0deg) scale(0.85);
+    }
+    50% {
+      transform: rotate(180deg) scale(1.1);
+    }
+    100% {
+      transform: rotate(360deg) scale(0.85);
+    }
+  }
+
+  @keyframes spin-zoom-reverse {
+    0% {
+      transform: rotate(360deg) scale(1.1);
+    }
+    50% {
+      transform: rotate(180deg) scale(0.85);
+    }
+    100% {
+      transform: rotate(0deg) scale(1.1);
+    }
+  }
+
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 0.1;
+      transform: scale(0.95);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(1.05);
+    }
   }
   
   @keyframes scan {

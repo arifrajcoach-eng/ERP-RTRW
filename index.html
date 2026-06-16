@@ -114,10 +114,16 @@
 
     <style>
       div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) {
-        width: 600px;
+        width: 95%;
+        max-width: 600px;
+        margin: 0 auto;
       }
       div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(4) {
         animation: none !important;
+      }
+      div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > button:nth-of-type(3) {
+        max-width: 100%;
+        box-sizing: border-box;
       }
     </style>
     <script type="module" src="/src/main.tsx"></script>
