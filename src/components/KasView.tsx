@@ -745,6 +745,9 @@ export function KasView({
       return (currentUser?.rt || "01").toString().replace(/^0+/, "").padStart(2, "0");
     })();
 
+    const targetIuranId = editingKas?.iuranId || `IURAN-${newId.replace('TRX-', '')}`;
+    const isIuran = trxType === "Masuk" && transaksi.toLowerCase().includes("iuran");
+
     const newTrx = {
       tenantId: tenantId,
       rt: resolvedRt,
@@ -760,10 +763,49 @@ export function KasView({
       debit: trxType === "Masuk" ? nominal : 0,
       kredit: trxType === "Keluar" ? nominal : 0,
       strukUrl: strukUrl,
+      iuranId: isIuran ? targetIuranId : (editingKas?.iuranId || null)
     };
 
     setIsLoadingDB(true);
     try {
+      if (isIuran) {
+        const iuranPayload = sanitizeForFirestore({
+          id: targetIuranId,
+          tenantId: tenantId || "MASTER",
+          rt: resolvedRt,
+          tanggal: dateObj.toISOString(),
+          jenis: transaksi,
+          nominal: nominal,
+          keterangan: keterangan || `Pembayaran ${transaksi}`,
+          nik: nik,
+          namaPenyetor: nama,
+          alamat: alamat,
+          buktiUrl: strukUrl,
+          status: 'Lunas',
+          userId: targetUserId,
+          recordedBy: currentUser?.uid || currentUser?.id_user || 'System',
+          updatedAt: new Date().toISOString()
+        });
+
+        await setDoc(doc(db, "iuran", targetIuranId), iuranPayload);
+        
+        // Update iuranData state
+        setIuranData((prev: any[]) => {
+          if (prev.some(i => i.id === targetIuranId)) {
+            return prev.map(i => i.id === targetIuranId ? iuranPayload : i);
+          }
+          return [iuranPayload, ...prev];
+        });
+      } else if (editingKas?.iuranId) {
+        // Delete previous related iuran if category becomes non-iuran
+        try {
+          await deleteDoc(doc(db, "iuran", editingKas.iuranId));
+          setIuranData((prev: any[]) => prev.filter(i => i.id !== editingKas.iuranId));
+        } catch (err) {
+          console.warn("Failed to delete outdated iuran record:", err);
+        }
+      }
+
       if (editingKas) {
         await updateDoc(doc(db, "kas", editingKas.id), newTrx);
         setKasData((prev: any[]) =>

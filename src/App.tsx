@@ -4599,6 +4599,7 @@ export default function App() {
           {activeTab === "users" && (
             <UsersView
               usersData={filteredUsersDataCentral}
+              wargaData={filteredWargaDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               tenantId={currentUser.tenantId || "rw26_berjuang"}

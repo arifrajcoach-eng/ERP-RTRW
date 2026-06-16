@@ -275,8 +275,12 @@ export function IuranView({
     let alamat = "-";
     
     // Attempt to find address from wargaData
+    let explicitRt = null;
     const foundCurrent = wargaData.find((w: any) => (w.nik === nik && nik !== "-") || (currentUser?.uid && w.id === currentUser.uid));
-    if (foundCurrent) alamat = foundCurrent.alamat || "-";
+    if (foundCurrent) {
+      alamat = foundCurrent.alamat || "-";
+      explicitRt = foundCurrent.rt;
+    }
 
     let targetUserId = currentUser?.uid || currentUser?.id_user || null;
     
@@ -291,6 +295,7 @@ export function IuranView({
         nama = w.nama || "Warga";
         alamat = w.alamat || "-";
         targetUserId = w.id || w.uid || w.id_user || null;
+        explicitRt = w.rt;
       } else {
         const manualNama = formData.get('namaPenyetor') as string;
         if (manualNama) nama = manualNama;
@@ -298,11 +303,17 @@ export function IuranView({
       }
     }
 
+    let finalRt = explicitRt;
+    if (!finalRt && tenantId && tenantId.toLowerCase().startsWith('rt')) {
+       finalRt = tenantId.split('_')[0].replace(/\D/g, '');
+    }
+    if (!finalRt) finalRt = currentUser?.rt || "01";
+
     const payload = sanitizeForFirestore({
       ...(editingTrx || {}),
       id,
       tenantId: tenantId || "MASTER",
-      rt: (currentUser?.rt || "01").toString(),
+      rt: finalRt.toString(),
       tanggal: dateObj.toISOString(),
       jenis: jenisPembayaran || "Iuran Warga",
       nominal: nominal || 0,
@@ -454,6 +465,7 @@ export function IuranView({
     let nama = currentUser?.nama || currentUser?.name || "Warga";
     let alamat = currentUser?.alamat || "-";
     let targetUserId = currentUser?.uid || currentUser?.id_user || null;
+    let explicitRt = currentUser?.rt;
 
     if (isPengurus && pgFormState.wargaId) {
       const selectedWarga = wargaData.find((w:any) => w.id === pgFormState.wargaId || w.docId === pgFormState.wargaId || w.nik === pgFormState.wargaId);
@@ -462,16 +474,23 @@ export function IuranView({
         nama = selectedWarga.nama || "Warga";
         alamat = selectedWarga.alamat || selectedWarga.blok || "-";
         targetUserId = selectedWarga.id || selectedWarga.uid || selectedWarga.id_user || null;
+        explicitRt = selectedWarga.rt;
       }
     } else if (isPengurus && pgFormState.namaPenyetor) {
       nama = pgFormState.namaPenyetor;
       nik = "-";
     }
 
+    let finalRt = explicitRt;
+    if (!finalRt && tenantId && tenantId.toLowerCase().startsWith('rt')) {
+       finalRt = tenantId.split('_')[0].replace(/\D/g, '');
+    }
+    if (!finalRt) finalRt = currentUser?.rt || "01";
+
     const payload = sanitizeForFirestore({
       id,
       tenantId: tenantId || "MASTER",
-      rt: (currentUser?.rt || '01').toString(),
+      rt: finalRt.toString(),
       tanggal: dateObj.toISOString(),
       jenis: pgFormState.jenis || "Iuran Warga",
       nominal: pgFormState.nominal || 0,

@@ -19,6 +19,7 @@ import { canCreate, canUpdate, canDelete } from "../lib/appUtils";
 
 interface UsersViewProps {
   usersData: any[];
+  wargaData: any[];
   setIsLoadingDB: any;
   handleFirestoreError: any;
   tenantId: string;
@@ -29,6 +30,7 @@ interface UsersViewProps {
 
 export default function UsersView({
   usersData,
+  wargaData,
   setIsLoadingDB,
   handleFirestoreError,
   tenantId,
@@ -49,14 +51,18 @@ export default function UsersView({
       ? editingUser.uid || editingUser.id_user
       : `USR-${Date.now()}`;
 
-    const userData = {
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const username = formData.get("username") as string;
+    const role = formData.get("role") as any;
+
+    const userData: any = {
       id_user,
       nama: formData.get("nama") as string,
       name: formData.get("nama") as string, // Legacy compatibility
-      email: formData.get("email") as string,
-      username: formData.get("username") as string,
-      password: formData.get("password") as string,
-      role: formData.get("role") as any,
+      email,
+      username,
+      role,
       rt: formData.get("rt") as string,
       nik: formData.get("nik") as string,
       status: formData.get("status") as "AKTIF" | "NONAKTIF",
@@ -64,7 +70,12 @@ export default function UsersView({
       allow_warga_inventaris: formData.get("allow_warga_inventaris") === "true",
       tenantId,
       created_at: editingUser?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
+
+    if (password) {
+      userData.password = password;
+    }
 
     if (!userData.username || !userData.role || !userData.email) {
       showNotification("Username, Role, dan Email wajib diisi!", "error");
@@ -73,12 +84,12 @@ export default function UsersView({
 
     setIsLoadingDB(true);
     try {
-      await setDoc(doc(db, "users", id_user), userData);
+      await setDoc(doc(db, "users", id_user), userData, { merge: true });
 
       // Sync with public_usernames
       await setDoc(doc(db, "public_usernames", userData.username), {
         email: userData.email,
-      });
+      }, { merge: true });
 
       setShowForm(false);
       setEditingUser(null);
@@ -161,6 +172,9 @@ export default function UsersView({
                   Username
                 </th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  Email
+                </th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                   Peran
                 </th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">
@@ -188,7 +202,10 @@ export default function UsersView({
                   </td>
                 </tr>
               )}
-              {usersData.map((user) => (
+              {usersData.map((user) => {
+                const linkedWarga = wargaData.find((w: any) => (user.nik && w.nik === user.nik) || (user.email && w.email === user.email));
+                const displayNama = linkedWarga?.nama || user.nama || user.name || "-";
+                return (
                 <tr
                   key={
                     user.uid ||
@@ -200,12 +217,17 @@ export default function UsersView({
                 >
                   <td className="px-4 py-3">
                     <p className="text-xs font-bold text-slate-700">
-                      {user.nama || user.name}
+                      {displayNama}
                     </p>
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-[10px] text-slate-500 font-medium font-mono">
-                      {user.username || user.email?.split("@")[0]}
+                      {user.username || "-"}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="text-[10px] text-slate-500 font-medium font-mono">
+                      {user.email || "-"}
                     </p>
                   </td>
                   <td className="px-4 py-3">
@@ -270,7 +292,8 @@ export default function UsersView({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -330,6 +353,38 @@ export default function UsersView({
             </div>
             <form className="p-6 space-y-4" onSubmit={handleSaveUser}>
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                    Pilih Data Warga (Referensi Mendaftar)
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-bold mb-2"
+                    defaultValue={editingUser?.nik || ""}
+                    onChange={(e) => {
+                      const nik = e.target.value;
+                      if (nik) {
+                        const warga = wargaData.find((w: any) => w.nik === nik);
+                        if (warga) {
+                          const form = e.target.closest('form') as HTMLFormElement;
+                          if (form) {
+                            (form.elements.namedItem('nama') as HTMLInputElement).value = warga.nama || '';
+                            (form.elements.namedItem('nik') as HTMLInputElement).value = warga.nik || '';
+                            if (warga.email) (form.elements.namedItem('email') as HTMLInputElement).value = warga.email;
+                            if (warga.rt) (form.elements.namedItem('rt') as HTMLInputElement).value = warga.rt;
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">-- Pilih Warga --</option>
+                    {wargaData.map((w: any, idx: number) => (
+                      <option key={`${w.nik || w.id || 'no-id'}-${idx}`} value={w.nik}>
+                        {w.nama} - {w.nik}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="col-span-2">
                   <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
                     Nama Lengkap
