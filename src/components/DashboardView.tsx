@@ -139,13 +139,13 @@ export default function DashboardView({
   const personalStats = useMemo(() => {
     if (!isWarga || !currentUser?.nik) return null;
 
-    const mySetoran = sampahSetoranData.filter((s: any) => s.nik === currentUser.nik || s.namaNasabah === currentUser.name);
-    const myTarik = sampahTarikSaldoData.filter((s: any) => s.nik === currentUser.nik || s.namaNasabah === currentUser.name);
+    const mySetoran = sampahSetoranData.filter((s: any) => s.nik === currentUser?.nik || s.namaNasabah === currentUser?.name);
+    const myTarik = sampahTarikSaldoData.filter((s: any) => s.nik === currentUser?.nik || s.namaNasabah === currentUser?.name);
     const totalSetoran = mySetoran.reduce((acc, curr) => acc + (curr.total || 0), 0);
     const totalTarik = myTarik.reduce((acc, curr) => acc + (curr.jumlah || 0), 0);
     const saldoSampah = totalSetoran - totalTarik;
 
-    const myIuran = iuranData.filter((i: any) => i.nik === currentUser.nik || i.userId === currentUser.uid || i.namaPenyetor?.toLowerCase().includes(currentUser.name?.toLowerCase()));
+    const myIuran = iuranData.filter((i: any) => i.nik === currentUser?.nik || i.userId === currentUser?.uid || i.namaPenyetor?.toLowerCase().includes(currentUser?.name?.toLowerCase() || ''));
     
     // Calculate missing months for the current year
     const currentYear = new Date().getFullYear();
@@ -163,7 +163,7 @@ export default function DashboardView({
       if (!isPaid) unpaidCount++;
     }
 
-    const myOrders = tokoOrders.filter((o: any) => o.customerId === currentUser.uid || o.customerId === (currentUser.nik || ''));
+    const myOrders = tokoOrders.filter((o: any) => o.customerId === currentUser?.uid || o.customerId === (currentUser?.nik || ''));
     const pendingOrders = myOrders.filter((o: any) => o.status === 'PENDING' || o.status === 'PROCESS').length;
 
     const myLetters = (suratData || []).filter((s: any) => {
@@ -444,19 +444,36 @@ export default function DashboardView({
   }, [piePeriod, suratData, kasData, wargaData]);
 
   const kasVsOperasionalData = useMemo(() => {
-    const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
-    const biayaRutin = kasData.filter(t => t.kredit > 0 && 
-        (t.transaksi?.toLowerCase().includes('rutin') || 
-         t.transaksi?.toLowerCase().includes('biaya') || 
-         t.transaksi?.toLowerCase().includes('operasional') || 
-         t.transaksi?.toLowerCase().includes('hpp')))
-        .reduce((acc, curr) => acc + (curr.kredit || 0), 0);
+    const parseVal = (val: any) => {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const cleaned = val.toString().replace(/[^0-9.-]/g, '');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    const saldoTotal = kasData.reduce((acc, curr) => acc + parseVal(curr.debit) - parseVal(curr.kredit), 0);
+    const totalPemasukan = kasData.reduce((acc, curr) => acc + parseVal(curr.debit), 0);
+    const totalPengeluaran = kasData.reduce((acc, curr) => acc + parseVal(curr.kredit), 0);
     
+    let hppPlan = 0;
+    if (settings) {
+      const security = parseVal(settings.hpp_security_cost);
+      const trash = parseVal(settings.hpp_trash_cost);
+      const electricity = parseVal(settings.hpp_electricity_cost);
+      const admin = parseVal(settings.hpp_admin_cost);
+      const gov = parseVal(settings.hpp_gov_cost);
+      const social = parseVal(settings.hpp_social_cost);
+      hppPlan = security + trash + electricity + admin + gov + social;
+    }
+
     return [
       { name: 'Saldo Kas', value: Math.max(0, saldoTotal) },
-      { name: 'Operasional/HPP', value: biayaRutin }
+      { name: 'Pemasukan Kas', value: totalPemasukan },
+      { name: 'Pengeluaran Kas', value: totalPengeluaran },
+      { name: 'Est. Biaya per Bulan', value: hppPlan }
     ];
-  }, [kasData]);
+  }, [kasData, settings]);
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
@@ -994,10 +1011,10 @@ export default function DashboardView({
                 <CreditCard className="w-8 h-8 text-emerald-500" />
               </div>
               <div>
-                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant leading-none">Kas vs HPP</h3>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant leading-none">Kas vs Est. Biaya per Bulan</h3>
                 <div className="flex items-center gap-2 mt-2">
                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-                   <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Kondisi Keuangan Operasional</p>
+                   <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Sinkronisasi Biaya & Rencana Operasional</p>
                 </div>
               </div>
             </div>
@@ -1017,7 +1034,17 @@ export default function DashboardView({
                     animationDuration={1500}
                   >
                     {kasVsOperasionalData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === 0 ? '#4f46e5' : '#ef4444'} stroke={document.documentElement.classList.contains('dark') ? '#0f172a' : 'white'} strokeWidth={6} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={
+                          index === 0 ? '#4f46e5' : // Saldo Kas (Indigo)
+                          index === 1 ? '#10b981' : // Pemasukan Kas (Emerald)
+                          index === 2 ? '#f43f5e' : // Pengeluaran Kas (Rose)
+                          '#f97316'                 // HPP PLAN (Orange)
+                        } 
+                        stroke={document.documentElement.classList.contains('dark') ? '#0f172a' : 'white'} 
+                        strokeWidth={6} 
+                      />
                     ))}
                   </Pie>
                   <Tooltip 
@@ -1032,7 +1059,16 @@ export default function DashboardView({
               {kasVsOperasionalData.map((entry, index) => (
                 <div key={entry.name} className="flex items-center justify-between md:justify-start gap-6 p-2 rounded-[1.5rem] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group">
                   <div className="flex items-center gap-4">
-                    <div className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.1)] group-hover:scale-125 transition-transform" style={{ backgroundColor: index === 0 ? '#4f46e5' : '#ef4444' }}></div>
+                    <div 
+                      className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.1)] group-hover:scale-125 transition-transform" 
+                      style={{ 
+                        backgroundColor: 
+                          index === 0 ? '#4f46e5' : 
+                          index === 1 ? '#10b981' : 
+                          index === 2 ? '#f43f5e' : 
+                          '#f97316' 
+                      }}
+                    ></div>
                     <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">{entry.name}</span>
                   </div>
                   <span className="text-sm font-black text-slate-800 dark:text-slate-200 tabular-nums font-mono">Rp {entry.value.toLocaleString('id-ID')}</span>

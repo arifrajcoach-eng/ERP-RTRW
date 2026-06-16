@@ -1057,7 +1057,8 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       }
     });
   } else {
-    const buildPath = path.join(process.cwd(), "dist");
+    // In production (bundled with esbuild to dist/server.cjs), __dirname is the dist folder itself
+    const buildPath = __dirname;
     app.use(express.static(buildPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(buildPath, "index.html"));

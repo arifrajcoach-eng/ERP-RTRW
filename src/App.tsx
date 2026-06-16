@@ -1312,6 +1312,9 @@ export default function App() {
     return Array.from(list);
   }, [currentUser, wargaAuth, selectedTenantId, tenantsData]);
 
+  // Securely resolve current active tenant ID for single context operations
+  const activeTenantId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+
   // Tenant friendly name display format mapper
   const getTenantFriendlyName = (tId: string) => {
     const tenantObj = tenantsData.find(t => t.id === tId);
@@ -1892,7 +1895,7 @@ export default function App() {
           setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
         }));
       } else if (currentUser?.tenantId) {
-        unsubs.push(onSnapshot(query(collection(db, "users"), where("tenantId", "==", currentUser.tenantId)), (snap) => {
+        unsubs.push(onSnapshot(query(collection(db, "users"), where("tenantId", "==", currentUser?.tenantId || wargaAuth?.tenantId || "")), (snap) => {
           setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
         }));
       } else if (tIds.length > 0) {
@@ -2062,7 +2065,7 @@ export default function App() {
          });
       } else {
          if (currentUser?.id) {
-           unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser.id), limit(50)), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+           unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser?.id || wargaAuth?.nik || ""), limit(50)), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
          }
       }
     }
@@ -2457,7 +2460,6 @@ export default function App() {
   };
 
   // --- TENANT SPECIFIC LOCALSTORAGE PERSISTENCE (SECURE CONTEXT) ---
-  const activeTenantId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
 
   // Effect to load data from tenant-specific cache when active tenant changing
   useEffect(() => {
@@ -2577,7 +2579,7 @@ export default function App() {
         currentTenant.status !== "PREMIUM" &&
         currentTenant.status !== "ENTERPRISE"
       ) {
-        const tId = currentUser.tenantId || "";
+        const tId = currentUser?.tenantId || wargaAuth?.tenantId || "";
         if (tId === "MASTER") return; // Skip virtual tenant update
         console.log("Auto-activating PREMIUM for dev account...");
         try {
@@ -2586,7 +2588,7 @@ export default function App() {
             updatedAt: new Date().toISOString(),
           });
           // Also set as super admin for this login session
-          if (!currentUser.isSuperAdmin) {
+          if (!currentUser?.isSuperAdmin) {
             setCurrentUser((prev) =>
               prev
                 ? { ...prev, isSuperAdmin: true, role: "SUPER_ADMIN" }
@@ -2694,7 +2696,7 @@ export default function App() {
       },
       {
         id: "sos-monitor",
-        label: "Monitor Keamanan",
+        label: "MONITOR SOS",
         icon: ShieldAlert,
       },
       {
@@ -3034,6 +3036,7 @@ export default function App() {
             "inventaris",
             "organisasi",
             "kependudukan",
+            "sos-monitor",
           ],
           TAMU: ["dashboard", "etoko"],
           VIEWER: ["dashboard", "etoko"],
@@ -3196,8 +3199,8 @@ export default function App() {
   if (
     !wargaAuth &&
     (!currentUser ||
-      (currentUser.role === "Warga" &&
-        currentUser.name === "Warga (Anonymous)"))
+      (currentUser?.role === "Warga" &&
+        currentUser?.name === "Warga (Anonymous)"))
   ) {
     return (
       <>
@@ -4004,7 +4007,7 @@ export default function App() {
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-800 dark:text-slate-200 font-mono font-black truncate bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50 flex-1">
-                    {currentUser.tenantId || ""}
+                    {(currentUser?.tenantId || wargaAuth?.tenantId) || ""}
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-brand-green"></div>
                 </div>
@@ -4173,8 +4176,8 @@ export default function App() {
             <div className="flex items-center gap-2 md:gap-4">
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-black leading-none text-slate-800 dark:text-slate-100 flex items-center justify-end gap-2 mb-1.5 font-elegant">
-                  {currentUser.name}
-                  {currentUser.isSuperAdmin && (
+                  {currentUser?.name || wargaAuth?.nama || "User"}
+                  {currentUser?.isSuperAdmin && (
                     <div className="relative">
                       <ShieldCheck className="w-4 h-4 text-brand-blue" />
                       <div className="absolute inset-0 bg-brand-blue/20 blur-[2px] rounded-full scale-110"></div>
@@ -4184,12 +4187,12 @@ export default function App() {
                 <div className="flex justify-end">
                   <span
                     className={`text-[9px] uppercase font-black tracking-widest px-3 py-1 rounded-full border shadow-sm inline-block transition-all
-                      ${currentUser.isSuperAdmin
+                      ${currentUser?.isSuperAdmin
                         ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/20"
                         : "bg-brand-blue/5 text-brand-blue border-brand-blue/10"
                       }`}
                   >
-                    {currentUser.isSuperAdmin ? "Authority Role" : (currentUser.role || "Citizen")}
+                    {currentUser?.isSuperAdmin ? "Authority Role" : (currentUser?.role || wargaAuth?.role || "Warga")}
                   </span>
                 </div>
               </div>
@@ -4201,11 +4204,11 @@ export default function App() {
                     {userPhoto ? (
                       <img
                         src={userPhoto}
-                        alt={currentUser.name}
+                        alt={currentUser?.name || wargaAuth?.nama || "User"}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover/avatar:scale-110"
                       />
                     ) : (
-                      <span className="drop-shadow-md">{currentUser.name.charAt(0)}</span>
+                      <span className="drop-shadow-md">{(currentUser?.name || wargaAuth?.nama || "U").charAt(0)}</span>
                     )}
                   </div>
                 </div>
@@ -4252,7 +4255,7 @@ export default function App() {
               emergenciesData={emergenciesData}
               handleTriggerSOS={handleTriggerSOS}
               onResolveSOS={handleResolveSOS}
-              userRole={currentUser.role}
+              userRole={currentUser?.role || wargaAuth?.role || "Warga"}
               setActiveTab={setActiveTab}
               posyanduKegiatanData={posyanduKegiatanData}
               inventarisData={inventarisData}
@@ -4271,7 +4274,7 @@ export default function App() {
               setShowUpgradeModal={setShowUpgradeModal}
               setShowQRModal={setShowQRModal}
               settings={settings}
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               setIsLoadingDB={setIsLoadingDB}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
@@ -4283,13 +4286,13 @@ export default function App() {
               wargaData={cappedWargaData}
               currentTenant={currentTenant}
               setWargaData={setWargaData}
-              userRole={currentUser.role}
-              tenantId={currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || "")}
+              userRole={currentUser?.role || wargaAuth?.role || "Warga"}
+              tenantId={currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "")}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               settings={settings}
               tenantsData={tenantsData}
             />
@@ -4298,12 +4301,12 @@ export default function App() {
             <BukuTamuView
               tamuData={bukuTamuData}
               setTamuData={setBukuTamuData}
-              userRole={currentUser.role}
-              currentUser={currentUser}
+              userRole={currentUser?.role || wargaAuth?.role || "Warga"}
+              currentUser={currentUser || wargaAuth}
               tenantId={
-                currentUser?.tenantId && currentUser.tenantId !== "unknown"
-                  ? currentUser.tenantId
-                  : "rw26_berjuang"
+                (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
+                  ? currentUser?.tenantId
+                  : (wargaAuth?.tenantId || "rw26_berjuang")
               }
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
@@ -4311,31 +4314,31 @@ export default function App() {
             />
           )}
           {activeTab === "sos-monitor" && (
-            (currentUser?.role === 'ADMIN' || currentUser?.role === 'PENGURUS' || currentUser?.role === 'SATPAM' || currentUser?.isSuperAdmin) ? (
+            (currentUser?.role === 'ADMIN' || currentUser?.role === 'PENGURUS' || currentUser?.role === 'SATPAM' || currentUser?.isSuperAdmin || wargaAuth?.role === 'ADMIN') ? (
               <SatpamDashboard tenantId={
-                currentUser?.tenantId && currentUser.tenantId !== "unknown"
-                  ? currentUser.tenantId
-                  : "rw26_berjuang"
+                (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
+                  ? currentUser?.tenantId
+                  : (wargaAuth?.tenantId || "rw26_berjuang")
               } />
             ) : <div className="p-10 text-center text-slate-500">Anda tidak memiliki akses ke fitur ini.</div>
           )}
           {activeTab === "organisasi" && (
             <OrganisasiView
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               currentTenant={currentTenant}
               settings={settings}
               showNotification={showNotification}
             />
           )}
           {activeTab === "verifikasi" && (
-            currentUser?.role === "WARGA" ? (
+            (currentUser?.role === "WARGA" || wargaAuth?.role === "WARGA") ? (
               <WargaProfileView
                 wargaData={mergedWargaProfile}
                 verifikasiData={verifikasiWargaData}
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
+                tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4377,8 +4380,8 @@ export default function App() {
               kasData={filteredKasDataCentral}
               setKasData={setKasData}
               wargaData={filteredWargaDataCentral}
-              userRole={currentUser.role}
-              currentUser={currentUser}
+              userRole={currentUser?.role || wargaAuth?.role || "Warga"}
+              currentUser={currentUser || wargaAuth}
               getSetting={getSetting}
               tenantId={activeTenantId || "rw26_berjuang"}
               setIsLoadingDB={setIsLoadingDB}
@@ -4387,7 +4390,7 @@ export default function App() {
               showNotification={showNotification}
               plan={currentTenant?.status}
               isPengurus={["ADMIN", "SUPER_ADMIN", "OWNER", "RW", "RT", "BENDAHARA", "SEKRETARIS", "KADER"].includes(
-                currentUser.role?.toUpperCase(),
+                (currentUser?.role || wargaAuth?.role || "").toUpperCase(),
               )}
             />
           )}
@@ -4410,6 +4413,7 @@ export default function App() {
                 setImunisasiData={setImunisasiData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
+                wargaAuth={wargaAuth}
                 tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -4444,6 +4448,7 @@ export default function App() {
                 sampahTarikSaldoData={sampahTarikSaldoData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
+                wargaAuth={wargaAuth}
                 tenantId={activeTenantId || "rw26_berjuang"}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4496,8 +4501,8 @@ export default function App() {
                 inventarisKategori={inventarisKategori}
                 inventarisLokasi={inventarisLokasi}
                 inventarisSupplier={inventarisSupplier}
-                userRole={currentUser.role}
-                currentUser={currentUser}
+                userRole={currentUser?.role || wargaAuth?.role || "Warga"}
+                currentUser={currentUser || wargaAuth}
                 tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -4507,11 +4512,11 @@ export default function App() {
               />
             );
           })()}
-          {activeTab === "kependudukan" && currentUser && (
+          {activeTab === "kependudukan" && (currentUser || wargaAuth) && (
             <KependudukanView
               kelahiranData={kelahiranData}
               kematianData={kematianData}
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
@@ -4545,8 +4550,8 @@ export default function App() {
                 setSuratData={setSuratData}
                 wargaData={filteredWargaDataCentral}
                 usersData={filteredUsersDataCentral}
-                userRole={currentUser.role}
-                currentUser={currentUser}
+                userRole={currentUser?.role || wargaAuth?.role || "Warga"}
+                currentUser={currentUser || wargaAuth}
                 getSetting={getSetting}
                 kopSettings={kopSettings}
                 tenantId={activeTenantId || "rw26_berjuang"}
@@ -4589,7 +4594,7 @@ export default function App() {
 
           {activeTab === "daftar-trial" && (
             <DaftarPendaftarTrialView 
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               onAdd={() => setShowFreeTrialModal(true)} 
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
@@ -4605,7 +4610,7 @@ export default function App() {
               tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               settings={settings}
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
             />
           )}
           {activeTab === "leads" && (
@@ -4633,11 +4638,11 @@ export default function App() {
               currentTenant={currentTenant}
               wargaData={filteredWargaDataCentral}
               settings={settings}
-              userRole={currentUser.role}
+              userRole={currentUser?.role || wargaAuth?.role || "Warga"}
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               setActiveTab={setActiveTab}
             />
           )}
@@ -4649,12 +4654,12 @@ export default function App() {
               </div>
             ) : getPlanFeatures(currentTenant || {}).ePemilu ? (
               <EVotingView
-                userRole={currentUser.role}
+                userRole={currentUser?.role || wargaAuth?.role || "Warga"}
                 tenantId={activeTenantId}
                 candidates={votingCandidates}
                 config={votingConfig}
                 userVotes={userVotes}
-                currentUser={currentUser}
+                currentUser={currentUser || wargaAuth}
                 wargaAuth={wargaAuth}
                 handleFirestoreError={handleFirestoreError}
                 handleFileUpload={handleFileUpload}
@@ -4683,12 +4688,12 @@ export default function App() {
           )}
           {activeTab === "etoko" && (
             <ETokoView
-              userRole={currentUser.role}
+              userRole={currentUser?.role || wargaAuth?.role || "Warga"}
               tenantId={activeTenantId || "rw26_berjuang"}
               products={tokoProducts}
               orders={tokoOrders}
               reviews={tokoReviews}
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               wargaAuth={wargaAuth}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -4701,7 +4706,7 @@ export default function App() {
           {activeTab === "analitik" &&
             (getPlanFeatures(currentTenant).analytics ? (
               <AnalyticsPremiumView
-                tenantId={activeTenantId || currentUser.tenantId}
+                tenantId={activeTenantId || currentUser?.tenantId || wargaAuth?.tenantId || ""}
                 kasData={filteredKasDataCentral}
                 wargaData={filteredWargaDataCentral}
                 iuranData={filteredIuranDataCentral}
@@ -4735,9 +4740,9 @@ export default function App() {
 
           {activeTab === "monitoring" && (
             <EnterpriseGovDashboard
-              tenantId={activeTenantId || currentUser.tenantId}
+              tenantId={activeTenantId || currentUser?.tenantId || wargaAuth?.tenantId || ""}
               wargaData={wargaData}
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               wargaAuth={wargaAuth}
             />
           )}
@@ -8020,6 +8025,7 @@ function PosyanduView({
   setImunisasiData,
   wargaData,
   currentUser,
+  wargaAuth,
   tenantId,
   setIsLoadingDB,
   handleFirestoreError,
@@ -8031,30 +8037,33 @@ function PosyanduView({
   const isWarga = roleUpper === "WARGA";
 
   const filteredBalita = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
+    if (isWarga && (currentUser?.nik || wargaAuth?.nik)) {
+      const activeNik = currentUser?.nik || wargaAuth?.nik;
       return (balitaData || []).filter(
         (b: any) =>
-          b.nikOrangTua === currentUser.nik || b.nik === currentUser.nik,
+          b.nikOrangTua === activeNik || b.nik === activeNik,
       );
     }
     return balitaData || [];
-  }, [balitaData, isWarga, currentUser?.nik]);
+  }, [balitaData, isWarga, currentUser?.nik, wargaAuth?.nik]);
 
   const filteredIbuHamil = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
-      return (ibuHamilData || []).filter((i: any) => i.nik === currentUser.nik);
+    if (isWarga && (currentUser?.nik || wargaAuth?.nik)) {
+      const activeNik = currentUser?.nik || wargaAuth?.nik;
+      return (ibuHamilData || []).filter((i: any) => i.nik === activeNik);
     }
     return ibuHamilData || [];
-  }, [ibuHamilData, isWarga, currentUser?.nik]);
+  }, [ibuHamilData, isWarga, currentUser?.nik, wargaAuth?.nik]);
 
   const filteredPosbindu = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
+    if (isWarga && (currentUser?.nik || wargaAuth?.nik)) {
+      const activeNik = currentUser?.nik || wargaAuth?.nik;
       return (pemeriksaanPosbinduData || []).filter(
-        (p: any) => p.nik === currentUser.nik,
+        (p: any) => p.nik === activeNik,
       );
     }
     return pemeriksaanPosbinduData || [];
-  }, [pemeriksaanPosbinduData, isWarga, currentUser?.nik]);
+  }, [pemeriksaanPosbinduData, isWarga, currentUser?.nik, wargaAuth?.nik]);
 
   const [activeSubTab, setActiveSubTab] = useState<
     | "dashboard"
@@ -8647,7 +8656,7 @@ function PosyanduView({
       tenantId,
       tanggal: formData.get("tanggal"),
       lokasi: formData.get("lokasi"),
-      kaderId: currentUser.email,
+      kaderId: currentUser?.email || wargaAuth?.nik || "Guest",
       keterangan: formData.get("keterangan"),
     };
 
@@ -10747,6 +10756,7 @@ function BankSampahView({
   sampahTarikSaldoData,
   wargaData,
   currentUser,
+  wargaAuth,
   tenantId,
   handleFirestoreError,
   showNotification,
@@ -10846,18 +10856,20 @@ function BankSampahView({
   const isWarga = roleUpper === "WARGA";
 
   const filteredSampahSetoran = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
-      return (sampahSetoranData || []).filter((s: any) => s.nasabahId === currentUser.nik);
+    if (isWarga && (currentUser?.nik || wargaAuth?.nik)) {
+      const activeNik = currentUser?.nik || wargaAuth?.nik;
+      return (sampahSetoranData || []).filter((s: any) => s.nasabahId === activeNik);
     }
     return sampahSetoranData || [];
-  }, [sampahSetoranData, isWarga, currentUser?.nik]);
+  }, [sampahSetoranData, isWarga, currentUser?.nik, wargaAuth?.nik]);
 
   const filteredSampahTarikSaldo = useMemo(() => {
-    if (isWarga && currentUser?.nik) {
-      return (sampahTarikSaldoData || []).filter((t: any) => t.nasabahId === currentUser.nik);
+    if (isWarga && (currentUser?.nik || wargaAuth?.nik)) {
+      const activeNik = currentUser?.nik || wargaAuth?.nik;
+      return (sampahTarikSaldoData || []).filter((t: any) => t.nasabahId === activeNik);
     }
     return sampahTarikSaldoData || [];
-  }, [sampahTarikSaldoData, isWarga, currentUser?.nik]);
+  }, [sampahTarikSaldoData, isWarga, currentUser?.nik, wargaAuth?.nik]);
 
   // Nasabah Summary (Warga with their balances)
   const nasabahSummary = useMemo(() => {
@@ -10885,22 +10897,24 @@ function BankSampahView({
         (n: any) => n.totalSetoran > 0 || n.saldo > 0 || n.isNasabah === true,
       );
       
-    if (isWarga && currentUser?.nik) {
-      summary = summary.filter((n: any) => n.nik === currentUser.nik);
+    if (isWarga && (currentUser?.nik || wargaAuth?.nik)) {
+      const activeNik = currentUser?.nik || wargaAuth?.nik;
+      summary = summary.filter((n: any) => n.nik === activeNik);
     }
     return summary;
-  }, [wargaData, sampahSetoranData, sampahTarikSaldoData, isWarga, currentUser?.nik]);
+  }, [wargaData, sampahSetoranData, sampahTarikSaldoData, isWarga, currentUser?.nik, wargaAuth?.nik]);
 
   // Auto-select self as nasabah for WARGA
   useEffect(() => {
-    if (isWarga && currentUser?.nik && activeSubTab === "dashboard") {
+    if (isWarga && (currentUser?.nik || wargaAuth?.nik) && activeSubTab === "dashboard") {
+      const activeNik = currentUser?.nik || wargaAuth?.nik;
       // Find matching nasabah by NIK
-      const match = nasabahSummary.find((n: any) => n.nik === currentUser.nik || n.email === currentUser.email);
+      const match = nasabahSummary.find((n: any) => n.nik === activeNik || n.email === currentUser?.email);
       if (match) {
         setSelectedNasabahId(match.nik);
       }
     }
-  }, [isWarga, currentUser?.nik, currentUser?.email, nasabahSummary, activeSubTab]);
+  }, [isWarga, currentUser?.nik, wargaAuth?.nik, currentUser?.email, nasabahSummary, activeSubTab]);
 
   // Statistics
   const stats = useMemo(() => {

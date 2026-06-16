@@ -39,6 +39,7 @@ import {
 import { doc, setDoc, updateDoc, onSnapshot, query, where, collection, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { MapPicker } from './MapPicker';
 
 const normalizeProfileData = (data: any) => {
@@ -331,6 +332,66 @@ export function WargaProfileView({
     printWindow.document.write(content);
     printWindow.document.close();
     showNotification("Pratinjau cetak terbuka di tab baru", "info");
+  };
+
+  const downloadMySuratPDF = async (item: any) => {
+    if (!wargaData?.terverifikasi) {
+        showNotification('Surat tidak dapat diunduh: Identitas belum terverifikasi oleh Admin.', 'error');
+        return;
+    }
+    
+    showNotification("Menyiapkan dokumen PDF...", "info");
+
+    const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
+    const kop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
+    
+    const mappedSurat = {
+      ...item,
+      jenisSurat: item.jenis,
+      nomor_surat: item.nomorSurat || item.nomor_surat,
+      jk: item.jenisKelamin || item.jk || wargaData.jk || wargaData.jenisKelamin || "-",
+      pekerjaan: item.pekerjaan || wargaData.profesi || "-",
+      statusKawin: item.statusKawin || wargaData.kawin || wargaData.statusKawin || "-",
+      keperluan: item.keterangan || item.keperluan || "-",
+    };
+
+    // Use the existing generateSuratHTML logic to get the content
+    const content = generateSuratHTML(mappedSurat, kop, settings);
+
+    // Create hidden element for generation
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '210mm';
+    container.style.backgroundColor = '#fff';
+    
+    // Wrap in a div to ensure proper rendering
+    container.innerHTML = `<div style="background: white; width: 210mm;">${content}</div>`;
+    document.body.appendChild(container);
+    
+    try {
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Surat_${wargaData.nama}_${item.id}.pdf`);
+      showNotification("PDF berhasil diunduh.", "success");
+    } catch (err) {
+      console.error("PDF download error:", err);
+      showNotification("Gagal mengunduh PDF.", "error");
+    } finally {
+      document.body.removeChild(container);
+    }
   };
 
   const handleRequestSurat = (jenisId: string, name: string) => {
@@ -796,13 +857,22 @@ export function WargaProfileView({
                                      
                                      <div className="flex items-center gap-3 shrink-0 flex-wrap md:flex-nowrap">
                                         {item.status === 'Selesai' && (
-                                           <button
-                                              onClick={() => generateMySuratPDF(item)}
-                                              className="flex items-center justify-center gap-2.5 px-6 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/10 active:scale-95 transition-all"
-                                              title="Cetak Surat"
-                                           >
-                                              <Printer className="w-4 h-4" /> Cetak Surat
-                                           </button>
+                                           <div className="flex gap-2">
+                                              <button
+                                                 onClick={() => generateMySuratPDF(item)}
+                                                 className="flex items-center justify-center gap-2.5 px-6 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/10 active:scale-95 transition-all"
+                                                 title="Cetak via Browser"
+                                              >
+                                                 <Printer className="w-4 h-4" /> Cetak
+                                              </button>
+                                              <button
+                                                 onClick={() => downloadMySuratPDF(item)}
+                                                 className="flex items-center justify-center gap-2.5 px-6 py-4 bg-brand-blue hover:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-blue/10 active:scale-95 transition-all"
+                                                 title="Unduh PDF Langsung"
+                                              >
+                                                 <Download className="w-4 h-4" /> Download
+                                              </button>
+                                           </div>
                                         )}
                                         <button
                                            onClick={() => setSuratToDelete(item)}

@@ -90,7 +90,7 @@ export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) =>
 
   return (
     <div className="p-6 bg-slate-950 text-white min-h-screen">
-      <h1 className="text-2xl font-black text-red-500 uppercase tracking-widest mb-6">Dashboard Satpam</h1>
+      <h1 className="text-2xl font-black text-red-500 uppercase tracking-widest mb-6">Dashboard SOS</h1>
       
       {/* Active Alerts */}
       <section className="mb-8">

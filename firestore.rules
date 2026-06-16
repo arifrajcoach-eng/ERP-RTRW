@@ -43,7 +43,7 @@ service cloud.firestore {
     
     function isTenantMemberStatic(tenantId) {
       let isString = tenantId is string;
-      let isCommon = isString && tenantId in ['trihprw26', 'MASTER', 'master', 'rt01_rw26_berjuang', 'rt02_rw26_berjuang', 'rt03_rw26_berjuang', 'rt04_rw26_berjuang', 'rt05_rw26_berjuang'];
+      let isCommon = isString && tenantId in ['rw26_berjuang', 'trihprw26', 'MASTER', 'master', 'rt01_rw26_berjuang', 'rt02_rw26_berjuang', 'rt03_rw26_berjuang', 'rt04_rw26_berjuang', 'rt05_rw26_berjuang'];
       return isSignedIn() && isString && (
         isAdminStatic() ||
         ('email' in request.auth.token && request.auth.token.email != null && request.auth.token.email.lower() == 'arifrajcoach@gmail.com') || 
@@ -76,7 +76,7 @@ service cloud.firestore {
 
         ('firebase' in request.auth.token && 'sign_in_provider' in request.auth.token.firebase && request.auth.token.firebase.sign_in_provider == 'anonymous' && (
           isCommon ||
-          tenantId.lower() in ['trihprw26', 'master'] ||
+          tenantId.lower() in ['rw26_berjuang', 'trihprw26', 'master'] ||
           tenantId.lower().matches('^rt[0-9]+_trih.*')
         )) ||
         
@@ -259,30 +259,77 @@ service cloud.firestore {
 
     match /toko_products/{docId} {
       allow read: if isSignedIn();
-      allow create: if isPengurus() && 'tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId);
-      allow update: if isPengurus() && 'tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId) && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId);
-      allow delete: if isPengurus() && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId);
+      allow create: if isSignedIn() && 'tenantId' in request.resource.data && (
+        isTenantMember(request.resource.data.tenantId) || 
+        (request.resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(request.resource.data.tenantId + "_" + request.resource.data.sellerId)) && 
+         get(/databases/$(database)/documents/verifikasi_warga/$(request.resource.data.tenantId + "_" + request.resource.data.sellerId)).data.authUid == request.auth.uid) ||
+        (getUserData() != null && (getUserData().role == 'Warga' || getUserData().role == 'USER'))
+      );
+      allow update: if isSignedIn() && (
+        isPengurus() || 
+        (resource.data.sellerId == request.auth.uid) ||
+        (resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)) && 
+         get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)).data.authUid == request.auth.uid) ||
+        (getUserData() != null && 'nik' in getUserData() && resource.data.sellerId == getUserData().nik)
+      ) && (request.resource.data.tenantId == resource.data.tenantId);
+      allow delete: if isSignedIn() && (
+        isPengurus() || 
+        (resource.data.sellerId == request.auth.uid) ||
+        (resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)) && 
+         get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)).data.authUid == request.auth.uid) ||
+        (getUserData() != null && 'nik' in getUserData() && resource.data.sellerId == getUserData().nik)
+      );
     }
 
     match /toko_products_seller/{docId} {
-      allow list: if isTenantMemberStatic(resource.data.tenantId);
-      allow get: if isTenantMember(resource.data.tenantId);
-      allow create: if isPengurus() && 'tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId);
-      allow update: if isPengurus() && 'tenantId' in request.resource.data && isTenantMember(request.resource.data.tenantId) && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId);
-      allow delete: if isPengurus() && 'tenantId' in resource.data && isTenantMember(resource.data.tenantId);
+      allow read: if isSignedIn() && (isTenantMember(resource.data.tenantId) || (resource.data.sellerId == request.auth.uid) || (resource.data.sellerId == request.auth.token.email));
+      allow create: if isSignedIn() && 'tenantId' in request.resource.data && (
+        isTenantMember(request.resource.data.tenantId) || 
+        (request.resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(request.resource.data.tenantId + "_" + request.resource.data.sellerId)) && 
+         get(/databases/$(database)/documents/verifikasi_warga/$(request.resource.data.tenantId + "_" + request.resource.data.sellerId)).data.authUid == request.auth.uid) ||
+        (getUserData() != null && (getUserData().role == 'Warga' || getUserData().role == 'USER'))
+      );
+      allow update: if isSignedIn() && (
+        isPengurus() || 
+        (resource.data.sellerId == request.auth.uid) ||
+        (resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)) && 
+         get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)).data.authUid == request.auth.uid) ||
+        (getUserData() != null && 'nik' in getUserData() && resource.data.sellerId == getUserData().nik)
+      ) && (request.resource.data.tenantId == resource.data.tenantId);
+      allow delete: if isSignedIn() && (
+        isPengurus() || 
+        (resource.data.sellerId == request.auth.uid) ||
+        (resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)) && 
+         get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)).data.authUid == request.auth.uid) ||
+        (getUserData() != null && 'nik' in getUserData() && resource.data.sellerId == getUserData().nik)
+      );
     }
 
     match /toko_orders/{docId} {
-      allow list: if isSignedIn() && (resource.data.customerId == request.auth.uid || isTenantMemberStatic(resource.data.tenantId));
-      allow get: if isSignedIn() && (resource.data.customerId == request.auth.uid || isTenantMember(resource.data.tenantId));
+      allow read: if isSignedIn() && (
+        isTenantMember(resource.data.tenantId) || 
+        resource.data.buyerId == request.auth.uid || 
+        resource.data.customerId == request.auth.uid ||
+        resource.data.sellerId == request.auth.uid ||
+        (resource.data.customerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.customerId)) && get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.customerId)).data.authUid == request.auth.uid) ||
+        (resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)) && get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)).data.authUid == request.auth.uid)
+      );
       allow create: if isSignedIn();
-      allow update: if (isSignedIn() && resource.data.customerId == request.auth.uid) || (isPengurus() && isTenantMember(resource.data.tenantId));
+      allow update: if isSignedIn() && (
+        isPengurus() || 
+        resource.data.buyerId == request.auth.uid || 
+        resource.data.customerId == request.auth.uid ||
+        resource.data.sellerId == request.auth.uid ||
+        (resource.data.customerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.customerId)) && get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.customerId)).data.authUid == request.auth.uid) ||
+        (resource.data.sellerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)) && get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.sellerId)).data.authUid == request.auth.uid)
+      );
       allow delete: if isAdmin();
     }
 
     match /toko_reviews/{docId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isPengurus() || (resource.data.customerId == request.auth.uid) || (resource.data.customerId != null && exists(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.customerId)) && get(/databases/$(database)/documents/verifikasi_warga/$(resource.data.tenantId + "_" + resource.data.customerId)).data.authUid == request.auth.uid);
     }
 
     match /ppob_trx/{docId} {

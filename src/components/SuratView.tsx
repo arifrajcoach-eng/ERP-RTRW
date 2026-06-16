@@ -38,6 +38,7 @@ import {
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { StyledButton } from './StyledButton';
 import { ConfirmModal } from './ui/ConfirmModal';
 import { getTranslatedLabel } from '../lib/langUtils';
@@ -479,6 +480,185 @@ export function SuratView({
     printWindow.document.write(content);
     printWindow.document.close();
     showNotification("Pratinjau cetak terbuka di tab baru", "info");
+  };
+
+  const downloadSuratPDF = async (surat: any) => {
+    // Robust identity verification check (same as generateSuratPDF)
+    const normalizedTargetNik = String(surat.nik || '').trim();
+    const warga = wargaData.find(w => {
+      const wNik = String(w.nik || w.NIK || '').trim();
+      const wId = String(w.id || w.docId || '').trim();
+      return (wNik && wNik === normalizedTargetNik) || 
+             (wId && wId === normalizedTargetNik) ||
+             (surat.authUid && w.authUid === surat.authUid) ||
+             (surat.userId && w.userId === surat.userId) ||
+             (surat.nik && w.nikMapping === surat.nik);
+    }) || (String(currentUser?.nik || '').trim() === normalizedTargetNik ? currentUser : null);
+
+    const isWargaVerified = warga?.terverifikasi === true || 
+                            warga?.status === "Disetujui" || 
+                            warga?.isVerified === true ||
+                            (currentUser?.role?.toUpperCase() === "WARGA" && currentUser?.status === "Disetujui") ||
+                            isGlobalSuperAdmin;
+                            
+    if (!isWargaVerified) {
+        showNotification('Surat tidak dapat diunduh: Identitas belum terverifikasi.', 'error');
+        return;
+    }
+
+    const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
+    const rawKop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
+    
+    const kop: any = {};
+    Object.keys(rawKop).forEach(key => {
+      const val = rawKop[key];
+      if (val && val !== "..." && val !== "-" && val !== "RT ... / RW ...") {
+        kop[key] = val;
+      }
+    });
+
+    showNotification("Menyiapkan dokumen PDF...", "info");
+
+    const defaultLogoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
+    const logoPemerintah = (kop.logo_url && kop.logo_url.length > 10) ? kop.logo_url : defaultLogoUrl;
+    const logoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : "/logosmartrwai.png"; 
+    
+    const displayRT = surat.rt || kop.rt || "03"; 
+    const displayRW = kop.rw || "26"; 
+    const orgName = `RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}`;
+    const kelurahanText = kop.kelurahan && kop.kecamatan && kop.kelurahan !== "..."
+      ? `KELURAHAN ${kop.kelurahan.toUpperCase()} - KECAMATAN ${kop.kecamatan.toUpperCase()}`
+      : "KELURAHAN KEBALEN - KECAMATAN BABELAN";
+    const kabupaten = kop.kabupaten || "KABUPATEN BEKASI";
+    const displayKabupaten = kabupaten.toUpperCase().includes('KABUPATEN') || kabupaten.toUpperCase().includes('KOTA') 
+      ? kabupaten.toUpperCase() 
+      : (kabupaten !== "..." ? `KABUPATEN ${kabupaten.toUpperCase()}` : "KABUPATEN BEKASI");
+
+    const alamatText = kop.alamat && kop.alamat !== "..."
+      ? `Sekretariat : ${kop.alamat} ${kop.email ? ' | Email: ' + kop.email : ''} ${kop.instagram ? ' | Instagram: ' + kop.instagram : ''}`
+      : "Sekretariat : Jl. Katala 3 Blok K3 No. 1 RT 02 / RW 26 | Email: kebalenrw26@gmail.com";
+
+    // Create hidden element for generation
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '210mm';
+    container.style.backgroundColor = '#fff';
+    
+    // Construct HTML content exactly like generateSuratPDF but optimized for html2canvas
+    container.innerHTML = `
+      <div style="font-family: 'Times New Roman', serif; padding: 40px; color: #000; background: #fff; line-height: 1.4; width: 210mm; min-height: 297mm;">
+        ${kop.bg_kertas_url ? `<div style="width: 100mm; height: 100mm; background-image: url('${kop.bg_kertas_url}'); background-size: contain; background-position: center; background-repeat: no-repeat; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); filter: grayscale(100%) opacity(0.15); z-index: 0;"></div>` : ''}
+        <div style="position: relative; z-index: 1;">
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px;">
+            <img src="${logoPemerintah}" style="width: 80px; height: 80px; object-fit: contain;" />
+            <div style="text-align: center; flex: 1; padding: 0 10px;">
+              <h1 style="margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase;">${orgName}</h1>
+              <h2 style="margin: 2px 0; font-size: 15px; font-weight: bold; text-transform: uppercase;">${kelurahanText}</h2>
+              <h2 style="margin: 2px 0; font-size: 15px; font-weight: bold; text-transform: uppercase;">${displayKabupaten}</h2>
+              <p style="margin: 2px 0; font-size: 10px;">${alamatText}</p>
+            </div>
+            <img src="${logoOrganisasi}" style="width: 90px; height: 90px; object-fit: contain;" />
+          </div>
+          
+          <div style="text-align: center; margin-bottom: 25px;">
+            <h3 style="margin: 0; text-decoration: underline; font-size: 16px; font-weight: bold; text-transform: uppercase;">SURAT PENGANTAR</h3>
+            <p style="margin: 5px 0; font-size: 13px;">Nomor : ${surat.nomorSurat || `...... / RT ${displayRT} / RW ${displayRW} / Tahun ${new Date().getFullYear()}`}</p>
+          </div>
+          
+          <div style="font-size: 13px; text-align: justify;">
+            <p style="margin-bottom: 12px;">Yang bertanda tangan di bawah ini Ketua RT ${displayRT} / RW ${displayRW} Kelurahan ${surat.kelurahan || kop.kelurahan || 'Kebalen'} Kecamatan ${surat.kecamatan || kop.kecamatan || 'Babelan'} ${surat.kota || displayKabupaten}</p>
+            <p>Dengan ini menerangkan bahwa :</p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0 15px 30px;">
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Nama</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;"><b>${surat.pemohon}</b></td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Tempat Tgl, Lahir</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.ttl || '-'}</td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Jenis Kelamin</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.jenisKelamin || '-'}</td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Pekerjaan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.pekerjaan || '-'}</td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Kewarganegaraan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.kewarganegaraan || 'WNI'}</td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">No. KTP/NIK</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.nik || '-'}</td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Status Perkawinan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.statusKawin || '-'}</td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Alamat</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.alamat || '-'}</td></tr>
+              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Maksud / Keperluan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.keterangan || '-'}</td></tr>
+            </table>
+            
+            <p>Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
+          </div>
+          
+          <div style="text-align: right; margin-top: 30px; margin-bottom: 5px; font-size: 13px; padding-right: 40px;">
+             ${(kop.kabupaten || 'Bekasi').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; padding: 0 40px; margin-top: 10px;">
+            <div style="text-align: center; width: 220px;">
+              <p>Mengetahui,</p>
+              <p>Ketua RW ${displayRW}</p>
+              <div style="height: 80px; display: flex; align-items: center; justify-content: center; position: relative;">
+                ${kop.signature_rw_url ? `<img src="${kop.signature_rw_url}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
+              </div>
+              <p style="font-bold; text-decoration: underline;">( ${kop.nama_ketua_rw || 'Tri Handoko P'} )</p>
+            </div>
+            <div style="text-align: center; width: 220px;">
+              <p>&nbsp;</p>
+              <p>Ketua RT ${displayRT}</p>
+              <div style="height: 80px; display: flex; align-items: center; justify-content: center; position: relative;">
+                ${kop.signature_rt_url ? `<img src="${kop.signature_rt_url}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
+              </div>
+              <p style="font-bold; text-decoration: underline;">( ${kop.nama_ketua_rt || 'Fadhlan'} )</p>
+            </div>
+          </div>
+          
+          <div style="text-align: center; font-style: italic; font-size: 11px; margin-top: 30px; margin-bottom: 5px; color: #374151; font-family: 'Times New Roman', serif;">
+            "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
+          </div>
+
+          <div style="margin-top: 50px; border-top: 1.5px solid #000; padding-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 10px;">
+             <div style="display: flex; flex-direction: column;">
+               <span>Tl. Berkas / Surat No :</span>
+               <span style="margin-top: 15px">Berkas Sesuai</span>
+               <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
+             </div>
+             <div style="display: flex; flex-direction: column;">
+               <span>Hal :</span>
+               <span style="margin-top: 15px">Berkas Kecamatan</span>
+               <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
+             </div>
+             <div style="display: flex; flex-direction: column;">
+               <span>Tgl : ..............................</span>
+               <span style="margin-top: 15px">Paraf Arsiparis</span>
+               <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
+             </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+    
+    try {
+      // Use crossOrigin to handle images if needed
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Surat_${surat.pemohon}_${surat.id}.pdf`);
+      showNotification("PDF berhasil diunduh.", "success");
+    } catch (err) {
+      console.error("PDF download error:", err);
+      showNotification("Gagal mengunduh PDF.", "error");
+    } finally {
+      document.body.removeChild(container);
+    }
   };
 
   const handleSaveSurat = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -991,14 +1171,24 @@ export function SuratView({
                       </td>
                       <td className="px-6 py-4 flex items-center justify-center gap-2">
                         {s.status === 'Selesai' ? (
-                          <button 
-                            onClick={() => generateSuratPDF(s)} 
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/30"
-                            title="Cetak Surat PDF"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                            <span>Cetak</span>
-                          </button>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => generateSuratPDF(s)} 
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/30"
+                              title="Cetak Surat via Browser"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Cetak</span>
+                            </button>
+                            <button 
+                              onClick={() => downloadSuratPDF(s)} 
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-blue hover:bg-indigo-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/30"
+                              title="Unduh PDF Langsung"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Download</span>
+                            </button>
+                          </div>
                         ) : isPengurus && (
                           <>
                             {(((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
@@ -1654,11 +1844,16 @@ export function SuratView({
                         <button onClick={() => { handleRejectSurat(viewingSurat); setViewingSurat(null); }} className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-200">Tolak</button>
                      </>
                    )}
-                   {viewingSurat.status === 'Selesai' && (
-                      <button onClick={() => generateSuratPDF(viewingSurat)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-2">
-                        <Printer className="w-4 h-4" /> Cetak Dokumen PDF
-                      </button>
-                   )}
+                  {viewingSurat.status === 'Selesai' && (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                       <button onClick={() => generateSuratPDF(viewingSurat)} className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-2">
+                         <Printer className="w-4 h-4" /> Cetak Dokumen PDF
+                       </button>
+                       <button onClick={() => downloadSuratPDF(viewingSurat)} className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-emerald-200 flex items-center justify-center gap-2">
+                         <Download className="w-4 h-4" /> Download PDF Langsung
+                       </button>
+                    </div>
+                  )}
                 </div>
              </motion.div>
           </div>
