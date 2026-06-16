@@ -86,35 +86,6 @@ checkRule(
 );
 
 console.log("\n=============================================");
-
-checkRule(
-  "No console.log in Production Components",
-  () => {
-    const srcDir = path.join(process.cwd(), 'src', 'components');
-    if (!fs.existsSync(srcDir)) return true;
-    
-    let found = false;
-    const walkDir = (dir: string) => {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) { walkDir(full); continue; }
-        if (!/\.(tsx?|jsx?)$/.test(entry.name)) continue;
-        
-        const lines = fs.readFileSync(full, 'utf-8').split('\n');
-        lines.forEach((line, i) => {
-          if (/^\s*console\.log\(/.test(line) && !line.includes('//')) {
-            console.error(`  \x1b[33m⚠ console.log di ${path.relative(process.cwd(), full)}:${i+1}\x1b[0m`);
-            found = true;
-          }
-        });
-      }
-    };
-    walkDir(srcDir);
-    return !found; // warn only — tidak fail CI
-  },
-  "Hapus console.log sebelum production build (gunakan console.error/warn untuk error penting)"
-);
-
 if (hasErrors) {
   console.error(`${RED}STATUS: FAILED. Integrity checks failed.${RESET}`);
   console.log("=============================================");

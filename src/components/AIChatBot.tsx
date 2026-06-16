@@ -489,6 +489,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     } catch (error: any) {
       console.error('AI Chat Error (attempt ' + (2 - retries) + '):', error);
       if (retries > 0) {
+        console.log('Retrying...');
         return handleSend(textToSend, retries - 1);
       }
       if (mountedRef.current) {

@@ -617,7 +617,7 @@ export default function App() {
                   name: isMasterEmail ? "Admin Master" : "Admin RW Berjuang",
                   role: isMasterEmail ? "SUPER_ADMIN" : "RW",
                   email: user.email,
-                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || ''),
+                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"),
                   isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
@@ -2999,32 +2999,58 @@ export default function App() {
 
   if (isAuthInitializing && !isAuthHanging) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="relative mb-8 pt-4">
-          <div className="w-24 h-24 border-8 border-brand-blue/10 border-t-brand-blue border-r-brand-pink rounded-full animate-spin"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-            <AppLogo
-              size={12}
-              className="w-12 h-12"
-            />
+      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_center,rgba(0,191,255,0.08)_0%,radial-gradient(circle_at_center,rgba(255,105,180,0.03)_30%,rgba(15,23,42,1)_80%))] flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden relative">
+        {/* Glow effect background element */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-blue/5 rounded-full blur-[100px] pointer-events-none" />
+        
+        <div className="relative mb-10 pt-4 scale-95 sm:scale-100 transition-all">
+          {/* Outer high-tech dotted pulsing ring (clockwise spin-zoom) */}
+          <div className="w-32 h-32 rounded-full border border-dashed border-brand-blue/30 animate-spin-zoom absolute top-0 left-0" />
+          
+          {/* Middle neon thin glowing ring (counter-clockwise spin-zoom) */}
+          <div className="w-32 h-32 rounded-full border-t border-b-2 border-brand-pink/50 border-r border-l-0 animate-spin-zoom-reverse absolute top-0 left-0 shadow-[0_0_15px_rgba(255,105,180,0.15)]" />
+          
+          {/* Innermost pulsing ambient scale ring */}
+          <div className="w-32 h-32 rounded-full border border-brand-blue/20 bg-slate-900/40 backdrop-blur-md flex items-center justify-center shadow-[0_10px_35px_rgba(0,0,0,0.5)]">
+            <div className="relative p-3 bg-slate-950/80 rounded-2xl border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+              <AppLogo
+                size={14}
+                className="w-14 h-14 object-contain scale-100 hover:scale-105 transition-transform"
+              />
+            </div>
           </div>
         </div>
-        <h2 className="text-white font-bold tracking-widest text-[10px] uppercase mb-2">
-          Menyiapkan Ekosistem Digital
-        </h2>
-        <p className="text-white/30 text-[9px] uppercase tracking-wider mb-8">Memeriksa Sesi & Sinkronisasi Keamanan...</p>
-        
-        {/* Hidden emergency bypass button appears if very slow */}
-        <button 
-          onClick={() => {
-            safeLocalStorage.clear();
-            safeSessionStorage.clear();
-            window.location.reload();
-          }}
-          className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/20 hover:text-white/40 rounded-xl text-[9px] font-black uppercase transition-all tracking-widest border border-white/5"
-        >
-          Reset Sesi & Perbaiki Loading
-        </button>
+
+        <div className="relative z-10 max-w-sm px-4">
+          <div className="flex items-center justify-center gap-1.5 mb-2.5">
+            <span className="h-[2px] w-4 bg-brand-blue/40 rounded-full"></span>
+            <h1 className="text-white font-black tracking-[0.25em] text-[13px] uppercase font-sans">
+              SmaRt<span className="text-brand-blue">RW</span> <span className="text-brand-pink">AI</span>
+            </h1>
+            <span className="h-[2px] w-4 bg-brand-pink/40 rounded-full"></span>
+          </div>
+
+          <h2 className="text-slate-200 font-extrabold tracking-[0.18em] text-[10px] uppercase font-sans mb-1.5">
+            Menyiapkan Ekosistem Digital
+          </h2>
+          <p className="text-slate-400/60 text-[9px] uppercase tracking-[0.12em] font-medium max-w-[280px] mx-auto leading-relaxed mb-10">
+            Memeriksa Sesi & Sinkronisasi Keamanan Wilayah...
+          </p>
+          
+          {/* Safe bypass controls */}
+          <div className="pt-2">
+            <button 
+              onClick={() => {
+                safeLocalStorage.clear();
+                safeSessionStorage.clear();
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-slate-900/60 hover:bg-red-950/20 text-slate-500 hover:text-red-400 rounded-full text-[9px] font-bold uppercase transition-all tracking-wider border border-slate-800/80 hover:border-red-900/30 cursor-pointer shadow-sm active:scale-95"
+            >
+              Reset Sesi & Perbaiki Loading
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -3046,7 +3072,7 @@ export default function App() {
   if (isSelfRegistering) {
     return (
       <SelfRegistrationView
-        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || ''}
+        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"}
         onClose={() => setIsSelfRegistering(false)}
         handleFileUpload={handleFileUpload}
         showNotification={showNotification}
@@ -3183,14 +3209,14 @@ export default function App() {
 
   if (wargaAuth && !currentUser?.isSuperAdmin) {
     return (
-      <div className="relative w-full h-screen overflow-hidden">
+      <div className="relative w-full min-h-screen md:h-screen overflow-y-auto md:overflow-hidden bg-slate-50">
         <WargaProfileView
           wargaData={mergedWargaProfile}
           verifikasiData={verifikasiWargaData}
           suratData={suratData}
           setSuratData={setSuratData}
           setWargaAuth={setWargaAuth}
-          tenantId={mergedWargaProfile.tenantId || ''}
+          tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
           isLoadingDB={isLoadingDB}
           setIsLoadingDB={setIsLoadingDB}
           handleFileUpload={handleFileUpload}
@@ -4197,7 +4223,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile.tenantId || ''}
+                tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4213,7 +4239,7 @@ export default function App() {
               <VerifikasiAdminView
                 verifikasiData={filteredVerifikasiWargaDataCentral}
                 wargaData={filteredWargaDataCentral}
-                tenantId={currentUser.tenantId || ''}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 showNotification={showNotification}
@@ -4242,7 +4268,7 @@ export default function App() {
               userRole={currentUser.role}
               currentUser={currentUser}
               getSetting={getSetting}
-              tenantId={currentUser.tenantId || ''}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -4272,7 +4298,7 @@ export default function App() {
                 setImunisasiData={setImunisasiData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || ''}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4306,7 +4332,7 @@ export default function App() {
                 sampahTarikSaldoData={sampahTarikSaldoData}
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || ''}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
@@ -4360,7 +4386,7 @@ export default function App() {
                 inventarisSupplier={inventarisSupplier}
                 userRole={currentUser.role}
                 currentUser={currentUser}
-                tenantId={currentUser.tenantId || ''}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4374,7 +4400,7 @@ export default function App() {
               kelahiranData={kelahiranData}
               kematianData={kematianData}
               currentUser={currentUser}
-              tenantId={currentUser.tenantId || ''}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
@@ -4389,7 +4415,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile.tenantId || ''}
+                tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4411,7 +4437,7 @@ export default function App() {
                 currentUser={currentUser}
                 getSetting={getSetting}
                 kopSettings={kopSettings}
-                tenantId={currentUser.tenantId || ''}
+                tenantId={currentUser.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -4463,7 +4489,7 @@ export default function App() {
               usersData={filteredUsersDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
-              tenantId={currentUser.tenantId || ''}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser}
@@ -4490,7 +4516,7 @@ export default function App() {
           )}
           {activeTab === "pengaturan" && (
             <PengaturanView
-              tenantId={currentUser.tenantId || ''}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               currentTenant={currentTenant}
               wargaData={filteredWargaDataCentral}
               settings={settings}
@@ -4545,7 +4571,7 @@ export default function App() {
           {activeTab === "etoko" && (
             <ETokoView
               userRole={currentUser.role}
-              tenantId={currentUser.tenantId || ''}
+              tenantId={currentUser.tenantId || "rw26_berjuang"}
               products={tokoProducts}
               orders={tokoOrders}
               reviews={tokoReviews}
@@ -5721,7 +5747,7 @@ function SelfRegistrationView({
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
 
-  const [currentTenantId, setCurrentTenantId] = useState(tenantId || '');
+  const [currentTenantId, setCurrentTenantId] = useState(tenantId || "rw26_berjuang");
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
 
@@ -6574,7 +6600,7 @@ function LoginView({
   const [kodeKeluarga, setKodeKeluarga] = useState("");
 
   const [tenantInput, setTenantInput] = useState(() => {
-    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || '';
+    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang";
   });
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
@@ -6913,7 +6939,7 @@ function LoginView({
         }
 
         const docId = found.docId || found.id || found.nik;
-        const resolvedTenantId = found.tenantId || cleanTenant || '';
+        const resolvedTenantId = found.tenantId || cleanTenant || "rw26_berjuang";
         safeLocalStorage.setItem("lastActiveTenantId", resolvedTenantId);
 
         // 1. Create/update user document FIRST for Firestore security rules support (getUserData() mapping)
@@ -6926,7 +6952,7 @@ function LoginView({
             role: "Warga",
             nik: found.nik || "",
             name: found.nama || "Warga",
-            tenantId: found.tenantId || '',
+            tenantId: found.tenantId || "rw26_berjuang",
             linkedResidentId: docId,
             updatedAt: new Date().toISOString(),
           },
@@ -6946,7 +6972,7 @@ function LoginView({
               found.status === "Disetujui" || found.terverifikasi
                 ? "Disetujui"
                 : "Menunggu Persetujuan",
-            tenantId: found.tenantId || '',
+            tenantId: found.tenantId || "rw26_berjuang",
             lastLogin: new Date().toISOString(),
           },
           { merge: true },

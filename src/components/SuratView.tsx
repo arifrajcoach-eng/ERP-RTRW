@@ -577,6 +577,7 @@ export function SuratView({
   };
 
   const handleApproveSurat = (s: any) => {
+    console.log("[SuratView] handleApproveSurat invoked", {
       status: s?.status,
       isRTUser,
       isRWUser,
@@ -652,6 +653,7 @@ export function SuratView({
     if (!approvalConfirm) return;
     const { s, action, msg, nextStatus } = approvalConfirm;
 
+    console.log("[SuratView] executeApprovalConfirm executing", {
       suratId: s?.id,
       action,
       nextStatus,
@@ -678,9 +680,11 @@ export function SuratView({
           updateData.approvedByRW = currentUser?.nama || currentUser?.name || 'Ketua RW';
         }
 
+        console.log("[SuratView] Writing approved status update to firestore", { id: s.id, updateData });
         await updateDoc(doc(db, 'surat', s.id), updateData);
         showNotification(msg, 'success');
       } else if (action === 'reject') {
+        console.log("[SuratView] Writing rejected status update to firestore", { id: s.id });
         await updateDoc(doc(db, 'surat', s.id), { status: 'Ditolak' });
         showNotification('Surat ditolak', 'success');
       }
