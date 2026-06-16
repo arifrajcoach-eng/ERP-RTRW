@@ -41,6 +41,29 @@ import { db, auth } from '../firebase';
 import { jsPDF } from 'jspdf';
 import { MapPicker } from './MapPicker';
 
+const normalizeProfileData = (data: any) => {
+  if (!data) return {};
+  return {
+    ...data,
+    nama: data.nama || "",
+    kk: data.kk || "",
+    hp: data.hp || data.telepon || "",
+    telepon: data.telepon || data.hp || "",
+    blok: data.blok || data.alamat || "",
+    alamat: data.alamat || data.blok || "",
+    profesi: data.profesi || data.pekerjaan || "",
+    pekerjaan: data.pekerjaan || data.profesi || "",
+    pendidikanTerakhir: data.pendidikanTerakhir || data.pendidikan || "",
+    pendidikan: data.pendidikan || data.pendidikanTerakhir || "",
+    posisi: data.posisi || data.posisiKeluarga || "",
+    posisiKeluarga: data.posisiKeluarga || data.posisi || "",
+    kawin: data.kawin || data.statusKawin || "",
+    statusKawin: data.statusKawin || data.kawin || "",
+    jk: data.jk || data.jenisKelamin || "",
+    jenisKelamin: data.jenisKelamin || data.jk || ""
+  };
+};
+
 interface WargaProfileViewProps {
   wargaData: any;
   verifikasiData: any[];
@@ -61,7 +84,7 @@ interface WargaProfileViewProps {
 }
 
 export function WargaProfileView({ 
-  wargaData, 
+  wargaData: rawWargaData, 
   verifikasiData, 
   suratData = [], 
   setSuratData, 
@@ -78,6 +101,10 @@ export function WargaProfileView({
   generateSuratHTML, 
   settings 
 }: WargaProfileViewProps) {
+  const wargaData = React.useMemo(() => {
+    return normalizeProfileData(rawWargaData);
+  }, [rawWargaData]);
+
   const [activeCitizenTab, setActiveCitizenTab] = useState<'profil' | 'layanan' | 'riwayat'>('profil');
   const [uploadPct, setUploadPct] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -202,7 +229,9 @@ export function WargaProfileView({
     return [...matched].sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''))[0];
   }, [verifikasiData, wargaData]);
 
-  const currentData = activeSubmission || wargaData;
+  const currentData = React.useMemo(() => {
+    return normalizeProfileData(activeSubmission || wargaData);
+  }, [activeSubmission, wargaData]);
   const familyNiks = wargaData.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
   const mySurat = suratData.filter(s => s.nik === wargaData.nik || (s.nik && familyNiks.includes(s.nik)));
 

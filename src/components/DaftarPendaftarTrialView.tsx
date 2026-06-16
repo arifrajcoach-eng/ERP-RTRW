@@ -86,7 +86,7 @@ export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification,
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role?.toUpperCase() === 'SUPERADMIN';
+    const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role?.toUpperCase() === 'SUPERADMIN' || currentUser?.role?.toUpperCase() === 'SUPER_ADMIN';
     if (!isSuperAdmin) {
       setLoading(false);
       return;
@@ -130,7 +130,7 @@ export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification,
     return () => unsubscribe();
   }, [handleFirestoreError, currentUser]);
 
-  if (!currentUser?.isSuperAdmin) {
+  if (!currentUser?.isSuperAdmin && currentUser?.role?.toUpperCase() !== 'SUPERADMIN' && currentUser?.role?.toUpperCase() !== 'SUPER_ADMIN') {
     return (
       <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl m-6 max-w-xl mx-auto">
         <ShieldCheck className="w-12 h-12 mx-auto text-red-500 mb-3" />

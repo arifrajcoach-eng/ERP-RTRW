@@ -27,6 +27,29 @@ interface VerifikasiAdminViewProps {
   currentUser: any;
 }
 
+const normalizeVerifItem = (item: any) => {
+  if (!item) return {};
+  return {
+    ...item,
+    nama: item.nama || "",
+    kk: item.kk || "",
+    hp: item.hp || item.telepon || "",
+    telepon: item.telepon || item.hp || "",
+    blok: item.alamat || item.blok || "",
+    alamat: item.alamat || item.blok || "",
+    profesi: item.profesi || item.pekerjaan || "",
+    pekerjaan: item.pekerjaan || item.profesi || "",
+    pendidikanTerakhir: item.pendidikanTerakhir || item.pendidikan || "",
+    pendidikan: item.pendidikan || item.pendidikanTerakhir || "",
+    posisi: item.posisi || item.posisiKeluarga || "",
+    posisiKeluarga: item.posisiKeluarga || item.posisi || "",
+    kawin: item.kawin || item.statusKawin || "",
+    statusKawin: item.statusKawin || item.kawin || "",
+    jk: item.jk || item.jenisKelamin || "",
+    jenisKelamin: item.jenisKelamin || item.jk || ""
+  };
+};
+
 export function VerifikasiAdminView({ 
   verifikasiData, 
   wargaData, 
@@ -37,7 +60,7 @@ export function VerifikasiAdminView({
   handleFirestoreError, 
   currentUser 
 }: VerifikasiAdminViewProps) {
-  const [filter, setFilter] = useState<'All' | 'Menunggu Persetujuan' | 'Disetujui' | 'Ditolak'>('Menunggu Persetujuan');
+  const [filter, setFilter] = useState<'All' | 'Menunggu Persetujuan' | 'Disetujui' | 'Ditolak'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [catatan, setCatatan] = useState('');
@@ -46,8 +69,11 @@ export function VerifikasiAdminView({
   useEffect(() => {
     if (selectedItem) {
       const latest = verifikasiData.find(v => v.id === selectedItem.id);
-      if (latest && JSON.stringify(latest) !== JSON.stringify(selectedItem)) {
-        setSelectedItem(latest);
+      if (latest) {
+        const normalizedLatest = normalizeVerifItem(latest);
+        if (JSON.stringify(normalizedLatest) !== JSON.stringify(selectedItem)) {
+          setSelectedItem(normalizedLatest);
+        }
       }
     }
   }, [verifikasiData, selectedItem]);
@@ -72,14 +98,38 @@ export function VerifikasiAdminView({
       }
     });
 
+    // Merge in unverified wargaData that is NOT already in verifikasiData
+    wargaData.forEach(w => {
+      if (!w.terverifikasi) {
+        const nik = w.nik || 'unknown';
+        if (!uniqueMap[nik]) {
+          uniqueMap[nik] = {
+            id: w.docId || w.id || `VRF-WG-${nik}-${Date.now()}`,
+            nik: w.nik,
+            nama: w.nama,
+            kk: w.kk,
+            hp: w.hp || w.telepon,
+            alamat: w.alamat || w.blok,
+            rt: w.rt,
+            rw: w.rw,
+            ktpUrl: w.foto || w.ktpUrl || "",
+            submittedAt: w.updatedAt || w.createdAt || new Date().toISOString(),
+            status: 'Menunggu Persetujuan',
+            type: 'WARGA_INPUT_MANUAL',
+            isWargaDataRef: true
+          };
+        }
+      }
+    });
+
     const dedupedData = Object.values(uniqueMap);
 
-    return dedupedData.filter((v: any) => {
+    return dedupedData.map(item => normalizeVerifItem(item)).filter((v: any) => {
       const matchFilter = filter === 'All' || v.status === filter;
       const matchSearch = String(v.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) || String(v.nik || '').includes(searchQuery);
       return matchFilter && matchSearch;
     });
-  }, [verifikasiData, filter, searchQuery]);
+  }, [verifikasiData, wargaData, filter, searchQuery]);
 
   const handleApprove = async (item: any) => {
     if (actionLoading) return;
@@ -100,12 +150,18 @@ export function VerifikasiAdminView({
       // Use the tenantId from the item itself to ensure it stays in the correct RT/RW node
       const recordTenantId = item.tenantId || tenantId;
 
-      batch.update(vRef, {
+      batch.set(vRef, {
+        id: docId,
+        nik: item.nik,
+        nama: item.nama || "",
+        submittedAt: item.submittedAt || new Date().toISOString(),
+        tenantId: recordTenantId,
         status: 'Disetujui',
         approvedAt: new Date().toISOString(),
         approvedBy: currentUser.name || currentUser.displayName || 'Admin',
-        catatan: approveNote
-      });
+        catatan: approveNote,
+        type: item.type || 'REGISTRASI_BARU'
+      }, { merge: true });
 
       const standardDocId = `${recordTenantId}_${item.nik}`;
       const targetRef = doc(db, 'data_warga', standardDocId);
@@ -186,16 +242,16 @@ export function VerifikasiAdminView({
     try {
       const batch = writeBatch(db);
       const vRef = doc(db, 'verifikasi_warga', item.id);
+      const recordTenantId = item.tenantId || tenantId;
       
-      batch.update(vRef, {
+      batch.set(vRef, {
         status: 'Ditolak',
         catatan: reason,
         rejectedAt: new Date().toISOString(),
         rejectedBy: currentUser?.name || currentUser?.displayName || 'Admin'
-      });
+      }, { merge: true });
 
       if (isAlreadyApproved) {
-        const recordTenantId = item.tenantId || tenantId;
         const citizenDocId = `${recordTenantId}_${item.nik}`;
         const wargaRef = doc(db, 'data_warga', citizenDocId);
         batch.update(wargaRef, {

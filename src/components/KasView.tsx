@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Wallet,
@@ -39,6 +39,8 @@ import { ConfirmModal } from "./ui/ConfirmModal";
 import { scanReceiptAI } from "../services/aiService";
 import { PLAN_FEATURES } from "../constants";
 
+const INDONESIAN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
 interface KasViewProps {
   kasData: any[];
   setKasData: React.Dispatch<React.SetStateAction<any[]>>;
@@ -78,8 +80,6 @@ export function KasView({
   plan,
 }: KasViewProps) {
   const [showMasukForm, setShowMasukForm] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [strukUrl, setStrukUrl] = useState("");
   const [trxType, setTrxType] = useState<"Masuk" | "Keluar">("Masuk");
   const [isScanning, setIsScanning] = useState(false);
@@ -131,6 +131,7 @@ export function KasView({
   }, [showMasukForm]);
 
   const months = [
+    "Semua",
     "Januari",
     "Februari",
     "Maret",
@@ -146,6 +147,8 @@ export function KasView({
   ];
 
   const [years] = useState([2024, 2025, 2026, 2027]);
+  const [selectedMonth, setSelectedMonth] = useState(0); // Default to "Semua"
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -299,11 +302,12 @@ export function KasView({
 
   const processImportedKasData = async (data: any[]) => {
     const dateObj = new Date();
-    const formattedDate = dateObj.toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    const formattedDate = (() => {
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = INDONESIAN_MONTHS[dateObj.getMonth()];
+      const year = dateObj.getFullYear();
+      return `${day} ${month} ${year}`;
+    })();
 
     const newData = data.map((row: any, idx: number) => {
       const debit = parseInt(
@@ -578,10 +582,20 @@ export function KasView({
       nik = "-";
     }
 
+    const resolvedRtForPg = (() => {
+      if (getSetting) {
+        const settingsRt = getSetting("rt");
+        if (settingsRt) return settingsRt.toString().replace(/^0+/, "").padStart(2, "0");
+      }
+      const matchRt = tenantId?.match(/rt\s*(\d+)/i);
+      if (matchRt) return matchRt[1].padStart(2, "0");
+      return (currentUser?.rt || "01").toString().replace(/^0+/, "").padStart(2, "0");
+    })();
+
     const payload = sanitizeForFirestore({
       id,
       tenantId: tenantId || "MASTER",
-      rt: (currentUser?.rt || '01').toString(),
+      rt: resolvedRtForPg,
       tanggal: dateObj.toISOString(),
       jenis: pgFormState.jenis || "Iuran RT",
       nominal: pgFormState.nominal || 0,
@@ -606,11 +620,17 @@ export function KasView({
       });
       
       const kasId = `TRX-${Date.now()}`;
+      const formattedDateForPg = (() => {
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = INDONESIAN_MONTHS[dateObj.getMonth()];
+        const year = dateObj.getFullYear();
+        return `${day} ${month} ${year}`;
+      })();
       const kasPayload = {
         id: kasId,
         tenantId: tenantId || "MASTER",
         rt: payload.rt,
-        tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        tanggal: formattedDateForPg,
         tipe: 'Masuk',
         transaksi: payload.jenis,
         nama: payload.namaPenyetor,
@@ -646,7 +666,7 @@ export function KasView({
     if (isSavingKas) return;
     
     // Check monthly transaction limits
-    const currentMonthForTrx = new Date().toLocaleDateString("id-ID", { month: "short", year: "numeric" });
+    const currentMonthForTrx = `${INDONESIAN_MONTHS[new Date().getMonth()]} ${new Date().getFullYear()}`;
     const trxThisMonthCount = kasData.filter(k => k.tanggal && k.tanggal.includes(currentMonthForTrx)).length;
 
     const normalizedPlan = (plan || 'STARTER').toUpperCase();
@@ -668,11 +688,12 @@ export function KasView({
     const formData = new FormData(e.currentTarget);
     const dateInput = formData.get("tanggal") as string;
     const dateObj = dateInput ? new Date(dateInput) : new Date();
-    const formattedDate = dateObj.toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    const formattedDate = (() => {
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = INDONESIAN_MONTHS[dateObj.getMonth()];
+      const year = dateObj.getFullYear();
+      return `${day} ${month} ${year}`;
+    })();
 
     const newId = editingKas ? editingKas.id : `TRX-${Date.now()}`;
     let nominal = parseInt(
@@ -714,9 +735,19 @@ export function KasView({
     const transaksi = jenisPembayaran || "Iuran RT";
     const keterangan = formData.get("keterangan") as string;
 
+    const resolvedRt = (() => {
+      if (getSetting) {
+        const settingsRt = getSetting("rt");
+        if (settingsRt) return settingsRt.toString().replace(/^0+/, "").padStart(2, "0");
+      }
+      const matchRt = tenantId?.match(/rt\s*(\d+)/i);
+      if (matchRt) return matchRt[1].padStart(2, "0");
+      return (currentUser?.rt || "01").toString().replace(/^0+/, "").padStart(2, "0");
+    })();
+
     const newTrx = {
       tenantId: tenantId,
-      rt: currentUser?.rt || "01",
+      rt: resolvedRt,
       id: newId,
       tanggal: editingKas ? editingKas.tanggal : formattedDate,
       tipe: trxType,
@@ -766,8 +797,53 @@ export function KasView({
     }
   };
 
-  const currentMonthTransactions = kasData; // Use all transactions
-  // const currentMonthTransactions = kasData.filter((t) => { ... });
+  const currentMonthTransactions = useMemo(() => {
+    return kasData.filter((t: any) => {
+      if (!t.tanggal) return false;
+      
+      let tMonth = -1;
+      let tYear = -1;
+      
+      if (t.tanggal.includes('-') || t.tanggal.includes('T')) {
+        const dObj = new Date(t.tanggal);
+        if (!isNaN(dObj.getTime())) {
+          tMonth = dObj.getMonth();
+          tYear = dObj.getFullYear();
+        }
+      } else {
+        const parts = t.tanggal.split(/\s+/);
+        if (parts.length >= 3) {
+          const mLabel = parts[1];
+          const idMonths = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+          const enMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const mIndexStr = idMonths.indexOf(mLabel);
+          if (mIndexStr !== -1) {
+            tMonth = mIndexStr;
+          } else {
+            const mIndexEn = enMonths.indexOf(mLabel);
+            if (mIndexEn !== -1) tMonth = mIndexEn;
+          }
+          tYear = parseInt(parts[2]);
+        }
+      }
+      
+      // If selectedMonth is 0, it means "Semua"
+      const matchesDate = (selectedMonth === 0) || (tMonth === (selectedMonth - 1) && tYear === selectedYear);
+      if (!matchesDate) return false;
+      
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          (t.nama || '').toLowerCase().includes(query) ||
+          (t.keterangan || '').toLowerCase().includes(query) ||
+          (t.transaksi || '').toLowerCase().includes(query) ||
+          (t.nik || '').includes(query);
+        return matchesSearch;
+      }
+      
+      return true;
+    });
+  }, [kasData, selectedMonth, selectedYear, searchQuery]);
 
   const totalItems = currentMonthTransactions.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);

@@ -347,6 +347,37 @@ export default function App() {
     [key: string]: any;
   } | null>(null);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
+
+  // Synchronous security repair for the main platform owner (arifrajcoach@gmail.com)
+  useEffect(() => {
+    const isOwnerEmail =
+      currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com" ||
+      auth.currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com";
+    if (isOwnerEmail) {
+      const isIncorrect =
+        currentUser?.role !== "SUPER_ADMIN" ||
+        currentUser?.isSuperAdmin !== true ||
+        currentUser?.tenantId !== "MASTER";
+      if (isIncorrect) {
+        console.log("Forcing SUPER_ADMIN privileges for platform owner", currentUser?.email || auth.currentUser?.email);
+        setCurrentUser((prev) => {
+          const base = prev || {
+            name: "Admin Master",
+            email: "arifrajcoach@gmail.com",
+            rt: "01",
+            status: "AKTIF",
+            created_at: new Date().toISOString(),
+          };
+          return {
+            ...base,
+            role: "SUPER_ADMIN",
+            isSuperAdmin: true,
+            tenantId: "MASTER",
+          };
+        });
+      }
+    }
+  }, [currentUser, isAuthInitializing]);
   const [isAuthHanging, setIsAuthHanging] = useState(false);
 
   // --- SECONDARY UI STATES ---
@@ -524,7 +555,7 @@ export default function App() {
             const allowedStatuses = ["GRATIS", "STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE", "AKTIF"];
             const userStatus = userData.status?.toUpperCase() || "TRIAL";
             
-            if (!allowedStatuses.includes(userStatus) && user.email !== "arifrajcoach@gmail.com") {
+            if (!allowedStatuses.includes(userStatus) && user.email?.toLowerCase() !== "arifrajcoach@gmail.com") {
               await signOut(auth);
               setCurrentUser(null);
               showNotification("Akun Anda tidak memiliki paket yang diizinkan. Hubungi Admin.", "error");
@@ -595,6 +626,17 @@ export default function App() {
                     docToDeleteRef = doc(db, "users", matchedUser.id);
                   }
                 }
+
+                // If not found in users, try data_warga
+                if (!preRegUserData) {
+                  const wargaRef = collection(db, "data_warga");
+                  const qWarga = query(wargaRef, where("email", "==", user.email));
+                  const wargaSnapshot = await getDocs(qWarga);
+                  if (!wargaSnapshot.empty) {
+                    preRegUserData = wargaSnapshot.docs[0].data();
+                    // Keep preRegUserData, no docToDeleteRef needed
+                  }
+                }
               }
             } catch (err: any) {
               console.warn("Permission denied checking preReg / email user docs:", err);
@@ -604,7 +646,14 @@ export default function App() {
             }
 
             if (preRegUserData) {
+              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
               const newUser = { ...preRegUserData, id_user: user.uid, uid: user.uid };
+              if (isMasterEmail) {
+                newUser.isSuperAdmin = true;
+                newUser.role = "SUPER_ADMIN";
+                newUser.tenantId = "MASTER";
+                if (!newUser.name || newUser.name === "User") newUser.name = user.displayName || "Admin Master";
+              }
               await setDoc(doc(db, "users", user.uid), newUser);
               if (docToDeleteRef) await deleteDoc(docToDeleteRef);
               setCurrentUser({ uid: user.uid, ...newUser } as any);
@@ -1102,7 +1151,58 @@ export default function App() {
     if (globalSelectedRw && globalSelectedRw !== "Semua") {
       result = result.filter((w: any) => checkWorkspaceFilter(w, globalSelectedRw));
     }
-    return result;
+    
+    // Sort transactions by date descending
+    const parseIndonesianDate = (dateStr: string) => {
+      if (!dateStr) return 0;
+      let time = new Date(dateStr).getTime();
+      if (!isNaN(time)) return time;
+
+      const monthsMap: Record<string, string> = {
+        januari: "january",
+        februari: "february",
+        maret: "march",
+        april: "april",
+        mei: "may",
+        juni: "june",
+        juli: "july",
+        agustus: "august",
+        september: "september",
+        oktober: "october",
+        november: "november",
+        desember: "december",
+        tgl: "",
+        jan: "jan",
+        feb: "feb",
+        mar: "mar",
+        apr: "apr",
+        jun: "jun",
+        jul: "jul",
+        agt: "aug",
+        agu: "aug",
+        sep: "sep",
+        okt: "oct",
+        des: "dec"
+      };
+      
+      let normalized = dateStr.toLowerCase();
+      const sortedKeys = Object.keys(monthsMap).sort((a, b) => b.length - a.length);
+      sortedKeys.forEach(key => {
+        normalized = normalized.replace(new RegExp(key, 'g'), monthsMap[key]);
+      });
+      
+      time = new Date(normalized).getTime();
+      return isNaN(time) ? 0 : time;
+    };
+
+    return [...result].sort((a: any, b: any) => {
+      const timeB = parseIndonesianDate(b.tanggal);
+      const timeA = parseIndonesianDate(a.tanggal);
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      return (b.id || "").localeCompare(a.id || "");
+    });
   }, [kasData, tenantRT, globalSelectedRw, isDeletedTrial]);
 
   const filteredSuratDataCentral = useMemo(() => {
@@ -1347,7 +1447,7 @@ export default function App() {
     !!currentUser && !isCitizen && !isViewer && roleUpperApp !== "VIEWER";
 
   useEffect(() => {
-    if (currentUser?.role === "Viewer" || (!currentUser && wargaAuth)) {
+    if (roleUpperApp === "VIEWER" || (!currentUser && wargaAuth)) {
       if (
         activeTab === "dashboard" ||
         activeTab === "transaksi" ||
@@ -1772,8 +1872,8 @@ export default function App() {
       const chunks = chunkArray(tIds, 10);
       chunks.forEach(chunk => {
         const constraints: any[] = [where("tenantId", "in", chunk)];
-        if (currentUser?.role === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser.rt)));
+        if (currentUser?.role?.toUpperCase() === "RT") {
+          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser?.rt)));
         }
         unsubs.push(onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
           setWargaData(prev => {
@@ -1817,16 +1917,23 @@ export default function App() {
     if (!["keuangan", "dashboard"].includes(activeTab)) return;
 
     const tIds = activeTenantIds;
-    const rt = currentUser?.role === "RT" ? getQueryRtNormalized(currentUser.rt) : null;
+    const rt = (currentUser?.role?.toUpperCase() === "RT" || currentUser?.role?.toUpperCase() === "WARGA" || !!wargaAuth) 
+      ? getQueryRtNormalized(currentUser?.rt || wargaAuth?.rt) 
+      : null;
     const unsubs: (() => void)[] = [];
     
     if (tIds.length > 0) {
       const chunks = chunkArray(tIds, 10);
       chunks.forEach(chunk => {
-        if (hasFullAccess) {
-           const kq = rt ? query(collection(db, "kas"), where("tenantId", "in", chunk), where("rt", "==", rt), orderBy("tanggal", "desc"), limit(1000)) : query(collection(db, "kas"), where("tenantId", "in", chunk), orderBy("tanggal", "desc"), limit(1000));
-           unsubs.push(onSnapshot(kq, (snap) => setKasData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
-        }
+        const kq = rt 
+          ? query(collection(db, "kas"), where("tenantId", "in", chunk), where("rt", "==", rt), limit(1000)) 
+          : query(collection(db, "kas"), where("tenantId", "in", chunk), limit(1000));
+        
+        unsubs.push(onSnapshot(kq, (snap) => {
+          setKasData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))]);
+        }, (err) => {
+          console.warn("Failed to subscribe to kas:", err);
+        }));
         
         const iuranQ = hasFullAccess ? 
           (rt ? query(collection(db, "iuran"), where("tenantId", "in", chunk), where("rt", "==", rt)) : query(collection(db, "iuran"), where("tenantId", "in", chunk))) :
@@ -2461,8 +2568,11 @@ export default function App() {
   useEffect(() => {
     // DEV AUTO-ACTIVATE: Ensure our main developer has all features enabled
     const autoActivate = async () => {
+      const isDevEmail =
+        currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com" ||
+        auth.currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com";
       if (
-        currentUser?.email === "arifrajcoach@gmail.com" &&
+        isDevEmail &&
         currentTenant &&
         currentTenant.status !== "PREMIUM" &&
         currentTenant.status !== "ENTERPRISE"
@@ -2723,7 +2833,9 @@ export default function App() {
         // Hide items strictly above plan level (Gatekeeper)
         if (requiredLevel > currentLevel) return false;
 
-        const isPlatformOwner = currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com";
+        const isPlatformOwner =
+          currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com" ||
+          auth.currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com";
         const restrictedItems = ["daftar-trial", "super-admin", "leads"];
         if (restrictedItems.includes(item.id) && !isPlatformOwner) return false;
         
@@ -4268,7 +4380,7 @@ export default function App() {
               userRole={currentUser.role}
               currentUser={currentUser}
               getSetting={getSetting}
-              tenantId={currentUser.tenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || "rw26_berjuang"}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -7263,9 +7375,11 @@ function LoginView({
           : userDoc.exists()
             ? userDoc.data()?.name
             : user.displayName || "User",
-        tenantId: userDoc.exists()
-          ? userDoc.data()?.tenantId || preRegisteredTenant
-          : preRegisteredTenant,
+        tenantId: isArif
+          ? "MASTER"
+          : userDoc.exists()
+            ? userDoc.data()?.tenantId || preRegisteredTenant
+            : preRegisteredTenant,
         createdAt: userDoc.exists()
           ? userDoc.data()?.createdAt || new Date().toISOString()
           : new Date().toISOString(),
@@ -7277,11 +7391,18 @@ function LoginView({
       setCurrentUser(userData as any);
       setIsLoading(false);
     } catch (err: any) {
-      console.error("Google Login Error:", err);
+      if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
+        console.error("Google Login Error:", err);
+      } else {
+        console.log("Google Login cancelled by user/interrupted:", err.code);
+      }
+
       if (err.code === "auth/popup-blocked") {
         setError(
           "Gagal login: Popup diblokir. Silakan buka aplikasi di tab baru (jika di dalam preview) atau izinkan popup browser Anda.",
         );
+      } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        setError("Login Google dibatalkan atau ditutup.");
       } else if (err.code === "auth/network-request-failed" || String(err.message || err).includes("network-request-failed")) {
         setError(
           "KEAMANAN IFRAME: Google Login diblokir oleh browser Anda karena aplikasi sedang berjalan di dalam IFrame Preview (masalah pembatasan Cookie Pihak Ketiga). Harap buka aplikasi di Tab Baru agar Google Auth berjalan normal.",

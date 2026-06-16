@@ -94,6 +94,45 @@ export default function DashboardView({
     localStorage.setItem('hideSubscriptionInfo', String(hideSubscriptionInfo));
   }, [hideSubscriptionInfo]);
 
+  const parseSafeDate = (dateStr: any): Date => {
+    if (!dateStr) return new Date(0);
+    const dateObj = new Date(dateStr);
+    if (!isNaN(dateObj.getTime())) return dateObj;
+
+    const monthsMap: Record<string, number> = {
+      jan: 0, januari: 0,
+      feb: 1, februari: 1,
+      mar: 2, maret: 2,
+      apr: 3, april: 3,
+      mei: 4, may: 4,
+      jun: 5, juni: 5,
+      jul: 6, juli: 6,
+      agt: 7, agu: 7, agustus: 7,
+      sep: 8, september: 8,
+      okt: 9, oktober: 9, october: 9,
+      nov: 10, november: 10,
+      des: 11, desember: 11, december: 11
+    };
+
+    try {
+      const clean = dateStr.toString().toLowerCase().trim();
+      const parts = clean.split(/\s+/);
+      if (parts.length >= 3) {
+        const day = parseInt(parts[0]);
+        const monthLabel = parts[1];
+        const year = parseInt(parts[2]);
+        
+        const monthIndex = monthsMap[monthLabel];
+        if (monthIndex !== undefined && !isNaN(day) && !isNaN(year)) {
+          return new Date(year, monthIndex, day);
+        }
+      }
+    } catch (e) {
+      // fallback
+    }
+    return new Date(0);
+  };
+
   const isWarga = userRole === 'WARGA';
 
   // Personal Stats for Warga
@@ -116,7 +155,7 @@ export default function DashboardView({
     for (let m = 0; m <= currentMonth; m++) {
       const isPaid = myIuran.some((trx: any) => {
         if (trx.status !== 'Lunas') return false;
-        const d = new Date(trx.tanggal);
+        const d = parseSafeDate(trx.tanggal);
         const matchesDate = d.getMonth() === m && d.getFullYear() === currentYear;
         const isIuranWajib = trx.jenis?.toLowerCase().includes('iuran') || trx.keterangan?.toLowerCase().includes('iuran');
         return matchesDate && isIuranWajib;
@@ -275,7 +314,7 @@ export default function DashboardView({
         date: k.tanggal,
         amount: k.debit || k.kredit,
         type: k.tipe === 'Masuk' ? 'in' : 'out',
-        dateObj: new Date(k.tanggal),
+        dateObj: parseSafeDate(k.tanggal),
         isPersonal: k.nik === currentUser?.nik || k.nama?.includes(currentUser?.name || '')
       })),
       ...iuranData.filter(i => i.status === 'Menunggu Verifikasi').map(i => ({
@@ -294,7 +333,7 @@ export default function DashboardView({
         date: s.tanggal,
         status: s.status,
         type: 'doc',
-        dateObj: new Date(s.tanggal),
+        dateObj: parseSafeDate(s.tanggal),
         isPersonal: s.nik === currentUser?.nik || s.pemohon === currentUser?.name
       })),
       ...bukuTamuData.map(b => ({ 
@@ -389,7 +428,8 @@ export default function DashboardView({
 
   const activityChartData = useMemo(() => {
     const getActData = (period: string) => {
-      const currentMonth = new Date().toLocaleDateString('id-ID', { month: 'short' });
+      const INDONESIAN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+      const currentMonth = INDONESIAN_MONTHS[new Date().getMonth()];
       const filteredSurat = period === 'yearly' ? suratData : suratData.filter(s => s.tanggal && s.tanggal.includes(currentMonth));
       const filteredKas = period === 'yearly' ? kasData : kasData.filter(k => k.tanggal && k.tanggal.includes(currentMonth));
 
@@ -402,6 +442,21 @@ export default function DashboardView({
     };
     return piePeriod === 'yearly' ? getActData('yearly') : getActData('30days');
   }, [piePeriod, suratData, kasData, wargaData]);
+
+  const kasVsOperasionalData = useMemo(() => {
+    const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
+    const biayaRutin = kasData.filter(t => t.kredit > 0 && 
+        (t.transaksi?.toLowerCase().includes('rutin') || 
+         t.transaksi?.toLowerCase().includes('biaya') || 
+         t.transaksi?.toLowerCase().includes('operasional') || 
+         t.transaksi?.toLowerCase().includes('hpp')))
+        .reduce((acc, curr) => acc + (curr.kredit || 0), 0);
+    
+    return [
+      { name: 'Saldo Kas', value: Math.max(0, saldoTotal) },
+      { name: 'Operasional/HPP', value: biayaRutin }
+    ];
+  }, [kasData]);
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
@@ -786,7 +841,7 @@ export default function DashboardView({
         handleFirestoreError={handleFirestoreError}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-4 sm:p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:border-brand-blue/30 relative overflow-hidden group">
           <div className="absolute -right-12 -top-12 w-64 h-64 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-blue/10 transition-colors"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
@@ -924,6 +979,63 @@ export default function DashboardView({
                     <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">{entry.name}</span>
                   </div>
                   <span className="text-sm font-black text-slate-800 dark:text-slate-200 tabular-nums font-mono">{entry.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Kas vs HPP */}
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-10 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all hover:border-emerald-500/30 relative overflow-hidden group">
+          <div className="absolute -right-12 -top-12 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center shadow-inner border border-emerald-500/10">
+                <CreditCard className="w-8 h-8 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase font-elegant leading-none">Kas vs HPP</h3>
+                <div className="flex items-center gap-2 mt-2">
+                   <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                   <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Kondisi Keuangan Operasional</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="h-[350px] w-full flex flex-col md:flex-row items-center justify-center">
+            <div className="relative w-full h-full flex items-center justify-center">
+              <ResponsiveContainer width={260} height={260}>
+                <PieChart>
+                  <Pie
+                    data={kasVsOperasionalData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={75}
+                    outerRadius={105}
+                    paddingAngle={8}
+                    dataKey="value"
+                    animationDuration={1500}
+                  >
+                    {kasVsOperasionalData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index === 0 ? '#4f46e5' : '#ef4444'} stroke={document.documentElement.classList.contains('dark') ? '#0f172a' : 'white'} strokeWidth={6} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                    itemStyle={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'JetBrains Mono' }}
+                    formatter={(value: number) => `Rp ${value.toLocaleString('id-ID')}`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-col gap-4 justify-center md:ml-12 mt-8 md:mt-0 w-full md:w-auto">
+              {kasVsOperasionalData.map((entry, index) => (
+                <div key={entry.name} className="flex items-center justify-between md:justify-start gap-6 p-2 rounded-[1.5rem] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.1)] group-hover:scale-125 transition-transform" style={{ backgroundColor: index === 0 ? '#4f46e5' : '#ef4444' }}></div>
+                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">{entry.name}</span>
+                  </div>
+                  <span className="text-sm font-black text-slate-800 dark:text-slate-200 tabular-nums font-mono">Rp {entry.value.toLocaleString('id-ID')}</span>
                 </div>
               ))}
             </div>
