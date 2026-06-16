@@ -301,7 +301,6 @@ function WargaView(props: WargaViewProps) {
             docs = docs.concat(snapshot.docs.map(d => ({id: d.id, ...(d.data() as any)})));
         }
         
-        console.log(`Analyzing ${docs.length} documents for duplicates across tenants: ${uniqueTids.join(', ')}...`);
         
         const map = new Map<string, any[]>();
         
@@ -319,12 +318,10 @@ function WargaView(props: WargaViewProps) {
             map.get(nik)!.push(doc);
         }
         
-        console.log(`Processed ${map.size} unique NIKs.`);
         
         const toDelete: any[] = [];
         for (const [nik, items] of map.entries()) {
             if (items.length > 1) {
-                console.log(`Found ${items.length} docs for NIK: '${nik}'`);
                 // Sort to keep the "best" one. 
                 // Priorities:
                 // 1. the one that matches current tenantId directly
@@ -344,7 +341,6 @@ function WargaView(props: WargaViewProps) {
             return;
         }
         
-        console.log(`Preparing to delete ${toDelete.length} documents.`);
         
         // Batch delete
         const CHUNK_SIZE = 450; 
@@ -355,7 +351,6 @@ function WargaView(props: WargaViewProps) {
                 batch.delete(doc(db, 'data_warga', d.id));
             });
             await batch.commit();
-            console.log(`Deleted chunk ${Math.floor(i / CHUNK_SIZE) + 1}`);
         }
         
         showNotification(`Berhasil menghapus ${toDelete.length} data duplikat.`, 'success');
@@ -379,13 +374,11 @@ function WargaView(props: WargaViewProps) {
     const allowPull = currentSyncMode === "two_way" || currentSyncMode === "rw_to_rt";
     const allowPush = currentSyncMode === "two_way" || currentSyncMode === "rt_to_rw";
     
-    console.log(`Starting sync for RT "${detectedRT}" to/from parent RW with mode: "${currentSyncMode}"`);
     try {
         const potentialParentIDs = [currentTenant?.parentId]
             .filter(Boolean)
             .filter(pId => isBelongsToParent(tenantId, pId)) as string[];
 
-        console.log("Querying potential parent tenants:", potentialParentIDs);
 
         let allParentDocs: any[] = [];
         if (allowPull) {
@@ -404,7 +397,6 @@ function WargaView(props: WargaViewProps) {
                             where('rt', '==', rtVal)
                         );
                         const snapshot = await getDocs(q);
-                        console.log(`Parent tenant "${pId}" (RT filter "${rtVal}") returned ${snapshot.docs.length} citizen documents.`);
                         snapshot.docs.forEach(docSnap => {
                             allParentDocs.push({ id: docSnap.id, data: docSnap.data(), parentId: pId });
                         });
@@ -415,7 +407,6 @@ function WargaView(props: WargaViewProps) {
             }
         }
 
-        console.log(`Found total ${allParentDocs.length} potential parent documents across all queried tenants.`);
         
         const cleanNumberNode = (val: any): string => {
             if (val === null || val === undefined) return "";
@@ -423,7 +414,6 @@ function WargaView(props: WargaViewProps) {
         };
         
         const targetRTCode = cleanNumberNode(detectedRT);
-        console.log(`Normalized target RT code to match is "${targetRTCode}" (from raw "${detectedRT}")`);
 
         // Filter parent documents with lenient and comprehensive matching rules
         const parentDocsToPull = allowPull ? allParentDocs.filter(item => {
@@ -448,7 +438,6 @@ function WargaView(props: WargaViewProps) {
         );
         const localSnapshot = await getDocs(localQuery);
         const localDocs = localSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as any) }));
-        console.log(`Found ${localDocs.length} local citizens in tenant "${tenantId}".`);
 
         let pullCount = 0;
         let pushCount = 0;
@@ -547,7 +536,6 @@ function WargaView(props: WargaViewProps) {
     }
 
     setIsLoadingDB(true);
-    console.log(`Starting reverse sync from RTs to RW tenant "${tenantId}"...`);
     try {
         const fallbackChildIds = [
             "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
@@ -596,7 +584,6 @@ function WargaView(props: WargaViewProps) {
             const mode = getChildSyncMode(childId);
             const isAllowed = mode === "two_way" || mode === "rt_to_rw";
             if (!isAllowed) {
-                console.log(`Child RT "${childId}" has syncMode "${mode}". Skipping citizen pull to RW parent.`);
             }
             return isAllowed;
         });
@@ -604,7 +591,6 @@ function WargaView(props: WargaViewProps) {
         let allRTDocs: any[] = [];
         
         for (const childId of allowedChildIDs) {
-            console.log(`Fetching citizens from RT child: "${childId}"`);
             try {
                 const q = query(
                     collection(db, 'data_warga'),
@@ -619,7 +605,6 @@ function WargaView(props: WargaViewProps) {
             }
         }
         
-        console.log(`Found total of ${allRTDocs.length} citizens in all allowed RTs.`);
         
         if (allRTDocs.length === 0) {
             showNotification("Tidak ada data warga ditemukan di tenant-tenant RT anggota.", "info");
@@ -651,7 +636,6 @@ function WargaView(props: WargaViewProps) {
             return;
         }
 
-        console.log(`Syncing ${docsToSync.length} new records from RTs to RW tenant.`);
         
         const CHUNK_SIZE = 450;
         for (let i = 0; i < docsToSync.length; i += CHUNK_SIZE) {
@@ -831,7 +815,6 @@ function WargaView(props: WargaViewProps) {
         deleteId = `${tenantId}_${wargaToDelete.nik}`;
     }
     
-    console.log("Deleting warga with ID:", deleteId);
     
     if (!deleteId) {
         showNotification("Gagal: ID tidak ditemukan.", 'error');
