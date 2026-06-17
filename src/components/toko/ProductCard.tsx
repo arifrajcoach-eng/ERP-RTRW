@@ -27,7 +27,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
       <div className="absolute top-4 right-4 z-10">
          <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/80 backdrop-blur-md rounded-full border border-white/10 shadow-lg">
            <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] animate-pulse" />
-           <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/90">Lapak +62 ORIGINAL</span>
+           <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/90">LAPAK +26 ORIGINAL</span>
          </div>
       </div>
 

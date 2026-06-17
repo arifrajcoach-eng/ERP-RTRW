@@ -1508,19 +1508,38 @@ export default function App() {
         // Only Try to get geolocation if no custom coords exist
         if (typeof navigator !== "undefined" && "geolocation" in navigator) {
           try {
-            // Single, highly patient, high-accuracy attempt to get the best GPS lock
+            // HIGH-PRECISION LOCK: Wait and pick the best accuracy sample
             const position = await new Promise<GeolocationPosition>(
               (resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, {
-                  enableHighAccuracy: true,
-                  timeout: 10000,
-                  maximumAge: 0,
-                });
+                let bestPos: GeolocationPosition | null = null;
+                const watchId = navigator.geolocation.watchPosition(
+                  (pos) => {
+                    if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
+                      bestPos = pos;
+                    }
+                    // Exit early if accuracy is already excellent
+                    if (pos.coords.accuracy <= 20) {
+                      navigator.geolocation.clearWatch(watchId);
+                      resolve(pos);
+                    }
+                  },
+                  () => {}, // ignore partial failures
+                  { enableHighAccuracy: true, maximumAge: 0 }
+                );
+
+                // Timeout-based selection: Stop watching after 8 seconds and use best found
+                setTimeout(() => {
+                  navigator.geolocation.clearWatch(watchId);
+                  if (bestPos) resolve(bestPos);
+                  else {
+                    reject(new Error("Timeout waiting for high-accuracy GPS"));
+                  }
+                }, 8000);
               },
             );
             lat = position.coords.latitude;
             lng = position.coords.longitude;
-            userLocation = `📍 Sinyal GPS Presisi (Akurasi: ~${position.coords.accuracy.toFixed(0)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            userLocation = `📍 Sinyal GPS Presisi (Akurasi: ~${position.coords.accuracy.toFixed(1)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
           } catch (geoErr) {
             console.warn("High-accuracy geolocation failed, attempting low accuracy...", geoErr);
             try {
@@ -2684,7 +2703,7 @@ export default function App() {
       },
       {
         id: "kependudukan",
-        label: "Layanan Sipil",
+        label: "Info Lahir & Wafat",
         icon: ClipboardList,
       },
       // --- KEBUTUHAN WARGA ---
@@ -2698,10 +2717,11 @@ export default function App() {
         id: "sos-monitor",
         label: "MONITOR SOS",
         icon: ShieldAlert,
+        className: "mt-0 pt-0 pb-0",
       },
       {
         id: "complaint",
-        label: mode === "apartemen" ? "Keluhan/Defect" : "Keluhan",
+        label: mode === "apartemen" ? "LAPOR PAK" : "LAPOR PAK",
         icon: AlertTriangle,
         plan: "complaint",
       },
@@ -2713,7 +2733,7 @@ export default function App() {
       },
       {
         id: "etoko",
-        label: "E-LAPAK +62",
+        label: "E-LAPAK +26",
         icon: ShoppingBag,
         plan: "eLapak",
       },
@@ -3977,14 +3997,14 @@ export default function App() {
           <div style={{ marginTop: '-10px' }} className="p-3 bg-white/80 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-brand-blue/20">
             {getPlanFeatures(currentTenant).multiRegion ? (
               <div className="space-y-1.5">
-                <label className="text-[9px] text-brand-blue font-black uppercase tracking-widest pl-1">
+                <label className="text-[9px] text-brand-blue font-black uppercase tracking-widest pl-1 mt-0 pt-0 pb-0">
                   Wilayah Kerja
                 </label>
                 <div className="relative">
                   <select
                     value={globalSelectedRw}
                     onChange={(e) => setGlobalSelectedRw(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[11px] font-bold py-2 pl-3 pr-8 outline-none text-slate-700 dark:text-slate-200 appearance-none shadow-inner cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[11px] font-bold py-2 pl-3 pr-8 outline-none text-slate-700 dark:text-slate-200 appearance-none shadow-inner cursor-pointer mt-[2px]"
                   >
                     <option value="Semua">🏢 KELURAHAN (PUSAT)</option>
                     {realRWList.map((rw) => {
@@ -4164,7 +4184,7 @@ export default function App() {
             <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 capitalize tracking-tight hidden lg:block font-elegant" style={{ fontFamily: "Verdana", fontStyle: "italic" }}>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-400 dark:from-white dark:to-slate-500" style={{ fontFamily: "Verdana", fontStyle: "italic" }}>
                 {activeTab === "etoko"
-                  ? "E-LAPAK +62"
+                  ? "E-LAPAK +26"
                   : activeTab === "posyandu"
                     ? "Care Center"
                     : activeTab.replace("-", " ")}
@@ -4314,13 +4334,11 @@ export default function App() {
             />
           )}
           {activeTab === "sos-monitor" && (
-            (currentUser?.role === 'ADMIN' || currentUser?.role === 'PENGURUS' || currentUser?.role === 'SATPAM' || currentUser?.isSuperAdmin || wargaAuth?.role === 'ADMIN') ? (
-              <SatpamDashboard tenantId={
+            <SatpamDashboard tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
                   : (wargaAuth?.tenantId || "rw26_berjuang")
               } />
-            ) : <div className="p-10 text-center text-slate-500">Anda tidak memiliki akses ke fitur ini.</div>
           )}
           {activeTab === "organisasi" && (
             <OrganisasiView
@@ -4860,6 +4878,16 @@ export default function App() {
                   Batal
                 </button>
               </div>
+              <button 
+                onClick={() => {
+                  setIsSOSConfirmOpen(false);
+                  setActiveTab("settings");
+                  showNotification("Harap buka menu SOS di dashboard untuk kalibrasi.", "info");
+                }}
+                className="mt-6 text-[10px] font-black text-slate-400 hover:text-brand-blue uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 mx-auto"
+              >
+                <MapPin className="w-3 h-3" /> Masalah Akurasi GPS? Kalibrasi Kustom
+              </button>
             </motion.div>
           </div>
         )}
@@ -7641,7 +7669,7 @@ function LoginView({
                   </p>
                 </div>
                 <p className="text-xs text-emerald-600 font-medium leading-relaxed">
-                  Gunakan Google Login untuk akses penuh fitur {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()}: E-LAPAK +62,
+                  Gunakan Google Login untuk akses penuh fitur {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()}: E-LAPAK +26,
                   Surat Digital, Keuangan, dan Pengaduan.
                 </p>
               </div>

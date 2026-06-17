@@ -166,7 +166,7 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
               <MessageSquare className="w-7 h-7" />
            </div>
            <div>
-              <h2 className="text-2xl font-outfit font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">Lapor Keluhan</h2>
+              <h2 className="text-2xl font-outfit font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">LAPOR PAK</h2>
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5 opacity-70">Sampaikan aspirasi demi kenyamanan bersama</p>
            </div>
         </div>

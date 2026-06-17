@@ -2,12 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, updateDoc, doc, orderBy, limit } from 'firebase/firestore';
 import { EmergencyLog } from '../types';
-import { ShieldAlert, MapPin, CheckCircle, History, Clock, Phone } from 'lucide-react';
+import { ShieldAlert, MapPin, CheckCircle, History, Clock, Phone, Map as MapIcon } from 'lucide-react';
+import { SOSDashboardMap } from './SOSDashboardMap';
 
 export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const [emergencies, setEmergencies] = useState<EmergencyLog[]>([]);
   const [history, setHistory] = useState<EmergencyLog[]>([]);
+  const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(true);
 
+  // Sound effect helper
+  const playSOSSounds = () => {
+    // Vibrate
+    if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+    // Simple sound
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2347/2347-preview.mp3');
+    audio.play().catch(e => console.error("Sound play failed:", e));
+  };
+ 
   // Format Helper: "15 Jun 2026, 15:40:12 WIB"
   const formatDateTime = (timestampStr: string) => {
     if (!timestampStr) return '-';
@@ -43,10 +57,17 @@ export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) =>
       const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmergencyLog));
       // Sort pending logs by timestamp descending
       const sortedLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      // Check for new emergency
+      if (sortedLogs.length > 0 && sortedLogs[0].id !== lastNotificationId) {
+          playSOSSounds();
+          setLastNotificationId(sortedLogs[0].id);
+      }
+      
       setEmergencies(sortedLogs);
     });
     return () => unsubscribe();
-  }, [tenantId]);
+  }, [tenantId, lastNotificationId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -90,7 +111,23 @@ export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) =>
 
   return (
     <div className="p-6 bg-slate-950 text-white min-h-screen">
-      <h1 className="text-2xl font-black text-red-500 uppercase tracking-widest mb-6">Dashboard SOS</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-black text-red-500 uppercase tracking-widest leading-none">Dashboard SOS</h1>
+        <button 
+          onClick={() => setShowMap(!showMap)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-tighter transition-all border-none cursor-pointer ${showMap ? 'bg-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+        >
+          <MapIcon size={16} />
+          {showMap ? 'Sembunyikan Peta' : 'Tampilkan Peta'}
+        </button>
+      </div>
+
+      {/* SOS Map Section */}
+      {showMap && (
+        <div className="mb-8 overflow-hidden rounded-3xl border-2 border-red-900/20 shadow-2xl">
+            <SOSDashboardMap emergencies={emergencies} />
+        </div>
+      )}
       
       {/* Active Alerts */}
       <section className="mb-8">

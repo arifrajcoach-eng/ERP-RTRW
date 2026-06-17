@@ -788,7 +788,7 @@ export default function DashboardView({
               .filter(item => {
                 if (item.id === "sos-monitor") {
                   const role = (currentUser?.role || '').toUpperCase();
-                  return ['ADMIN', 'PENGURUS', 'SATPAM'].includes(role) || currentUser?.isSuperAdmin;
+                  return true;
                 }
                 return true;
               })
