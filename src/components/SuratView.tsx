@@ -42,6 +42,7 @@ import html2canvas from 'html2canvas';
 import { StyledButton } from './StyledButton';
 import { ConfirmModal } from './ui/ConfirmModal';
 import { getTranslatedLabel } from '../lib/langUtils';
+import { generateSuratHTML, prepareBase64Kop } from '../lib/appUtils';
 
 interface SuratViewProps {
   suratData: any[];
@@ -255,227 +256,34 @@ export function SuratView({
         kop[key] = val;
       }
     });
-    
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showNotification("Gagal membuka jendela cetak. Pastikan popup tidak diblokir.", "error");
       return;
     }
-
-    // Map kopSettings to the variables used in the template
-    const defaultLogoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
-    const logoPemerintah = (kop.logo_url && kop.logo_url.length > 10) ? kop.logo_url : defaultLogoUrl;
-    const logoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : "/logosmartrwai.png"; 
     
-    // User requirements: RT from data warga (surat.rt), RW from standard kop settings
     const displayRT = surat.rt || kop.rt || "03"; 
     const displayRW = kop.rw || "26"; 
-    
-    const orgName = `RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}`;
-    
-    const kelurahanText = kop.kelurahan && kop.kecamatan && kop.kelurahan !== "..."
-      ? `KELURAHAN ${kop.kelurahan.toUpperCase()} - KECAMATAN ${kop.kecamatan.toUpperCase()}`
-      : "KELURAHAN KEBALEN - KECAMATAN BABELAN";
-      
-    const kabupaten = kop.kabupaten || "KABUPATEN BEKASI";
-    const displayKabupaten = kabupaten.toUpperCase().includes('KABUPATEN') || kabupaten.toUpperCase().includes('KOTA') 
-      ? kabupaten.toUpperCase() 
-      : (kabupaten !== "..." ? `KABUPATEN ${kabupaten.toUpperCase()}` : "KABUPATEN BEKASI");
 
-    const alamatText = kop.alamat && kop.alamat !== "..."
-      ? `Sekretariat : ${kop.alamat} ${kop.email ? ' | Email: ' + kop.email : ''} ${kop.instagram ? ' | Instagram: ' + kop.instagram : ''}`
-      : "Sekretariat : Jl. Katala 3 Blok K3 No. 1 RT 02 / RW 26 | Email: kebalenrw26@gmail.com | Instagram: @kebalenrw26";
+    const mappedSurat = {
+      ...surat,
+      rt: displayRT,
+      rw: displayRW,
+      jenis: surat.jenis || surat.jenisSurat || "SURAT PENGANTAR",
+      jenisSurat: surat.jenisSurat || surat.jenis || "SURAT PENGANTAR",
+      nomor_surat: surat.nomorSurat || surat.nomor_surat,
+      ttl: surat.ttl,
+      jk: surat.jenisKelamin || surat.jk || "-",
+      pekerjaan: surat.pekerjaan || "-",
+      kewarganegaraan: surat.kewarganegaraan || "WNI",
+      nik: surat.nik,
+      statusKawin: surat.statusKawin || "-",
+      alamat: surat.alamat,
+      keperluan: surat.keterangan || surat.keperluan || "-",
+    };
 
-    const tenantName = kop.nama_rt || kop.nama_organisasi || settings?.nama_rt || settings?.namaLayout || orgName || "SmaRtRw AI";
-    const tagline = kop.tagline || settings?.tagline || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
-
-    const content = `
-      <html>
-        <head>
-          <title>${tenantName} - ${tagline} - Cetak ${surat.jenis || surat.jenisSurat || 'Surat Pengantar'}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
-            body { font-family: 'Times New Roman', serif; padding: 40px; margin: 0; color: #000; background: #fff; line-height: 1.4; }
-            .page { 
-              width: 210mm; 
-              min-height: 297mm; 
-              margin: auto; 
-              background: white; 
-              position: relative;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .watermark {
-              width: 100mm;
-              height: 100mm;
-              background-image: url('${kop.bg_kertas_url}');
-              background-size: contain;
-              background-position: center;
-              background-repeat: no-repeat;
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              filter: grayscale(100%) opacity(0.15);
-              z-index: 0;
-            }
-            
-            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px; position: relative; z-index: 1; }
-            .logo-left { width: 80px; height: 80px; object-fit: contain; }
-            .logo-right { width: 90px; height: 90px; object-fit: contain; }
-            .header-text { text-align: center; flex: 1; padding: 0 10px; }
-            .header-text h1 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; line-height: 1.2; }
-            .header-text h2 { margin: 2px 0; font-size: 15px; font-weight: bold; text-transform: uppercase; line-height: 1.2; }
-            .header-text p { margin: 2px 0; font-size: 10px; font-weight: normal; }
-            
-            .title-section { text-align: center; margin-bottom: 25px; }
-            .title-section h3 { margin: 0; text-decoration: underline; font-size: 16px; font-weight: bold; text-transform: uppercase; }
-            .title-section p { margin: 5px 0; font-size: 13px; }
-            
-            .content-section { font-size: 13px; text-align: justify; }
-            .content-section p { margin-bottom: 12px; }
-            
-            .data-table { width: 100%; border-collapse: collapse; margin: 15px 0 15px 30px; }
-            .data-table td { padding: 4px 0; vertical-align: top; }
-            .data-table td.label { width: 160px; }
-            .data-table td.separator { width: 20px; text-align: center; }
-            .data-table td.value { font-weight: normal; }
-            
-            .footer-date { text-align: right; margin-top: 30px; margin-bottom: 5px; font-size: 13px; padding-right: 40px; }
-            .footer-section { display: flex; justify-content: space-between; padding: 0 40px; margin-top: 10px; }
-            .footer-column { text-align: center; width: 220px; }
-            .signature-space { height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
-            .signature-img { height: 80px; width: 150px; object-fit: contain; position: absolute; pointer-events: none; }
-            .signature-name { font-weight: bold; text-decoration: underline; }
-            
-            .verif-box-grid { margin-top: 50px; border-top: 1.5px solid #000; padding-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 10px; }
-            .verif-item { display: flex; flex-direction: column; }
-            .verif-box { border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px; }
-            
-            @media print {
-              body { padding: 0; }
-              .page { width: 100%; margin: 0; border: none; }
-              @page { margin: 1.5cm; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="page">
-            ${kop.bg_kertas_url ? `<div class="watermark"></div>` : ''}
-            <div class="header">
-              <img src="${logoPemerintah}" class="logo-left" />
-              <div class="header-text">
-                <h1>${orgName}</h1>
-                <h2>${kelurahanText}</h2>
-                <h2>${displayKabupaten}</h2>
-                <p>${alamatText}</p>
-              </div>
-              <img src="${logoOrganisasi}" class="logo-right" />
-            </div>
-            
-            <div class="title-section">
-              <h3>SURAT PENGANTAR</h3>
-              <p>Nomor : ${surat.nomorSurat || `...... / RT ${displayRT} / RW ${displayRW} / Tahun ${new Date().getFullYear()}`}</p>
-            </div>
-            
-            <div class="content-section">
-              <p>Yang bertanda tangan di bawah ini Ketua RT ${displayRT} / RW ${displayRW} Kelurahan ${surat.kelurahan || kop.kelurahan || 'Kebalen'} Kecamatan ${surat.kecamatan || kop.kecamatan || 'Babelan'} ${surat.kota || displayKabupaten}</p>
-              <p>Dengan ini menerangkan bahwa :</p>
-              
-              <table class="data-table">
-                <tr><td class="label">Nama</td><td class="separator">:</td><td class="value"><b>${surat.pemohon}</b></td></tr>
-                <tr><td class="label">Tempat Tgl, Lahir</td><td class="separator">:</td><td class="value">${surat.ttl || '-'}</td></tr>
-                <tr><td class="label">Jenis Kelamin</td><td class="separator">:</td><td class="value">${surat.jenisKelamin || '-'}</td></tr>
-                <tr><td class="label">Pekerjaan</td><td class="separator">:</td><td class="value">${surat.pekerjaan || '-'}</td></tr>
-                <tr><td class="label">Kewarganegaraan</td><td class="separator">:</td><td class="value">${surat.kewarganegaraan || 'WNI'}</td></tr>
-                <tr><td class="label">No. KTP/NIK</td><td class="separator">:</td><td class="value">${surat.nik || '-'}</td></tr>
-                <tr><td class="label">Status Perkawinan</td><td class="separator">:</td><td class="value">${surat.statusKawin || '-'}</td></tr>
-                <tr><td class="label">Alamat</td><td class="separator">:</td><td class="value">${surat.alamat || '-'}</td></tr>
-                <tr><td class="label">Maksud / Keperluan</td><td class="separator">:</td><td class="value">${surat.keterangan || '-'}</td></tr>
-              </table>
-              
-              <p>Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
-            </div>
-            
-            <div class="footer-date">
-               ${(kop.kabupaten || 'Bekasi').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
-            </div>
-            
-            <div class="footer-section">
-              <div class="footer-column">
-                <p>Mengetahui,</p>
-                <p>Ketua RW ${displayRW}</p>
-                <div class="signature-space">
-                  ${kop.signature_rw_url ? `<img src="${kop.signature_rw_url}" class="signature-img" />` : ''}
-                </div>
-                <p class="signature-name">( ${kop.nama_ketua_rw || 'Tri Handoko P'} )</p>
-              </div>
-              <div class="footer-column">
-                <p>&nbsp;</p>
-                <p>Ketua RT ${displayRT}</p>
-                <div class="signature-space">
-                  ${kop.signature_rt_url ? `<img src="${kop.signature_rt_url}" class="signature-img" />` : ''}
-                </div>
-                <p class="signature-name">( ${kop.nama_ketua_rt || 'Fadhlan'} )</p>
-              </div>
-            </div>
-            
-            <div style="text-align: center; font-style: italic; font-size: 11px; margin-top: 30px; margin-bottom: 5px; color: #374151; font-family: 'Times New Roman', serif;">
-              "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
-            </div>
-
-            <div class="verif-box-grid">
-               <div class="verif-item">
-                 <span>Tl. Berkas / Surat No :</span>
-                 <span style="margin-top: 15px">Berkas Sesuai</span>
-                 <div class="verif-box"></div>
-               </div>
-               <div class="verif-item">
-                 <span>Hal :</span>
-                 <span style="margin-top: 15px">Berkas Kecamatan</span>
-                 <div class="verif-box"></div>
-               </div>
-               <div class="verif-item">
-                 <span>Tgl : ..............................</span>
-                 <span style="margin-top: 15px">Paraf Arsiparis</span>
-                 <div class="verif-box"></div>
-               </div>
-            </div>
-          </div>
-          
-          <script>
-            function checkImages() {
-              const images = document.getElementsByTagName('img');
-              let loadedCount = 0;
-              if (images.length === 0) {
-                setTimeout(() => { window.print(); window.close(); }, 800);
-                return;
-              }
-              for (let i = 0; i < images.length; i++) {
-                if (images[i].complete) {
-                  loadedCount++;
-                } else {
-                  images[i].addEventListener('load', () => {
-                    loadedCount++;
-                    if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 800);
-                  });
-                  images[i].addEventListener('error', (e) => {
-                    console.error('Image failing to load', e);
-                    loadedCount++;
-                    if (loadedCount === images.length) setTimeout(() => { window.print(); window.close(); }, 800);
-                  });
-                }
-              }
-              if (loadedCount === images.length) {
-                setTimeout(() => { window.print(); window.close(); }, 800);
-              }
-            }
-            window.onload = checkImages;
-          </script>
-        </body>
-      </html>
-    `;
+    const content = generateSuratHTML(mappedSurat, kop, settings);
 
     printWindow.document.write(content);
     printWindow.document.close();
@@ -506,6 +314,14 @@ export function SuratView({
         return;
     }
 
+    // Detect mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      showNotification("Mengaktifkan mode cetak PDF khusus HP (Gunakan opsi 'Simpan sebagai PDF' di layar cetak)", "info");
+      generateSuratPDF(surat);
+      return;
+    }
+
     const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
     const rawKop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
     
@@ -519,163 +335,80 @@ export function SuratView({
 
     showNotification("Menyiapkan dokumen PDF...", "info");
 
-    const defaultLogoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
-    const rawLogoPemerintah = (kop.logo_url && kop.logo_url.length > 10) ? kop.logo_url : defaultLogoUrl;
-    const rawLogoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : "/logosmartrwai.png"; 
-    
+    let base64Kop;
+    try {
+      base64Kop = await prepareBase64Kop(kop);
+    } catch (e) {
+      console.error("Error preparing base64 kop:", e);
+      base64Kop = { ...kop };
+    }
+
     const displayRT = surat.rt || kop.rt || "03"; 
     const displayRW = kop.rw || "26"; 
-    const orgName = `RUKUN TETANGGA ${displayRT} / RUKUN WARGA ${displayRW}`;
-    const kelurahanText = kop.kelurahan && kop.kecamatan && kop.kelurahan !== "..."
-      ? `KELURAHAN ${kop.kelurahan.toUpperCase()} - KECAMATAN ${kop.kecamatan.toUpperCase()}`
-      : "KELURAHAN KEBALEN - KECAMATAN BABELAN";
-    const kabupaten = kop.kabupaten || "KABUPATEN BEKASI";
-    const displayKabupaten = kabupaten.toUpperCase().includes('KABUPATEN') || kabupaten.toUpperCase().includes('KOTA') 
-      ? kabupaten.toUpperCase() 
-      : (kabupaten !== "..." ? `KABUPATEN ${kabupaten.toUpperCase()}` : "KABUPATEN BEKASI");
 
-    const alamatText = kop.alamat && kop.alamat !== "..."
-      ? `Sekretariat : ${kop.alamat} ${kop.email ? ' | Email: ' + kop.email : ''} ${kop.instagram ? ' | Instagram: ' + kop.instagram : ''}`
-      : "Sekretariat : Jl. Katala 3 Blok K3 No. 1 RT 02 / RW 26 | Email: kebalenrw26@gmail.com";
-
-    // Helper to safely fetch and convert image URL to base64, bypassing CORS or falling back to a transparent spacer
-    const transparentSpacer = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-
-    const toBase64 = async (url: any): Promise<string> => {
-      if (!url || typeof url !== 'string' || url.trim() === '') return transparentSpacer;
-      if (url.startsWith('data:')) return url;
-      
-      let targetUrl = url;
-      if (url.startsWith('/')) {
-        targetUrl = window.location.origin + url;
-      }
-      
-      try {
-        const response = await fetch(targetUrl);
-        if (!response.ok) throw new Error('Fetch status error');
-        const blob = await response.blob();
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string || transparentSpacer);
-          reader.onerror = () => resolve(transparentSpacer);
-          reader.readAsDataURL(blob);
-        });
-      } catch (err) {
-        console.warn(`Failed to convert image to base64, using fallback: ${url}`, err);
-        return transparentSpacer;
-      }
+    const mappedSurat = {
+      ...surat,
+      rt: displayRT,
+      rw: displayRW,
+      jenis: surat.jenis || surat.jenisSurat || "SURAT PENGANTAR",
+      jenisSurat: surat.jenisSurat || surat.jenis || "SURAT PENGANTAR",
+      nomor_surat: surat.nomorSurat || surat.nomor_surat,
+      ttl: surat.ttl,
+      jk: surat.jenisKelamin || surat.jk || "-",
+      pekerjaan: surat.pekerjaan || "-",
+      kewarganegaraan: surat.kewarganegaraan || "WNI",
+      nik: surat.nik,
+      statusKawin: surat.statusKawin || "-",
+      alamat: surat.alamat,
+      keperluan: surat.keterangan || surat.keperluan || "-",
     };
 
-    // Pre-convert all images to base64 ahead of rendering
-    const [logoPemerintah, logoOrganisasi, signatureRw, signatureRt, bgKertas] = await Promise.all([
-      toBase64(rawLogoPemerintah),
-      toBase64(rawLogoOrganisasi),
-      kop.signature_rw_url ? toBase64(kop.signature_rw_url) : Promise.resolve(transparentSpacer),
-      kop.signature_rt_url ? toBase64(kop.signature_rt_url) : Promise.resolve(transparentSpacer),
-      kop.bg_kertas_url ? toBase64(kop.bg_kertas_url) : Promise.resolve(transparentSpacer)
-    ]);
+    const contentHtml = generateSuratHTML(mappedSurat, base64Kop, settings);
 
-    // Create hidden element for generation
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '0';
-    container.style.width = '210mm';
-    container.style.backgroundColor = '#fff';
+    // Create an isolated iframe for generation to bypass Tailwind v4 OKLCH parsing issues in html2canvas
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '210mm';
+    iframe.style.height = '297mm';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    // Provide dry-run window.print
+    if (iframe.contentWindow) {
+      try {
+        (iframe.contentWindow as any).print = () => {};
+        (iframe.contentWindow as any).close = () => {};
+      } catch (err) {}
+    }
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      throw new Error("Could not create isolated iframe for PDF generation");
+    }
+
+    // Write the HTML inside the iframe document
+    iframeDoc.open();
+    iframeDoc.write(contentHtml);
+    iframeDoc.close();
     
-    // Construct HTML content exactly like generateSuratPDF but optimized for html2canvas
-    container.innerHTML = `
-      <div style="font-family: 'Times New Roman', serif; padding: 40px; color: #000; background: #fff; line-height: 1.4; width: 210mm; min-height: 297mm;">
-        ${bgKertas && bgKertas !== transparentSpacer ? `<div style="width: 100mm; height: 100mm; background-image: url('${bgKertas}'); background-size: contain; background-position: center; background-repeat: no-repeat; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); filter: grayscale(100%) opacity(0.15); z-index: 0;"></div>` : ''}
-        <div style="position: relative; z-index: 1;">
-          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px;">
-            <img src="${logoPemerintah}" style="width: 80px; height: 80px; object-fit: contain;" />
-            <div style="text-align: center; flex: 1; padding: 0 10px;">
-              <h1 style="margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase;">${orgName}</h1>
-              <h2 style="margin: 2px 0; font-size: 15px; font-weight: bold; text-transform: uppercase;">${kelurahanText}</h2>
-              <h2 style="margin: 2px 0; font-size: 15px; font-weight: bold; text-transform: uppercase;">${displayKabupaten}</h2>
-              <p style="margin: 2px 0; font-size: 10px;">${alamatText}</p>
-            </div>
-            <img src="${logoOrganisasi}" style="width: 90px; height: 90px; object-fit: contain;" />
-          </div>
-          
-          <div style="text-align: center; margin-bottom: 25px;">
-            <h3 style="margin: 0; text-decoration: underline; font-size: 16px; font-weight: bold; text-transform: uppercase;">SURAT PENGANTAR</h3>
-            <p style="margin: 5px 0; font-size: 13px;">Nomor : ${surat.nomorSurat || `...... / RT ${displayRT} / RW ${displayRW} / Tahun ${new Date().getFullYear()}`}</p>
-          </div>
-          
-          <div style="font-size: 13px; text-align: justify;">
-            <p style="margin-bottom: 12px;">Yang bertanda tangan di bawah ini Ketua RT ${displayRT} / RW ${displayRW} Kelurahan ${surat.kelurahan || kop.kelurahan || 'Kebalen'} Kecamatan ${surat.kecamatan || kop.kecamatan || 'Babelan'} ${surat.kota || displayKabupaten}</p>
-            <p>Dengan ini menerangkan bahwa :</p>
-            
-            <table style="width: 100%; border-collapse: collapse; margin: 15px 0 15px 30px;">
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Nama</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;"><b>${surat.pemohon}</b></td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Tempat Tgl, Lahir</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.ttl || '-'}</td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Jenis Kelamin</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.jenisKelamin || '-'}</td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Pekerjaan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.pekerjaan || '-'}</td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Kewarganegaraan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.kewarganegaraan || 'WNI'}</td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">No. KTP/NIK</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.nik || '-'}</td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Status Perkawinan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.statusKawin || '-'}</td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Alamat</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.alamat || '-'}</td></tr>
-              <tr><td style="width: 160px; padding: 4px 0; vertical-align: top;">Maksud / Keperluan</td><td style="width: 20px; padding: 4px 0; vertical-align: top; text-align: center;">:</td><td style="padding: 4px 0; vertical-align: top;">${surat.keterangan || '-'}</td></tr>
-            </table>
-            
-            <p>Demikian Surat Pengantar ini dibuat dengan sebenar-benarnya dan dapat dipergunakan sebagaimana mestinya.</p>
-          </div>
-          
-          <div style="text-align: right; margin-top: 30px; margin-bottom: 5px; font-size: 13px; padding-right: 40px;">
-             ${(kop.kabupaten || 'Bekasi').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
-          </div>
-          
-          <div style="display: flex; justify-content: space-between; padding: 0 40px; margin-top: 10px;">
-            <div style="text-align: center; width: 220px;">
-              <p>Mengetahui,</p>
-              <p>Ketua RW ${displayRW}</p>
-              <div style="height: 80px; display: flex; align-items: center; justify-content: center; position: relative;">
-                ${signatureRw && signatureRw !== transparentSpacer ? `<img src="${signatureRw}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
-              </div>
-              <p style="font-weight: bold; text-decoration: underline;">( ${kop.nama_ketua_rw || 'Tri Handoko P'} )</p>
-            </div>
-            <div style="text-align: center; width: 220px;">
-              <p>&nbsp;</p>
-              <p>Ketua RT ${displayRT}</p>
-              <div style="height: 80px; display: flex; align-items: center; justify-content: center; position: relative;">
-                ${signatureRt && signatureRt !== transparentSpacer ? `<img src="${signatureRt}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
-              </div>
-              <p style="font-weight: bold; text-decoration: underline;">( ${kop.nama_ketua_rt || 'Fadhlan'} )</p>
-            </div>
-          </div>
-          
-          <div style="text-align: center; font-style: italic; font-size: 11px; margin-top: 30px; margin-bottom: 5px; color: #374151; font-family: 'Times New Roman', serif;">
-            "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
-          </div>
- 
-          <div style="margin-top: 50px; border-top: 1.5px solid #000; padding-top: 15px; display: flex; justify-content: space-between; gap: 15px; font-size: 10px;">
-             <div style="display: flex; flex-direction: column; flex: 1;">
-                <span>Tl. Berkas / Surat No :</span>
-                <span style="margin-top: 15px">Berkas Sesuai</span>
-                <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
-             </div>
-             <div style="display: flex; flex-direction: column; flex: 1;">
-                <span>Hal :</span>
-                <span style="margin-top: 15px">Berkas Kecamatan</span>
-                <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
-             </div>
-             <div style="display: flex; flex-direction: column; flex: 1;">
-                <span>Tgl : ..............................</span>
-                <span style="margin-top: 15px">Paraf Arsiparis</span>
-                <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
-             </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(container);
+    // Wait for DOM content of the iframe to be fully parsed and built
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     
     try {
-      // Use crossOrigin to handle images if needed
-      const canvas = await html2canvas(container, {
+      // Strip print/close calls from scripts
+      const printScripts = iframeDoc.getElementsByTagName('script');
+      for (let i = printScripts.length - 1; i >= 0; i--) {
+        if (printScripts[i].innerHTML.includes('window.print') || printScripts[i].innerHTML.includes('window.close')) {
+          printScripts[i].parentNode?.removeChild(printScripts[i]);
+        }
+      }
+
+      const pdfNode = iframeDoc.getElementById('print-container-root');
+      if (!pdfNode) throw new Error("PDF content element #print-container-root not found in iframe");
+
+      const canvas = await html2canvas(pdfNode, {
         scale: 2,
         useCORS: true,
         logging: false,
@@ -688,13 +421,13 @@ export function SuratView({
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Surat_${surat.pemohon}_${surat.id}.pdf`);
+      pdf.save(`Surat_${surat.pemohon || 'Dokumen'}_${surat.id || 'Draft'}.pdf`);
       showNotification("PDF berhasil diunduh.", "success");
     } catch (err: any) {
       console.error("PDF download error:", err);
       showNotification(`Gagal mengunduh PDF: ${err?.message || "Kesalahan render layout"}`, "error");
     } finally {
-      document.body.removeChild(container);
+      document.body.removeChild(iframe);
     }
   };
 

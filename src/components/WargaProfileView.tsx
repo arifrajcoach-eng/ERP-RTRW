@@ -41,6 +41,7 @@ import { db, auth } from '../firebase';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { MapPicker } from './MapPicker';
+import { prepareBase64Kop } from '../lib/appUtils';
 
 const normalizeProfileData = (data: any) => {
   if (!data) return {};
@@ -345,9 +346,23 @@ export function WargaProfileView({
     const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
     const kop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
     
+    let base64Kop;
+    try {
+      base64Kop = await prepareBase64Kop(kop);
+    } catch (e) {
+      console.error("Error preparing base64 kop:", e);
+      base64Kop = { ...kop };
+    }
+
+    const displayRT = item.rt || kop.rt || wargaData.rt || "03";
+    const displayRW = kop.rw || "26";
+
     const mappedSurat = {
       ...item,
-      jenisSurat: item.jenis,
+      rt: displayRT,
+      rw: displayRW,
+      jenis: item.jenis || "SURAT PENGANTAR",
+      jenisSurat: item.jenis || "SURAT PENGANTAR",
       nomor_surat: item.nomorSurat || item.nomor_surat,
       jk: item.jenisKelamin || item.jk || wargaData.jk || wargaData.jenisKelamin || "-",
       pekerjaan: item.pekerjaan || wargaData.profesi || "-",
@@ -356,22 +371,52 @@ export function WargaProfileView({
     };
 
     // Use the existing generateSuratHTML logic to get the content
-    const content = generateSuratHTML(mappedSurat, kop, settings);
+    const contentHtml = generateSuratHTML(mappedSurat, base64Kop, settings);
 
-    // Create hidden element for generation
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '0';
-    container.style.width = '210mm';
-    container.style.backgroundColor = '#fff';
-    
-    // Wrap in a div to ensure proper rendering
-    container.innerHTML = `<div style="background: white; width: 210mm;">${content}</div>`;
-    document.body.appendChild(container);
+    // Create an isolated iframe for generation to bypass Tailwind v4 OKLCH parsing issues in html2canvas
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '210mm';
+    iframe.style.height = '297mm';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    // Provide dry-run window.print
+    if (iframe.contentWindow) {
+      try {
+        (iframe.contentWindow as any).print = () => {};
+        (iframe.contentWindow as any).close = () => {};
+      } catch (err) {}
+    }
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      throw new Error("Could not create isolated iframe for PDF generation");
+    }
+
+    // Write the HTML inside the iframe document
+    iframeDoc.open();
+    iframeDoc.write(contentHtml);
+    iframeDoc.close();
     
     try {
-      const canvas = await html2canvas(container, {
+      // Strip print/close calls from scripts
+      const printScripts = iframeDoc.getElementsByTagName('script');
+      for (let i = printScripts.length - 1; i >= 0; i--) {
+        if (printScripts[i].innerHTML.includes('window.print') || printScripts[i].innerHTML.includes('window.close')) {
+          printScripts[i].parentNode?.removeChild(printScripts[i]);
+        }
+      }
+
+      const pdfNode = iframeDoc.getElementById('print-container-root');
+      if (!pdfNode) throw new Error("PDF content element #print-container-root not found in iframe");
+
+      // Wait a tiny bit to ensure imagery layout is computed
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const canvas = await html2canvas(pdfNode, {
         scale: 2,
         useCORS: true,
         logging: false,
@@ -384,13 +429,13 @@ export function WargaProfileView({
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Surat_${wargaData.nama}_${item.id}.pdf`);
+      pdf.save(`Surat_${wargaData.nama || 'Warga'}_${item.id || 'Draft'}.pdf`);
       showNotification("PDF berhasil diunduh.", "success");
-    } catch (err) {
+    } catch (err: any) {
       console.error("PDF download error:", err);
-      showNotification("Gagal mengunduh PDF.", "error");
+      showNotification(`Gagal mengunduh PDF: ${err?.message || "Kesalahan render layout"}`, "error");
     } finally {
-      document.body.removeChild(container);
+      document.body.removeChild(iframe);
     }
   };
 

@@ -475,13 +475,16 @@ export default function TenantsView({
                               RW: {tenant.rwTarget}
                             </div>
                           )}
-                          <div className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-0.5 rounded-full w-fit border ${
-                            tenant.syncMode === "rw_to_rt" 
-                              ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400"
-                              : tenant.syncMode === "rt_to_rw"
-                                ? "bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400"
-                                : "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400"
-                          }`}>
+                          <div 
+                            style={{ width: '80px' }}
+                            className={`flex items-center justify-center gap-1 text-[10.5px] font-bold py-0.5 rounded-full border ${
+                              tenant.syncMode === "rw_to_rt" 
+                                ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400"
+                                : tenant.syncMode === "rt_to_rw"
+                                  ? "bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400"
+                                  : "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400"
+                            }`}
+                          >
                             {tenant.syncMode === "rw_to_rt" 
                               ? "⬇️ RW -> RT" 
                               : tenant.syncMode === "rt_to_rw"

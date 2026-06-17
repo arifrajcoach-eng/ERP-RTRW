@@ -13,15 +13,17 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
             <div 
                 className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
             >
-                <div 
+                <img
+                    src={kop.bg_kertas_url}
+                    alt="Watermark"
                     style={{
                         width: '100mm',
                         height: '100mm',
-                        backgroundImage: `url(${kop.bg_kertas_url})`,
-                        backgroundSize: 'contain',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        filter: 'grayscale(100%) opacity(0.15)'
+                        objectFit: 'contain',
+                        filter: kop.bg_kertas_url?.startsWith('data:') ? 'none' : 'grayscale(100%)',
+                        opacity: kop.bg_kertas_url?.startsWith('data:') ? 1.0 : 0.20,
+                        border: 'none',
+                        display: 'block'
                     }}
                 />
             </div>
@@ -126,7 +128,7 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
                  </div>
             </div>
              <div className="mt-12 text-center text-[10px] font-semibold italic text-slate-800">
-                 {kop?.catatan}
+                 {kop?.catatan || 'Catatan : Fotocopy Surat Pengantar A4 3 Lembar'}
              </div>
         </div>
     );
