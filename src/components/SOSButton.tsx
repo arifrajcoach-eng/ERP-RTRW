@@ -41,8 +41,8 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
   };
 
   const triggerSOS = async () => {
-    let lat = 0;
-    let lng = 0;
+    let lat: number | null = null;
+    let lng: number | null = null;
     let accuracy = 0;
     let userLocation = "Lokasi Tidak Diketahui";
 
@@ -91,8 +91,8 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
     if (customLat && customLng) {
       lat = parseFloat(customLat);
       lng = parseFloat(customLng);
-      userLocation = `📍 Sinyal GPS Terkalibrasi (Kustom): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-    } else if (lat === 0 && lng === 0) {
+      userLocation = `📍 Sinyal GPS Terkalibrasi (Kustom): ${lat?.toFixed(6)}, ${lng?.toFixed(6)}`;
+    } else if (lat === null || lng === null) {
       // Allow sending SOS even without location.
       userLocation = `📍 Lokasi Tidak Diketahui / GPS Dinonaktifkan`;
       console.warn("Mengirim SOS tanpa lokasi.");

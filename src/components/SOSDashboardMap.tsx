@@ -50,6 +50,7 @@ export const SOSDashboardMap: React.FC<SOSDashboardMapProps> = ({ emergencies })
   return (
     <div className="h-[400px] w-full rounded-3xl overflow-hidden border-2 border-red-900/30 shadow-2xl relative z-0">
       <MapContainer 
+        key={`${centerLat}-${centerLng}`}
         center={[centerLat, centerLng]} 
         zoom={15} 
         className="h-full w-full"

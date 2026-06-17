@@ -135,6 +135,10 @@ export default function DashboardView({
 
   const isWarga = userRole === 'WARGA';
 
+  const hasSuperAdminAccess = useMemo(() => {
+    return allowedMenuItems?.some(item => item.id === 'super-admin');
+  }, [allowedMenuItems]);
+
   // Personal Stats for Warga
   const personalStats = useMemo(() => {
     if (!isWarga || !currentUser?.nik) return null;
@@ -770,7 +774,6 @@ export default function DashboardView({
                   <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" style={{ marginLeft: '16px' }}>{currentTenant?.name || settings?.nama_rt || 'Digital Environment'}</p>
                 </div>
               </div>
-
             </div>
           </div>
         )}
@@ -784,7 +787,7 @@ export default function DashboardView({
           </div>
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
             {allowedMenuItems
-              .filter(item => !['dashboard', 'pengaturan', 'super-admin', 'users', 'kop-template'].includes(item.id))
+              .filter(item => !['dashboard', 'pengaturan', 'users', 'kop-template'].includes(item.id))
               .filter(item => {
                 if (item.id === "sos-monitor") {
                   const role = (currentUser?.role || '').toUpperCase();

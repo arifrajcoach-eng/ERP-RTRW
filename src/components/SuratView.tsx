@@ -520,8 +520,8 @@ export function SuratView({
     showNotification("Menyiapkan dokumen PDF...", "info");
 
     const defaultLogoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_Kabupaten_Bekasi.png/1200px-Logo_Kabupaten_Bekasi.png";
-    const logoPemerintah = (kop.logo_url && kop.logo_url.length > 10) ? kop.logo_url : defaultLogoUrl;
-    const logoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : "/logosmartrwai.png"; 
+    const rawLogoPemerintah = (kop.logo_url && kop.logo_url.length > 10) ? kop.logo_url : defaultLogoUrl;
+    const rawLogoOrganisasi = (kop.logo_rw_url && kop.logo_rw_url.length > 10) ? kop.logo_rw_url : "/logosmartrwai.png"; 
     
     const displayRT = surat.rt || kop.rt || "03"; 
     const displayRW = kop.rw || "26"; 
@@ -538,6 +538,43 @@ export function SuratView({
       ? `Sekretariat : ${kop.alamat} ${kop.email ? ' | Email: ' + kop.email : ''} ${kop.instagram ? ' | Instagram: ' + kop.instagram : ''}`
       : "Sekretariat : Jl. Katala 3 Blok K3 No. 1 RT 02 / RW 26 | Email: kebalenrw26@gmail.com";
 
+    // Helper to safely fetch and convert image URL to base64, bypassing CORS or falling back to a transparent spacer
+    const transparentSpacer = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+    const toBase64 = async (url: any): Promise<string> => {
+      if (!url || typeof url !== 'string' || url.trim() === '') return transparentSpacer;
+      if (url.startsWith('data:')) return url;
+      
+      let targetUrl = url;
+      if (url.startsWith('/')) {
+        targetUrl = window.location.origin + url;
+      }
+      
+      try {
+        const response = await fetch(targetUrl);
+        if (!response.ok) throw new Error('Fetch status error');
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string || transparentSpacer);
+          reader.onerror = () => resolve(transparentSpacer);
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        console.warn(`Failed to convert image to base64, using fallback: ${url}`, err);
+        return transparentSpacer;
+      }
+    };
+
+    // Pre-convert all images to base64 ahead of rendering
+    const [logoPemerintah, logoOrganisasi, signatureRw, signatureRt, bgKertas] = await Promise.all([
+      toBase64(rawLogoPemerintah),
+      toBase64(rawLogoOrganisasi),
+      kop.signature_rw_url ? toBase64(kop.signature_rw_url) : Promise.resolve(transparentSpacer),
+      kop.signature_rt_url ? toBase64(kop.signature_rt_url) : Promise.resolve(transparentSpacer),
+      kop.bg_kertas_url ? toBase64(kop.bg_kertas_url) : Promise.resolve(transparentSpacer)
+    ]);
+
     // Create hidden element for generation
     const container = document.createElement('div');
     container.style.position = 'absolute';
@@ -549,7 +586,7 @@ export function SuratView({
     // Construct HTML content exactly like generateSuratPDF but optimized for html2canvas
     container.innerHTML = `
       <div style="font-family: 'Times New Roman', serif; padding: 40px; color: #000; background: #fff; line-height: 1.4; width: 210mm; min-height: 297mm;">
-        ${kop.bg_kertas_url ? `<div style="width: 100mm; height: 100mm; background-image: url('${kop.bg_kertas_url}'); background-size: contain; background-position: center; background-repeat: no-repeat; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); filter: grayscale(100%) opacity(0.15); z-index: 0;"></div>` : ''}
+        ${bgKertas && bgKertas !== transparentSpacer ? `<div style="width: 100mm; height: 100mm; background-image: url('${bgKertas}'); background-size: contain; background-position: center; background-repeat: no-repeat; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); filter: grayscale(100%) opacity(0.15); z-index: 0;"></div>` : ''}
         <div style="position: relative; z-index: 1;">
           <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px;">
             <img src="${logoPemerintah}" style="width: 80px; height: 80px; object-fit: contain;" />
@@ -595,39 +632,39 @@ export function SuratView({
               <p>Mengetahui,</p>
               <p>Ketua RW ${displayRW}</p>
               <div style="height: 80px; display: flex; align-items: center; justify-content: center; position: relative;">
-                ${kop.signature_rw_url ? `<img src="${kop.signature_rw_url}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
+                ${signatureRw && signatureRw !== transparentSpacer ? `<img src="${signatureRw}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
               </div>
-              <p style="font-bold; text-decoration: underline;">( ${kop.nama_ketua_rw || 'Tri Handoko P'} )</p>
+              <p style="font-weight: bold; text-decoration: underline;">( ${kop.nama_ketua_rw || 'Tri Handoko P'} )</p>
             </div>
             <div style="text-align: center; width: 220px;">
               <p>&nbsp;</p>
               <p>Ketua RT ${displayRT}</p>
               <div style="height: 80px; display: flex; align-items: center; justify-content: center; position: relative;">
-                ${kop.signature_rt_url ? `<img src="${kop.signature_rt_url}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
+                ${signatureRt && signatureRt !== transparentSpacer ? `<img src="${signatureRt}" style="height: 80px; width: 150px; object-fit: contain;" />` : ''}
               </div>
-              <p style="font-bold; text-decoration: underline;">( ${kop.nama_ketua_rt || 'Fadhlan'} )</p>
+              <p style="font-weight: bold; text-decoration: underline;">( ${kop.nama_ketua_rt || 'Fadhlan'} )</p>
             </div>
           </div>
           
           <div style="text-align: center; font-style: italic; font-size: 11px; margin-top: 30px; margin-bottom: 5px; color: #374151; font-family: 'Times New Roman', serif;">
             "Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."
           </div>
-
-          <div style="margin-top: 50px; border-top: 1.5px solid #000; padding-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 10px;">
-             <div style="display: flex; flex-direction: column;">
-               <span>Tl. Berkas / Surat No :</span>
-               <span style="margin-top: 15px">Berkas Sesuai</span>
-               <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
+ 
+          <div style="margin-top: 50px; border-top: 1.5px solid #000; padding-top: 15px; display: flex; justify-content: space-between; gap: 15px; font-size: 10px;">
+             <div style="display: flex; flex-direction: column; flex: 1;">
+                <span>Tl. Berkas / Surat No :</span>
+                <span style="margin-top: 15px">Berkas Sesuai</span>
+                <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
              </div>
-             <div style="display: flex; flex-direction: column;">
-               <span>Hal :</span>
-               <span style="margin-top: 15px">Berkas Kecamatan</span>
-               <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
+             <div style="display: flex; flex-direction: column; flex: 1;">
+                <span>Hal :</span>
+                <span style="margin-top: 15px">Berkas Kecamatan</span>
+                <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
              </div>
-             <div style="display: flex; flex-direction: column;">
-               <span>Tgl : ..............................</span>
-               <span style="margin-top: 15px">Paraf Arsiparis</span>
-               <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
+             <div style="display: flex; flex-direction: column; flex: 1;">
+                <span>Tgl : ..............................</span>
+                <span style="margin-top: 15px">Paraf Arsiparis</span>
+                <div style="border: 1.5px solid #000; padding: 5px; height: 35px; width: 70px; margin-top: 4px;"></div>
              </div>
           </div>
         </div>
@@ -653,9 +690,9 @@ export function SuratView({
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Surat_${surat.pemohon}_${surat.id}.pdf`);
       showNotification("PDF berhasil diunduh.", "success");
-    } catch (err) {
+    } catch (err: any) {
       console.error("PDF download error:", err);
-      showNotification("Gagal mengunduh PDF.", "error");
+      showNotification(`Gagal mengunduh PDF: ${err?.message || "Kesalahan render layout"}`, "error");
     } finally {
       document.body.removeChild(container);
     }

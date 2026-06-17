@@ -32,8 +32,8 @@ export default function SOSOverlay({
   canResolve,
   setActiveTab,
 }: SOSOverlayProps) {
+  console.log("SOSOverlay: Rendering with emergency:", emergency);
   // Save to log when viewed (implied)
-  console.log("SOSOverlay: Received emergency data:", emergency);
   useEffect(() => {
     if (emergency && !emergency.logged) {
       // Logic would be here in a real production app to log the view
@@ -338,7 +338,7 @@ export default function SOSOverlay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-red-600 flex flex-col items-center p-6 text-white text-center sm:p-12 overflow-y-auto"
+      className="fixed inset-0 z-[9999] bg-red-600 flex flex-col items-center p-6 text-white text-center sm:p-12 overflow-y-auto"
     >
       {/* Flashing Background Animation */}
       <motion.div
@@ -370,56 +370,73 @@ export default function SOSOverlay({
           Sinyal Darurat Aktif!
         </h1>
 
-        {/* HIGH CONTRAST VICTIM CARD */}
+        {/* EMERGENCY DETAILS ON RED BACKGROUND */}
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: [0.95, 1.02, 1], opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="bg-yellow-400 text-slate-900 border-4 border-white font-sans rounded-[2rem] p-6 sm:p-8 w-full max-w-lg shadow-[0_20px_50px_rgba(234,179,8,0.5)] my-6 relative overflow-hidden"
+           initial={{ scale: 0.95, opacity: 0 }}
+           animate={{ scale: 1, opacity: 1 }}
+           transition={{ duration: 0.4 }}
+           className="text-white font-sans w-full max-w-2xl my-6 relative"
         >
-          {/* Animated decorative beacon light inside the card */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl animate-pulse pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse pointer-events-none" />
           
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-rose-800 mb-2 flex items-center justify-center gap-1.5 leading-none">
-            <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping shrink-0" />
-            WARGA YANG MEMBUTUHKAN BANTUAN SEGERA
+          <p className="text-[12px] font-black uppercase tracking-[0.2em] text-white/70 mb-4 flex items-center justify-center gap-1.5 leading-none">
+            <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
+            Laporan Darurat / SOS
           </p>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950 uppercase leading-none drop-shadow-sm select-all">
-            {emergency.userName || "Warga Tetangga"}
-          </h2>
-          {emergency.userAddress && (
-            <div className="mt-4 inline-block bg-rose-700 text-white font-black text-xs uppercase tracking-wide rounded-2xl px-5 py-2.5 shadow-md border border-rose-600 leading-tight">
-              📍 {emergency.userAddress}
+          
+          <div className="space-y-6 text-center">
+            <div>
+              <p className="text-xs uppercase font-bold opacity-80">Nama Warga</p>
+              <h2 className="text-4xl sm:text-5xl font-black text-white uppercase leading-none drop-shadow-md select-all">
+                {emergency.userName || "Warga Tetangga"}
+              </h2>
             </div>
-          )}
+            
+             <div className="grid grid-cols-2 gap-6 pt-6 border-t border-red-400/50">
+              <div>
+                <p className="text-xs uppercase font-bold opacity-80">Lokasi Rumah</p>
+                <p className="text-lg font-bold text-white">{emergency.userAddress || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase font-bold opacity-80">RT / RW</p>
+                <p className="text-lg font-bold text-white">
+                  {emergency.rt || "-"} / {emergency.rw || "-"}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-red-400/50">
+              <p className="text-xs uppercase font-bold opacity-80">Lokasi Kejadian</p>
+              {(() => {
+                  const lat = emergency.latitude ?? emergency.location?.lat ?? emergency.lat ?? null;
+                  const lng = emergency.longitude ?? emergency.location?.lng ?? emergency.lng ?? null;
+                  const isIpBased = emergency.userLocation?.includes('IP Fallback');
+                  
+                  if (lat !== null && lng !== null && lat !== undefined && lng !== undefined && lat !== 0 && lng !== 0) {
+                      return (
+                        <a
+                           href={`https://www.google.com/maps?q=loc:${lat},${lng}&z=19`}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="text-md font-bold text-white underline hover:text-red-200 transition-colors block mt-1"
+                        >
+                           {isIpBased ? 'Lokasi Kejadian Saat Ini (Estimasi Jaringan)' : 'Lokasi Kejadian Saat Ini (GPS Presisi)'} ↗
+                        </a>
+                      );
+                  }
+                  
+                  return (
+                    <p className="text-md font-bold text-white mt-1">
+                      {emergency.userLocation || "Lokasi Tidak Diketahui"}
+                    </p>
+                  );
+                })()}
+            </div>
+          </div>
         </motion.div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2 mb-6 justify-center">
-          <span className="bg-white/20 px-4 py-1.5 rounded-full text-xs font-mono font-black border border-white/25 uppercase tracking-wider animate-pulse flex items-center gap-1.5 shadow-lg">
-            🚨 Sirine Aktif: Siklus {sosLoopCount} / 12 (Sinyal Terkirim)
-          </span>
+        {/* Removed status indicator box */}
 
-          <span className="bg-cyan-500/30 text-cyan-100 px-4 py-1.5 rounded-full text-xs font-mono font-black border border-cyan-500/50 uppercase tracking-widest flex items-center gap-1.5 shadow-lg animate-pulse">
-            <Radio className="w-3.5 h-3.5 text-cyan-300 animate-ping shrink-0" />
-            <Signal className="w-3.5 h-3.5 text-cyan-300 shrink-0 animate-bounce" />
-            <span>GPS ACTIVE: 100% Locked</span>
-          </span>
-
-          {sosLoopCount < 12 && !isMuted ? (
-            <span className="bg-emerald-500/30 text-emerald-100 px-4 py-1.5 rounded-full text-xs font-mono font-black border border-emerald-500/50 uppercase tracking-widest flex items-center gap-1.5 shadow-lg animate-pulse">
-              📳 Mode Getar HP: Aktif
-            </span>
-          ) : (
-            <span className="bg-white/10 text-white/50 px-4 py-1.5 rounded-full text-xs font-mono font-black border border-white/10 uppercase tracking-widest flex items-center gap-1.5">
-              📳 Mode Getar: Nonaktif
-            </span>
-          )}
-          {sosLoopCount >= 12 && (
-            <span className="bg-amber-400 text-slate-950 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg animate-bounce">
-              ✓ Sirine Berbunyi Selama 12 Siklus Selesai! Menunggu Petugas
-            </span>
-          )}
-        </div>
 
         {audioBlocked && !isMuted && (
           <motion.div
@@ -431,123 +448,6 @@ export default function SOSOverlay({
             ⚠️ KETUK LAYAR DI MANA SAJA UNTUK BUNYI & GETAR SIRINE!
           </motion.div>
         )}
-
-        <motion.div
-          animate={
-            sosLoopCount < 12 && !isMuted
-              ? {
-                  x: [0, -3, 3, -3, 3, -1, 1, -1, 1, 0],
-                  y: [0, 2, -2, 2, -2, 1, -1, 1, -1, 0],
-                }
-              : {}
-          }
-          transition={{
-            repeat: Infinity,
-            duration: 0.5,
-            ease: "easeInOut",
-          }}
-          className="bg-white/10 border border-white/20 p-6 sm:p-8 rounded-3xl w-full mb-8 shadow-2xl"
-        >
-          <div className="flex flex-col gap-4 text-left">
-            <div className="flex items-center gap-4 border-b border-white/10 pb-4">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden">
-                {emergency.userPhoto ? (
-                  <img
-                    src={emergency.userPhoto}
-                    alt="Reporter"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="w-6 h-6" />
-                )}
-              </div>
-              <div className="flex flex-col">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-                  Nama Pelapor
-                </p>
-                <p className="text-xl sm:text-2xl font-black leading-tight">
-                  {emergency.userName}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {emergency.userPhone && (
-                    <a
-                      href={`https://wa.me/${emergency.userPhone.replace(/\D/g, "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 bg-green-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-500/50 hover:bg-green-500/50 transition-colors"
-                    >
-                      WhatsApp: {emergency.userPhone}
-                    </a>
-                  )}
-                  {emergency.userEmail && (
-                    <p className="text-[10px] font-bold opacity-70 bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
-                      {emergency.userEmail}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 border-b border-white/10 pb-4">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                <MapPin className="w-6 h-6" />
-              </div>
-              <div className="flex flex-col gap-1 overflow-hidden">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-                    Lokasi Kejadian
-                  </p>
-                  <span className="bg-cyan-500/20 text-cyan-200 border border-cyan-500/30 font-mono text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                    🛰️ GPS Lock: Active
-                  </span>
-                </div>
-                {(() => {
-                  const lat = emergency.latitude ?? emergency.location?.lat ?? emergency.lat;
-                  const lng = emergency.longitude ?? emergency.location?.lng ?? emergency.lng;
-                  return (lat !== undefined && lng !== undefined && lat !== 0) ? (
-                  <a
-                    href={`https://www.google.com/maps?q=loc:${lat},${lng}&z=19`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-bold truncate underline hover:text-white/80 transition-colors"
-                  >
-                    {emergency.userLocation} ↗
-                  </a>
-                  ) : (
-                  <p className="text-sm font-bold truncate">
-                    {emergency.userLocation}
-                  </p>
-                  );
-                })()}
-                {emergency.userAddress && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <p className="text-sm font-black bg-white/20 px-3 py-1.5 rounded-xl inline-block w-fit uppercase tracking-tight">
-                      {emergency.userAddress}
-                    </p>
-                    <p className="text-sm font-black bg-white/30 px-3 py-1.5 rounded-xl inline-block w-fit uppercase tracking-tight">
-                      RT: {emergency.rt || "-"} / RW: {emergency.rw || "-"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                <History className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-                  Waktu Terkirim
-                </p>
-                <p className="text-lg font-bold">
-                  {new Date(emergency.timestamp).toLocaleTimeString("id-ID")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
 
         <p className="text-lg sm:text-xl font-bold mb-8 animate-bounce flex items-center gap-2">
           <LifeBuoy className="w-6 h-6" />
@@ -626,7 +526,7 @@ export default function SOSOverlay({
             onClick={() => {
               setIsMuted(false);
             }}
-            className="px-10 py-5 bg-emerald-500 text-white border-2 border-emerald-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-emerald-400 transition-all active:scale-95 shadow-[0_8px_30px_rgba(16,185,129,0.4)] mb-4 flex items-center justify-center gap-2 cursor-pointer"
+            className="px-10 py-5 bg-[#b6b119] text-[#ed0000] border-2 border-emerald-600 rounded-2xl font-black uppercase text-sm w-full tracking-widest hover:bg-emerald-400 transition-all active:scale-95 shadow-[0_8px_30px_rgba(16,185,129,0.4)] mb-4 flex items-center justify-center gap-2 cursor-pointer"
           >
             <Volume2 className="w-6 h-6" />
             AKTIFKAN SUARA SIRINE
@@ -644,43 +544,6 @@ export default function SOSOverlay({
           </button>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-2 flex-wrap">
-          {/* Back to menu without stopping */}
-          <button
-            onClick={() => {
-              onCloseLocal();
-              setActiveTab("dashboard");
-            }}
-            className="px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
-          >
-            <LayoutDashboard className="w-4 h-4" /> Kembali Ke Menu Utama
-          </button>
-
-          {audioBlocked && !isMuted ? (
-            <button
-              onClick={enableAudioManually}
-              className="px-6 py-4 bg-yellow-400 text-slate-900 border border-[#ffcbcb] rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-yellow-300 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto shadow-xl"
-            >
-              <Volume2 className="w-5 h-5" /> AKTIFKAN ALARM
-            </button>
-          ) : null}
-
-          {!isMuted ? (
-            <button
-              onClick={() => setIsMuted(true)}
-              className="px-6 py-4 bg-red-700/50 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
-              <BellOff className="w-5 h-5" /> Off Suara
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsMuted(false)}
-              className="px-6 py-4 bg-emerald-600 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
-              <Volume2 className="w-5 h-5" /> On Suara
-            </button>
-          )}
-        </div>
 
         <p className="mt-8 text-[10px] font-bold opacity-60 uppercase tracking-widest">
           Sinyal ini terkirim ke seluruh pengurus dan warga

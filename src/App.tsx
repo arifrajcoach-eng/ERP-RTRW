@@ -895,12 +895,30 @@ export default function App() {
     if (e.status !== "ACTIVE" || e.id === hiddenEmergencyId) return false;
     const emTime = e.timestamp ? new Date(e.timestamp).getTime() : (e.createdAt?.toMillis?.() || Date.now());
     
-    const isMine = e.userId === auth.currentUser?.uid;
-    const isNewSinceAppStart = emTime > appStartTime.current - 20000; // 20s buffer for clock drift
+    // Identify if the active emergency belongs to the currently logged in user
+    const currentUserId = auth.currentUser?.uid || wargaAuth?.uid;
+    const currentNik = wargaAuth?.nik;
+    const isMine = (currentUserId && e.userId === currentUserId) || (currentNik && e.userId === currentNik);
     
-    // ONLY show if it's the user's own SOS OR if it's a new SOS that occurred while app is open
-    // This prevents stale/old SOS from screaming on every login or refresh.
-    return isMine || isNewSinceAppStart;
+    // Identify if the emergency is in the user's selected/current tenant
+    const myTenantId = currentUser?.tenantId || wargaAuth?.tenantId || selectedTenantId;
+    const isMineTenant = e.tenantId === myTenantId;
+    
+    const isNewSinceAppStart = emTime > appStartTime.current - 30000; // 30s buffer for clock drift
+    const isRecent = (Date.now() - emTime) < 300000; // 5 minutes max age for automatic display to prevent popping up stale SOS
+    const isAuthorized = currentUser?.isSuperAdmin || ["RW", "RT", "SATPAM"].includes(currentUser?.role || "");
+    
+    console.log("App.tsx: Evaluating activeEmergency:", JSON.stringify(e));
+    
+    // Always show if it's the user's own active SOS (allowing them to see & stop/resolve it)
+    if (isMine) return true;
+    
+    // For other users, show only if it is live (triggered while app was open) or highly recent (under 5 minutes old)
+    // AND the user belongs to the same tenant or holds administrative authority
+    const isTargetUser = isMineTenant || isAuthorized;
+    const isLiveOrRecent = isNewSinceAppStart || isRecent;
+    
+    return isTargetUser && isLiveOrRecent;
   });
 
   useEffect(() => {
