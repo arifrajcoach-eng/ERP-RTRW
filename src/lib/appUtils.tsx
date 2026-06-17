@@ -87,7 +87,7 @@ export const shortenUrl = async (longUrl: string): Promise<string> => {
 };
 
 // Shared Helper for Document Generation
-export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
+export const generateSuratHTML = (surat: any, kop: any, settings: any, isDownload?: boolean) => {
   const displayRT = surat.rt || kop.rt || "...";
   const displayRW = kop.rw || "...";
   const tenantName = kop.nama_rt || kop.nama_organisasi || settings?.nama_rt || settings?.namaLayout || "SmaRtRw AI";
@@ -250,6 +250,7 @@ export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
             </div>
           </div>
         </div>
+        ${isDownload ? '' : `
         <script>
           function checkImages() {
             const images = document.getElementsByTagName('img');
@@ -278,6 +279,7 @@ export const generateSuratHTML = (surat: any, kop: any, settings: any) => {
           }
           window.onload = checkImages;
         </script>
+        `}
       </body>
     </html>
   `;

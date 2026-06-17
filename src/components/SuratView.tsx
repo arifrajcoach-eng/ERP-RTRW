@@ -314,14 +314,6 @@ export function SuratView({
         return;
     }
 
-    // Detect mobile device
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-      showNotification("Mengaktifkan mode cetak PDF khusus HP (Gunakan opsi 'Simpan sebagai PDF' di layar cetak)", "info");
-      generateSuratPDF(surat);
-      return;
-    }
-
     const hasKopSettings = kopSettings && Object.keys(kopSettings).length > 0;
     const rawKop = hasKopSettings ? kopSettings : (getSetting("KOP_SURAT") || {});
     
@@ -363,48 +355,40 @@ export function SuratView({
       keperluan: surat.keterangan || surat.keperluan || "-",
     };
 
-    const contentHtml = generateSuratHTML(mappedSurat, base64Kop, settings);
+    const contentHtml = generateSuratHTML(mappedSurat, base64Kop, settings, true);
 
     // Create an isolated iframe for generation to bypass Tailwind v4 OKLCH parsing issues in html2canvas
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
+    iframe.style.position = 'fixed';
     iframe.style.width = '210mm';
     iframe.style.height = '297mm';
     iframe.style.left = '-9999px';
     iframe.style.top = '0';
     iframe.style.border = 'none';
+    iframe.style.zIndex = '-9999';
+    iframe.width = '794';
+    iframe.height = '1123';
     document.body.appendChild(iframe);
 
-    // Provide dry-run window.print
-    if (iframe.contentWindow) {
-      try {
-        (iframe.contentWindow as any).print = () => {};
-        (iframe.contentWindow as any).close = () => {};
-      } catch (err) {}
-    }
+    // Load HTML content via srcdoc to guarantee triggering of onload across all Android & iOS devices
+    iframe.srcdoc = contentHtml;
+
+    // Await iframe complete load and rendering of Tailwind compiler inside it
+    await new Promise<void>((resolve) => {
+      iframe.onload = () => {
+        // Wait an additional 2000ms after onload to allow full paint of fonts and base64 images
+        setTimeout(resolve, 2000);
+      };
+      // Absolute fallback safety timeout
+      setTimeout(resolve, 4000);
+    });
 
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!iframeDoc) {
-      throw new Error("Could not create isolated iframe for PDF generation");
+      throw new Error("Could not access iframe document inside isolated sandbox");
     }
-
-    // Write the HTML inside the iframe document
-    iframeDoc.open();
-    iframeDoc.write(contentHtml);
-    iframeDoc.close();
-    
-    // Wait for DOM content of the iframe to be fully parsed and built
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     
     try {
-      // Strip print/close calls from scripts
-      const printScripts = iframeDoc.getElementsByTagName('script');
-      for (let i = printScripts.length - 1; i >= 0; i--) {
-        if (printScripts[i].innerHTML.includes('window.print') || printScripts[i].innerHTML.includes('window.close')) {
-          printScripts[i].parentNode?.removeChild(printScripts[i]);
-        }
-      }
-
       const pdfNode = iframeDoc.getElementById('print-container-root');
       if (!pdfNode) throw new Error("PDF content element #print-container-root not found in iframe");
 
