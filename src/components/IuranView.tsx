@@ -19,7 +19,8 @@ import {
   Eye,
   Edit2,
   Trash2,
-  Printer
+  Printer,
+  FileDown
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -193,18 +194,7 @@ export function IuranView({
   };
 
   const handlePrint = (trx: any) => {
-    let printWindow = null;
-    try {
-      printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        showNotification('Gagal mencetak: Pop-up diblokir. Harap aktifkan pop-up untuk situs ini.', 'error');
-        return;
-      }
-    } catch (e) {
-      showNotification('Gagal mencetak: Browser memblokir pembukaan tab baru.', 'error');
-      return;
-    }
-
+    const doc = new jsPDF();
     const kop = getSetting("KOP_SURAT") || {};
     const tenantName = kop.nama_rt || kop.nama_organisasi || getSetting("nama_organisasi") || "SmaRtRw AI";
     const tagline = kop.tagline || getSetting("tagline") || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
@@ -212,47 +202,85 @@ export function IuranView({
     const formattedNominal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(trx.nominal);
     const dateStr = new Date(trx.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${tenantName} - ${tagline} - Bukti Pembayaran - ${trx.id}</title>
-          <style>
-            body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
-            .header { text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
-            .content { max-width: 600px; margin: 0 auto; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
-            .label { font-weight: bold; color: #64748b; font-size: 14px; }
-            .value { font-weight: 600; color: #1e293b; }
-            .amount { font-size: 24px; font-weight: 900; color: #3b82f6; text-align: center; margin: 30px 0; }
-            .status { text-align: center; margin-top: 40px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
-            .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 60px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 style="font-size: 24px; font-weight: bold; margin: 0;">${tenantName}</h1>
-            <p style="font-size: 13px; font-style: italic; color: #64748b; margin: 5px 0 10px 0;">${tagline}</p>
-            <p style="font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #3b82f6; margin: 0;">Bukti Transaksi Digital Keuangan</p>
-          </div>
-          <div class="content">
-            <div class="amount">${formattedNominal}</div>
-            <div class="row"><span class="label">ID Transaksi</span><span class="value">${trx.id}</span></div>
-            <div class="row"><span class="label">Tanggal</span><span class="value">${dateStr}</span></div>
-            <div class="row"><span class="label">Penyetor</span><span class="value">${trx.namaPenyetor}</span></div>
-            <div class="row"><span class="label">Alamat / NIK</span><span class="value">${trx.alamat} / ${trx.nik}</span></div>
-            <div class="row"><span class="label">Jenis Pembayaran</span><span class="value">${trx.jenis}</span></div>
-            <div class="row"><span class="label">Keterangan</span><span class="value">${trx.keterangan || '-'}</span></div>
-            <div class="status" style="color: ${trx.status === 'Lunas' ? '#10b981' : '#f59e0b'}">${trx.status}</div>
-          </div>
-          <div class="footer">
-            <p style="font-size: 13px; font-weight: 500; font-style: italic; color: #475569; margin-bottom: 12px;">"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan harmoni dan kebersamaan di lingkungan kita."</p>
-            <p>Terima kasih telah melakukan pembayaran tepat waktu.<br/>Dokumen ini sah dihasilkan secara elektronik oleh Sistem SmaRtRw.</p>
-          </div>
-          <script>window.onload = () => { window.print(); window.close(); }</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    // Header
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(tenantName, 105, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100, 116, 139);
+    doc.text(tagline, 105, 28, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(59, 130, 246);
+    doc.text("Bukti Transaksi Digital Keuangan", 105, 36, { align: 'center' });
+    
+    doc.setDrawColor(59, 130, 246);
+    doc.setLineWidth(0.5);
+    doc.line(20, 42, 190, 42);
+
+    // Amount
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 41, 59);
+    doc.text(formattedNominal, 105, 60, { align: 'center' });
+
+    // Details Grid
+    let startY = 80;
+    const leftMargin = 30;
+    const valueMargin = 75;
+    const lineHeight = 12;
+
+    const details = [
+      ["ID Transaksi", trx.id],
+      ["Tanggal", dateStr],
+      ["Penyetor", trx.namaPenyetor],
+      ["Alamat / NIK", `${trx.alamat} / ${trx.nik}`],
+      ["Jenis Pembayaran", trx.jenis],
+      ["Keterangan", trx.keterangan || '-']
+    ];
+
+    doc.setFontSize(11);
+    details.forEach((item, index) => {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 116, 139);
+      doc.text(item[0], leftMargin, startY + (index * lineHeight));
+      
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 41, 59);
+      doc.text(item[1], valueMargin, startY + (index * lineHeight));
+      
+      // Bottom border for each row
+      doc.setDrawColor(241, 245, 249);
+      doc.setLineWidth(0.5);
+      doc.line(leftMargin, startY + (index * lineHeight) + 2, 180, startY + (index * lineHeight) + 2);
+    });
+
+    // Status
+    const statusY = startY + (details.length * lineHeight) + 15;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    if (trx.status === 'Lunas') {
+      doc.setTextColor(16, 185, 129); // emerald
+    } else {
+      doc.setTextColor(245, 158, 11); // amber
+    }
+    doc.text(trx.status.toUpperCase(), 105, statusY, { align: 'center' });
+
+    // Footer
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(71, 85, 105);
+    doc.text('"Mari selalu menjaga rukun tetangga dengan saling berbagi, mewujudkan', 105, 260, { align: 'center' });
+    doc.text('harmoni dan kebersamaan di lingkungan kita."', 105, 265, { align: 'center' });
+
+    doc.setFont("helvetica", "normal");
+    doc.text("Terima kasih telah melakukan pembayaran tepat waktu.", 105, 275, { align: 'center' });
+    doc.text("Dokumen ini sah dihasilkan secara elektronik oleh Sistem SmaRtRw.", 105, 280, { align: 'center' });
+
+    doc.save(`Struk_Iuran_${trx.id}.pdf`);
   };
 
   const sanitizeForFirestore = (obj: any) => {
@@ -795,15 +823,6 @@ export function IuranView({
                         >
                           <Eye className="w-5 h-5" />
                         </motion.button>
-                        <motion.button 
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => { e.stopPropagation(); handlePrint(trx); }} 
-                          className="p-3.5 text-slate-500 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-lg hover:text-brand-blue transition-all" 
-                          title="Receipt"
-                        >
-                          <Printer className="w-5 h-5" />
-                        </motion.button>
                         {isPengurus && (
                           <>
                             <motion.button 
@@ -1181,24 +1200,24 @@ export function IuranView({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="bg-white/95 backdrop-blur-2xl w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden border border-white"
           >
-            <div className={`p-8 ${viewingTrx.status === 'Lunas' ? 'bg-gradient-to-br from-emerald-600 to-teal-700' : 'bg-gradient-to-br from-orange-600 to-amber-700'} text-white flex justify-between items-center relative overflow-hidden`}>
+            <div className={`px-8 pt-[36px] mt-0 pb-[5px] ml-0 text-[6px] h-[164px] ${viewingTrx.status === 'Lunas' ? 'bg-gradient-to-br from-emerald-600 to-teal-700' : 'bg-gradient-to-br from-orange-600 to-amber-700'} text-white flex justify-between items-center relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 relative z-10">
+              <h3 className="font-black uppercase tracking-[0.2em] text-[15px] h-[20px] mb-0 flex items-center gap-3 relative z-10 pt-0 mt-0">
                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                   <CreditCard className="w-4 h-4" /> 
+                   <CreditCard className="w-5 h-5" /> 
                 </div>
                 Detail Transaksi Keuangan
               </h3>
               <button 
                 onClick={() => setViewingTrx(null)} 
-                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-all active:scale-90 relative z-10"
+                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-all active:scale-90 relative z-10 -mt-[26px]"
                 id="close-detail-modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-10 space-y-8">
+            <div className="px-10 pb-[38px] h-[400px] pt-[40px] mt-[5px] mb-0 space-y-8 flex flex-col justify-between">
               <div className="flex flex-col items-center">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Total Pembayaran Berhasil</div>
                 <div className={`text-4xl font-black tracking-tighter ${viewingTrx.status === 'Lunas' ? 'text-emerald-600' : 'text-orange-600'}`}>
@@ -1209,7 +1228,7 @@ export function IuranView({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-y-6 gap-x-10 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
+              <div className="grid grid-cols-2 gap-y-6 gap-x-10 bg-slate-50/50 px-8 pt-0 pb-0 -mt-[48px] mb-[19px] rounded-[2rem] border border-slate-100">
                 <div>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Transaksi</p>
                   <p className="text-xs font-black text-slate-800 break-all family-mono">{viewingTrx.id}</p>
@@ -1258,9 +1277,9 @@ export function IuranView({
               <div className="flex gap-4">
                  <button 
                    onClick={() => handlePrint(viewingTrx)} 
-                   className="flex-1 py-5 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                   className="flex-1 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-[1.5rem] text-[11px] font-bold uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-blue-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                  >
-                   <Printer className="w-5 h-5" /> CETAK STRUK
+                   <FileDown className="w-5 h-5 drop-shadow-sm" /> <span className="drop-shadow-sm">UNDUH STRUK (PDF)</span>
                  </button>
                  <button 
                    onClick={() => setViewingTrx(null)} 

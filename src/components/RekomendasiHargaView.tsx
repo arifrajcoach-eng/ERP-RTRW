@@ -14,6 +14,7 @@ import {
   CheckCircle2, 
   Info, 
   FileText, 
+  FileDown,
   ArrowRight,
   Settings,
   AlertTriangle,
@@ -797,9 +798,10 @@ export function RekomendasiHargaView({
         </div>
         <button
           onClick={handleDownloadPDF}
-          className="px-6 py-3.5 bg-slate-850 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 font-bold uppercase tracking-wider text-[10px] rounded-2xl transition-all cursor-pointer shadow-sm hover:scale-102"
+          className="px-6 py-3.5 bg-slate-850 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 font-bold uppercase tracking-wider text-[10px] rounded-2xl transition-all cursor-pointer shadow-sm hover:scale-102 flex items-center justify-center gap-2"
         >
-          Cetak Analisis Keuangan RT (.pdf)
+          <FileDown className="w-4 h-4 text-emerald-400" />
+          <span>Cetak Analisis Keuangan RT (.pdf)</span>
         </button>
       </div>
 

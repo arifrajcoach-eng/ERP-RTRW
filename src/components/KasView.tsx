@@ -7,6 +7,7 @@ import {
   Download,
   Upload,
   Printer,
+  FileDown,
   Edit,
   Trash2,
   Eye,
@@ -1579,7 +1580,7 @@ export function KasView({
                     onClick={() => exportSingleTrxPDF(viewingKas)}
                     className="flex-1 py-5 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                   >
-                    <Printer className="w-5 h-5" /> CETAK BUKTI
+                    <FileDown className="w-5 h-5" /> UNDUH BUKTI (PDF)
                   </button>
                   <button
                     onClick={() => setViewingKas(null)}

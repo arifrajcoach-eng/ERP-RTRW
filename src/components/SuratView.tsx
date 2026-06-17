@@ -5,6 +5,7 @@ import {
   Search, 
   PlusCircle, 
   Printer, 
+  FileDown,
   Edit, 
   Trash2, 
   CheckCircle2, 
@@ -927,38 +928,30 @@ export function SuratView({
                         {s.status === 'Selesai' ? (
                           <div className="flex gap-2">
                             <button 
-                              onClick={() => generateSuratPDF(s)} 
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/30"
-                              title="Cetak Surat via Browser"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                              <span>Cetak</span>
-                            </button>
-                            <button 
                               onClick={() => downloadSuratPDF(s)} 
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-blue hover:bg-indigo-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/30"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-blue-500/30"
                               title="Unduh PDF Langsung"
                             >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Download</span>
+                              <Download className="w-4 h-4 drop-shadow-sm" />
+                              <span className="drop-shadow-sm">Download</span>
                             </button>
                           </div>
                         ) : isPengurus && (
                           <>
                             {(((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
                                (s.status.includes('Persetujuan RW') && isRWUser)) && (
-                                <button onClick={() => handleApproveSurat(s)} className="p-2 text-emerald-600 hover:text-emerald-700"><CheckCircle2 className="w-4 h-4" /></button>
+                                <button onClick={() => handleApproveSurat(s)} className="p-2 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:from-emerald-500 hover:to-emerald-400 text-emerald-600 hover:text-white rounded-xl shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all active:scale-95 group"><CheckCircle2 className="w-4 h-4" /></button>
                               )}
                             {(s.status.includes('Menunggu') || s.status === 'Diajukan') && (
-                              <button onClick={() => handleRejectSurat(s)} className="p-2 text-rose-600 hover:text-rose-700"><X className="w-4 h-4" /></button>
+                              <button onClick={() => handleRejectSurat(s)} className="p-2 border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-rose-500/5 hover:from-rose-500 hover:to-rose-400 text-rose-600 hover:text-white rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.1)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all active:scale-95 group"><X className="w-4 h-4" /></button>
                             )}
                           </>
                         )}
                         {(!isWarga && (isPengurus || s.userId === (currentUser?.uid || currentUser?.id_user) || s.authUid === (currentUser?.uid || currentUser?.id_user))) && (
-                          <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 text-slate-400 hover:text-slate-600" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 border border-slate-500/20 bg-gradient-to-br from-slate-500/10 to-slate-500/5 hover:from-slate-600 hover:to-slate-500 text-slate-500 hover:text-white rounded-xl shadow-[0_0_10px_rgba(100,116,139,0.1)] hover:shadow-[0_0_20px_rgba(100,116,139,0.4)] transition-all active:scale-95 group flex-shrink-0" title="Edit"><Edit className="w-4 h-4" /></button>
                         )}
                          {isPengurus && (
-                          <button onClick={() => setSuratToDelete(s)} className="p-2 text-slate-400 hover:text-rose-600" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => setSuratToDelete(s)} className="p-2 border border-slate-500/20 bg-gradient-to-br from-slate-500/10 to-slate-500/5 hover:from-rose-600 hover:to-rose-500 text-slate-400 hover:text-white rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.0)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all active:scale-95 group flex-shrink-0" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         )}
                       </td>
                     </tr>
@@ -985,7 +978,7 @@ export function SuratView({
               exit={{ opacity: 0, scale: 0.9, y: 20 }} 
               className="bg-white dark:bg-slate-900 w-full sm:max-w-2xl sm:rounded-[3rem] rounded-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col h-full sm:h-auto sm:max-h-[95vh] border border-white/20 dark:border-slate-800"
             >
-              <div className="p-4 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="p-4 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 mt-[59px]">
                 <div className="flex items-center gap-3 sm:gap-5">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
                     <PlusCircle className="w-6 h-6 sm:w-7 sm:h-7" />
@@ -1006,7 +999,7 @@ export function SuratView({
                 </motion.button>
               </div>
               
-              <form onSubmit={handleSaveSurat} ref={formRef} className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+              <form onSubmit={handleSaveSurat} ref={formRef} className="flex-1 flex flex-col min-h-0 h-full overflow-hidden -mt-[30px] ml-0">
                 <div className="flex-1 overflow-y-auto p-5 sm:p-10 space-y-5 sm:space-y-10 custom-scrollbar pb-24">
                   {/* 1. Pemohon Section */}
                 <div className="space-y-6">
@@ -1601,7 +1594,7 @@ export function SuratView({
                   {viewingSurat.status === 'Selesai' && (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                        <button onClick={() => generateSuratPDF(viewingSurat)} className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-2">
-                         <Printer className="w-4 h-4" /> Cetak Dokumen PDF
+                         <FileDown className="w-4 h-4" /> Cetak Dokumen PDF
                        </button>
                        <button onClick={() => downloadSuratPDF(viewingSurat)} className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-emerald-200 flex items-center justify-center gap-2">
                          <Download className="w-4 h-4" /> Download PDF Langsung
