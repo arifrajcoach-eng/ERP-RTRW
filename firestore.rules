@@ -234,12 +234,15 @@ service cloud.firestore {
       allow create: if true; // Allow new user creation during registration
       allow update: if isSignedIn() && (
         request.auth.uid == userId || 
+        userId == "PRE_" + request.auth.token.email.lower() ||
         isAdmin() ||
         (isPengurus() && 
          'tenantId' in resource.data && resource.data.tenantId != null && isTenantMember(resource.data.tenantId) &&
          'tenantId' in request.resource.data && request.resource.data.tenantId != null && isTenantMember(request.resource.data.tenantId))
       );
       allow delete: if isSignedIn() && (
+        request.auth.uid == userId ||
+        userId == "PRE_" + request.auth.token.email.lower() ||
         isAdmin() ||
         (isPengurus() && 'tenantId' in resource.data && resource.data.tenantId != null && isTenantMember(resource.data.tenantId))
       );

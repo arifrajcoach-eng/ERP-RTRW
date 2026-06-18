@@ -7356,9 +7356,83 @@ function LoginView({
       let preRegisteredTenant = tenantId;
       let isPreRegistered = false;
       let userDataExtra = {};
+      let isVerifiedResident = false;
 
-      // 2. If standard UID document doesn't exist, search if Super Admin pre-registered this email
-      if (!userDoc.exists() && user.email) {
+      // 2. ALWAYS verify against Data Warga first (except for Admin Master)
+      if (!isArif && user.email) {
+        const targetEmail = user.email.toLowerCase().trim();
+        const emailVariations = [
+          user.email,
+          targetEmail,
+          user.email.toUpperCase()
+        ].filter((v, i, a) => a.indexOf(v) === i);
+
+        const wargaRef = collection(db, "data_warga");
+        
+        // [SIMPLIFIED] Query by lowercase email only to avoid requiring complex composite indexes 
+        // that would trigger "Missing or insufficient permissions" or "Index required" errors.
+        // We will perform further filtering (tenantId, casing, etc.) in memory.
+        const qw = query(wargaRef, where("email", "==", targetEmail));
+        const wargaSnapshot = await getDocs(qw);
+
+        let docs = wargaSnapshot.docs;
+        
+        // 2a. Filter by tenantId in memory if provided
+        if (tenantInput) {
+          const targetTenant = tenantInput.toLowerCase().trim();
+          docs = docs.filter(d => (d.data().tenantId || "").toLowerCase().trim() === targetTenant);
+        }
+        
+        if (docs.length > 0) {
+          // Priority logic:
+          // 1. Terverifikasi && Non-Trial
+          // 2. Terverifikasi 
+          // 3. Not Verified (will show error)
+          
+          // Sort to find best match: verified first, then non-trial
+          const sortedDocs = [...docs].sort((a, b) => {
+            const da = a.data();
+            const db = b.data();
+            if (da.terverifikasi && !db.terverifikasi) return -1;
+            if (!da.terverifikasi && db.terverifikasi) return 1;
+            const isTrialA = (da.tenantId || "").startsWith("TRIAL_");
+            const isTrialB = (db.tenantId || "").startsWith("TRIAL_");
+            if (!isTrialA && isTrialB) return -1;
+            if (isTrialA && !isTrialB) return 1;
+            return 0;
+          });
+
+          const matchedWargaDoc = sortedDocs[0];
+          const matchedWarga = matchedWargaDoc.data();
+          
+          if (matchedWarga.terverifikasi === true) {
+            isPreRegistered = true;
+            isVerifiedResident = true;
+            preRegisteredRole = "Warga";
+            preRegisteredTenant = matchedWarga.tenantId; // FORCE the tenant from verified record
+            userDataExtra = {
+              nik: matchedWarga.nik || "",
+              linkedResidentId: matchedWargaDoc.id,
+            };
+            console.log("Verified Resident Found! Tenant:", preRegisteredTenant);
+          } else if (!isVerifiedResident) {
+            // Found in data_warga but status is not verified
+            await signOut(auth);
+            setError(
+              `Email Anda (${user.email}) terdaftar di Data Warga, namun status Anda belum 'Terverifikasi' oleh Admin Wilayah. Silakan hubungi Ketua RT/RW di wilayah Anda untuk memverifikasi data Anda agar dapat login.`,
+            );
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      const isTrihUser =
+        user.email?.toLowerCase().includes("trihprw26") ||
+        user.email?.toLowerCase().includes("handoko");
+
+      // 3. Search if pre-registered in users collection (for Admin/trial roles)
+      if (!isArif && !isVerifiedResident && !isTrihUser) {
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", user.email));
         const querySnapshot = await getDocs(q);
@@ -7370,41 +7444,21 @@ function LoginView({
           preRegisteredRole = matchedData.role || "Viewer";
           preRegisteredTenant = matchedData.tenantId || tenantId;
 
-          // Delete the old pre-registered dummy doc to prevent duplicates, since we will use the actual auth UID
           if (matchedUser.id !== user.uid) {
             await deleteDoc(doc(db, "users", matchedUser.id));
           }
-        } else {
-          // AUTO-REGISTRATION BRIDGE FOR CITIZENS (No manual admin action required!)
-          // Check if their Google email matches any registered email in 'data_warga' directory (loaded by Admin / imported)
-          const targetEmail = user.email.toLowerCase().trim();
-          const emailVariations = [
-            user.email,
-            targetEmail,
-            user.email.toUpperCase()
-          ].filter((v, i, a) => a.indexOf(v) === i);
-
-          const wargaRef = collection(db, "data_warga");
-          const qw = query(wargaRef, where("email", "in", emailVariations));
-          const wargaSnapshot = await getDocs(qw);
-
-          if (!wargaSnapshot.empty) {
-            isPreRegistered = true;
-            const matchedWarga = wargaSnapshot.docs[0].data();
-            preRegisteredRole = "Warga";
-            preRegisteredTenant = matchedWarga.tenantId || tenantId;
-            userDataExtra = {
-              nik: matchedWarga.nik || "",
-              linkedResidentId: wargaSnapshot.docs[0].id,
-            };
-          }
+        } else if (!userDoc.exists()) {
+          // No user doc and not found in any registration source
+          await signOut(auth);
+          setError(
+            "Email Google Anda belum terdaftar di sistem. Silakan hubungi Admin Wilayah untuk mendaftarkan email Anda di form Data Warga.",
+          );
+          setIsLoading(false);
+          return;
         }
       }
 
-      const isTrihUser =
-        user.email?.toLowerCase().includes("trihprw26") ||
-        user.email?.toLowerCase().includes("handoko");
-
+      // Final gate if no user document was found and after all search sources
       if (!userDoc.exists() && !isPreRegistered && !isArif && !isTrihUser) {
         await signOut(auth);
         setError(
@@ -7413,25 +7467,30 @@ function LoginView({
         setIsLoading(false);
         return;
       }
-      // 3. Setup User Profile
+
+      // 4. Setup User Profile
       const userData = {
         email: user.email,
         role: isArif
           ? "SUPER_ADMIN"
-          : userDoc.exists()
-            ? userDoc.data()?.role
-            : preRegisteredRole,
+          : isVerifiedResident 
+            ? "Warga"
+            : userDoc.exists()
+              ? userDoc.data()?.role 
+              : preRegisteredRole,
         isSuperAdmin: isArif,
         name: isArif
           ? (user.displayName || "Admin Master")
           : userDoc.exists()
-            ? userDoc.data()?.name
+            ? userDoc.data()?.name || user.displayName || "User"
             : user.displayName || "User",
         tenantId: isArif
           ? "MASTER"
-          : userDoc.exists()
-            ? userDoc.data()?.tenantId || preRegisteredTenant
-            : preRegisteredTenant,
+          : isVerifiedResident
+            ? preRegisteredTenant // Priority: If verified resident, use that tenant
+            : userDoc.exists()
+              ? userDoc.data()?.tenantId || preRegisteredTenant
+              : preRegisteredTenant,
         createdAt: userDoc.exists()
           ? userDoc.data()?.createdAt || new Date().toISOString()
           : new Date().toISOString(),
@@ -7691,6 +7750,29 @@ function LoginView({
                   Surat Digital, Keuangan, dan Pengaduan.
                 </p>
               </div>
+
+              {/* [NEW] Tenant ID input for Google Login to improve system disambiguation */}
+              <div className="px-1">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">
+                  KODE AREA WILAYAH (OPSIONAL)
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="text"
+                    value={tenantInput}
+                    onChange={(e) => setTenantInput(e.target.value.toLowerCase().trim())}
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-[1.25rem] text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10 transition-all font-bold text-sm"
+                    placeholder="Contoh: rw26_berjuang"
+                  />
+                </div>
+                <p className="text-[9px] text-slate-400 px-3 mt-1.5 leading-tight italic">
+                  💡 Tips: Masukkan Kode Wilayah jika Anda terdaftar di lebih dari satu area.
+                </p>
+              </div>
+
               <button
                 type="button"
                 onClick={handleGoogleLogin}

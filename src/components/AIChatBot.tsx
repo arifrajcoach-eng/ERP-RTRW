@@ -42,7 +42,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const [isListening, setIsListening] = useState(false);
   const [usageCount, setUsageCount] = useState(0);
   const [dataContext, setDataContext] = useState<any>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -248,7 +248,10 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const toggleListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Browser Anda tidak mendukung pengenalan suara (Speech Recognition). Silakan gunakan Google Chrome atau Microsoft Edge.");
+      setMessages(prev => [...prev, { 
+        role: 'bot', 
+        text: "Waduh maaf Kak! 🫣 Browser yang Kakak gunakan saat ini belum mendukung fitur pengenalan suara (Mic). Chaty saranin coba buka lewat Google Chrome atau Microsoft Edge versi terbaru yaa supaya kita bisa chatingan via suara! 😊✨" 
+      }]);
       return;
     }
 
@@ -500,14 +503,18 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
           errorMsg = 'Aduh maaf, kunci AI belum terdeteksi. Jika di Vercel, pastikan kamu menggunakan nama VITE_GEMINI_API_KEY, dan kamu WAJIB melakukan Redeploy setelah memasukkan kunci tersebut ya!';
         } else if (
           error.message?.includes('429') || 
+          error.message?.includes('503') ||
+          error.message?.includes('UNAVAILABLE') ||
+          error.message?.includes('high demand') ||
           error.message?.includes('Quota exceeded') || 
           error.message?.includes('RESOURCE_EXHAUSTED') ||
           JSON.stringify(error).includes('429') ||
+          JSON.stringify(error).includes('503') ||
           JSON.stringify(error).includes('RESOURCE_EXHAUSTED')
         ) {
           errorMsg = isPrivileged
-            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian (Error 429: Resource Exhausted).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmaRtRw AI" di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
-            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI gratisan Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429: Resource Exhausted). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmaRtRw AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
+            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian atau sedang mengalami trafik yang cukup tinggi (Error 429/503).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmaRtRw AI" di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
+            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI atau server Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429/503). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmaRtRw AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
         }
 
         setMessages(prev => [...prev, { role: 'bot', text: errorMsg }]);
@@ -605,21 +612,19 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
       {/* Input */}
       <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 transition-colors">
         <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-brand-blue/10 focus-within:border-brand-blue transition-all">
-          {isPrivileged && (
-            <button
-              type="button"
-              onClick={toggleListening}
-              className={`p-2.5 rounded-xl transition-all ${
-                isListening
-                  ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
-              title={isListening ? "Mendengarkan... klik untuk berhenti" : "Klik & sapa Chaty melalui Mic"}
-              disabled={isLoading}
-            >
-              <Mic className={`w-4 h-4 ${isListening ? 'scale-110' : ''}`} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={toggleListening}
+            className={`p-2.5 rounded-xl transition-all ${
+              isListening
+                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+            }`}
+            title={isListening ? "Mendengarkan... klik untuk berhenti" : "Klik & sapa Chaty melalui Mic"}
+            disabled={isLoading}
+          >
+            <Mic className={`w-4 h-4 ${isListening ? 'scale-110' : ''}`} />
+          </button>
 
           <input
             value={input}

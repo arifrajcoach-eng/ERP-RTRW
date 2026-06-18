@@ -8,7 +8,10 @@ export function isQuotaExhaustedError(error: any): boolean {
     errorStr.includes("quota") ||
     errorStr.includes("limit") ||
     errorStr.includes("exceeded your current quota") ||
-    errorStr.includes("QUOTA_EXHAUSTED")
+    errorStr.includes("QUOTA_EXHAUSTED") ||
+    errorStr.includes("503") ||
+    errorStr.includes("UNAVAILABLE") ||
+    errorStr.includes("high demand")
   );
 }
 
