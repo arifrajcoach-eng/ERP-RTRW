@@ -281,7 +281,7 @@ export function getTrialStatus(tenant: any, currentUser?: any) {
   const isPaidPremium = ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
 
   const isStarter = !isPaidPremium && (!tenant.status || 
-                    ["STARTER", "GRATIS", "FREE", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
+                    ["STARTER", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
 
   if (!isStarter) {
     return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 0 };
@@ -348,22 +348,22 @@ export default function App() {
   } | null>(null);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
 
-  // Synchronous security repair for the main platform owner (arifrajcoach@gmail.com)
+  // Synchronous security repair for the main platform owner
   useEffect(() => {
-    const isOwnerEmail =
-      currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com" ||
-      auth.currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com";
+    const emailLow = currentUser?.email?.toLowerCase() || auth.currentUser?.email?.toLowerCase();
+    const isOwnerEmail = emailLow === "arifrajcoach@gmail.com" || emailLow === "arifrajmci@gmail.com";
+    
     if (isOwnerEmail) {
       const isIncorrect =
         currentUser?.role !== "SUPER_ADMIN" ||
         currentUser?.isSuperAdmin !== true ||
         currentUser?.tenantId !== "MASTER";
       if (isIncorrect) {
-        console.log("Forcing SUPER_ADMIN privileges for platform owner", currentUser?.email || auth.currentUser?.email);
+        console.log("Forcing SUPER_ADMIN privileges for platform owner", emailLow);
         setCurrentUser((prev) => {
           const base = prev || {
             name: "Admin Master",
-            email: "arifrajcoach@gmail.com",
+            email: emailLow,
             rt: "01",
             status: "AKTIF",
             created_at: new Date().toISOString(),
@@ -381,7 +381,46 @@ export default function App() {
   const [isAuthHanging, setIsAuthHanging] = useState(false);
 
   // --- SECONDARY UI STATES ---
-  const [wargaAuth, setWargaAuth] = useState<any>(null); // For custom citizen login
+  const [wargaAuth, setWargaAuth] = useState<any>(() => {
+    try {
+      const saved = safeLocalStorage.getItem("smartrw_warga_auth");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.warn("Failed to parse smartrw_warga_auth from safeLocalStorage:", e);
+      return null;
+    }
+  }); // For custom citizen login
+
+  // Auto-sync citizen session persistence
+  useEffect(() => {
+    try {
+      if (wargaAuth) {
+        safeLocalStorage.setItem("smartrw_warga_auth", JSON.stringify(wargaAuth));
+      } else {
+        safeLocalStorage.removeItem("smartrw_warga_auth");
+      }
+    } catch (e) {
+      console.error("Error writing smartrw_warga_auth to storage:", e);
+    }
+  }, [wargaAuth]);
+
+  // Auto-login citizen if session is persisted
+  useEffect(() => {
+    if (!wargaAuth) {
+       try {
+         const saved = safeLocalStorage.getItem("smartrw_warga_auth");
+         if (saved) {
+           const parsed = JSON.parse(saved);
+           if (parsed) {
+             setWargaAuth(parsed);
+           }
+         }
+       } catch (e) {
+         console.warn("Failed to auto-login from smartrw_warga_auth:", e);
+       }
+    }
+  }, []);
+
   const [impersonatedTenantId, setImpersonatedTenantId] = useState<
     string | null
   >(safeLocalStorage.getItem("impersonatedTenantId"));
@@ -550,32 +589,59 @@ export default function App() {
 
           if (userDoc && userDoc.exists()) {
             let userData = userDoc.data() as any;
-            const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
+            const userEmailLow = user.email?.toLowerCase();
+            const isMasterEmail = userEmailLow === "arifrajcoach@gmail.com" || userEmailLow === "arifrajmci@gmail.com";
+            const isTrihUser = userEmailLow?.includes("trihprw26") || userEmailLow?.includes("handoko");
             let needsUpdate = false;
-            const allowedStatuses = ["GRATIS", "STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE", "AKTIF"];
-            const userStatus = userData.status?.toUpperCase() || "TRIAL";
+            const allowedStatuses = ["STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE", "AKTIF"];
+            const userStatus = (userData.status || "TRIAL").toUpperCase();
             
-            if (!allowedStatuses.includes(userStatus) && user.email?.toLowerCase() !== "arifrajcoach@gmail.com") {
-              await signOut(auth);
-              setCurrentUser(null);
-              showNotification("Akun Anda tidak memiliki paket yang diizinkan. Hubungi Admin.", "error");
-              return;
+            if (!allowedStatuses.includes(userStatus) && !isMasterEmail) {
+              // Auto-repair: If they are supposed to be active (e.g. from Verified Data Warga) but status is wrong
+              if (userData.role === "Warga" || userData.role === "PENDUDUK") {
+                userData.status = "ACTIVE";
+                needsUpdate = true;
+              } else {
+                await signOut(auth);
+                setCurrentUser(null);
+                showNotification("Akun Anda belum aktif atau paket tidak valid. Hubungi Admin.", "error");
+                return;
+              }
+            }
+
+            if (isMasterEmail) {
+              const isAdminStatusWrong = userData.role !== "SUPER_ADMIN" || !userData.isSuperAdmin || userData.status !== "ACTIVE";
+              userData.isSuperAdmin = true;
+              userData.role = "SUPER_ADMIN";
+              userData.status = "ACTIVE";
+              
+              // NEW: Try to sync tenant from data_warga if currently MASTER to prefer residence
+              if (userData.tenantId === "MASTER" || !userData.tenantId) {
+                 try {
+                    const wargaRef = collection(db, "data_warga");
+                    const qw = query(wargaRef, where("email", "==", user.email));
+                    const snap = await getDocs(qw);
+                    if (!snap.empty) {
+                       const verified = snap.docs.find(d => d.data().terverifikasi === true);
+                       if (verified) {
+                          userData.tenantId = verified.data().tenantId;
+                          userData.nik = verified.data().nik || userData.nik;
+                       }
+                    }
+                 } catch (e) {
+                    console.warn("Soft error syncing residence for admin:", e);
+                 }
+              }
+
+              if (!userData.tenantId) userData.tenantId = "MASTER"; 
+              if (!userData.name || userData.name === "User") userData.name = user.displayName || "Admin Master";
+              if (isAdminStatusWrong) needsUpdate = true;
             }
 
             if (isTrihUser && userData.tenantId !== "rw26_berjuang") {
               userData.tenantId = "rw26_berjuang";
               userData.role = "RW";
               needsUpdate = true;
-            }
-
-            const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
-            if (isMasterEmail) {
-              const isAdminStatusWrong = userData.role !== "SUPER_ADMIN" || !userData.isSuperAdmin || userData.tenantId !== "MASTER";
-              userData.isSuperAdmin = true;
-              userData.role = "SUPER_ADMIN";
-              userData.tenantId = "MASTER";
-              if (!userData.name || userData.name === "User") userData.name = user.displayName || "Admin Master";
-              if (isAdminStatusWrong) needsUpdate = true;
             }
 
             if (needsUpdate) {
@@ -627,14 +693,23 @@ export default function App() {
                   }
                 }
 
-                // If not found in users, try data_warga
+                // If not found in users, try data_warga (robust email variations)
                 if (!preRegUserData) {
+                  const targetEmail = user.email.toLowerCase().trim();
+                  const emailVariations = [
+                    user.email.trim(),
+                    targetEmail,
+                    user.email.toUpperCase().trim()
+                  ].filter((v, i, a) => a.indexOf(v) === i);
+
                   const wargaRef = collection(db, "data_warga");
-                  const qWarga = query(wargaRef, where("email", "==", user.email));
+                  const qWarga = query(wargaRef, where("email", "in", emailVariations));
                   const wargaSnapshot = await getDocs(qWarga);
                   if (!wargaSnapshot.empty) {
-                    preRegUserData = wargaSnapshot.docs[0].data();
-                    // Keep preRegUserData, no docToDeleteRef needed
+                    const matchedWarga = wargaSnapshot.docs[0].data();
+                    if (matchedWarga.terverifikasi === true) {
+                      preRegUserData = matchedWarga;
+                    }
                   }
                 }
               }
@@ -646,19 +721,19 @@ export default function App() {
             }
 
             if (preRegUserData) {
-              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
+              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com" || user.email?.toLowerCase() === "arifrajmci@gmail.com";
               const newUser = { ...preRegUserData, id_user: user.uid, uid: user.uid };
               if (isMasterEmail) {
                 newUser.isSuperAdmin = true;
                 newUser.role = "SUPER_ADMIN";
-                newUser.tenantId = "MASTER";
+                if (!newUser.tenantId) newUser.tenantId = "MASTER";
                 if (!newUser.name || newUser.name === "User") newUser.name = user.displayName || "Admin Master";
               }
               await setDoc(doc(db, "users", user.uid), newUser);
               if (docToDeleteRef) await deleteDoc(docToDeleteRef);
               setCurrentUser({ uid: user.uid, ...newUser } as any);
             } else {
-              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
+              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com" || user.email?.toLowerCase() === "arifrajmci@gmail.com";
               const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
               if (isMasterEmail || isTrihUser) {
                 const newUser = {
@@ -666,7 +741,7 @@ export default function App() {
                   name: isMasterEmail ? "Admin Master" : "Admin RW Berjuang",
                   role: isMasterEmail ? "SUPER_ADMIN" : "RW",
                   email: user.email,
-                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || ''),
+                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"),
                   isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
@@ -1913,7 +1988,8 @@ export default function App() {
       chunks.forEach(chunk => {
         const constraints: any[] = [where("tenantId", "in", chunk)];
         if (currentUser?.role?.toUpperCase() === "RT") {
-          constraints.push(where("rt", "==", getQueryRtNormalized(currentUser?.rt)));
+          const rtToFilter = currentUser?.rt || (currentUser?.tenantId?.match(/rt(\d+)/i)?.[1]) || "01";
+          constraints.push(where("rt", "==", getQueryRtNormalized(rtToFilter)));
         }
         unsubs.push(onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
           setWargaData(prev => {
@@ -2849,12 +2925,12 @@ export default function App() {
         const isSuperAdmin = !!currentUser?.isSuperAdmin;
         const isVerified = linkedWarga?.terverifikasi === true;
         const planConfig = getPlanFeatures(currentTenant);
-        const isFreePlan =
+        const isStarterPlan =
           (currentTenant?.status || "TRIAL") === "TRIAL" ||
-          (currentTenant?.status || "TRIAL") === "FREE";
+          (currentTenant?.status || "TRIAL") === "STARTER";
 
         const planLevels: Record<string, number> = {
-          'TRIAL': 0, 'FREE': 0, 'STARTER': 0,
+          'TRIAL': 0, 'STARTER': 0,
           'BASIC': 1, 'FLASH': 1, 'LITE': 1, 'RT': 1,
           'PRO': 2, 'RW': 2,
           'PREMIUM': 3, 'GOLD': 3,
@@ -2887,7 +2963,7 @@ export default function App() {
           item.id !== "verifikasi"
         )
           return false;
-        if ((role === "ADMIN" || role === "RT") && isFreePlan) {
+        if ((role === "ADMIN" || role === "RT") && isStarterPlan) {
           if (["inventaris", "posyandu", "bank-sampah"].includes(item.id))
             return false;
         }
@@ -3225,7 +3301,7 @@ export default function App() {
   if (isSelfRegistering) {
     return (
       <SelfRegistrationView
-        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || ''}
+        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"}
         onClose={() => setIsSelfRegistering(false)}
         handleFileUpload={handleFileUpload}
         showNotification={showNotification}
@@ -3320,7 +3396,7 @@ export default function App() {
             </div>
 
             <p className="text-slate-400 text-sm leading-relaxed mb-8 text-left">
-              Masa aktif Paket Gratis / Uji Coba untuk wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah berakhir dan masuk hari ke-31 tanpa adanya upgrade ke Paket Berbayar (Flash, Pro, Premium, atau Enterprise).
+              Masa aktif Paket Starter / Uji Coba untuk wilayah <strong className="text-slate-200 uppercase">{currentTenant.name || "Anda"}</strong> telah berakhir dan masuk hari ke-31 tanpa adanya upgrade ke Paket Berbayar (Flash, Pro, Premium, atau Enterprise).
               <br /><br />
               Sesuai dengan kebijakan privasi platform dan pembersihan data otomatis berkala, <strong>seluruh database riwayat warga, pembukuan kas, iuran, mading, posyandu, dan surat pengantar wilayah Anda telah dihapus secara permanen secara otomatis</strong> dari server kami.
               <br /><br />
@@ -3369,7 +3445,7 @@ export default function App() {
           suratData={suratData}
           setSuratData={setSuratData}
           setWargaAuth={setWargaAuth}
-          tenantId={mergedWargaProfile.tenantId || ''}
+          tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
           isLoadingDB={isLoadingDB}
           setIsLoadingDB={setIsLoadingDB}
           handleFileUpload={handleFileUpload}
@@ -4344,7 +4420,7 @@ export default function App() {
               tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
-                  : (wargaAuth?.tenantId || '')
+                  : (wargaAuth?.tenantId || "rw26_berjuang")
               }
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
@@ -4355,7 +4431,7 @@ export default function App() {
             <SatpamDashboard tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
-                  : (wargaAuth?.tenantId || '')
+                  : (wargaAuth?.tenantId || "rw26_berjuang")
               } />
           )}
           {activeTab === "organisasi" && (
@@ -4374,7 +4450,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile?.tenantId || ''}
+                tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4390,7 +4466,7 @@ export default function App() {
               <VerifikasiAdminView
                 verifikasiData={filteredVerifikasiWargaDataCentral}
                 wargaData={filteredWargaDataCentral}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 showNotification={showNotification}
@@ -4419,7 +4495,7 @@ export default function App() {
               userRole={currentUser?.role || wargaAuth?.role || "Warga"}
               currentUser={currentUser || wargaAuth}
               getSetting={getSetting}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -4450,7 +4526,7 @@ export default function App() {
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 wargaAuth={wargaAuth}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4485,7 +4561,7 @@ export default function App() {
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 wargaAuth={wargaAuth}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
@@ -4539,7 +4615,7 @@ export default function App() {
                 inventarisSupplier={inventarisSupplier}
                 userRole={currentUser?.role || wargaAuth?.role || "Warga"}
                 currentUser={currentUser || wargaAuth}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4553,7 +4629,7 @@ export default function App() {
               kelahiranData={kelahiranData}
               kematianData={kematianData}
               currentUser={currentUser || wargaAuth}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
@@ -4568,7 +4644,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile.tenantId || ''}
+                tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4590,7 +4666,7 @@ export default function App() {
                 currentUser={currentUser || wargaAuth}
                 getSetting={getSetting}
                 kopSettings={kopSettings}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -4643,7 +4719,7 @@ export default function App() {
               wargaData={filteredWargaDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser || wargaAuth}
@@ -4670,7 +4746,7 @@ export default function App() {
           )}
           {activeTab === "pengaturan" && (
             <PengaturanView
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               currentTenant={currentTenant}
               wargaData={filteredWargaDataCentral}
               settings={settings}
@@ -4725,7 +4801,7 @@ export default function App() {
           {activeTab === "etoko" && (
             <ETokoView
               userRole={currentUser?.role || wargaAuth?.role || "Warga"}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               products={tokoProducts}
               orders={tokoOrders}
               reviews={tokoReviews}
@@ -5911,7 +5987,7 @@ function SelfRegistrationView({
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
 
-  const [currentTenantId, setCurrentTenantId] = useState(tenantId || '');
+  const [currentTenantId, setCurrentTenantId] = useState(tenantId || "rw26_berjuang");
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
 
@@ -6764,7 +6840,7 @@ function LoginView({
   const [kodeKeluarga, setKodeKeluarga] = useState("");
 
   const [tenantInput, setTenantInput] = useState(() => {
-    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || '';
+    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang";
   });
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
@@ -7103,7 +7179,7 @@ function LoginView({
         }
 
         const docId = found.docId || found.id || found.nik;
-        const resolvedTenantId = found.tenantId || cleanTenant || '';
+        const resolvedTenantId = found.tenantId || cleanTenant || "rw26_berjuang";
         safeLocalStorage.setItem("lastActiveTenantId", resolvedTenantId);
 
         // 1. Create/update user document FIRST for Firestore security rules support (getUserData() mapping)
@@ -7116,7 +7192,7 @@ function LoginView({
             role: "Warga",
             nik: found.nik || "",
             name: found.nama || "Warga",
-            tenantId: found.tenantId || '',
+            tenantId: found.tenantId || "rw26_berjuang",
             linkedResidentId: docId,
             updatedAt: new Date().toISOString(),
           },
@@ -7136,7 +7212,7 @@ function LoginView({
               found.status === "Disetujui" || found.terverifikasi
                 ? "Disetujui"
                 : "Menunggu Persetujuan",
-            tenantId: found.tenantId || '',
+            tenantId: found.tenantId || "rw26_berjuang",
             lastLogin: new Date().toISOString(),
           },
           { merge: true },
@@ -7339,10 +7415,15 @@ function LoginView({
     setError("");
     try {
       const provider = new GoogleAuthProvider();
+      console.log("Starting GitHub Login with Google...");
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      console.log("Auth result received. User UID:", user.uid, "Email:", user.email);
+      console.log("Auth state check (auth.currentUser):", auth.currentUser ? "SIGNED IN" : "NOT SIGNED IN");
 
-      const isArif = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
+      const isArif = 
+        user.email?.toLowerCase() === "arifrajcoach@gmail.com" || 
+        user.email?.toLowerCase() === "arifrajmci@gmail.com";
       let tenantId = "";
       if (isArif) {
         tenantId = "MASTER";
@@ -7350,7 +7431,18 @@ function LoginView({
 
       // 1. Check if user entry exists by standard UID
       const userRef = doc(db, "users", user.uid);
-      let userDoc = await getDoc(userRef);
+      let userDoc = null;
+      let permissionDeniedOnUserDoc = false;
+      try {
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+          userDoc = snap;
+        }
+      } catch (e: any) {
+        console.warn("Permission denied or error reading users doc (safe to ignore if new user):", e);
+        // We'll proceed to check data_warga or other registry
+        permissionDeniedOnUserDoc = true;
+      }
 
       let preRegisteredRole = "Viewer";
       let preRegisteredTenant = tenantId;
@@ -7358,71 +7450,66 @@ function LoginView({
       let userDataExtra = {};
       let isVerifiedResident = false;
 
-      // 2. ALWAYS verify against Data Warga first (except for Admin Master)
-      if (!isArif && user.email) {
+      // 2. ALWAYS verify against Data Warga first
+      if (user.email) {
         const targetEmail = user.email.toLowerCase().trim();
         const emailVariations = [
-          user.email,
+          user.email.trim(),
           targetEmail,
-          user.email.toUpperCase()
+          user.email.toUpperCase().trim()
         ].filter((v, i, a) => a.indexOf(v) === i);
 
         const wargaRef = collection(db, "data_warga");
         
-        // [SIMPLIFIED] Query by lowercase email only to avoid requiring complex composite indexes 
-        // that would trigger "Missing or insufficient permissions" or "Index required" errors.
-        // We will perform further filtering (tenantId, casing, etc.) in memory.
-        const qw = query(wargaRef, where("email", "==", targetEmail));
-        const wargaSnapshot = await getDocs(qw);
-
-        let docs = wargaSnapshot.docs;
-        
-        // 2a. Filter by tenantId in memory if provided
-        if (tenantInput) {
-          const targetTenant = tenantInput.toLowerCase().trim();
-          docs = docs.filter(d => (d.data().tenantId || "").toLowerCase().trim() === targetTenant);
-        }
-        
-        if (docs.length > 0) {
-          // Priority logic:
-          // 1. Terverifikasi && Non-Trial
-          // 2. Terverifikasi 
-          // 3. Not Verified (will show error)
+        let wargaSnapshot;
+        try {
+          const qw = query(wargaRef, where("email", "in", emailVariations));
+          wargaSnapshot = await getDocs(qw);
           
-          // Sort to find best match: verified first, then non-trial
-          const sortedDocs = [...docs].sort((a, b) => {
-            const da = a.data();
-            const db = b.data();
-            if (da.terverifikasi && !db.terverifikasi) return -1;
-            if (!da.terverifikasi && db.terverifikasi) return 1;
-            const isTrialA = (da.tenantId || "").startsWith("TRIAL_");
-            const isTrialB = (db.tenantId || "").startsWith("TRIAL_");
-            if (!isTrialA && isTrialB) return -1;
-            if (isTrialA && !isTrialB) return 1;
-            return 0;
-          });
-
-          const matchedWargaDoc = sortedDocs[0];
-          const matchedWarga = matchedWargaDoc.data();
+          let docs = wargaSnapshot.docs;
           
-          if (matchedWarga.terverifikasi === true) {
-            isPreRegistered = true;
-            isVerifiedResident = true;
-            preRegisteredRole = "Warga";
-            preRegisteredTenant = matchedWarga.tenantId; // FORCE the tenant from verified record
-            userDataExtra = {
-              nik: matchedWarga.nik || "",
-              linkedResidentId: matchedWargaDoc.id,
-            };
-            console.log("Verified Resident Found! Tenant:", preRegisteredTenant);
-          } else if (!isVerifiedResident) {
-            // Found in data_warga but status is not verified
-            await signOut(auth);
-            setError(
-              `Email Anda (${user.email}) terdaftar di Data Warga, namun status Anda belum 'Terverifikasi' oleh Admin Wilayah. Silakan hubungi Ketua RT/RW di wilayah Anda untuk memverifikasi data Anda agar dapat login.`,
-            );
-            setIsLoading(false);
-            return;
+          if (docs.length > 0) {
+            // Sort to find best match: verified first, then non-trial
+            const sortedDocs = [...docs].sort((a, b) => {
+              const da = a.data();
+              const db = b.data();
+              if (da.terverifikasi && !db.terverifikasi) return -1;
+              if (!da.terverifikasi && db.terverifikasi) return 1;
+              const isTrialA = (da.tenantId || "").startsWith("TRIAL_");
+              const isTrialB = (db.tenantId || "").startsWith("TRIAL_");
+              if (!isTrialA && isTrialB) return -1;
+              if (isTrialA && !isTrialB) return 1;
+              return 0;
+            });
+
+            const matchedWargaDoc = sortedDocs[0];
+            const matchedWarga = matchedWargaDoc.data();
+            
+            if (matchedWarga.terverifikasi === true) {
+              isPreRegistered = true;
+              isVerifiedResident = true;
+              preRegisteredRole = "Warga";
+              preRegisteredTenant = matchedWarga.tenantId; // FORCE the tenant from verified record
+              userDataExtra = {
+                nik: matchedWarga.nik || "",
+                linkedResidentId: matchedWargaDoc.id,
+              };
+              console.log("Verified Resident Found via Email! Tenant:", preRegisteredTenant);
+            } else {
+              // Registered but not verified
+              await signOut(auth);
+              setError(
+                `Email Anda (${user.email}) terdaftar di Data Warga, namun status Anda belum 'Terverifikasi' oleh Admin Wilayah. Silakan hubungi Ketua RT/RW di wilayah Anda untuk memverifikasi data Anda agar dapat login.`,
+              );
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch (e: any) {
+          console.error("Error querying data_warga:", e);
+          // If we fail to check data_warga AND user doc was denied, we have a real problem
+          if (permissionDeniedOnUserDoc) {
+             throw new Error(`Gagal memuat profil user. Missing or insufficient permissions. Silakan lapor admin.`);
           }
         }
       }
@@ -7434,8 +7521,14 @@ function LoginView({
       // 3. Search if pre-registered in users collection (for Admin/trial roles)
       if (!isArif && !isVerifiedResident && !isTrihUser) {
         const usersRef = collection(db, "users");
-        const q = query(usersRef, where("email", "==", user.email));
-        const querySnapshot = await getDocs(q);
+        let querySnapshot;
+        try {
+          const q = query(usersRef, where("email", "==", user.email));
+          querySnapshot = await getDocs(q);
+        } catch (e: any) {
+          console.error("Error querying users for pre-reg:", e);
+          throw new Error(`Gagal mengecek data registrasi Admin. ${e.message}`);
+        }
 
         if (!querySnapshot.empty) {
           isPreRegistered = true;
@@ -7445,9 +7538,14 @@ function LoginView({
           preRegisteredTenant = matchedData.tenantId || tenantId;
 
           if (matchedUser.id !== user.uid) {
-            await deleteDoc(doc(db, "users", matchedUser.id));
+            try {
+              await deleteDoc(doc(db, "users", matchedUser.id));
+              console.log("Deleted old user doc:", matchedUser.id);
+            } catch (e: any) {
+              console.warn("Soft Error: Gagal menghapus data migrasi lama, mengabaikan...", e);
+            }
           }
-        } else if (!userDoc.exists()) {
+        } else if (!(userDoc && userDoc.exists())) {
           // No user doc and not found in any registration source
           await signOut(auth);
           setError(
@@ -7459,7 +7557,7 @@ function LoginView({
       }
 
       // Final gate if no user document was found and after all search sources
-      if (!userDoc.exists() && !isPreRegistered && !isArif && !isTrihUser) {
+      if (!(userDoc && userDoc.exists()) && !isPreRegistered && !isArif && !isTrihUser) {
         await signOut(auth);
         setError(
           "Akun Google Anda belum terdaftar di sistem. Silakan hubungi Admin Wilayah untuk mendaftarkan email Anda di form Data Warga.",
@@ -7470,35 +7568,42 @@ function LoginView({
 
       // 4. Setup User Profile
       const userData = {
+        uid: user.uid,
         email: user.email,
         role: isArif
           ? "SUPER_ADMIN"
           : isVerifiedResident 
             ? "Warga"
-            : userDoc.exists()
+            : (userDoc && userDoc.exists())
               ? userDoc.data()?.role 
               : preRegisteredRole,
         isSuperAdmin: isArif,
+        status: (isArif || isVerifiedResident) ? "ACTIVE" : "STARTER", 
         name: isArif
           ? (user.displayName || "Admin Master")
-          : userDoc.exists()
+          : (userDoc && userDoc.exists())
             ? userDoc.data()?.name || user.displayName || "User"
             : user.displayName || "User",
-        tenantId: isArif
-          ? "MASTER"
-          : isVerifiedResident
-            ? preRegisteredTenant // Priority: If verified resident, use that tenant
-            : userDoc.exists()
+        tenantId: isVerifiedResident
+          ? preRegisteredTenant // Priority: If verified resident, use that tenant from data_warga
+          : isArif
+            ? (userDoc && userDoc.exists() && userDoc.data()?.tenantId ? userDoc.data().tenantId : "MASTER")
+            : (userDoc && userDoc.exists())
               ? userDoc.data()?.tenantId || preRegisteredTenant
               : preRegisteredTenant,
-        createdAt: userDoc.exists()
+        createdAt: (userDoc && userDoc.exists())
           ? userDoc.data()?.createdAt || new Date().toISOString()
           : new Date().toISOString(),
         ...userDataExtra
       };
 
       // Always ensure the role and tenant are set
-      await setDoc(userRef, userData, { merge: true });
+      try {
+        await setDoc(userRef, userData, { merge: true });
+      } catch (e: any) {
+        console.error("Error setting user profile:", e);
+        throw new Error(`Gagal menyimpan profil pengguna ke database (UID: ${user.uid}). ${e.message}`);
+      }
       setCurrentUser(userData as any);
       setIsLoading(false);
     } catch (err: any) {
@@ -7974,13 +8079,13 @@ function LoginView({
                     </h3>
                     <p className="text-sm font-bold text-slate-500 mb-4 whitespace-nowrap overflow-hidden text-ellipsis">
                       Dapatkan{" "}
-                      <span className="text-brand-blue">Free Trial</span>{" "}
+                      <span className="text-brand-blue">Starter</span>{" "}
                       Sekarang!
                     </p>
 
                     <div className="flex items-center gap-2">
                       <div className="px-5 py-2.5 bg-brand-pink text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-brand-pink/20 group-hover:bg-brand-blue group-hover:shadow-brand-blue/20 transition-all flex items-center gap-2">
-                        Daftar Gratis
+                        Mulai Sekarang
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
                       <div className="text-[10px] font-bold text-slate-400 italic">
@@ -8119,7 +8224,7 @@ function LoginView({
               </div>
               <div className="flex items-center gap-2 px-6 py-2 bg-brand-pink text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-brand-pink/20 whitespace-nowrap">
                 <Sparkles className="w-3 h-3" />
-                Daftar Trial Gratis 30 hari
+                Mulai Paket Starter 30 hari
               </div>
            </div>
            <div className="p-4 sm:p-10 scale-95 lg:scale-100 origin-top">

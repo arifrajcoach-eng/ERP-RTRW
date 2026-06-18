@@ -361,38 +361,55 @@ export function SuratView({
     // Create an isolated iframe for generation to bypass Tailwind v4 OKLCH parsing issues in html2canvas
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
-    iframe.style.width = '210mm';
-    iframe.style.height = '297mm';
     iframe.style.left = '-9999px';
-    iframe.style.top = '0';
+    iframe.style.top = '-9999px';
     iframe.style.border = 'none';
-    iframe.style.zIndex = '-9999';
-    iframe.width = '794';
-    iframe.height = '1123';
+    iframe.width = '794px';
+    iframe.height = '1123px';
     document.body.appendChild(iframe);
 
-    // Load HTML content via srcdoc to guarantee triggering of onload across all Android & iOS devices
+    // Load HTML content via srcdoc
     iframe.srcdoc = contentHtml;
-
-    // Await iframe complete load and rendering of Tailwind compiler inside it
-    await new Promise<void>((resolve) => {
-      iframe.onload = () => {
-        // Wait an additional 2000ms after onload to allow full paint of fonts and base64 images
-        setTimeout(resolve, 2000);
-      };
-      // Absolute fallback safety timeout
-      setTimeout(resolve, 4000);
-    });
-
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) {
-      throw new Error("Could not access iframe document inside isolated sandbox");
-    }
     
-    try {
-      const pdfNode = iframeDoc.getElementById('print-container-root');
-      if (!pdfNode) throw new Error("PDF content element #print-container-root not found in iframe");
+    // Await iframe complete load
+    await new Promise<void>((resolve) => {
+        iframe.onload = () => {
+             // Buffer to allow rendering of styles and content
+            setTimeout(resolve, 2000); 
+        };
+        // Absolute fallback safety timeout
+        setTimeout(resolve, 7000);
+    });
+    
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+        document.body.removeChild(iframe);
+        throw new Error("Could not access iframe document");
+    }
 
+    // Await iframe content rendering
+    const pdfNode = await new Promise<HTMLElement | null>((resolve) => {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        const root = doc.getElementById('print-container-root');
+        if (root) {
+            clearInterval(interval);
+            resolve(root);
+        } else if (attempts > 50) { // 5 seconds of polling
+            clearInterval(interval);
+            console.error("PDF generation failed: #print-container-root not found.");
+            resolve(null);
+        }
+        attempts++;
+      }, 100);
+    });
+    if (!pdfNode) {
+      console.error("PDF generation failed: #print-container-root not found. Iframe body:", doc.body?.innerHTML);
+      document.body.removeChild(iframe);
+      throw new Error("PDF content element #print-container-root not found in iframe");
+    }
+
+    try {
       const canvas = await html2canvas(pdfNode, {
         scale: 2,
         useCORS: true,
@@ -537,6 +554,7 @@ export function SuratView({
     const isWargaVerified = warga?.terverifikasi === true || 
                             warga?.status === "Disetujui" || 
                             warga?.status === "DISETUJUI" ||
+                            warga?.status === "Warga Tetap" ||
                             warga?.isVerified === true ||
                             warga?.verifikasi === true ||
                             (warga?.statusVerification === "Verified") ||
@@ -932,8 +950,8 @@ export function SuratView({
                               className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-blue-500/30"
                               title="Unduh PDF Langsung"
                             >
-                              <Download className="w-4 h-4 drop-shadow-sm" />
-                              <span className="drop-shadow-sm">Download</span>
+                              <FileDown className="w-4 h-4 drop-shadow-sm" />
+                              <span className="drop-shadow-sm">Download PDF</span>
                             </button>
                           </div>
                         ) : isPengurus && (
@@ -1593,11 +1611,8 @@ export function SuratView({
                    )}
                   {viewingSurat.status === 'Selesai' && (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
-                       <button onClick={() => generateSuratPDF(viewingSurat)} className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-2">
-                         <FileDown className="w-4 h-4" /> Cetak Dokumen PDF
-                       </button>
                        <button onClick={() => downloadSuratPDF(viewingSurat)} className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-emerald-200 flex items-center justify-center gap-2">
-                         <Download className="w-4 h-4" /> Download PDF Langsung
+                         <FileDown className="w-4 h-4" /> Download PDF
                        </button>
                     </div>
                   )}

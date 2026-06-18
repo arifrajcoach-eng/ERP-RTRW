@@ -11,6 +11,7 @@ import {
   FileText, 
   PlusCircle, 
   Download, 
+  FileDown,
   Printer, 
   Info, 
   CheckCircle, 
@@ -264,7 +265,7 @@ export function WargaProfileView({
       const payload = {
         id: submissionId,
         tenantId,
-        nik: wargaData.nik,
+        nik: formData.nik !== undefined ? formData.nik : (wargaData.nik || ""),
         authUid: auth.currentUser?.uid || wargaData.authUid || "",
         nama: formData.nama !== undefined ? formData.nama : (currentData.nama || ""),
         kk: formData.kk !== undefined ? formData.kk : (currentData.kk || ""),
@@ -716,10 +717,16 @@ export function WargaProfileView({
                                    <p className="text-sm font-black text-slate-700 dark:text-slate-300 tabular-nums">{wargaData.hp || '-'}</p>
                                 </div>
                              </div>
-                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Identification Number (KK)</label>
-                                <p className="text-sm font-black text-slate-700 dark:text-slate-300 font-mono tracking-widest">{wargaData.kk || '-'}</p>
-                              </div>
+                             <div className="grid grid-cols-2 gap-8">
+                                <div>
+                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Resident ID (NIK)</label>
+                                   <p className="text-sm font-black text-slate-700 dark:text-slate-300 font-mono tracking-widest">{wargaData.nik || '-'}</p>
+                                </div>
+                                <div>
+                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Family Card (KK)</label>
+                                   <p className="text-sm font-black text-slate-700 dark:text-slate-300 font-mono tracking-widest">{wargaData.kk || '-'}</p>
+                                </div>
+                             </div>
                               <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Koordinat Rumah (GPS SOS)</label>
                                  {wargaData.latitude && wargaData.longitude ? (
@@ -902,22 +909,13 @@ export function WargaProfileView({
                                      
                                      <div className="flex items-center gap-3 shrink-0 flex-wrap md:flex-nowrap">
                                         {item.status === 'Selesai' && (
-                                           <div className="flex gap-2">
-                                              <button
-                                                 onClick={() => generateMySuratPDF(item)}
-                                                 className="flex items-center justify-center gap-2.5 px-6 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/10 active:scale-95 transition-all"
-                                                 title="Cetak via Browser"
-                                              >
-                                                 <Printer className="w-4 h-4" /> Cetak
-                                              </button>
-                                              <button
-                                                 onClick={() => downloadMySuratPDF(item)}
-                                                 className="flex items-center justify-center gap-2.5 px-6 py-4 bg-brand-blue hover:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-blue/10 active:scale-95 transition-all"
-                                                 title="Unduh PDF Langsung"
-                                              >
-                                                 <Download className="w-4 h-4" /> Download
-                                              </button>
-                                           </div>
+                                           <button
+                                              onClick={() => downloadMySuratPDF(item)}
+                                              className="flex items-center justify-center gap-2.5 px-6 py-4 bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-500 hover:to-blue-600 active:from-indigo-700 active:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-200 dark:shadow-none active:scale-[0.98] transition-all w-full md:w-auto border border-white/10"
+                                              title="Unduh PDF Resmi"
+                                           >
+                                              <FileDown className="w-4 h-4 shadow-sm" /> Download PDF
+                                           </button>
                                         )}
                                         <button
                                            onClick={() => setSuratToDelete(item)}
@@ -1370,6 +1368,13 @@ export function WargaProfileView({
                                    <div className="relative">
                                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
                                       <input type="text" value={formData.nama || ''} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nama Lengkap sesuai KTP" />
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor NIK</label>
+                                   <div className="relative">
+                                      <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
+                                      <input type="text" value={formData.nik || ''} onChange={e => setFormData({...formData, nik: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor NIK (16 digit)" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">

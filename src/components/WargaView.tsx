@@ -119,13 +119,16 @@ function WargaView(props: WargaViewProps) {
 
   // Auto-detect RT from tenant name (e.g. "RT 01 / RW 26") or from tenant identifier
   const detectedRT = useMemo(() => {
-    if (!tenant?.name) return null;
-    const match = tenant.name.match(/RT\s*(\d+)/i);
-    if (match) {
-      return match[1].padStart(2, '0');
+    if (tenant?.name) {
+        const match = tenant.name.match(/RT\s*(\d+)/i);
+        if (match) return match[1].padStart(2, '0');
+    }
+    if (tenantId) {
+        const matchId = tenantId.match(/rt(\d+)/i);
+        if (matchId) return matchId[1].padStart(2, '0');
     }
     return null;
-  }, [tenant?.name]);
+  }, [tenant?.name, tenantId]);
 
   const [filterRT, setFilterRT] = useState(isRTAdmin ? myRT : (detectedRT || "Semua"));
 
