@@ -736,7 +736,10 @@ service cloud.firestore {
       allow update: if isSignedIn() && (isAdmin() || ('email' in request.auth.token && docId == request.auth.token.email));
     }
     match /free_tier_followups/{docId} {
-      allow read, write: if true;
+      // Siapapun bisa create (pendaftar baru belum punya auth)
+      allow create: if true;
+      // Hanya admin/superAdmin yang bisa baca dan update
+      allow read, update, delete: if isSignedIn() && isAdmin();
     }
 
   }
