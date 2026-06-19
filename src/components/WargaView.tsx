@@ -156,10 +156,44 @@ function WargaView(props: WargaViewProps) {
   const filteredWargaData = useMemo(() => {
     const uniqueMap: Record<string, any> = {};
     wargaData.forEach(w => {
-      const id = w.docId || w.nik || w.id || Math.random().toString();
-      const existing = uniqueMap[id];
-      if (!existing || (w.terverifikasi && !existing.terverifikasi)) {
-        uniqueMap[id] = w;
+      let key = (w.nik || '').toString().trim();
+      const nama = (w.nama || '').toString().trim().toLowerCase();
+      
+      if (!key || key === 'Belum Ada' || key === '-' || key === '0') {
+        if (nama && nama !== '-') {
+          key = `NAMA:${nama}`;
+        } else {
+          key = w.docId || w.id || Math.random().toString();
+        }
+      }
+
+      const existing = uniqueMap[key];
+      if (!existing) {
+        uniqueMap[key] = w;
+      } else {
+        // Prioritize which copy of the same resident to display:
+        // 1. Direct match with current active tenantId (so current RT edits show)
+        // 2. Verified status (terverifikasi === true)
+        // 3. Document with more filled fields
+        const existingIsLocal = existing.tenantId === tenantId;
+        const currentIsLocal = w.tenantId === tenantId;
+        
+        let replace = false;
+        if (currentIsLocal && !existingIsLocal) {
+          replace = true;
+        } else if (existingIsLocal === currentIsLocal) {
+          if (w.terverifikasi && !existing.terverifikasi) {
+            replace = true;
+          } else if (w.terverifikasi === existing.terverifikasi) {
+            if (Object.keys(w).length > Object.keys(existing).length) {
+              replace = true;
+            }
+          }
+        }
+        
+        if (replace) {
+          uniqueMap[key] = w;
+        }
       }
     });
 
