@@ -2163,8 +2163,8 @@ export default function App() {
     const unsubs: (() => void)[] = [];
     const tIdsChunks = chunkArray(tIds, 10);
 
-    // Surat
-    if (activeTab === "surat" || activeTab === "dashboard" || activeTab === "ai-bot") {
+    // Surat - Sync for all pengurus tabs and also for active citizens (wargaAuth)
+    if (activeTab === "surat" || activeTab === "dashboard" || activeTab === "ai-bot" || !!wargaAuth || activeTab === "profile") {
       tIdsChunks.forEach(chunk => {
          unsubs.push(onSnapshot(query(collection(db, "surat"), where("tenantId", "in", chunk), limit(500)), snap => {
             setSuratData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))]);
@@ -8125,10 +8125,10 @@ function LoginView({
                 <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-40 group-hover:animate-shine" />
                 
                 <span className="p-1 px-1.5 bg-white/20 rounded-lg flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-all duration-300">
-                  <Sparkles className="w-4 h-4 text-[#111111] animate-pulse" />
+                  <Sparkles className="w-4 h-4 animate-pulse" style={{ color: '#ffffff' }} />
                 </span>
                 
-                <span className="text-[11px] font-black uppercase tracking-widest text-[#060606] drop-shadow-sm flex items-center gap-1">
+                <span className="text-[11px] font-black uppercase tracking-widest drop-shadow-sm flex items-center gap-1" style={{ color: '#fffafa' }}>
                   Pilih Paket & List Fitur <span className="text-sky-950 group-hover:translate-x-0.5 transition-transform duration-300">⚡</span>
                 </span>
               </motion.button>

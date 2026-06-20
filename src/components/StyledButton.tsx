@@ -41,8 +41,8 @@ export const StyledButton: React.FC<StyledButtonProps> = ({ label, onClick, colo
       className={`relative overflow-hidden px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-[0.15em] transition-all duration-300 flex items-center justify-center gap-2.5 bg-gradient-to-br ${disabled ? 'bg-slate-300 from-slate-300 to-slate-400 text-slate-500 cursor-not-allowed opacity-60 shadow-none' : colorMap[colorType]} ${className}`}
     >
       <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity pointer-events-none" />
-      {icon && <span className="relative z-10">{icon}</span>}
-      <span className="relative z-10">{label}</span>
+      {icon && <span className="relative z-10" style={{ color: '#ffffff' }}>{icon}</span>}
+      <span className="relative z-10" style={{ color: colorType === 'primary' ? '#fffafa' : undefined }}>{label}</span>
     </motion.button>
   );
 };

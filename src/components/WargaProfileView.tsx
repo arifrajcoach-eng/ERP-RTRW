@@ -372,46 +372,47 @@ export function WargaProfileView({
     };
 
     // Use the existing generateSuratHTML logic to get the content
-    const contentHtml = generateSuratHTML(mappedSurat, base64Kop, settings);
+    const contentHtml = generateSuratHTML(mappedSurat, base64Kop, settings, true);
 
     // Create an isolated iframe for generation to bypass Tailwind v4 OKLCH parsing issues in html2canvas
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '210mm';
-    iframe.style.height = '297mm';
+    iframe.style.position = 'fixed';
     iframe.style.left = '-9999px';
-    iframe.style.top = '0';
+    iframe.style.top = '-9999px';
     iframe.style.border = 'none';
+    iframe.width = '794px';
+    iframe.height = '1123px';
     document.body.appendChild(iframe);
 
-    // Provide dry-run window.print
-    if (iframe.contentWindow) {
-      try {
-        (iframe.contentWindow as any).print = () => {};
-        (iframe.contentWindow as any).close = () => {};
-      } catch (err) {}
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      throw new Error("Could not access iframe document");
     }
 
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) {
-      throw new Error("Could not create isolated iframe for PDF generation");
-    }
-
-    // Write the HTML inside the iframe document
-    iframeDoc.open();
-    iframeDoc.write(contentHtml);
-    iframeDoc.close();
+    doc.open();
+    doc.write(contentHtml);
+    doc.close();
     
     try {
-      // Strip print/close calls from scripts
-      const printScripts = iframeDoc.getElementsByTagName('script');
-      for (let i = printScripts.length - 1; i >= 0; i--) {
-        if (printScripts[i].innerHTML.includes('window.print') || printScripts[i].innerHTML.includes('window.close')) {
-          printScripts[i].parentNode?.removeChild(printScripts[i]);
-        }
-      }
+      // Await iframe content rendering and polling for the root element
+      const pdfNode = await new Promise<HTMLElement | null>((resolve) => {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          const root = doc.getElementById('print-container-root');
+          if (root) {
+              clearInterval(interval);
+              // Give 500ms for internal images/styles to settle after being found
+              setTimeout(() => resolve(root), 500);
+          } else if (attempts > 50) { // 5 seconds of polling
+              clearInterval(interval);
+              console.error("PDF generation failed: #print-container-root not found.");
+              resolve(null);
+          }
+          attempts++;
+        }, 100);
+      });
 
-      const pdfNode = iframeDoc.getElementById('print-container-root');
       if (!pdfNode) throw new Error("PDF content element #print-container-root not found in iframe");
 
       // Wait a tiny bit to ensure imagery layout is computed

@@ -368,36 +368,33 @@ export function SuratView({
     iframe.height = '1123px';
     document.body.appendChild(iframe);
 
-    // Load HTML content via srcdoc
-    iframe.srcdoc = contentHtml;
-    
-    // Await iframe complete load
-    await new Promise<void>((resolve) => {
-        iframe.onload = () => {
-             // Buffer to allow rendering of styles and content
-            setTimeout(resolve, 2000); 
-        };
-        // Absolute fallback safety timeout
-        setTimeout(resolve, 7000);
-    });
-    
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    const doc = iframe.contentWindow?.document;
     if (!doc) {
-        document.body.removeChild(iframe);
-        throw new Error("Could not access iframe document");
+      document.body.removeChild(iframe);
+      throw new Error("Could not access iframe document");
     }
 
-    // Await iframe content rendering
+    doc.open();
+    doc.write(contentHtml);
+    doc.close();
+    
+    // Await iframe content rendering and polling for the root element
     const pdfNode = await new Promise<HTMLElement | null>((resolve) => {
       let attempts = 0;
       const interval = setInterval(() => {
-        const root = doc.getElementById('print-container-root');
-        if (root) {
+        // Ensure doc is available and try multiple ways to find the element
+        const currentDoc = iframe.contentWindow?.document || iframe.contentDocument;
+        const root = currentDoc?.getElementById('print-container-root') || 
+                     currentDoc?.querySelector('.print-container') ||
+                     currentDoc?.body?.firstElementChild;
+                     
+        if (root && root.id === 'print-container-root') {
             clearInterval(interval);
-            resolve(root);
-        } else if (attempts > 50) { // 5 seconds of polling
+            // Give 800ms for heavy fonts/images/tailwind to fully settle
+            setTimeout(() => resolve(root as HTMLElement), 800);
+        } else if (attempts > 60) { // 6 seconds of polling
             clearInterval(interval);
-            console.error("PDF generation failed: #print-container-root not found.");
+            console.error("PDF generation failed: #print-container-root not found. Content summary:", currentDoc?.body?.innerText?.substring(0, 50));
             resolve(null);
         }
         attempts++;
@@ -568,22 +565,34 @@ export function SuratView({
     let nextStatus = 'Selesai';
     let msg = 'Surat disetujui';
 
-    if (s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') {
-      if (!isRTUser) {
-        console.warn("[SuratView] Blocked RT approval check: not RT user", { isRTUser });
-        showNotification('Hanya RT yang dapat menyetujui tahap ini', 'error');
-        return;
-      }
+    const currentStatus = String(s.status || '').toUpperCase();
+    const isWaitingRT = currentStatus.includes('RT') || 
+                        currentStatus === 'MENUNGGU PERSETUJUAN' || 
+                        currentStatus === 'DIAJUKAN' || 
+                        currentStatus.includes('PENDING');
+                        
+    const isWaitingRW = currentStatus.includes('RW');
+
+    if (isRWUser) {
+      // RW authority can finalize immediately
+      nextStatus = 'Selesai';
+      msg = 'Surat disetujui secara resmi oleh RW/Otoritas Pusat. Selesai.';
+    } else if (isRTUser && (isWaitingRT || currentStatus === '')) {
       nextStatus = 'Menunggu Persetujuan RW';
       msg = 'Disetujui oleh RT. Sekarang menunggu persetujuan RW.';
-    } else if (s.status === 'Menunggu Persetujuan RW') {
-      if (!isRWUser) {
-        console.warn("[SuratView] Blocked RW approval check: not RW user", { isRWUser });
+    } else if (isRWUser && isWaitingRW) {
+      nextStatus = 'Selesai';
+      msg = 'Surat disetujui oleh RW. Selesai.';
+    } else {
+      // Fallback if somehow triggered by non-authorized user
+      if (isWaitingRW && !isRWUser) {
         showNotification('Hanya RW yang dapat menyetujui tahap ini', 'error');
         return;
       }
-      nextStatus = 'Selesai';
-      msg = 'Surat disetujui oleh RW. Selesai.';
+      if (isWaitingRT && !isRTUser) {
+        showNotification('Hanya RT yang dapat menyetujui tahap ini', 'error');
+        return;
+      }
     }
 
     setApprovalConfirm({
@@ -626,11 +635,21 @@ export function SuratView({
           updateData.approvedAt = new Date().toISOString();
         }
 
-        if (isRTUser && (s.status === 'Menunggu Persetujuan RT' || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan')) {
+        const currentStatus = String(s.status || '').toUpperCase();
+        const isWaitingRT = currentStatus.includes('RT') || 
+                            currentStatus === 'MENUNGGU PERSETUJUAN' || 
+                            currentStatus === 'DIAJUKAN' || 
+                            currentStatus.includes('PENDING');
+
+        if (isRTUser && (isWaitingRT || currentStatus === '')) {
           updateData.approvedByRT = currentUser?.nama || currentUser?.name || 'Ketua RT';
         }
-        if (isRWUser && s.status === 'Menunggu Persetujuan RW') {
+        if (isRWUser) {
           updateData.approvedByRW = currentUser?.nama || currentUser?.name || 'Ketua RW';
+          // Ensure RT is also marked if RW is approving
+          if (!updateData.approvedByRT) {
+            updateData.approvedByRT = updateData.approvedByRT || 'Disetujui RW';
+          }
         }
 
         console.log("[SuratView] Writing approved status update to firestore", { id: s.id, updateData });
