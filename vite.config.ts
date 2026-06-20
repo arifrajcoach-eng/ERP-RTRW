@@ -3,10 +3,30 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
+function firebaseToGatewayPlugin() {
+  return {
+    name: 'firebase-to-gateway',
+    enforce: 'pre' as const,
+    resolveId(source: string, importer: string | undefined) {
+      if (source === 'firebase/firestore' && importer) {
+        if (
+          importer.includes('dbGateway.ts') || 
+          importer.includes('firebaseFirestoreAlias.ts') || 
+          importer.includes('firebase.ts')
+        ) {
+          return null;
+        }
+        return path.resolve(__dirname, './src/lib/firebaseFirestoreAlias.ts');
+      }
+      return null;
+    }
+  };
+}
+
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [firebaseToGatewayPlugin(), react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ""),
     },

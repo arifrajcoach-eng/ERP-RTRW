@@ -208,10 +208,55 @@ export default function DashboardView({
     return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(angka);
   };
 
+  // Create a deduplicated/unique resident list to sync counts and figures around the platform
+  const uniqueWargaData = useMemo(() => {
+    const uniqueMap: Record<string, any> = {};
+    const tId = currentTenant?.id || '';
+    
+    (wargaData || []).forEach(w => {
+      let key = (w.nik || '').toString().trim();
+      const nama = (w.nama || '').toString().trim().toLowerCase();
+      
+      if (!key || key === 'Belum Ada' || key === '-' || key === '0') {
+        if (nama && nama !== '-') {
+          key = `NAMA:${nama}`;
+        } else {
+          key = w.docId || w.id || Math.random().toString();
+        }
+      }
+
+      const existing = uniqueMap[key];
+      if (!existing) {
+        uniqueMap[key] = w;
+      } else {
+        const existingIsLocal = existing.tenantId === tId;
+        const currentIsLocal = w.tenantId === tId;
+        
+        let replace = false;
+        if (currentIsLocal && !existingIsLocal) {
+          replace = true;
+        } else if (existingIsLocal === currentIsLocal) {
+          if (w.terverifikasi && !existing.terverifikasi) {
+            replace = true;
+          } else if (w.terverifikasi === existing.terverifikasi) {
+            if (Object.keys(w).length > Object.keys(existing).length) {
+              replace = true;
+            }
+          }
+        }
+        if (replace) {
+          uniqueMap[key] = w;
+        }
+      }
+    });
+
+    return Object.values(uniqueMap);
+  }, [wargaData, currentTenant?.id]);
+
   // Memoized stats
   const stats = useMemo(() => {
-    const totalWarga = wargaData.length;
-    const uniqueKK = new Set(wargaData.map((w: any) => w.kk || w.kodeKeluarga).filter(kk => kk)).size;
+    const totalWarga = uniqueWargaData.length;
+    const uniqueKK = new Set(uniqueWargaData.map((w: any) => w.kk || w.kodeKeluarga).filter(kk => kk)).size;
     const saldoTotal = kasData.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.kredit || 0), 0);
     
     const pendingStatuses = ['Draft', 'Menunggu Persetujuan RT', 'Menunggu Persetujuan RW', 'Menunggu Persetujuan', 'Diajukan', 'PENDING', 'Pending', 'Pending_RT', 'PENDING_RT'];
@@ -223,7 +268,7 @@ export default function DashboardView({
       saldoTotal,
       suratPending
     };
-  }, [wargaData, kasData, suratData]);
+  }, [uniqueWargaData, kasData, suratData]);
 
   const yearContext = new Date().getFullYear().toString();
 
@@ -257,11 +302,11 @@ export default function DashboardView({
   }, [kasPeriod, dataYearly, months, kasData]);
 
   const demographics = useMemo(() => {
-    const totalLaki = wargaData.filter(w => {
+    const totalLaki = uniqueWargaData.filter(w => {
       const jk = (w.jk || w.jenisKelamin || '').toLowerCase();
       return jk === 'laki-laki' || jk === 'pria' || jk === 'l';
     }).length;
-    const totalPerempuan = wargaData.filter(w => {
+    const totalPerempuan = uniqueWargaData.filter(w => {
       const jk = (w.jk || w.jenisKelamin || '').toLowerCase();
       return jk === 'perempuan' || jk === 'wanita' || jk === 'p';
     }).length;
@@ -276,7 +321,7 @@ export default function DashboardView({
       return age;
     };
 
-    const ages = wargaData.map(w => getAge(w.tglLahir));
+    const ages = uniqueWargaData.map(w => getAge(w.tglLahir));
     return {
       totalLaki,
       totalPerempuan,
@@ -286,18 +331,18 @@ export default function DashboardView({
       totalDewasa: ages.filter(a => a > 18 && a <= 60).length,
       totalLansia: ages.filter(a => a > 60).length
     };
-  }, [wargaData]);
+  }, [uniqueWargaData]);
 
   const dataByRT = useMemo(() => {
     const rts: Record<string, number> = {};
-    wargaData.forEach(w => {
+    uniqueWargaData.forEach(w => {
       const rt = w.rt || '??';
       rts[rt] = (rts[rt] || 0) + 1;
     });
     return Object.entries(rts)
       .map(([name, value]) => ({ name: `RT ${name}`, value }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [wargaData]);
+  }, [uniqueWargaData]);
 
   const recentActivities = useMemo(() => {
     interface DashboardActivityItem {
@@ -441,11 +486,11 @@ export default function DashboardView({
         { name: 'Pemasukan Kas', value: filteredKas.filter(k => k.tipe === 'Masuk').length },
         { name: 'Pengeluaran Kas', value: filteredKas.filter(k => k.tipe === 'Keluar').length },
         { name: getTranslatedLabel("Surat Pengantar", settings?.themeMode), value: filteredSurat.length },
-        { name: getTranslatedLabel("Data Warga", settings?.themeMode), value: wargaData.length },
+        { name: getTranslatedLabel("Data Warga", settings?.themeMode), value: uniqueWargaData.length },
       ];
     };
     return piePeriod === 'yearly' ? getActData('yearly') : getActData('30days');
-  }, [piePeriod, suratData, kasData, wargaData]);
+  }, [piePeriod, suratData, kasData, uniqueWargaData]);
 
   const kasVsOperasionalData = useMemo(() => {
     const parseVal = (val: any) => {
@@ -1230,7 +1275,7 @@ export default function DashboardView({
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
                     <Smartphone className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">PPOB</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">E-LAPAK +26</span>
                 </button>
               </div>
             </div>

@@ -29,6 +29,7 @@ import {
   QrCode,
   Store,
   ShieldCheck,
+  FileUp,
 } from "lucide-react";
 import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -36,6 +37,7 @@ import { logAuditEvent } from "../services/auditLogService";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { ConfirmModal } from "./ui/ConfirmModal";
 import { scanReceiptAI } from "../services/aiService";
 import { PLAN_FEATURES } from "../constants";
@@ -456,6 +458,39 @@ export function KasView({
     showNotification("PDF Berhasil diunduh");
   };
 
+  const handleExportAllPDF = () => {
+    const doc = new jsPDF();
+    const settings = getSetting("KOP_SURAT") || {};
+    const tenantName = settings.nama_rt || settings.nama_organisasi || "SmaRtRw AI";
+
+    doc.setFontSize(16);
+    doc.text(`Laporan Kas ${tenantName}`, 14, 15);
+    
+    autoTable(doc, {
+      head: [['Tanggal', 'Entitas', 'Kategori', 'Debit', 'Kredit']],
+      body: currentMonthTransactions.map(t => [t.tanggal, t.nama, t.transaksi, formatRupiah(t.debit || 0), formatRupiah(t.kredit || 0)]),
+      startY: 20
+    });
+    
+    doc.save("Laporan_Kas.pdf");
+    showNotification("PDF Laporan Berhasil diunduh");
+  };
+
+  const handleExportAllExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(currentMonthTransactions.map(t => ({
+      Tanggal: t.tanggal,
+      Entitas: t.nama,
+      Kategori: t.transaksi,
+      Debit: t.debit,
+      Kredit: t.kredit,
+      Keterangan: t.keterangan
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Kas");
+    XLSX.writeFile(wb, "Laporan_Kas.xlsx");
+    showNotification("Excel Laporan Berhasil diunduh");
+  };
+
   const handleDeleteKas = async () => {
     if (!kasToDelete) return;
 
@@ -769,6 +804,7 @@ export function KasView({
 
     setIsLoadingDB(true);
     try {
+      console.log("Saving transaction to Firestore:", newTrx);
       if (isIuran) {
         const iuranPayload = sanitizeForFirestore({
           id: targetIuranId,
@@ -983,11 +1019,11 @@ export function KasView({
       </div>
 
       {/* Tabel Kas */}
-      <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/30 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden relative transition-all">
+      <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/30 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden relative transition-all h-[600px]">
         <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-slate-50/50 dark:bg-slate-800/30">
           <div>
             <h3 
-              className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase italic font-elegant"
+              className="text-[19px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase italic font-elegant"
               style={{ width: '238.68099999999998px' }}
             >
               <div className="w-2 h-8 bg-brand-blue rounded-full shadow-lg shadow-brand-blue/40"></div>
@@ -1004,21 +1040,58 @@ export function KasView({
                 placeholder="Cari transaksi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 pr-5 py-3.5 bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 text-sm font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/10 w-full xl:w-64 transition-all shadow-sm placeholder:text-slate-300 dark:text-slate-200"
+                className="pl-11 pr-5 py-3.5 bg-white dark:bg-slate-800 border-[2.11111px] border-[#e9038d] text-sm font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-blue/10 w-full xl:w-64 transition-all shadow-sm placeholder:text-slate-300 dark:text-slate-200"
               />
             </div>
             <div className="flex gap-2 w-full lg:w-auto">
+              {/* PDF and Excel buttons */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleExportAllPDF}
+                className="flex items-center justify-center gap-2 bg-gradient-to-br from-rose-400 via-pink-500 to-red-500 text-white p-3 rounded-2xl shadow-lg hover:shadow-xl hover:shadow-rose-400/30 transition-all duration-300"
+                title="Export PDF"
+              >
+                <Printer className="w-4 h-4 text-white" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleExportAllExcel}
+                className="flex items-center justify-center gap-2 bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-500 text-white p-3 rounded-2xl shadow-lg hover:shadow-xl hover:shadow-emerald-400/30 transition-all duration-300"
+                title="Download Excel"
+              >
+                <FileDown className="w-4 h-4 text-white" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 text-white p-3 rounded-2xl shadow-lg hover:shadow-xl hover:shadow-amber-400/30 transition-all duration-300"
+                title="Import Excel"
+              >
+                <FileUp className="w-4 h-4 text-white" />
+              </motion.button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".xlsx, .xls, .csv"
+                onChange={handleImportFileKas}
+              />
+
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="flex-1 lg:flex-none bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-blue/10 shadow-sm transition-all appearance-none cursor-pointer"
+                className="flex-1 lg:flex-none bg-gradient-to-tr from-indigo-100 via-white to-rose-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-950 border border-indigo-200 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-lg shadow-indigo-100/50 dark:shadow-none transition-all appearance-none cursor-pointer hover:from-indigo-100 hover:to-purple-100 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
                 {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="flex-1 lg:flex-none bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-blue/10 shadow-sm transition-all appearance-none cursor-pointer"
+                className="flex-1 lg:flex-none bg-gradient-to-tr from-indigo-100 via-white to-rose-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-950 border border-indigo-200 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-lg shadow-indigo-100/50 dark:shadow-none transition-all appearance-none cursor-pointer hover:from-indigo-100 hover:to-purple-100 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
                 {years.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
@@ -1031,7 +1104,7 @@ export function KasView({
                   <button
                     onClick={() => scanInputRef.current?.click()}
                     disabled={isScanning}
-                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 shadow-sm group disabled:opacity-50"
+                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 text-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-400/30 group disabled:opacity-50"
                   >
                     {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg group-hover:bg-brand-blue/10 transition-colors"><Camera className="w-3.5 h-3.5 text-brand-blue" /></div>}
                     {isScanning ? "Memindai..." : "AI SCAN STRUK"}
@@ -1039,7 +1112,7 @@ export function KasView({
                   
                   <button
                     onClick={handleOpenNewKas}
-                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-tr from-brand-blue to-indigo-700 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-brand-blue/20 active:scale-95 shadow-xl shadow-brand-blue/20 group"
+                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-blue-500/30 active:scale-95 shadow-xl shadow-blue-500/20 group"
                   >
                     <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> 
                     ENTRI KAS BARU
@@ -1114,11 +1187,11 @@ export function KasView({
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex gap-2 justify-end items-center transition-all">
-                        <button onClick={() => setViewingKas(trx)} className="p-3 text-white bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl shadow-lg shadow-amber-500/20 transform hover:scale-110 active:scale-95 transition-all border border-white/10 outline-none"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => setViewingKas(trx)} className="p-3 text-white bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl shadow-lg shadow-amber-500/20 transform hover:scale-110 active:scale-95 transition-all duration-300 border border-white/10 outline-none"><Eye className="w-4 h-4" /></button>
                         {isPengurus && (
                           <>
-                            <button onClick={() => handleEditKas(trx)} className="p-3 text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl hover:scale-110 active:scale-95 transition-all outline-none"><Edit className="w-4 h-4" /></button>
-                            <button onClick={() => setKasToDelete(trx)} className="p-3 text-rose-600 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white hover:scale-110 active:scale-95 transition-all outline-none"><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => handleEditKas(trx)} className="p-3 text-white bg-gradient-to-br from-indigo-400 to-blue-600 rounded-2xl shadow-lg shadow-indigo-500/20 transform hover:scale-110 active:scale-95 transition-all duration-300 border border-white/10 outline-none"><Edit className="w-4 h-4" /></button>
+                            <button onClick={() => setKasToDelete(trx)} className="p-3 text-white bg-gradient-to-br from-rose-400 to-red-600 rounded-2xl shadow-lg shadow-rose-500/20 transform hover:scale-110 active:scale-95 transition-all duration-300 border border-white/10 outline-none"><Trash2 className="w-4 h-4" /></button>
                           </>
                         )}
                       </div>

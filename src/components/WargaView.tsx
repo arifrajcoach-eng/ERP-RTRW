@@ -130,13 +130,13 @@ function WargaView(props: WargaViewProps) {
     return null;
   }, [tenant?.name, tenantId]);
 
-  const [filterRT, setFilterRT] = useState(isRTAdmin ? myRT : (detectedRT || "Semua"));
+  const [filterRT, setFilterRT] = useState(detectedRT || (isRTAdmin ? myRT : "Semua"));
 
   useEffect(() => {
-    if (isRTAdmin) {
-      setFilterRT(myRT);
-    } else if (detectedRT) {
+    if (detectedRT) {
       setFilterRT(detectedRT);
+    } else if (isRTAdmin) {
+      setFilterRT(myRT);
     } else {
       setFilterRT("Semua");
     }
@@ -1319,7 +1319,7 @@ function WargaView(props: WargaViewProps) {
                     </td>
                     <td className="py-8 px-6">
                        <div className="flex flex-col gap-2.5">
-                         <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border w-fit shadow-lg ${
+                         <span style={{ width: "135px", textAlign: "center" }} className={`py-2 rounded-full text-[10px] font-black uppercase tracking-widest border inline-flex items-center justify-center shadow-lg ${
                            w.status === 'Warga Tetap' ? 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20' : 'bg-slate-900 text-white border-slate-700 shadow-slate-900/20'
                          }`}>
                            {w.status}
