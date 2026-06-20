@@ -249,20 +249,22 @@ export default function KependudukanView({
               Sistem pelaporan otomatis untuk memantau dinamika kependudukan RT/RW secara real-time dan transparan.
             </p>
           </div>
-          <div className="flex gap-3 mt-6">
-            <button 
-              onClick={() => { setActiveTab('kelahiran'); setShowForm(true); setEditingItem(null); }}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-black uppercase tracking-widest transition-all"
-            >
-              Lapor Kelahiran
-            </button>
-            <button 
-              onClick={() => { setActiveTab('kematian'); setShowForm(true); setEditingItem(null); }}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-black uppercase tracking-widest transition-all"
-            >
-              Lapor Kematian
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => { setActiveTab('kelahiran'); setShowForm(true); setEditingItem(null); }}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+              >
+                Lapor Kelahiran
+              </button>
+              <button 
+                onClick={() => { setActiveTab('kematian'); setShowForm(true); setEditingItem(null); }}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+              >
+                Lapor Kematian
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -311,13 +313,13 @@ export default function KependudukanView({
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Detail Bayi</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Orang Tua</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu & Tempat</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aksi</th>
+                  {canEdit && <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredKelahiran.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500 italic">Belum ada data kelahiran</td>
+                    <td colSpan={canEdit ? 4 : 3} className="px-6 py-12 text-center text-slate-500 italic">Belum ada data kelahiran</td>
                   </tr>
                 ) : (
                   filteredKelahiran.map((item) => (
@@ -346,22 +348,24 @@ export default function KependudukanView({
                          </div>
                          <p className="text-xs text-slate-500 italic">{item.tempatLahir}</p>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2">
-                           <button 
-                             onClick={() => { setEditingItem(item); setShowForm(true); }}
-                             className="p-2 hover:bg-brand-blue/10 text-brand-blue rounded-lg transition-colors"
-                           >
-                             <Edit2 className="w-4 h-4" />
-                           </button>
-                           <button 
-                             onClick={() => handleDelete(item.id, item.namaBayi)}
-                             className="p-2 hover:bg-rose-100 text-rose-500 rounded-lg transition-colors"
-                           >
-                             <Trash2 className="w-4 h-4" />
-                           </button>
-                        </div>
-                      </td>
+                      {canEdit && (
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                             <button 
+                               onClick={() => { setEditingItem(item); setShowForm(true); }}
+                               className="p-2 hover:bg-brand-blue/10 text-brand-blue rounded-lg transition-colors"
+                             >
+                               <Edit2 className="w-4 h-4" />
+                             </button>
+                             <button 
+                               onClick={() => handleDelete(item.id, item.namaBayi)}
+                               className="p-2 hover:bg-rose-100 text-rose-500 rounded-lg transition-colors"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -378,13 +382,13 @@ export default function KependudukanView({
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Warga Terkait</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Detail Kejadian</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pemakaman</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aksi</th>
+                  {canEdit && <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredKematian.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500 italic">Belum ada data kematian</td>
+                    <td colSpan={canEdit ? 4 : 3} className="px-6 py-12 text-center text-slate-500 italic">Belum ada data kematian</td>
                   </tr>
                 ) : (
                   filteredKematian.map((item) => (
@@ -413,22 +417,24 @@ export default function KependudukanView({
                       <td className="px-6 py-5">
                         <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{item.lokasiMakam}</p>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2">
-                           <button 
-                             onClick={() => { setEditingItem(item); setShowForm(true); }}
-                             className="p-2 hover:bg-brand-blue/10 text-brand-blue rounded-lg transition-colors"
-                           >
-                             <Edit2 className="w-4 h-4" />
-                           </button>
-                           <button 
-                             onClick={() => handleDelete(item.id, item.namaWarga)}
-                             className="p-2 hover:bg-rose-100 text-rose-500 rounded-lg transition-colors"
-                           >
-                             <Trash2 className="w-4 h-4" />
-                           </button>
-                        </div>
-                      </td>
+                      {canEdit && (
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                             <button 
+                               onClick={() => { setEditingItem(item); setShowForm(true); }}
+                               className="p-2 hover:bg-brand-blue/10 text-brand-blue rounded-lg transition-colors"
+                             >
+                               <Edit2 className="w-4 h-4" />
+                             </button>
+                             <button 
+                               onClick={() => handleDelete(item.id, item.namaWarga)}
+                               className="p-2 hover:bg-rose-100 text-rose-500 rounded-lg transition-colors"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}

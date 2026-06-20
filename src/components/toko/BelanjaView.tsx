@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ProductCard } from './ProductCard';
 import { 
   ShoppingCart, 
@@ -60,6 +60,7 @@ const PRODUCTS = [
     description: "Beras asli Cianjur, pulen, wangi pandan alami, tanpa pengawet atau pemutih kimia. Langsung dari petani binaan.",
     price: 78000,
     stock: 25,
+    rt: "26",
     image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=400",
     discount: "Diskon 5%"
   },
@@ -70,6 +71,7 @@ const PRODUCTS = [
     description: "Minyak goreng kelapa sawit berkualitas tinggi, menghasilkan gorengan garing dan sehat. Kemasan pouch praktis.",
     price: 36500,
     stock: 40,
+    rt: "26",
     image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&q=80&w=400",
     discount: ""
   },
@@ -80,6 +82,7 @@ const PRODUCTS = [
     description: "Keranjang baju cucian serbaguna, bisa dilipat saat tidak digunakan. Bahan kanvas tebal tahan air bermotif minimalis.",
     price: 45000,
     stock: 12,
+    rt: "25",
     image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=400",
     discount: ""
   },
@@ -90,6 +93,7 @@ const PRODUCTS = [
     description: "Nasi goreng legenda dengan racikan bumbu rahasia Pak RT 26, dilengkapi telur mata sapi, suwiran ayam, acar dan kerupuk.",
     price: 18000,
     stock: 15,
+    rt: "26",
     image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&q=80&w=400",
     discount: "Diskon 10%"
   },
@@ -100,6 +104,7 @@ const PRODUCTS = [
     description: "Jasa pembersihan AC indoor & outdoor oleh teknisi berpengalaman warga RT 26. Dingin maksimal, hemat listrik, garansi 30 hari.",
     price: 75000,
     stock: 5,
+    rt: "26",
     image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400",
     discount: ""
   },
@@ -110,6 +115,7 @@ const PRODUCTS = [
     description: "Layanan cuci kering setrika kilat selesai dalam 6 jam. Harum, rapi, higienis, menggunakan deterjen ramah kulit.",
     price: 12000,
     stock: 10,
+    rt: "24",
     image: "https://images.unsplash.com/photo-1545173168-9f19072f1024?auto=format&fit=crop&q=80&w=400",
     discount: ""
   }
@@ -464,8 +470,95 @@ export default function BelanjaView({
   const [newProduct, setNewProduct] = useState({ name: "", price: "", description: "" });
   const [productImage, setProductImage] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const voucherScrollRef = useRef<HTMLDivElement>(null);
+  const [isVoucherDragging, setIsVoucherDragging] = useState(false);
+  const [voucherStartX, setVoucherStartX] = useState(0);
+  const [voucherScrollLeft, setVoucherScrollLeft] = useState(0);
+
+  const voucherScrollRef2 = useRef<HTMLDivElement>(null);
+  const [isVoucherDragging2, setIsVoucherDragging2] = useState(false);
+  const [voucherStartX2, setVoucherStartX2] = useState(0);
+  const [voucherScrollLeft2, setVoucherScrollLeft2] = useState(0);
+
+  const voucherScrollRef3 = useRef<HTMLDivElement>(null);
+  const [isVoucherDragging3, setIsVoucherDragging3] = useState(false);
+  const [voucherStartX3, setVoucherStartX3] = useState(0);
+  const [voucherScrollLeft3, setVoucherScrollLeft3] = useState(0);
+
+  const onVoucherMouseDown3 = (e: React.MouseEvent) => {
+    if (!voucherScrollRef3.current) return;
+    setIsVoucherDragging3(true);
+    setVoucherStartX3(e.pageX - voucherScrollRef3.current.offsetLeft);
+    setVoucherScrollLeft3(voucherScrollRef3.current.scrollLeft);
+  };
+
+  const onVoucherMouseLeave3 = () => {
+    setIsVoucherDragging3(false);
+  };
+
+  const onVoucherMouseUp3 = () => {
+    setIsVoucherDragging3(false);
+  };
+
+  const onVoucherMouseMove3 = (e: React.MouseEvent) => {
+    if (!isVoucherDragging3 || !voucherScrollRef3.current) return;
+    e.preventDefault();
+    const x = e.pageX - voucherScrollRef3.current.offsetLeft;
+    const walk = (x - voucherStartX3) * 2; // Scroll speed
+    voucherScrollRef3.current.scrollLeft = voucherScrollLeft3 - walk;
+  };
+
+
+  const onVoucherMouseDown2 = (e: React.MouseEvent) => {
+    if (!voucherScrollRef2.current) return;
+    setIsVoucherDragging2(true);
+    setVoucherStartX2(e.pageX - voucherScrollRef2.current.offsetLeft);
+    setVoucherScrollLeft2(voucherScrollRef2.current.scrollLeft);
+  };
+
+  const onVoucherMouseLeave2 = () => {
+    setIsVoucherDragging2(false);
+  };
+
+  const onVoucherMouseUp2 = () => {
+    setIsVoucherDragging2(false);
+  };
+
+  const onVoucherMouseMove2 = (e: React.MouseEvent) => {
+    if (!isVoucherDragging2 || !voucherScrollRef2.current) return;
+    e.preventDefault();
+    const x = e.pageX - voucherScrollRef2.current.offsetLeft;
+    const walk = (x - voucherStartX2) * 2; // Scroll speed
+    voucherScrollRef2.current.scrollLeft = voucherScrollLeft2 - walk;
+  };
+
+
+  const onVoucherMouseDown = (e: React.MouseEvent) => {
+    if (!voucherScrollRef.current) return;
+    setIsVoucherDragging(true);
+    setVoucherStartX(e.pageX - voucherScrollRef.current.offsetLeft);
+    setVoucherScrollLeft(voucherScrollRef.current.scrollLeft);
+  };
+
+  const onVoucherMouseLeave = () => {
+    setIsVoucherDragging(false);
+  };
+
+  const onVoucherMouseUp = () => {
+    setIsVoucherDragging(false);
+  };
+
+  const onVoucherMouseMove = (e: React.MouseEvent) => {
+    if (!isVoucherDragging || !voucherScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - voucherScrollRef.current.offsetLeft;
+    const walk = (x - voucherStartX) * 2; // Scroll speed
+    voucherScrollRef.current.scrollLeft = voucherScrollLeft - walk;
+  };
+
   const [localOrders, setLocalOrders] = useState([1, 2, 3]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRT, setSelectedRT] = useState("Semua");
   const [currentBanner, setCurrentBanner] = useState(0);
 
   const handleSendChatMessage = (text: string) => {
@@ -505,7 +598,12 @@ export default function BelanjaView({
   };
 
   const filteredProducts = (products.length > 0 ? products : localProducts).filter(p => {
+    const pRT = p.rt || (p.tenantId && p.tenantId.toLowerCase().includes("rt") 
+       ? p.tenantId.toLowerCase().split("rt")[1]?.split("_")[0]?.replace(/[^0-9]/g, "") 
+       : "");
+    
     const matchesCategory = activeCategory === "Semua" || p.category === activeCategory;
+    const matchesRT = selectedRT === "Semua" || p.rt === selectedRT || pRT === selectedRT;
     const matchesSearch = (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
                          (p.description || "").toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -517,7 +615,7 @@ export default function BelanjaView({
       matchesFeed = p.discount !== undefined; // Assume mall products have discounts for demo
     }
 
-    return matchesCategory && matchesSearch && matchesFeed;
+    return matchesCategory && matchesRT && matchesSearch && matchesFeed;
   });
 
   const handleQuickLink = (label: string) => {
@@ -586,6 +684,15 @@ export default function BelanjaView({
 
   const nextBanner = () => setCurrentBanner((prev) => (prev + 1) % BANNERS.length);
   const prevBanner = () => setCurrentBanner((prev) => (prev - 1 + BANNERS.length) % BANNERS.length);
+
+  const scrollContainer = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
+    if (ref.current) {
+      const { scrollLeft, clientWidth } = ref.current;
+      const scrollAmount = clientWidth * 0.7;
+      const targetScroll = direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount;
+      ref.current.scrollTo({ left: targetScroll, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="bg-[#f8fafc] min-h-screen pb-24 animate-in fade-in duration-700 overflow-x-hidden">
@@ -664,12 +771,35 @@ export default function BelanjaView({
                   </h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Geser kanan-kiri untuk kupon eksklusif</p>
                 </div>
-                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse">
-                  Semua Voucher Aktif
-                </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 mr-2">
+                    <button 
+                      onClick={() => scrollContainer(voucherScrollRef, 'left')}
+                      className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-90"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-180" />
+                    </button>
+                    <button 
+                      onClick={() => scrollContainer(voucherScrollRef, 'right')}
+                      className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-90"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse">
+                    Semua Voucher Aktif
+                  </span>
+                </div>
               </div>
 
-              <div className="flex gap-5 overflow-x-auto pb-6 pt-2 px-2 no-scrollbar scroll-smooth snap-x">
+              <div 
+                ref={voucherScrollRef}
+                onMouseDown={onVoucherMouseDown}
+                onMouseLeave={onVoucherMouseLeave}
+                onMouseUp={onVoucherMouseUp}
+                onMouseMove={onVoucherMouseMove}
+                className={`flex gap-5 overflow-x-auto pb-6 pt-2 px-2 no-scrollbar snap-x ${isVoucherDragging ? 'cursor-grabbing select-none scroll-auto' : 'cursor-grab scroll-smooth'}`}
+              >
                 {THEMATIC_VOUCHERS.map((voucher, idx) => {
                   const premium = getPremiumStyle(voucher.promoCode);
                   return (
@@ -849,7 +979,29 @@ export default function BelanjaView({
           ))}
         </div>
 
-
+        {/* RT Filter Selector */}
+        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 mt-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full shrink-0">
+             <Filter className="w-3 h-3 text-emerald-600" />
+             <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Filter RT:</span>
+          </div>
+          {["Semua", "24", "25", "26"].map((rt) => (
+            <button
+              key={rt}
+              onClick={() => {
+                setSelectedRT(rt);
+                showNotification?.(`Menampilkan Lapak dari RT ${rt === "Semua" ? "Seluruh Wilayah" : rt}`, "info");
+              }}
+              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border ${
+                selectedRT === rt 
+                  ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-600/30" 
+                  : "bg-white border-slate-100 text-slate-500 hover:border-emerald-200"
+              }`}
+            >
+              {rt === "Semua" ? "Semua RT" : `RT ${rt}`}
+            </button>
+          ))}
+        </div>
 
         {/* Recent Checks Section */}
         {RECENT_CHECKS.length > 0 && (
@@ -863,7 +1015,14 @@ export default function BelanjaView({
                 <ChevronRight className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+            <div 
+              ref={voucherScrollRef3}
+              onMouseDown={onVoucherMouseDown3}
+              onMouseLeave={onVoucherMouseLeave3}
+              onMouseUp={onVoucherMouseUp3}
+              onMouseMove={onVoucherMouseMove3}
+              className={`flex gap-4 overflow-x-auto pb-4 no-scrollbar ${isVoucherDragging3 ? 'cursor-grabbing select-none scroll-auto' : 'cursor-grab scroll-smooth'}`}
+            >
               {RECENT_CHECKS.map((item) => (
                 <div 
                   key={item.id} 
@@ -1279,6 +1438,7 @@ export default function BelanjaView({
                         description: newProduct.description,
                         category: "Sembako", // Default category for new products in demo
                         stock: 10,
+                        rt: "26", // Default RT for new products added via UI in RT 26 context
                         image: productImage || 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&q=80&w=400',
                         discount: ""
                       };
@@ -2403,10 +2563,33 @@ export default function BelanjaView({
                 <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
                   <span>✨</span> Semua Voucher & Kupon Aktif (Geser)
                 </h3>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Geser Kanan-Kiri</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => scrollContainer(voucherScrollRef2, 'left')}
+                      className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm active:scale-90"
+                    >
+                      <ChevronRight className="w-3 h-3 rotate-180" />
+                    </button>
+                    <button 
+                      onClick={() => scrollContainer(voucherScrollRef2, 'right')}
+                      className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm active:scale-90"
+                    >
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Geser Kanan-Kiri</span>
+                </div>
               </div>
 
-              <div className="flex gap-5 overflow-x-auto pb-6 pt-2 px-2 no-scrollbar scroll-smooth snap-x">
+              <div 
+                ref={voucherScrollRef2}
+                onMouseDown={onVoucherMouseDown2}
+                onMouseLeave={onVoucherMouseLeave2}
+                onMouseUp={onVoucherMouseUp2}
+                onMouseMove={onVoucherMouseMove2}
+                className={`flex gap-5 overflow-x-auto pb-6 pt-2 px-2 no-scrollbar snap-x ${isVoucherDragging2 ? 'cursor-grabbing select-none scroll-auto' : 'cursor-grab scroll-smooth'}`}
+              >
                 {THEMATIC_VOUCHERS.map((voucher, idx) => {
                   const premium = getPremiumStyle(voucher.promoCode);
                   return (

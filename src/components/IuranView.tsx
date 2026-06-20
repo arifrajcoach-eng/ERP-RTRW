@@ -20,7 +20,9 @@ import {
   Edit2,
   Trash2,
   Printer,
-  FileDown
+  FileDown,
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -860,19 +862,29 @@ export function IuranView({
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
           
           <div className="relative z-10 mb-10">
-            <h3 className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200 shrink-0">
-                <Users className="w-6 h-6 text-white" />
+            <div className="flex justify-between items-start">
+              <h3 className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200 shrink-0">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl md:text-2xl font-black text-slate-800 tracking-tighter uppercase italic leading-tight">
+                    Rekapitulasi
+                  </span>
+                  <span className="text-emerald-600 text-xl md:text-2xl font-black tracking-tighter uppercase italic leading-tight">
+                    Iuran Wajib
+                  </span>
+                </div>
+              </h3>
+              <div className="flex gap-2">
+                <button className="p-3 bg-white border border-slate-100 rounded-2xl hover:bg-rose-50 transition-colors shadow-sm text-rose-500 hover:text-rose-600">
+                  <FileText className="w-5 h-5" />
+                </button>
+                <button className="p-3 bg-white border border-slate-100 rounded-2xl hover:bg-emerald-50 transition-colors shadow-sm text-emerald-600 hover:text-emerald-700">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </button>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xl md:text-2xl font-black text-slate-800 tracking-tighter uppercase italic leading-tight">
-                  Rekapitulasi
-                </span>
-                <span className="text-emerald-600 text-xl md:text-2xl font-black tracking-tighter uppercase italic leading-tight">
-                  Iuran Wajib
-                </span>
-              </div>
-            </h3>
+            </div>
             <p className="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest max-w-2xl leading-relaxed">
               Monitoring kepatuhan iuran bulanan warga tahun <span className="text-emerald-500 font-black">{selectedYear}</span>. Pastikan semua warga berkontribusi aktif.
             </p>
@@ -889,10 +901,16 @@ export function IuranView({
                 </tr>
               </thead>
               <tbody className="font-medium text-slate-600 text-xs">
-                {wargaData.filter((w:any) => {
-                  const p = (w.posisi || w.posisiKeluarga || w.status_keluarga || "").toLowerCase();
-                  return p.includes('kepala keluarga') || p.includes('kk') || p.includes('pemilik');
-                }).sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || "")).map((w: any, index: number) => (
+                {Array.from(new Map(
+                  wargaData
+                    .filter((w:any) => {
+                      const p = (w.posisi || w.posisiKeluarga || w.status_keluarga || "").toLowerCase();
+                      return p.includes('kepala keluarga') || p.includes('kk') || p.includes('pemilik');
+                    })
+                    .map(w => [w.nik || w.id || w.docId, w])
+                ).values())
+                .sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || ""))
+                .map((w: any, index: number) => (
                   <tr key={`kk-${index}`} className="hover:bg-blue-50/30 transition-all duration-300">
                     <td className="px-8 py-7 border-b border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50/10 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.02)] transition-colors">
                       <div className="font-black text-slate-800 tracking-tight text-sm uppercase italic">{w.nama}</div>

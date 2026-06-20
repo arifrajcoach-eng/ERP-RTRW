@@ -2,19 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
-import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer, RefreshCw } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer, RefreshCw, Eye, User, ShieldCheck } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
 
-export function ComplaintView({ currentUser, showNotification, handleFirestoreError, settings, complaintsData }: any) {
+export function ComplaintView({ 
+  currentUser, 
+  showNotification, 
+  handleFirestoreError, 
+  settings, 
+  complaintsData, 
+  wargaData,
+  verifikasiWargaData = [],
+  quotaExceeded = false
+}: any) {
   const [jenisKeluhan, setJenisKeluhan] = useState('Kebersihan');
   const [deskripsi, setDeskripsi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewingReporter, setViewingReporter] = useState<any>(null);
 
   // Filter complaints for regular users to only show their own, unless they are pengurus
-  const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
+  const role = (currentUser?.role || "").toUpperCase();
+  const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS', 'OPERATOR'].some(r => role.includes(r)) || role === 'PENGURUS';
   
   const complaints = isAtLeastPengurus 
     ? (complaintsData || [])
-    : (complaintsData || []).filter((c: any) => c.userId === currentUser.uid || c.userId === currentUser.id_user);
+    : (complaintsData || []).filter((c: any) => c.userId === (currentUser?.uid || currentUser?.id_user || currentUser?.nik || 'anonymous'));
 
   const handleUpdateStatus = async (complaintId: string, newStatus: string) => {
     try {
@@ -140,8 +152,14 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
     try {
       await addDoc(collection(db, 'complaints'), {
         tenantId: currentUser.tenantId,
-        userId: currentUser.uid || 'anonymous',
+        userId: currentUser.uid || currentUser.id_user || currentUser.nik || 'anonymous',
         namaWarga: currentUser.name || currentUser.nama || 'Warga',
+        rt: currentUser.rt || '',
+        rw: currentUser.rw || '',
+        blok: currentUser.blok || '',
+        nomor: currentUser.nomor || currentUser.no_rumah || '',
+        noRumah: currentUser.noRumah || currentUser.no_rumah || currentUser.nomor || '',
+        hp: currentUser.hp || currentUser.wa || currentUser.telephone || '',
         jenisKeluhan,
         deskripsi,
         status: 'PENDING',
@@ -231,6 +249,17 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
         </div>
 
         <div className="grid grid-cols-1 gap-6">
+          {quotaExceeded && (
+            <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-3xl flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-red-800 dark:text-red-200 uppercase tracking-tight">Batas Penggunaan Tercapai (Quota Exceeded)</p>
+                <p className="text-[10px] text-red-600 dark:text-red-400 font-bold uppercase tracking-widest mt-0.5">Beberapa identitas warga mungkin tidak muncul sementara karena akses ke database dibatasi oleh Google Cloud.</p>
+              </div>
+            </div>
+          )}
           {complaints.length === 0 && (
             <div className="text-center py-24 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
               <MessageSquare className="w-16 h-16 text-slate-200 dark:text-slate-800 mx-auto mb-6 opacity-50" />
@@ -239,7 +268,39 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
             </div>
           )}
           
-          {complaints.map((c: any, i: number) => (
+          {complaints.map((c: any, i: number) => {
+            const searchId = String(c.userId || "").trim();
+            const reporterInfoDataWarga = wargaData 
+              ? wargaData.find((w: any) => 
+                  String(w.docId || "").trim() === searchId || 
+                  String(w.id || "").trim() === searchId || 
+                  String(w.nik || "").trim() === searchId || 
+                  String(w.id_user || "").trim() === searchId ||
+                  String(w.authUid || "").trim() === searchId
+                ) 
+              : null;
+              
+            const reporterInfoVerifikasi = verifikasiWargaData
+              ? verifikasiWargaData.find((w: any) => 
+                  String(w.docId || "").trim() === searchId || 
+                  String(w.id || "").trim() === searchId || 
+                  String(w.nik || "").trim() === searchId || 
+                  String(w.authUid || "").trim() === searchId
+                )
+              : null;
+
+            const reporterInfo = reporterInfoDataWarga || reporterInfoVerifikasi;
+            
+            const displayHP = c.hp || reporterInfo?.hp || reporterInfo?.wa || reporterInfo?.telephone || reporterInfo?.no_hp || "";
+            const displayRT = c.rt || reporterInfo?.rt || "";
+            const displayRW = c.rw || reporterInfo?.rw || "";
+            const displayBlok = c.blok || reporterInfo?.blok || "";
+            const displayNomor = c.noRumah || c.nomor || reporterInfo?.no_rumah || reporterInfo?.nomor || "";
+            const displayNIK = reporterInfo?.nik || reporterInfo?.id_user || reporterInfo?.idWarga || (String(c.userId || "").length > 10 ? c.userId : "");
+            const displayKK = reporterInfo?.kk || reporterInfo?.no_kk || reporterInfo?.kodeKeluarga || "";
+            const displayNama = reporterInfo?.nama || reporterInfo?.name || reporterInfo?.namaWarga || c.namaWarga || "Warga";
+
+            return (
             <div 
               key={c.id} 
               className="p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:border-brand-blue/30 group/card relative overflow-hidden"
@@ -265,11 +326,51 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
                   <div className="pt-4 border-t border-slate-50 dark:border-slate-800">
                     <div className="flex items-center gap-3">
                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-brand-blue font-black text-xs uppercase font-elegant">
-                          {c.namaWarga?.charAt(0) || 'W'}
+                          {displayNama?.charAt(0) || 'W'}
                        </div>
                        <div>
-                          <p className="text-[12px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">{c.namaWarga}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">ID PELAPOR: {c.userId?.substring(0,8)}...</p>
+                          <div className="flex items-center gap-2">
+                             <p className="text-[12px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">{displayNama}</p>
+                             {isAtLeastPengurus && (
+                               <button 
+                                 onClick={() => setViewingReporter({
+                                   ...c,
+                                   namaWarga: displayNama,
+                                   hp: displayHP,
+                                   rt: displayRT,
+                                   rw: displayRW,
+                                   blok: displayBlok,
+                                   noRumah: displayNomor,
+                                   nik: displayNIK,
+                                   kk: displayKK
+                                 })}
+                                 className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-brand-blue/10 text-slate-400 hover:text-brand-blue rounded-lg transition-all"
+                                 title="Lihat Detail Pelapor"
+                               >
+                                 <Eye className="w-3.5 h-3.5" />
+                               </button>
+                             )}
+                          </div>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-ellipsis overflow-hidden">ID PELAPOR: {String(c.userId || "").substring(0,8)}...</p>
+                          {isAtLeastPengurus && (
+                             <div className="flex flex-wrap gap-1.5 mt-2">
+                               {displayHP && (
+                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-50 text-green-700 text-[8px] font-black rounded border border-green-100 uppercase tracking-tighter">
+                                    WA: {displayHP}
+                                 </span>
+                               )}
+                               {displayRT && (
+                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[8px] font-black rounded border border-blue-100 uppercase tracking-tighter">
+                                    WILAYAH: RT {displayRT} / RW {displayRW}
+                                 </span>
+                               )}
+                               {(displayBlok || displayNomor) && (
+                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 text-slate-600 text-[8px] font-black rounded border border-slate-200 uppercase tracking-tighter">
+                                    ALAMAT: {displayBlok} {displayNomor}
+                                 </span>
+                               )}
+                             </div>
+                          )}
                        </div>
                     </div>
                   </div>
@@ -298,7 +399,13 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
                     'bg-slate-900 text-white border-slate-700 shadow-slate-900/20'
                   }`}>
                     {c.status === 'DONE' || c.status === 'Selesai' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                    <span>{c.status}</span>
+                    <span>
+                      {c.status === 'PENDING' ? 'Laporan Terkirim ke RT/RW' : 
+                       c.status === 'PROCESS' ? 'Sedang Diproses' :
+                       c.status === 'DONE' ? 'Selesai' :
+                       c.status === 'REJECTED' ? 'Ditolak' : 
+                       c.status}
+                    </span>
                   </div>
 
                   <div className="flex gap-2">
@@ -358,9 +465,87 @@ export function ComplaintView({ currentUser, showNotification, handleFirestoreEr
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+      {/* Reporter Detail Modal */}
+      <AnimatePresence>
+        {viewingReporter && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewingReporter(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden shadow-2xl"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                     <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Detail Pelapor</h3>
+                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Identitas Penanggung Jawab Laporan</p>
+                  </div>
+                  <button 
+                    onClick={() => setViewingReporter(null)}
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  >
+                    <X className="w-6 h-6 text-slate-400" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex items-center gap-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="w-16 h-16 rounded-2xl bg-brand-blue flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-brand-blue/20">
+                      {viewingReporter.namaWarga?.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{viewingReporter.namaWarga}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <ShieldCheck className="w-3 h-3 text-green-500" />
+                        <p className="text-[10px] font-bold text-brand-blue uppercase tracking-widest">Warga Terverifikasi</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {[
+                      { label: 'Nomor NIK', value: viewingReporter.nik || viewingReporter.userId || '-', icon: <User className="w-4 h-4" /> },
+                      { label: 'Nomor KK', value: viewingReporter.kk || '-', icon: <AlertCircle className="w-4 h-4" /> },
+                      { label: 'Nomor HP / WhatsApp', value: viewingReporter.hp || '-', icon: <MessageSquare className="w-4 h-4" /> },
+                      { label: 'Wilayah (RT / RW)', value: (viewingReporter.rt || viewingReporter.rw) ? `RT ${viewingReporter.rt || '-'} / RW ${viewingReporter.rw || '-'}` : '-', icon: <Clock className="w-4 h-4" /> },
+                      { label: 'Alamat / Blok', value: (viewingReporter.blok || viewingReporter.noRumah) ? `${viewingReporter.blok || ''} ${viewingReporter.noRumah || ''}`.trim() : '-', icon: <AlertCircle className="w-4 h-4" /> }
+                    ].map((item, idx) => (
+                      <div key={idx} className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-brand-blue/30 transition-all group">
+                        <div className="flex items-center gap-3 mb-1">
+                          <div className="text-slate-400 group-hover:text-brand-blue transition-colors">
+                            {item.icon}
+                          </div>
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{item.label}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 ml-7">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setViewingReporter(null)}
+                  className="w-full mt-8 py-4 bg-slate-900 dark:bg-brand-blue text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-slate-900/10 dark:shadow-brand-blue/20 transform active:scale-95 transition-all"
+                >
+                  Tutup Detail
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

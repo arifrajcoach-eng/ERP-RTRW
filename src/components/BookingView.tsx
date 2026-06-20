@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
-import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer, ShieldCheck } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer, ShieldCheck, Eye } from 'lucide-react';
 
-export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, bookingsData }: any) {
+export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, bookingsData, wargaData }: any) {
   const [namaFasilitas, setNamaFasilitas] = useState('Aula RW');
   const [tanggal, setTanggal] = useState('');
   const [keperluan, setKeperluan] = useState('');
@@ -289,6 +289,21 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
                     </div>
 
                     <div className="flex gap-3">
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          const warga = wargaData.find((w: any) => w.id_user === b.userId || w.uid === b.userId || w.nik === b.userId);
+                          if (!warga) {
+                            alert(`Identitas Pemohon (Data tidak ditemukan):\nNama: ${b.namaWarga}\nUser ID: ${b.userId}`);
+                            return;
+                          }
+                          alert(`Identitas Pemohon:\nNama: ${warga.nama || b.namaWarga}\nNIK: ${warga.nik || '-'}\nAlamat: ${warga.alamat || '-'}\nNo. HP: ${warga.no_hp || '-'}\nPekerjaan: ${warga.pekerjaan || '-'}\nEmail: ${warga.email || '-'}`);
+                        }}
+                        className="p-4 bg-white dark:bg-slate-800 text-slate-400 hover:text-sky-600 hover:border-sky-600/30 border border-slate-200 dark:border-slate-700 rounded-2xl transition-all shadow-sm hover:shadow-xl active:scale-95"
+                        title="Lihat Identitas Pemohon"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
                       {(b.status === 'APPROVED' || b.status === 'Disetujui') && (
                          <button 
                            onClick={(e) => { e.stopPropagation(); handlePrintBooking(b); }}

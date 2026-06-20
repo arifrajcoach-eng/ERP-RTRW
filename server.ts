@@ -6,12 +6,21 @@ import * as dotenv from "dotenv";
 import crypto from "crypto";
 import { GoogleGenAI, Modality } from "@google/genai";
 
-dotenv.config();
+// Safe CJS globals
+const __dirname = process.cwd();
+const __filename = path.join(__dirname, 'server.ts');
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
-const firebaseConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "firebase-applet-config.json"), "utf8"));
+
+const configPath = path.resolve(process.cwd(), "firebase-applet-config.json");
+if (!fs.existsSync(configPath)) {
+  throw new Error(`Config file not found at: ${configPath}`);
+}
+const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
 import cron from "node-cron";
 
 // Initialize Firebase Admin (Only if credentials provided, otherwise fallback)
@@ -1052,7 +1061,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
     });
   } else {
     // In production (bundled with esbuild to dist/server.cjs), __dirname is the dist folder itself
-    const buildPath = __dirname;
+    const buildPath = path.resolve(process.cwd(), "dist");
     app.use(express.static(buildPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(buildPath, "index.html"));

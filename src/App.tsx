@@ -1984,7 +1984,12 @@ export default function App() {
   // 1. Warga & Users Sync
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
-    if (activeTab !== "warga" && activeTab !== "dashboard" && activeTab !== "users") return;
+    if (quotaExceeded) return;
+    
+    // We want these central collections to stay synced even if we move between tabs
+    // that rely on them (warga, dashboard, users, complaint, search, etc)
+    const centralTabs = ["warga", "dashboard", "users", "complaint", "landing", "search"];
+    if (!centralTabs.includes(activeTab || "")) return;
 
     const tIds = activeTenantIds;
     const unsubs: (() => void)[] = [];
@@ -2004,7 +2009,7 @@ export default function App() {
             const filtered = prev.filter(p => !chunk.includes(p.tenantId));
             return [...filtered, ...snap.docs.map(doc => ({ docId: doc.id, ...doc.data() } as any))];
           });
-        }));
+        }, (err) => handleFirestoreError(err, "list", "data_warga")));
       });
     } else {
       setWargaData([]);
@@ -2014,11 +2019,11 @@ export default function App() {
       if (currentUser?.isSuperAdmin) {
         unsubs.push(onSnapshot(query(collection(db, "users")), (snap) => {
           setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
-        }));
+        }, (err) => handleFirestoreError(err, "list", "users")));
       } else if (currentUser?.tenantId) {
         unsubs.push(onSnapshot(query(collection(db, "users"), where("tenantId", "==", currentUser?.tenantId || wargaAuth?.tenantId || "")), (snap) => {
           setUsersData(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
-        }));
+        }, (err) => handleFirestoreError(err, "list", "users")));
       } else if (tIds.length > 0) {
         const chunks = chunkArray(tIds, 10);
         chunks.forEach(chunk => {
@@ -2027,22 +2032,22 @@ export default function App() {
               const filtered = prev.filter(p => !chunk.includes(p.tenantId));
               return [...filtered, ...snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any))];
             });
-          }));
+          }, (err) => handleFirestoreError(err, "list", "users")));
         });
       }
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray]);
+  }, [activeTenantIds, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
 
   // 2. Financial Sync (Kas, Iuran, PPOB)
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
-
-    const tIds = activeTenantIds;
+    if (quotaExceeded) return;
     const rt = (currentUser?.role?.toUpperCase() === "RT" || currentUser?.role?.toUpperCase() === "WARGA" || !!wargaAuth) 
       ? getQueryRtNormalized(currentUser?.rt || wargaAuth?.rt) 
       : null;
+    const tIds = activeTenantIds;
     const unsubs: (() => void)[] = [];
     
     if (tIds.length > 0) {
@@ -2068,11 +2073,12 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTenantIds, currentUser?.uid, hasFullAccess, chunkArray]);
+  }, [activeTenantIds, currentUser?.uid, hasFullAccess, chunkArray, quotaExceeded]);
 
   // 3. Posyandu & Health Sync
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
+    if (quotaExceeded) return;
     if (activeTab !== "posyandu") return;
 
     const tIds = activeTenantIds;
@@ -2098,11 +2104,12 @@ export default function App() {
     });
 
     return () => unsubs.forEach(unsub => unsub());
-  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray]);
+  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray, quotaExceeded]);
 
   // 4. Inventory, Trash Bank, Store & more
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
+    if (quotaExceeded) return;
     const tIds = activeTenantIds;
     if (tIds.length === 0) return;
     const tIdsChunks = chunkArray(tIds, 10);
@@ -2153,11 +2160,12 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray]);
+  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
 
   // 5. Surat, Voting, Booking & Misc Sync
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
+    if (quotaExceeded) return;
     const tIds = activeTenantIds;
     if (tIds.length === 0) return;
     const unsubs: (() => void)[] = [];
@@ -2201,14 +2209,20 @@ export default function App() {
     // Complaints
     if (activeTab === "complaint" || activeTab === "dashboard" || activeTab === "ai-bot") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", chunk), limit(500)), snap => setComplaintsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", chunk), limit(500)), 
+           snap => setComplaintsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))]),
+           err => handleFirestoreError(err, "list", "complaints")
+         ));
       });
     }
 
     // Verifikasi
     if (activeTab === "verifikasi" || activeTab === "dashboard") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk), limit(500)), snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk), limit(500)), 
+           snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))]),
+           err => handleFirestoreError(err, "list", "verifikasi_warga")
+         ));
       });
     }
 
@@ -2223,15 +2237,12 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTab, activeTenantIds, currentUser?.uid]);
+  }, [activeTab, activeTenantIds, currentUser?.uid, quotaExceeded, wargaAuth, chunkArray]);
 
   // Real-time synchronization of all tenants
   useEffect(() => {
-    if (!currentUser && !wargaAuth) return;
+    if ((!currentUser && !wargaAuth) || quotaExceeded) return;
     
-    // For normal users, we might want to restrict this, but for hierarchy to work 
-    // in activeTenantIds, we need at least the parent/child structure.
-    // In this app, many views depend on tenantsData for name mapping and hierarchy.
     const q = query(collection(db, "tenants"), orderBy("createdAt", "desc"));
     const unsubTenants = onSnapshot(q, (snap) => {
       setTenantsData(snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() })));
@@ -2240,7 +2251,7 @@ export default function App() {
     });
 
     return () => unsubTenants();
-  }, [currentUser, wargaAuth]);
+  }, [currentUser, wargaAuth, quotaExceeded]);
 
   // 6. Automation: Tenant Subscription Follow-up (2 months after expiration)
   useEffect(() => {
@@ -4686,13 +4697,16 @@ export default function App() {
               />
             )
           )}
-          {activeTab === "complaint" && (
+          {activeTab === "complaint" && (currentUser || wargaAuth) && (
             <ComplaintView
-              currentUser={currentUser}
+              currentUser={currentUser || wargaAuth}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               settings={settings}
               complaintsData={complaintsData}
+              wargaData={wargaData}
+              verifikasiWargaData={verifikasiWargaData}
+              quotaExceeded={quotaExceeded}
             />
           )}
           {activeTab === "booking" && (
@@ -4702,6 +4716,7 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               settings={settings}
               bookingsData={bookingsData}
+              wargaData={wargaData}
             />
           )}
           {activeTab === "kop-template" && (
@@ -7326,6 +7341,15 @@ function LoginView({
         }
         const userCredential = await signInWithEmailAndPassword(auth, loginEmail, targetPass);
         const user = userCredential.user;
+        
+        // Check for email verification
+        if (!user.emailVerified) {
+             // Optional: Handle this based on project requirements, request asks for "email terdaftar"
+             // if user.emailVerified is not needed, we can skip or just ensure the email exists.
+             // Given the instructions, let's just proceed for now as most users are pre-registered
+             console.log("User email verification status:", user.emailVerified);
+        }
+
         const userProfileRef = doc(db, "users", user.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         const userData = userProfileSnap.data();
@@ -7341,6 +7365,26 @@ function LoginView({
         if (userData && !isMaster && userData.tenantId !== tenantInput) {
             await signOut(auth);
             throw new Error(`Tenant ID tidak sesuai. Akun Anda terdaftar di wilayah ${userData.tenantId}, bukan ${tenantInput}. Harap periksa Kode Area Wilayah.`);
+        }
+
+        // --- Package Check: Ensure minimal STARTER package ---
+        if (userData && userData.tenantId && !isMaster) {
+            const tenantRef = doc(db, "tenants", userData.tenantId);
+            const tenantSnap = await getDoc(tenantRef);
+            if (tenantSnap.exists()) {
+                const tenantData = tenantSnap.data();
+                const status = (tenantData?.status || 'STARTER').toUpperCase();
+                // Valid starter/allowed statuses:
+                const validStatuses = ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE', 'FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC'];
+                if (!validStatuses.includes(status)) {
+                    await signOut(auth);
+                    throw new Error("Akun Anda tidak memiliki langganan aktif yang valid (Minimal Paket Starter). Silakan hubungi admin.");
+                }
+            } else {
+                 // No tenant found - shouldn't happen for valid users, but handle it
+                 await signOut(auth);
+                 throw new Error("Data wilayah tidak ditemukan.");
+            }
         }
         
         // Ensure the spinner stops

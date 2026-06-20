@@ -1099,25 +1099,24 @@ export function KasView({
             
             <div className="flex gap-3 w-full lg:w-auto">
               <input type="file" ref={scanInputRef} className="hidden" accept="image/*,application/pdf" capture="environment" onChange={handleScanReceipt} />
+              
+              <button
+                onClick={() => scanInputRef.current?.click()}
+                disabled={isScanning}
+                className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 text-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-400/30 group disabled:opacity-50"
+              >
+                {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg group-hover:bg-brand-blue/10 transition-colors"><Camera className="w-3.5 h-3.5 text-brand-blue" /></div>}
+                {isScanning ? "Memindai..." : "AI SCAN STRUK"}
+              </button>
+              
               {isPengurus && (
-                <>
-                  <button
-                    onClick={() => scanInputRef.current?.click()}
-                    disabled={isScanning}
-                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 text-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-400/30 group disabled:opacity-50"
-                  >
-                    {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg group-hover:bg-brand-blue/10 transition-colors"><Camera className="w-3.5 h-3.5 text-brand-blue" /></div>}
-                    {isScanning ? "Memindai..." : "AI SCAN STRUK"}
-                  </button>
-                  
-                  <button
-                    onClick={handleOpenNewKas}
-                    className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-blue-500/30 active:scale-95 shadow-xl shadow-blue-500/20 group"
-                  >
-                    <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> 
-                    ENTRI KAS BARU
-                  </button>
-                </>
+                <button
+                  onClick={handleOpenNewKas}
+                  className="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.05] hover:shadow-2xl hover:shadow-blue-500/30 active:scale-95 shadow-xl shadow-blue-500/20 group"
+                >
+                  <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> 
+                  ENTRI KAS BARU
+                </button>
               )}
             </div>
           </div>

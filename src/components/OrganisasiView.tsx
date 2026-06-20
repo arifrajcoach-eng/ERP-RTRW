@@ -118,6 +118,10 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
   };
 
   const loadDefaultPresets = async () => {
+    if (!isPengurus) {
+      showNotification("Hanya pengurus yang dapat memuat preset.", "error");
+      return;
+    }
     const defaultPreset: Member[] = [
       {
         id: "m-1",
@@ -210,6 +214,10 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPengurus) {
+      showNotification("Hanya pengurus yang dapat mengubah struktur organisasi.", "error");
+      return;
+    }
     if (!formName.trim() || !formRole.trim()) {
       showNotification("Nama dan Jabatan tidak boleh kosong", "error");
       return;
@@ -267,6 +275,10 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
   };
 
   const handleDelete = async (idOfMember: string) => {
+    if (!isPengurus) {
+      showNotification("Hanya pengurus yang dapat menghapus personel.", "error");
+      return;
+    }
     if (!confirm("Apakah Anda yakin ingin menghapus personel ini dari struktur organisasi?")) {
       return;
     }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   PlusCircle,
   UserPlus,
@@ -43,6 +43,10 @@ export default function UsersView({
   const [showRTForm, setShowRTForm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  const sortedWarga = useMemo(() => {
+    return [...wargaData].sort((a, b) => (a.nama || "").localeCompare(b.nama || ""));
+  }, [wargaData]);
 
   const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -377,7 +381,7 @@ export default function UsersView({
                     }}
                   >
                     <option value="">-- Pilih Warga --</option>
-                    {wargaData.map((w: any, idx: number) => (
+                    {sortedWarga.map((w: any, idx: number) => (
                       <option key={`${w.nik || w.id || 'no-id'}-${idx}`} value={w.nik}>
                         {w.nama} - {w.nik}
                       </option>
