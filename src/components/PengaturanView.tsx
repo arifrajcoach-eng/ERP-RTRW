@@ -33,7 +33,6 @@ interface PengaturanViewProps {
   handleFirestoreError: any;
   currentUser: any;
   setActiveTab: any;
-  onOpenSupabaseModal?: () => void;
 }
 
 const QuotaProgress = ({
@@ -98,7 +97,6 @@ export default function PengaturanView({
   handleFirestoreError,
   currentUser,
   setActiveTab,
-  onOpenSupabaseModal,
 }: PengaturanViewProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState("");
@@ -1619,36 +1617,7 @@ export default function PengaturanView({
         </div>
       </div>
 
-      {/* Basis Data Dual-Engine Configuration */}
-      <div className="bg-slate-900 rounded-xl p-6 text-white shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 mb-8 border border-slate-700/50">
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400 border border-emerald-500/20">
-              <Database className="w-5 h-5 animate-pulse" />
-            </span>
-            <h3 className="text-sm font-bold tracking-wider text-white uppercase font-sans">
-              Basis Data Dual-Engine (Firebase & Supabase)
-            </h3>
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed max-w-xl font-medium">
-            Anda dapat menggunakan basis data default cloud gratis bawaan Google Cloud/Firestore, atau menghubungkannya dengan database PostgreSQL pribadi Anda dari **Supabase** untuk menikmati akses tak terbatas gratis selamanya.
-          </p>
-          <div className="flex items-center gap-2 pt-1.5">
-            <span className="text-[9px] font-mono uppercase px-2 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 rounded">
-              Engine Aktif: {localStorage.getItem("preferred_db_engine") === "supabase" ? "🟢 SUPABASE POSTGRES" : "🔥 FIREBASE FIRESTORE"}
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={onOpenSupabaseModal}
-          className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-lg text-xs uppercase tracking-widest transition-all cursor-pointer w-full md:w-auto"
-        >
-          Konfigurasi Supabase
-        </button>
-      </div>
-
       {/* Tombol Generate Dummy Data (Hanya untuk Testing) */}
-
       <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 flex flex-col items-center text-center">
         <h3 className="text-sm font-bold text-orange-800 mb-2">
           Alat Uji Coba: Generate Data Dummy

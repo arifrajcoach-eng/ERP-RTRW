@@ -129,35 +129,23 @@ import { motion, AnimatePresence } from "motion/react";
 import { db } from "./firebase";
 import { safeLocalStorage, safeSessionStorage } from "./lib/safeStorage";
 import { clearUserProfileCache, authInitTimeout } from "./lib/authSessionManager";
-import { 
-  dbGateway, 
-  gatewayDoc, 
-  gatewayCollection,
-  gatewayQuery,
-  gatewayWhere,
-  gatewayLimit,
-  gatewayOrderBy,
-  gatewayWriteBatch,
-  gatewayServerTimestamp,
-  gatewayGetDocFromServer
-} from "./lib/dbGateway";
-
-const collection = gatewayCollection;
-const doc = gatewayDoc;
-const query = gatewayQuery;
-const where = gatewayWhere;
-const limit = gatewayLimit;
-const orderBy = gatewayOrderBy;
-const getDocs = dbGateway.getDocs;
-const getDoc = dbGateway.getDoc;
-const onSnapshot = dbGateway.onSnapshot;
-const setDoc = dbGateway.setDoc;
-const updateDoc = dbGateway.updateDoc;
-const deleteDoc = dbGateway.deleteDoc;
-const writeBatch = gatewayWriteBatch;
-const serverTimestamp = gatewayServerTimestamp;
-const getDocFromServer = gatewayGetDocFromServer;
-
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  getDoc,
+  onSnapshot,
+  getDocFromServer,
+  writeBatch,
+  limit,
+  orderBy,
+  serverTimestamp,
+} from "firebase/firestore";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -184,8 +172,6 @@ import { RTRegistrationForm } from "./components/RTRegistrationForm";
 import { PricingSection } from "./components/PricingSection";
 import AIChatBot from "./components/AIChatBot";
 import UpgradeModal from "./components/UpgradeModal";
-import SupabaseConnectModal from "./components/SupabaseConnectModal";
-
 import LeadManagementView from "./components/LeadManagementView";
 import { GuestBookFormPublic } from "./components/GuestBookFormPublic";
 import { GuestBookQRCode } from "./components/GuestBookQRCode";
@@ -349,14 +335,7 @@ export default function App() {
   const [dbStatus, setDbStatus] = useState<
     "ONLINE" | "OFFLINE" | "UNAVAILABLE" | "INITIALIZING"
   >("INITIALIZING");
-  const [quotaExceeded, setQuotaExceeded] = useState(() => {
-    return localStorage.getItem("firestore_quota_exceeded") === "true" && localStorage.getItem("preferred_db_engine") !== "supabase";
-  });
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
-  const [activeDbEngine, setActiveDbEngine] = useState<"firestore" | "supabase">(() => {
-    return (localStorage.getItem("preferred_db_engine") as "firestore" | "supabase") || "firestore";
-  });
-
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [currentTenant, setCurrentTenant] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<{
@@ -417,26 +396,6 @@ export default function App() {
       showNotification("Kuota Firestore habis. Harap hubungi admin untuk meningkatkan paket atau mengaktifkan tagihan.", "error");
     }
   }, [quotaExceeded]);
-
-  // Handle live custom event triggers for firestore quota limit exhaustion
-  useEffect(() => {
-    const handleQuotaExceeded = () => {
-      console.warn("App Component: firestore_quota_exceeded custom event received.");
-      setQuotaExceeded(true);
-    };
-    window.addEventListener("firestore_quota_exceeded", handleQuotaExceeded);
-    return () => {
-      window.removeEventListener("firestore_quota_exceeded", handleQuotaExceeded);
-    };
-  }, []);
-
-  // Sync activeDbEngine selections with local storage and state overrides
-  useEffect(() => {
-    if (activeDbEngine === "supabase") {
-      localStorage.removeItem("firestore_quota_exceeded");
-      setQuotaExceeded(false);
-    }
-  }, [activeDbEngine]);
 
   // Auto-sync citizen session persistence
   useEffect(() => {
@@ -3245,7 +3204,7 @@ export default function App() {
 
   if (quotaExceeded) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 text-center bg-[radial-gradient(circle_at_center,rgba(0,191,255,0.06)_0%,rgba(15,23,42,1)_80%)]">
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
         <div className="w-24 h-24 bg-red-500/20 rounded-3xl flex items-center justify-center mb-8 animate-pulse border border-red-500/30">
           <AlertTriangle className="w-12 h-12 text-red-500" />
         </div>
@@ -3253,45 +3212,26 @@ export default function App() {
           Quota Terlampaui
         </h1>
         <div className="max-w-md bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-sm mb-8">
-          <p className="text-slate-300 leading-relaxed font-semibold">
-            Batas harian peninjauan gratis (Firebase Database Read Limits) untuk sistem gratisan wilayah ini telah tercapai.
+          <p className="text-slate-300 leading-relaxed font-medium">
+            Batas penggunaan gratis harian (Firestore Quota) untuk sistem ini
+            telah tercapai.
           </p>
-          <p className="text-slate-400 text-xs mt-4 leading-relaxed">
-            Tenang! Anda tetap dapat terus mengakses sistem dan mengelola warga dengan mengaktifkan basis data **Supabase gratis** Anda sendiri di bawah ini.
+          <p className="text-slate-400 text-sm mt-4 italic">
+            Akses data akan dipulihkan secara otomatis besok saat limit direset
+            oleh Google Cloud. Detail dapat dilihat di konsol Firebase (Spark
+            Plan).
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-4 bg-slate-900 border border-slate-800 text-slate-300 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            Refresh Halaman
-          </button>
-          <button
-            onClick={() => setIsSupabaseModalOpen(true)}
-            className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Database className="w-4 h-4" />
-            Hubungkan dengan Supabase (Bebas Batasan)
-          </button>
-        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-3"
+        >
+          <RefreshCw className="w-5 h-5" />
+          Refresh Halaman
+        </button>
         <p className="mt-12 text-white/20 font-mono text-[10px] uppercase tracking-[0.5em]">
-          Flexible Engine Recovery Mode v2.0
+          System Offline Mode v1.0
         </p>
-
-        <SupabaseConnectModal
-          isOpen={isSupabaseModalOpen}
-          onClose={() => setIsSupabaseModalOpen(false)}
-          onEngineChange={(eng) => {
-            setActiveDbEngine(eng);
-            if (eng === "supabase") {
-              setQuotaExceeded(false);
-              showNotification("Sistem berhasil dialihkan ke mesin database Supabase!", "success");
-            }
-          }}
-          currentEngine={activeDbEngine}
-        />
       </div>
     );
   }
@@ -4826,7 +4766,6 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               currentUser={currentUser || wargaAuth}
               setActiveTab={setActiveTab}
-              onOpenSupabaseModal={() => setIsSupabaseModalOpen(true)}
             />
           )}
           {activeTab === "panduan-admin" && <PanduanAdminView />}
@@ -5061,21 +5000,6 @@ export default function App() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
       />
-      <SupabaseConnectModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => setIsSupabaseModalOpen(false)}
-        onEngineChange={(eng) => {
-          setActiveDbEngine(eng);
-          if (eng === "supabase") {
-            setQuotaExceeded(false);
-            showNotification("Sistem berhasil dialihkan ke mesin database Supabase!", "success");
-          } else {
-            showNotification("Sistem dialihkan kembali ke mesin database Firebase Firestore.", "info");
-          }
-        }}
-        currentEngine={activeDbEngine}
-      />
-
       <CommandPalette 
         isOpen={isCommandPaletteOpen}
         setIsOpen={setIsCommandPaletteOpen}
