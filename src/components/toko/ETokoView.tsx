@@ -421,7 +421,7 @@ export default function ETokoView({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h2 className="text-4xl font-black text-slate-800 tracking-tighter" style={{ fontFamily: 'Outfit' }}>
-            E-LAPAK +26
+            E-LAPAKITA
           </h2>
           <p className="text-slate-500 font-medium">
             Beli kebutuhan harian lebih mudah & dukung UMKM warga

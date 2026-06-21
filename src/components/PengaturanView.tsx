@@ -105,11 +105,21 @@ export default function PengaturanView({
   const [logoUrl, setLogoUrl] = useState(currentTenant?.logo_url || settings?.tenant_system_logo || "");
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [resetUnderstandCheck, setResetUnderstandCheck] = useState(false);
+  const [namaRt, setNamaRt] = useState(settings?.nama_rt || "");
+  const [namaLapak, setNamaLapak] = useState(currentTenant?.nama_lapak || "Lapak Warga");
+  const [namaBankSampah, setNamaBankSampah] = useState(currentTenant?.nama_bank_sampah || "Bank Sampah");
+  const [namaEpemilu, setNamaEpemilu] = useState(currentTenant?.nama_epemilu || "e-Pemilu");
+  const [namaKesehatan, setNamaKesehatan] = useState(currentTenant?.nama_kesehatan || "Kesehatan");
+  const [tagline, setTagline] = useState(settings?.tagline || "");
 
-  // Sync previewMode and logoUrl when settings change (e.g. after save)
   useEffect(() => {
-    if (settings?.themeMode) setPreviewMode(settings.themeMode);
-  }, [settings?.themeMode]);
+    setNamaRt(settings?.nama_rt || "");
+    setNamaLapak(currentTenant?.nama_lapak || "Lapak Warga");
+    setNamaBankSampah(currentTenant?.nama_bank_sampah || "Bank Sampah");
+    setNamaEpemilu(currentTenant?.nama_epemilu || "e-Pemilu");
+    setNamaKesehatan(currentTenant?.nama_kesehatan || "Kesehatan");
+    setTagline(settings?.tagline || "");
+  }, [settings, currentTenant]);
 
   useEffect(() => {
     setLogoUrl(currentTenant?.logo_url || settings?.tenant_system_logo || "");
@@ -152,6 +162,18 @@ export default function PengaturanView({
       if (newSettings.nama_rt) {
         tenantUpdate.name = newSettings.nama_rt;
         tenantUpdate.nama = newSettings.nama_rt;
+      }
+      if (newSettings.nama_lapak) {
+        tenantUpdate.nama_lapak = newSettings.nama_lapak;
+      }
+      if (newSettings.nama_bank_sampah) {
+        tenantUpdate.nama_bank_sampah = newSettings.nama_bank_sampah;
+      }
+      if (newSettings.nama_epemilu) {
+        tenantUpdate.nama_epemilu = newSettings.nama_epemilu;
+      }
+      if (newSettings.nama_kesehatan) {
+        tenantUpdate.nama_kesehatan = newSettings.nama_kesehatan;
       }
       if (newSettings.tagline !== undefined) {
         tenantUpdate.tagline = newSettings.tagline;
@@ -1201,8 +1223,49 @@ export default function PengaturanView({
                 </label>
                 <input
                   name="nama_rt"
-                  defaultValue={settings.nama_rt}
+                  value={namaRt}
+                  onChange={(e) => setNamaRt(e.target.value)}
                   placeholder={`Contoh: PENGURUS ${getTranslatedLabel("RT", previewMode)} 04`}
+                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
+                />
+                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
+                  Nama Fitur Lapak (Contoh: Pasar Warga / E-Toko)
+                </label>
+                <input
+                  name="nama_lapak"
+                  value={namaLapak}
+                  onChange={(e) => setNamaLapak(e.target.value)}
+                  placeholder="Contoh: Lapak Warga"
+                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
+                />
+                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
+                  Nama Fitur Bank Sampah (Contoh: Unit Pengolah, Greentec, dll)
+                </label>
+                <input
+                  name="nama_bank_sampah"
+                  value={namaBankSampah}
+                  onChange={(e) => setNamaBankSampah(e.target.value)}
+                  placeholder="Contoh: Bank Sampah"
+                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
+                />
+                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
+                  Nama Fitur Pemilu (Contoh: E-Voting Warga, Pemilihan, dll)
+                </label>
+                <input
+                  name="nama_epemilu"
+                  value={namaEpemilu}
+                  onChange={(e) => setNamaEpemilu(e.target.value)}
+                  placeholder="Contoh: e-Pemilu"
+                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
+                />
+                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
+                  Nama Fitur Kesehatan (Contoh: Posyandu, Klinik, dll)
+                </label>
+                <input
+                  name="nama_kesehatan"
+                  value={namaKesehatan}
+                  onChange={(e) => setNamaKesehatan(e.target.value)}
+                  placeholder="Contoh: Kesehatan"
                   className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
                 />
                 <div className="flex items-start gap-2 mt-2">
@@ -1219,7 +1282,8 @@ export default function PengaturanView({
                 </label>
                 <input
                   name="tagline"
-                  defaultValue={settings.tagline || ""}
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
                   placeholder="Contoh: Guyub Rukun Saklawase"
                   className="w-full px-4 py-3 bg-white border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 transition-all font-bold text-slate-800 shadow-sm"
                 />

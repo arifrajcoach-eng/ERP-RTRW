@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ConfirmModal } from './ui/ConfirmModal';
 import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { 
   CreditCard, 
   Users, 
@@ -632,6 +634,65 @@ export function IuranView({
     }
   };
 
+  const rekapData = useMemo(() => {
+    return Array.from(new Map(
+      wargaData
+        .filter((w:any) => {
+          const p = (w.posisi || w.posisiKeluarga || w.status_keluarga || "").toLowerCase();
+          return p.includes('kepala keluarga') || p.includes('kk') || p.includes('pemilik');
+        })
+        .map(w => [w.nik || w.id || w.docId, w])
+    ).values())
+    .sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || ""))
+    .map((w: any) => ({
+        nama: w.nama,
+        alamat: w.alamat,
+        ...months.reduce((acc, m, i) => {
+            const paid = iuranData.some((trx: any) => {
+                if (trx.status !== 'Lunas') return false;
+                const isIuranWajib = trx.jenis === 'Iuran Warga' || trx.jenis?.toLowerCase().includes('iuran wajib') || trx.keterangan?.toLowerCase().includes('iuran wajib');
+                if (!isIuranWajib) return false;
+                const matchNik = (trx.nik && w.nik && trx.nik !== '-' && trx.nik === w.nik);
+                const matchUserId = (trx.userId && (trx.userId === w.id || trx.userId === w.uid || trx.userId === w.id_user || trx.userId === w.docId));
+                const cleanTrxNama = trx.namaPenyetor?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                const cleanWargaNama = w.nama?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                const matchNama = !!cleanTrxNama && !!cleanWargaNama && (cleanTrxNama.includes(cleanWargaNama) || cleanWargaNama.includes(cleanTrxNama));
+                if (!(matchNik || matchUserId || matchNama)) return false;
+                const trxDate = new Date(trx.tanggal);
+                return trxDate.getFullYear() === selectedYear && trxDate.getMonth() === i;
+            });
+            acc[m] = paid ? 'Lunas' : 'Belum';
+            return acc;
+        }, {} as any)
+    }));
+  }, [wargaData, iuranData, selectedYear, months]);
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(16);
+    doc.text("Rekapitulasi Iuran Wajib " + selectedYear, 105, 15, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text("Tenant: " + tenantId, 14, 25);
+    doc.line(14, 27, 196, 27); // Horizontal line
+    
+    // Table
+    autoTable(doc, { 
+        startY: 30,
+        head: [['Kepala Keluarga', ...months.map(m => m.substring(0,3))]],
+        body: rekapData.map(r => [r.nama, ...months.map(m => r[m])])
+    });
+    doc.save("Rekap_Iuran_" + selectedYear + ".pdf");
+  };
+
+  const handleExportExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(rekapData.map(r => ({ "Kepala Keluarga": r.nama, "Alamat": r.alamat, ...months.reduce((acc, m) => { acc[m] = r[m]; return acc; }, {} as any) })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap");
+    XLSX.writeFile(wb, "Rekap_Iuran_" + selectedYear + ".xlsx");
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   return (
@@ -877,10 +938,10 @@ export function IuranView({
                 </div>
               </h3>
               <div className="flex gap-2">
-                <button className="p-3 bg-white border border-slate-100 rounded-2xl hover:bg-rose-50 transition-colors shadow-sm text-rose-500 hover:text-rose-600">
+                <button onClick={handleExportPDF} className="p-3 bg-white border border-slate-100 rounded-2xl hover:bg-rose-50 transition-colors shadow-sm text-rose-500 hover:text-rose-600">
                   <FileText className="w-5 h-5" />
                 </button>
-                <button className="p-3 bg-white border border-slate-100 rounded-2xl hover:bg-emerald-50 transition-colors shadow-sm text-emerald-600 hover:text-emerald-700">
+                <button onClick={handleExportExcel} className="p-3 bg-white border border-slate-100 rounded-2xl hover:bg-emerald-50 transition-colors shadow-sm text-emerald-600 hover:text-emerald-700">
                   <FileSpreadsheet className="w-5 h-5" />
                 </button>
               </div>

@@ -233,7 +233,28 @@ export function WargaProfileView({
   }, [verifikasiData, wargaData]);
 
   const currentData = React.useMemo(() => {
-    return normalizeProfileData(activeSubmission || wargaData);
+    const base = normalizeProfileData(wargaData);
+    if (!activeSubmission) return base;
+    
+    const sub = normalizeProfileData(activeSubmission);
+    
+    // Merge: Active submission has priority, but fallback to base if blank
+    return {
+        ...base,
+        ...sub,
+        nama: sub.nama || base.nama,
+        nik: sub.nik || base.nik,
+        kk: sub.kk || base.kk,
+        hp: sub.hp || base.hp,
+        blok: sub.blok || base.blok,
+        alamat: sub.alamat || base.alamat,
+        rt: sub.rt || base.rt,
+        rw: sub.rw || base.rw,
+        kelurahan: sub.kelurahan || base.kelurahan,
+        kecamatan: sub.kecamatan || base.kecamatan,
+        kabupaten: sub.kabupaten || base.kabupaten,
+        kewarganegaraan: sub.kewarganegaraan || base.kewarganegaraan,
+    };
   }, [activeSubmission, wargaData]);
   const familyNiks = wargaData.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
   const mySurat = suratData.filter(s => s.nik === wargaData.nik || (s.nik && familyNiks.includes(s.nik)));

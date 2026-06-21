@@ -66,6 +66,22 @@ export const getTenantId = (currentUser: any, currentTenant?: any): string => {
   return tId;
 };
 
+export const getLapakName = (tenant?: any) => {
+  return tenant?.nama_lapak || "Lapak Warga";
+};
+
+export const getBankSampahName = (tenant?: any) => {
+  return tenant?.nama_bank_sampah || "Bank Sampah";
+};
+
+export const getEPemiluName = (tenant?: any) => {
+  return tenant?.nama_epemilu || "e-Pemilu";
+};
+
+export const getKesehatanName = (tenant?: any) => {
+  return tenant?.nama_kesehatan || "Kesehatan";
+};
+
 // URL Shortener Utility
 export const shortenUrl = async (longUrl: string): Promise<string> => {
   try {

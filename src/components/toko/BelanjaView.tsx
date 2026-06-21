@@ -144,7 +144,7 @@ const RECENT_CHECKS = [
 
 const BANNERS = [
   {
-    title: "Voucher Spesial LAPAK +26",
+    title: "Voucher Spesial E-LAPAKITA",
     subtitle: "POTONGAN 50%",
     benefit: "Hingga Rp 20.000",
     promoCode: "HEMATBGT",
@@ -256,7 +256,7 @@ const getPremiumStyle = (promoCode: string) => {
 
 const THEMATIC_VOUCHERS = [
   {
-    title: "Voucher Spesial LAPAK +26",
+    title: "Voucher Spesial E-LAPAKITA",
     subtitle: "POTONGAN 50%",
     benefit: "Hingga Rp 20.000",
     promoCode: "HEMATBGT",
@@ -425,6 +425,7 @@ export default function BelanjaView({
   onAddProduct?: (product: any) => void
 }) {
   const [activeCategory, setActiveCategory] = useState("Semua");
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFeedTab, setActiveFeedTab] = useState("Untuk Kamu");
   const [activeMainTab, setActiveMainTab] = useState("Home");
   const [unreadChatsCount, setUnreadChatsCount] = useState(8);
@@ -432,7 +433,7 @@ export default function BelanjaView({
   const [tokoSubTab, setTokoSubTab] = useState<"Main" | "TambahProduk" | "DaftarPesanan" | "Statistik" | "ManageProduk" | "Keuangan" | "Pengaturan">("Main");
   const [akunSubTab, setAkunSubTab] = useState<"Main" | "Alamat" | "Dompet" | "Bantuan" | "EditProfil" | "TambahAlamat" | "EditAlamat" | "LiveChat" | "EmailSupport">("Main");
   const [chatMessages, setChatMessages] = useState<Array<{ id: number; text: string; sender: 'user' | 'agent'; time: string }>>([
-    { id: 1, text: "Halo Bapak/Ibu, saya Ratih dari Customer Support E-LAPAK +26 (SmaRtRw AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
+    { id: 1, text: "Halo Bapak/Ibu, saya Ratih dari Customer Support E-LAPAKITA (SmaRtRw AI). Ada yang bisa saya bantu terkait transaksi, pembelanjaan, atau detail saldo Anda?", sender: "agent", time: "Baru saja" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatIsTyping, setChatIsTyping] = useState(false);
@@ -579,7 +580,7 @@ export default function BelanjaView({
       if (lowerText.includes("pesanan") || lowerText.includes("status") || lowerText.includes("sore")) {
         replyText = "Untuk melacak transaksi atau pesanan aktif Bapak, silakan periksa status pengiriman di tab 'Daftar Pesanan' di menu Toko / Lapak Anda.";
       } else if (lowerText.includes("iuran") || lowerText.includes("bayar")) {
-        replyText = "Setiap iuran bulanan warga RT 26/RW 04 dapat langsung dibayarkan otomatis memotong saldo dompet digital E-LAPAK +26 Anda.";
+        replyText = "Setiap iuran bulanan warga RT 26/RW 04 dapat langsung dibayarkan otomatis memotong saldo dompet digital E-LAPAKITA Anda.";
       } else if (lowerText.includes("saldo") || lowerText.includes("top-up") || lowerText.includes("gopay") || lowerText.includes("isi")) {
         replyText = "Anda dapat menambah saldo balance Anda secara instan dengan mengklik tombol 'Isi Saldo' di menu Dompet Aktif Anda.";
       } else if (lowerText.includes("halo") || lowerText.includes("pagi") || lowerText.includes("siang") || lowerText.includes("malam")) {
@@ -637,7 +638,7 @@ export default function BelanjaView({
     }
     const messages: Record<string, string> = {
       'Notifikasi': 'Memuat 5 notifikasi transaksi terbaru Anda.',
-      'Modul Utama': 'Mengalihkan ke Dashboard Modul Utama LAPAK +26...'
+      'Modul Utama': 'Mengalihkan ke Dashboard Modul Utama E-LAPAKITA...'
     };
 
     if (showNotification) {
@@ -677,9 +678,7 @@ export default function BelanjaView({
   };
 
   const handleFilterClick = () => {
-    if (showNotification) {
-      showNotification("Membuka filter kategori, harga, dan lokasi RT...", "info");
-    }
+    setShowFilterModal(true);
   };
 
   const nextBanner = () => setCurrentBanner((prev) => (prev + 1) % BANNERS.length);
@@ -696,11 +695,11 @@ export default function BelanjaView({
 
   return (
     <div className="bg-[#f8fafc] min-h-screen pb-24 animate-in fade-in duration-700 overflow-x-hidden">
-      {/* LAPAK +26 Premium Header */}
+      {/* E-LAPAKITA Premium Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-8 pb-14 rounded-b-[3rem] shadow-lg shadow-emerald-900/10 mb-[-2rem] relative z-20">
          <div className="flex justify-between items-start mb-6">
             <div onClick={() => handleQuickLink("Home")} className="cursor-pointer hover:opacity-80 transition-opacity">
-               <h1 className="text-3xl font-black italic tracking-tighter mb-1 font-elegant">LAPAK +26</h1>
+               <h1 className="text-3xl font-black italic tracking-tighter mb-1 font-elegant">E-LAPAKITA</h1>
                <p className="text-xs font-bold text-emerald-100/80 uppercase tracking-[0.2em]">Pusat Niaga & UMKM Warga</p>
             </div>
             <div className="flex gap-4">
@@ -1143,7 +1142,7 @@ export default function BelanjaView({
              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                 <Store size={40} className="text-slate-200" />
              </div>
-             <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">LAPAK +26 Masih Kosong</h4>
+             <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">E-LAPAKITA Masih Kosong</h4>
              <p className="text-slate-500 text-sm max-w-sm px-6 leading-relaxed">
                {PRODUCTS.length === 0 
                  ? "Belum ada warga yang membuka lapak di sini. Jadilah yang pertama memajukan ekonomi lingkungan dengan membuka toko Anda!" 
@@ -1176,7 +1175,7 @@ export default function BelanjaView({
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Store size={48} className="text-slate-300 mb-4" />
             <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Toko Anda Belum Aktif</h2>
-            <p className="text-sm text-slate-500 font-medium mb-6 max-w-xs">Buka toko gratis dan mulai berjualan ke seluruh warga LAPAK +26.</p>
+            <p className="text-sm text-slate-500 font-medium mb-6 max-w-xs">Buka toko gratis dan mulai berjualan ke seluruh warga E-LAPAKITA.</p>
             <button 
               onClick={() => handleQuickLink("Pendaftaran Toko")}
               className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-600/20 max-w-[250px] mx-auto"
@@ -1228,7 +1227,7 @@ export default function BelanjaView({
               <button 
                 onClick={() => {
                   if (showNotification) {
-                    showNotification("Toko berhasil dibuat! Selamat datang di LAPAK +26.", "success");
+                    showNotification("Toko berhasil dibuat! Selamat datang di E-LAPAKITA.", "success");
                   }
                   handleQuickLink("Toko Saya Aktif");
                 }}
@@ -2530,7 +2529,7 @@ export default function BelanjaView({
                   <Star size={24} className="fill-amber-500" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-500 uppercase">Koin LAPAK +26</h3>
+                  <h3 className="text-sm font-bold text-slate-500 uppercase">Koin E-LAPAKITA</h3>
                   <div className="text-xl font-black text-slate-800">4.500 Coins</div>
                 </div>
               </div>
@@ -2811,7 +2810,7 @@ export default function BelanjaView({
               </div>
 
               <div className="self-start bg-white border border-slate-200 text-slate-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] shadow-sm">
-                <p className="text-sm font-medium">Ya pak, beras premium 5kg ready. Bisa diantar sekarang. Langsung lewat LAPAK +26 ya transaksinya pak biar gampang saya rekap.</p>
+                <p className="text-sm font-medium">Ya pak, beras premium 5kg ready. Bisa diantar sekarang. Langsung lewat E-LAPAKITA ya transaksinya pak biar gampang saya rekap.</p>
                 <span className="text-[10px] text-slate-400 block mt-1 font-bold">10:45</span>
               </div>
             </div>
@@ -2957,6 +2956,48 @@ export default function BelanjaView({
             <span className="text-[9px] font-black uppercase tracking-tighter">Akun</span>
          </div>
       </div>
+      {/* Filter Modal */}
+      <AnimatePresence>
+        {showFilterModal && (
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setShowFilterModal(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              className="relative bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8"
+            >
+              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter mb-6">Filter Produk</h3>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Kategori</label>
+                  <select 
+                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-sm outline-none focus:border-brand-blue/30"
+                    value={activeCategory} 
+                    onChange={(e) => setActiveCategory(e.target.value)}
+                  >
+                    {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  </select>
+                </div>
+                
+                <button 
+                  onClick={() => setShowFilterModal(false)}
+                  className="w-full py-4 bg-brand-blue text-white rounded-2xl font-black uppercase text-xs shadow-xl shadow-blue-200 mt-4 hover:bg-blue-600 transition-all"
+                >
+                  Terapkan Filter
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

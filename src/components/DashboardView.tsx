@@ -1275,7 +1275,7 @@ export default function DashboardView({
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
                     <Smartphone className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">E-LAPAK +26</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">E-LAPAKITA</span>
                 </button>
               </div>
             </div>

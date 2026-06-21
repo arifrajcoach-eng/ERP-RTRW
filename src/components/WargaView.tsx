@@ -589,6 +589,7 @@ function WargaView(props: WargaViewProps) {
         const fallbackChildIds = [
             "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
             "rt01_rw_berjuang", "rt02_rw_berjuang", "rt03_rw_berjuang", "rt04_rw_berjuang",
+            "rt01_rw26_berjuang", "rt02_rw26_berjuang", "rt03_rw26_berjuang", "rt04_rw26_berjuang",
             "rt01_trihprw26", "rt02_trihprw26", "rt03_trihprw26", "rt04_trihprw26",
             "RW26_RT01", "RW26_RT02", "RW26_RT03", "RW26_RT04"
         ];
@@ -596,9 +597,9 @@ function WargaView(props: WargaViewProps) {
         // Filter fallbackChildIds to only include child IDs that belong to the current parent tenantId
         let CHILD_TENANT_IDS = fallbackChildIds.filter(id => isBelongsToParent(id, tenantId));
 
-        if (tenantId === "rw26_berjuang" || tenantId.endsWith("_rw26_berjuang")) {
-            CHILD_TENANT_IDS = [];
-        }
+        // if (tenantId === "rw26_berjuang" || tenantId.endsWith("_rw26_berjuang")) {
+        //     CHILD_TENANT_IDS = [];
+        // }
 
         const childSyncModes = new Map<string, string>();
         try {

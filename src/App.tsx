@@ -1414,7 +1414,7 @@ export default function App() {
   }, [currentUser, wargaAuth, selectedTenantId, tenantsData]);
 
   // Securely resolve current active tenant ID for single context operations
-  const activeTenantId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+  const activeTenantId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
 
   // Tenant friendly name display format mapper
   const getTenantFriendlyName = (tId: string) => {
@@ -1491,15 +1491,15 @@ export default function App() {
   }, [usersData, activeTenantIds, currentUser]);
 
   const linkedWarga = useMemo(() => {
-    const targetNik = currentUser?.nikMapping || currentUser?.nik;
+    const targetNik = currentUser?.nikMapping || currentUser?.nik || wargaAuth?.nik;
     if (!targetNik) return null;
     return filteredWargaDataCentral.find((w: any) => w.nik === targetNik) || null;
-  }, [currentUser, filteredWargaDataCentral]);
+  }, [currentUser, filteredWargaDataCentral, wargaAuth]);
 
   const mergedWargaProfile = useMemo(() => {
     return {
-      ...(linkedWarga || {}),
       ...(wargaAuth || {}),
+      ...(linkedWarga || {}),
       nik: linkedWarga?.nik || wargaAuth?.nik || currentUser?.nik || currentUser?.nikMapping || "",
       nama: linkedWarga?.nama || wargaAuth?.nama || currentUser?.name || currentUser?.displayName || "Warga",
       email: linkedWarga?.email || wargaAuth?.email || currentUser?.email || "",
@@ -1803,7 +1803,7 @@ export default function App() {
       return;
     }
     const tIds = activeTenantIds.filter(id => id && id !== "GUEST");
-    const rawTId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+    const rawTId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
     const tId = rawTId === "GUEST" ? "" : rawTId;
 
     if (!tId) {
@@ -1885,7 +1885,7 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+    const tId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
     if (!tId) return;
     
     const found = tenantsData.find(t => t.id === tId)?.parentId;
@@ -1933,7 +1933,7 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
-    const tId = currentUser?.isSuperAdmin && selectedTenantId ? selectedTenantId : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+    const tId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
     if (!tId) return;
     
     const unsubKopSettings = onSnapshot(doc(db, "tenant_settings", tId), (snap) => {
@@ -1988,8 +1988,8 @@ export default function App() {
     
     // We want these central collections to stay synced even if we move between tabs
     // that rely on them (warga, dashboard, users, complaint, search, etc)
-    const centralTabs = ["warga", "dashboard", "users", "complaint", "landing", "search"];
-    if (!centralTabs.includes(activeTab || "")) return;
+    const centralTabs = ["warga", "dashboard", "users", "complaint", "landing", "search", "verifikasi", "surat", "profile"];
+    if (!centralTabs.includes(activeTab || "") && !wargaAuth) return;
 
     const tIds = activeTenantIds;
     const unsubs: (() => void)[] = [];
@@ -2848,7 +2848,7 @@ export default function App() {
       },
       {
         id: "etoko",
-        label: "E-LAPAK +26",
+        label: "E-LAPAKITA",
         icon: ShoppingBag,
         plan: "eLapak",
       },
@@ -3355,6 +3355,7 @@ export default function App() {
           tenantId={currentUser?.tenantId || ""}
           initialEmail={prefilledEmail}
           initialMode={prefilledEmail ? "admin" : "admin"}
+          onLogout={handleLogout}
         />
         {showFreeTrialModal && (
           <FreeTrialRegistrationModal
@@ -4299,7 +4300,7 @@ export default function App() {
             <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 capitalize tracking-tight hidden lg:block font-elegant" style={{ fontFamily: "Verdana", fontStyle: "italic" }}>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-400 dark:from-white dark:to-slate-500" style={{ fontFamily: "Verdana", fontStyle: "italic" }}>
                 {activeTab === "etoko"
-                  ? "E-LAPAK +26"
+                  ? "E-LAPAKITA"
                   : activeTab === "posyandu"
                     ? "Care Center"
                     : activeTab.replace("-", " ")}
@@ -6817,6 +6818,7 @@ function LoginView({
   tenantId,
   initialEmail = "",
   initialMode = "admin",
+  onLogout,
 }: {
   setWargaAuth: any;
   setCurrentUser?: any;
@@ -6830,6 +6832,7 @@ function LoginView({
   tenantId: string;
   initialEmail?: string;
   initialMode?: "admin" | "warga" | "verifikasi";
+  onLogout: () => void;
 }) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
@@ -6837,7 +6840,6 @@ function LoginView({
   const [showKK, setShowKK] = useState(false);
   const [showNik, setShowNik] = useState(false);
   const [error, setError] = useState("");
-  const [iframeError, setIframeError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<"admin" | "warga" | "verifikasi">(
     initialMode,
@@ -7677,7 +7679,6 @@ function LoginView({
         setError(
           "KEAMANAN IFRAME: Google Login diblokir oleh browser Anda karena aplikasi sedang berjalan di dalam IFrame Preview (masalah pembatasan Cookie Pihak Ketiga). Harap buka aplikasi di Tab Baru agar Google Auth berjalan normal.",
         );
-        setIframeError(true);
       } else {
         setError(`Gagal login dengan Google: ${err.message}`);
       }
@@ -7792,21 +7793,15 @@ function LoginView({
                 <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
 
-              {(iframeError || error.includes("IFRAME") || error.includes("Cookie") || error.includes("network-request-failed")) && (
+              {/* @ts-ignore */}
+              {(error.includes("network-request-failed")) && (
                 <div className="mt-2 pt-3 border-t border-red-200/60 flex flex-col gap-2">
                   <span className="text-xs text-red-800 font-black flex items-center gap-1">
                     💡 Rekomendasi Solusi:
                   </span>
                   <p className="text-xs text-red-600 font-medium leading-relaxed">
-                    Browser memblokir login Google karena domain dijalankan di frame eksternal. Silakan klik tombol di bawah untuk membukanya di tab terpisah, sehingga Google login berjalan dengan aman.
+                    Terjadi kendala jaringan. Silakan coba lagi.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => window.open(window.location.href, "_blank")}
-                    className="mt-1 w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-                  >
-                    Buka di Tab Baru <ExternalLink className="w-4 h-4" />
-                  </button>
                 </div>
               )}
             </div>
@@ -7905,7 +7900,7 @@ function LoginView({
                   </p>
                 </div>
                 <p className="text-xs text-emerald-600 font-medium leading-relaxed">
-                  Gunakan Google Login untuk akses penuh fitur {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()}: E-LAPAK +26,
+                  Gunakan Google Login untuk akses penuh fitur {getTranslatedLabel("Warga", settings?.themeMode).toLowerCase()}: E-LAPAKITA,
                   Surat Digital, Keuangan, dan Pengaduan.
                 </p>
               </div>
@@ -7931,6 +7926,7 @@ function LoginView({
                   💡 Tips: Masukkan Kode Wilayah jika Anda terdaftar di lebih dari satu area.
                 </p>
               </div>
+
 
               <button
                 type="button"
