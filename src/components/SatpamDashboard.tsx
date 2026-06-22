@@ -2,10 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, updateDoc, doc, orderBy, limit } from 'firebase/firestore';
 import { EmergencyLog } from '../types';
-import { ShieldAlert, MapPin, CheckCircle, History, Clock, Phone, Map as MapIcon } from 'lucide-react';
+import { ShieldAlert, MapPin, CheckCircle, History, Clock, Phone, Map as MapIcon, Bell } from 'lucide-react';
 import { SOSDashboardMap } from './SOSDashboardMap';
 
-export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+interface SatpamDashboardProps {
+  tenantId: string;
+  pushSubscriptionStatus?: string;
+  requestPushPermission?: () => void;
+}
+
+export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({ 
+  tenantId,
+  pushSubscriptionStatus,
+  requestPushPermission
+}) => {
   const [emergencies, setEmergencies] = useState<EmergencyLog[]>([]);
   const [history, setHistory] = useState<EmergencyLog[]>([]);
   const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
@@ -121,6 +131,30 @@ export const SatpamDashboard: React.FC<{ tenantId: string }> = ({ tenantId }) =>
           {showMap ? 'Sembunyikan Peta' : 'Tampilkan Peta'}
         </button>
       </div>
+
+      {pushSubscriptionStatus && requestPushPermission && (
+        <div className="mb-6 p-5 bg-gradient-to-r from-slate-900 to-slate-900/40 border border-slate-800/80 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
+          <div className="space-y-1">
+            <h3 className="text-sm font-black uppercase text-blue-400 tracking-wider flex items-center gap-2">
+              <Bell size={16} className={`${pushSubscriptionStatus === "SUBSCRIBED" ? "text-green-500 animate-pulse" : "text-blue-400"}`} />
+              {pushSubscriptionStatus === "SUBSCRIBED" ? "🟢 Notifikasi Background Aktif" : "🔔 Setel Notifikasi SOS Background"}
+            </h3>
+            <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+              {pushSubscriptionStatus === "SUBSCRIBED"
+                ? "Sistem PWA di peramban Anda sudah terdaftar. Anda akan menerima sinyal darurat langsung di layar utama gawai/HP Anda meskipun aplikasi sedang ditutup!"
+                : "Aktifkan Web Push Notification agar Anda (RT, RW, atau Satpam) langsung menerima bunyi sirene & koordinat darurat di HP secara real-time meskipun peramban sedang tertutup."}
+            </p>
+          </div>
+          {pushSubscriptionStatus !== "SUBSCRIBED" && (
+            <button 
+              onClick={requestPushPermission}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-xs font-black uppercase tracking-wider text-white rounded-2xl transition-all shadow-md shadow-blue-900/30 cursor-pointer border-none shrink-0"
+            >
+              Aktifkan Sekarang
+            </button>
+          )}
+        </div>
+      )}
 
       {/* SOS Map Section */}
       {showMap && (

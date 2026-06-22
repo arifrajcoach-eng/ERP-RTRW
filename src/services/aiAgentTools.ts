@@ -409,3 +409,136 @@ export async function debugInspectData(collectionName: string, limitCount: numbe
   console.log(`[DEBUG] Inspected ${collectionName}:`, data);
   return data;
 }
+
+// 8. ADDITIONAL CHATY SUMMARIES
+export async function getMadingSummary(tenantId: string) {
+  try {
+    if (!tenantId) throw new Error("Tenant ID required");
+    const q = query(collection(db, 'mading'), where('tenantId', '==', tenantId), limit(10));
+    const snapshot = await getDocs(q);
+    const madingList: any[] = [];
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      madingList.push({ title: d.title || 'Mading', date: d.date || '-', description: d.description || '' });
+    });
+    return { madingList, total: madingList.length };
+  } catch (e) {
+    return { madingList: [], total: 0 };
+  }
+}
+
+export async function getSOSSummary(tenantId: string) {
+  try {
+    if (!tenantId) throw new Error("Tenant ID required");
+    const q = query(collection(db, 'emergencies'), where('tenantId', '==', tenantId), limit(15));
+    const snapshot = await getDocs(q);
+    const list: any[] = [];
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      list.push({ 
+        id: doc.id, 
+        type: d.type || d.kategori || 'SOS', 
+        reporter: d.reporterName || d.reporter || d.namaWarga || 'Warga', 
+        status: d.status || 'ACTIVE', 
+        time: d.timestamp || d.createdAt || '-' 
+      });
+    });
+    return { list, total: list.length, activeCount: list.filter(item => item.status === 'ACTIVE').length };
+  } catch (e) {
+    return { list: [], total: 0, activeCount: 0 };
+  }
+}
+
+export async function getComplaintsSummary(tenantId: string) {
+  try {
+    if (!tenantId) throw new Error("Tenant ID required");
+    const q = query(collection(db, 'complaints'), where('tenantId', '==', tenantId), limit(25));
+    const snapshot = await getDocs(q);
+    const list: any[] = [];
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      list.push({ 
+        id: doc.id, 
+        jenis: d.jenisKeluhan || d.category || 'Keluhan', 
+        warga: d.namaWarga || d.nama || 'Warga', 
+        deskripsi: d.deskripsi || d.detail || '', 
+        status: d.status || 'PENDING' 
+      });
+    });
+    return { list, total: list.length, pendingCount: list.filter(item => item.status === 'PENDING').length };
+  } catch (e) {
+    return { list: [], total: 0, pendingCount: 0 };
+  }
+}
+
+export async function getBookingsSummary(tenantId: string) {
+  try {
+    if (!tenantId) throw new Error("Tenant ID required");
+    const q = query(collection(db, 'bookings'), where('tenantId', '==', tenantId), limit(25));
+    const snapshot = await getDocs(q);
+    const list: any[] = [];
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      list.push({ 
+        id: doc.id, 
+        fasilitas: d.namaFasilitas || d.facility || 'Fasilitas', 
+        warga: d.namaWarga || d.nama || 'Warga', 
+        tanggal: d.tanggal || d.date || '', 
+        status: d.status || 'PENDING', 
+        keperluan: d.keperluan || '' 
+      });
+    });
+    return { list, total: list.length };
+  } catch (e) {
+    return { list: [], total: 0 };
+  }
+}
+
+export async function getBirthdaysSummary(tenantId: string) {
+  try {
+    if (!tenantId) throw new Error("Tenant ID required");
+    const q = query(collection(db, 'data_warga'), where('tenantId', '==', tenantId));
+    const snapshot = await getDocs(q);
+    const list: any[] = [];
+    const currentMonthNum = new Date().getMonth() + 1; // 1-indexed (e.g. 6 for June)
+    
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      const tglLahir = d.tglLahir;
+      if (tglLahir) {
+        const parts = tglLahir.split('-');
+        if (parts.length === 3) {
+          const birthMonthNum = parseInt(parts[1], 10);
+          const birthDayNum = parseInt(parts[2], 10);
+          if (birthMonthNum === currentMonthNum) {
+            list.push({
+              nama: d.nama || 'Warga',
+              rt: d.rt || '01',
+              rw: d.rw || '26',
+              tglLahir: d.tglLahir,
+              tanggalUlangTahun: birthDayNum,
+              usia: new Date().getFullYear() - parseInt(parts[0], 10)
+            });
+          }
+        }
+      }
+    });
+    
+    // Sort by day of the month ascending
+    list.sort((a, b) => a.tanggalUlangTahun - b.tanggalUlangTahun);
+    
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    
+    return {
+      list,
+      totalThisMonth: list.length,
+      currentMonthName: monthNames[currentMonthNum - 1]
+    };
+  } catch (e) {
+    console.warn("Failed getBirthdaysSummary", e);
+    return { list: [], totalThisMonth: 0, currentMonthName: 'Juni' };
+  }
+}

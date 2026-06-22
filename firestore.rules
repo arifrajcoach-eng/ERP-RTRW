@@ -112,6 +112,10 @@ service cloud.firestore {
     match /emergencies/{id} {
       allow read, write: if isSignedIn();
     }
+
+    match /emergency_logs/{id} {
+      allow read, write: if isSignedIn();
+    }
     
     match /notifications/{id} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;

@@ -58,13 +58,19 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
               if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
                 bestPos = pos;
               }
-              // If accuracy is high (< 20m), accept immediately
-              if (pos.coords.accuracy <= 20) {
+              // If accuracy is high (< 25m), accept immediately
+              if (pos.coords.accuracy <= 25) {
                 navigator.geolocation.clearWatch(watchId);
                 resolve(pos);
               }
             },
-            () => {}, // Ignore errors during watch
+            (err) => {
+              console.warn("[GPS] SOSButton watchPosition error:", err);
+              if (err.code === 1) { // PERMISSION_DENIED
+                navigator.geolocation.clearWatch(watchId);
+                reject(err);
+              }
+            },
             { enableHighAccuracy: true, maximumAge: 0 }
           );
 
@@ -81,7 +87,21 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
         accuracy = position.coords.accuracy;
         userLocation = `📍 Sinyal GPS Presisi (Akurasi: ~${accuracy.toFixed(1)}m): ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       } catch (e) {
-        console.warn("GPS lock failed:", e);
+        console.warn("GPS lock failed, trying quick low-accuracy getCurrentPosition:", e);
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: false,
+              timeout: 4000,
+              maximumAge: 30000
+            });
+          });
+          lat = position.coords.latitude;
+          lng = position.coords.longitude;
+          userLocation = `📍 Sinyal GPS Standar: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        } catch (e2) {
+          console.warn("Low-accuracy fallback failed too:", e2);
+        }
       }
     }
     
@@ -127,18 +147,39 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
       try {
         await setDoc(doc(db, "emergency_logs", id), {
           id,
-          tenantId: currentUser.tenantId,          userId: currentUser.uid || "anonymous",
+          tenantId: currentUser.tenantId,
+          userId: currentUser.uid || "anonymous",
           userName: currentUser.name || "Warga",
           userPhone: currentUser.hp || "-",
           location: {
-            lat: lat,
-            lng: lng
+            lat: lat || 0,
+            lng: lng || 0
           },
           status: 'pending',
           timestamp: new Date().toISOString()
         });
       } catch (errSync) {
         console.warn("Could not sync with central emergency_logs inside SOSButton: ", errSync);
+      }
+
+      // BROADCAST WEB PUSH NOTIFICATION BACKEND VIA REST API
+      try {
+        await fetch("/api/trigger-push-sos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            tenantId: currentUser.tenantId,
+            senderName: currentUser.name || "Warga",
+            latitude: lat || 0,
+            longitude: lng || 0,
+            address: userLocation
+          })
+        });
+        console.log("[PWA] Web Push broadcast initiated from SOSButton successfully!");
+      } catch (errPush) {
+        console.warn("[PWA] Fetching api/trigger-push-sos from SOSButton failed: ", errPush);
       }
 
       alert("Sinyal SOS Terkirim ke Seluruh Warga & Petugas!");

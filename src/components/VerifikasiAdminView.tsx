@@ -46,7 +46,14 @@ const normalizeVerifItem = (item: any) => {
     kawin: item.kawin || item.statusKawin || "",
     statusKawin: item.statusKawin || item.kawin || "",
     jk: item.jk || item.jenisKelamin || "",
-    jenisKelamin: item.jenisKelamin || item.jk || ""
+    jenisKelamin: item.jenisKelamin || item.jk || "",
+    rt: item.rt || "",
+    rw: item.rw || "",
+    email: item.email || "",
+    kelurahan: item.kelurahan || "",
+    kecamatan: item.kecamatan || "",
+    kabupaten: item.kabupaten || item.kota || "",
+    kota: item.kota || item.kabupaten || ""
   };
 };
 
@@ -177,19 +184,22 @@ export function VerifikasiAdminView({
         kk: item.kk || targetSnap.data()?.kk || legacyData?.kk || "",
         blok: item.alamat || item.blok || targetSnap.data()?.blok || legacyData?.blok || "",
         hp: item.hp || targetSnap.data()?.hp || legacyData?.hp || "",
-        profesi: item.pekerjaan || item.profesi || targetSnap.data()?.profesi || legacyData?.profesi || "",
-        pendidikanTerakhir: item.pendidikan || item.pendidikanTerakhir || targetSnap.data()?.pendidikanTerakhir || legacyData?.pendidikanTerakhir || "",
-        kawin: item.statusKawin || item.kawin || targetSnap.data()?.kawin || legacyData?.kawin || "",
+        profesi: item.profesi || item.pekerjaan || targetSnap.data()?.profesi || legacyData?.profesi || "",
+        pendidikanTerakhir: item.pendidikanTerakhir || item.pendidikan || targetSnap.data()?.pendidikanTerakhir || legacyData?.pendidikanTerakhir || "",
+        kawin: item.kawin || item.statusKawin || targetSnap.data()?.kawin || legacyData?.kawin || "",
         foto: item.ktpUrl || targetSnap.data()?.foto || legacyData?.foto || "",
         ktpUrl: item.ktpUrl || targetSnap.data()?.ktpUrl || legacyData?.ktpUrl || "",
         rt: item.rt || targetSnap.data()?.rt || legacyData?.rt || "01",
         rw: item.rw || targetSnap.data()?.rw || legacyData?.rw || "26",
         tempatLahir: item.tempatLahir || targetSnap.data()?.tempatLahir || legacyData?.tempatLahir || "",
         tglLahir: item.tglLahir || targetSnap.data()?.tglLahir || legacyData?.tglLahir || "",
-        jk: item.jk || targetSnap.data()?.jk || legacyData?.jk || "",
+        jk: item.jk || item.jenisKelamin || targetSnap.data()?.jk || legacyData?.jk || "",
         agama: item.agama || targetSnap.data()?.agama || legacyData?.agama || "Islam",
-        posisi: item.posisi || targetSnap.data()?.posisi || legacyData?.posisi || "",
+        posisi: item.posisi || item.posisiKeluarga || targetSnap.data()?.posisi || legacyData?.posisi || "",
         kewarganegaraan: item.kewarganegaraan || targetSnap.data()?.kewarganegaraan || legacyData?.kewarganegaraan || "WNI",
+        kelurahan: item.kelurahan || targetSnap.data()?.kelurahan || legacyData?.kelurahan || "",
+        kecamatan: item.kecamatan || targetSnap.data()?.kecamatan || legacyData?.kecamatan || "",
+        kabupaten: item.kabupaten || item.kota || targetSnap.data()?.kabupaten || targetSnap.data()?.kota || legacyData?.kabupaten || legacyData?.kota || "",
         terverifikasi: true,
         keteranganVerifikasi: approveNote,
         updatedAt: new Date().toISOString()
@@ -340,12 +350,15 @@ export function VerifikasiAdminView({
           if (item.pekerjaan || item.profesi) updatedFields.profesi = item.pekerjaan || item.profesi;
           if (item.pendidikan || item.pendidikanTerakhir) updatedFields.pendidikanTerakhir = item.pendidikan || item.pendidikanTerakhir;
           if (item.statusKawin || item.kawin) updatedFields.kawin = item.statusKawin || item.kawin;
-          if (item.jk) updatedFields.jk = item.jk;
+          if (item.jk || item.jenisKelamin) updatedFields.jk = item.jk || item.jenisKelamin;
           if (item.agama) updatedFields.agama = item.agama;
           if (item.tempatLahir) updatedFields.tempatLahir = item.tempatLahir;
           if (item.tglLahir) updatedFields.tglLahir = item.tglLahir;
-          if (item.posisi) updatedFields.posisi = item.posisi;
+          if (item.posisi || item.posisiKeluarga) updatedFields.posisi = item.posisi || item.posisiKeluarga;
           if (item.kewarganegaraan) updatedFields.kewarganegaraan = item.kewarganegaraan;
+          if (item.kelurahan) updatedFields.kelurahan = item.kelurahan;
+          if (item.kecamatan) updatedFields.kecamatan = item.kecamatan;
+          if (item.kabupaten || item.kota) updatedFields.kabupaten = item.kabupaten || item.kota;
           if (item.ktpUrl) {
             updatedFields.ktpUrl = item.ktpUrl;
             updatedFields.foto = item.ktpUrl;
@@ -436,12 +449,15 @@ export function VerifikasiAdminView({
           if (item.pekerjaan || item.profesi) updatedFields.profesi = item.pekerjaan || item.profesi;
           if (item.pendidikan || item.pendidikanTerakhir) updatedFields.pendidikanTerakhir = item.pendidikan || item.pendidikanTerakhir;
           if (item.statusKawin || item.kawin) updatedFields.kawin = item.statusKawin || item.kawin;
-          if (item.jk) updatedFields.jk = item.jk;
+          if (item.jk || item.jenisKelamin) updatedFields.jk = item.jk || item.jenisKelamin;
           if (item.agama) updatedFields.agama = item.agama;
           if (item.tempatLahir) updatedFields.tempatLahir = item.tempatLahir;
           if (item.tglLahir) updatedFields.tglLahir = item.tglLahir;
-          if (item.posisi) updatedFields.posisi = item.posisi;
+          if (item.posisi || item.posisiKeluarga) updatedFields.posisi = item.posisi || item.posisiKeluarga;
           if (item.kewarganegaraan) updatedFields.kewarganegaraan = item.kewarganegaraan;
+          if (item.kelurahan) updatedFields.kelurahan = item.kelurahan;
+          if (item.kecamatan) updatedFields.kecamatan = item.kecamatan;
+          if (item.kabupaten || item.kota) updatedFields.kabupaten = item.kabupaten || item.kota;
           if (item.ktpUrl) {
             updatedFields.ktpUrl = item.ktpUrl;
             updatedFields.foto = item.ktpUrl;
@@ -514,10 +530,22 @@ export function VerifikasiAdminView({
           nik: item.nik,
           email: item.email || "",
           kk: item.kk || "",
-          hp: item.hp || "",
+          hp: item.hp || item.telepon || "",
           blok: item.blok || item.alamat || "",
           rt: item.rt || "01",
           rw: item.rw || "26",
+          profesi: item.profesi || item.pekerjaan || "",
+          pendidikanTerakhir: item.pendidikanTerakhir || item.pendidikan || "",
+          kawin: item.kawin || item.statusKawin || "",
+          posisi: item.posisi || item.posisiKeluarga || "",
+          jk: item.jk || item.jenisKelamin || "",
+          agama: item.agama || "Islam",
+          tempatLahir: item.tempatLahir || "",
+          tglLahir: item.tglLahir || "",
+          kewarganegaraan: item.kewarganegaraan || "WNI",
+          kelurahan: item.kelurahan || "",
+          kecamatan: item.kecamatan || "",
+          kabupaten: item.kabupaten || item.kota || "",
           terverifikasi: true,
           tenantId: recordTenantId,
           lastSyncedAt: new Date().toISOString()
@@ -849,58 +877,82 @@ export function VerifikasiAdminView({
                     <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest border-b border-blue-50 pb-2">Perubahan Data</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">NIK</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.nik}</p>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Nama Lengkap</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.nama}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">NIK</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.nik || '-'}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold mt-2">Nama Lengkap</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.nama || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">KK Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.kk || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">HP Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.hp || '-'}</p>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">KK Baru</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.kk}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Email</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.email || '-'}</p>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Alamat / Blok Baru</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.blok}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Alamat / Blok Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.blok || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Agama Baru</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.agama || 'Islam'}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">RT</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.rt || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Jenis Kelamin</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.jk || '-'}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">RW</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.rw || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tempat Lahir</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tempatLahir || '-'}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Kelurahan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.kelurahan || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Tanggal Lahir</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.tglLahir || '-'}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Kecamatan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.kecamatan || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">HP Baru</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.hp}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Kabupaten / Kota</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.kabupaten || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Pekerjaan</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.profesi}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Kewarganegaraan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.kewarganegaraan || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Pendidikan</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.pendidikanTerakhir}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Tempat Lahir</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.tempatLahir || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Status Kawin</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.kawin}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Tanggal Lahir</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.tglLahir || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Posisi Keluarga</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.posisi}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Agama Baru</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.agama || 'Islam'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block">Kewarganegaraan</label>
-                        <p className="text-slate-800 border-b border-slate-100 pb-1">{selectedItem.kewarganegaraan}</p>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Jenis Kelamin</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.jk || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Pekerjaan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.profesi || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Pendidikan</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.pendidikanTerakhir || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Status Kawin</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.kawin || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Posisi Keluarga</label>
+                        <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.posisi || '-'}</p>
                       </div>
                     </div>
 

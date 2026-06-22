@@ -185,7 +185,6 @@ import { BukuTamuView } from "./components/BukuTamuView";
 import { FinansialDashboardView } from "./components/FinansialDashboardView";
 import { VerifikasiAdminView } from "./components/VerifikasiAdminView";
 import { WargaProfileView } from "./components/WargaProfileView";
-import { ErrorBoundary } from './components/ErrorBoundary';
 import { ComplaintView } from "./components/ComplaintView";
 import { SatpamDashboard } from "./components/SatpamDashboard";
 import { BookingView } from "./components/BookingView";
@@ -326,6 +325,22 @@ const calculateAge = (tglLahir: string) => {
   return age;
 };
 
+// Helper to convert base64 url-safe VAPID key to Uint8Array for subscription
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export default function App() {
   console.log("App Component: Mounting...");
   
@@ -390,6 +405,8 @@ export default function App() {
       return null;
     }
   }); // For custom citizen login
+
+  const [wargaAuthForceProfile, setWargaAuthForceProfile] = useState<boolean>(true);
 
   useEffect(() => {
     if (quotaExceeded) {
@@ -1087,6 +1104,112 @@ export default function App() {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  // --- WEB PUSH & PROGRESSIVE WEB APP (PWA) NOTIFICATION LOGIC ---
+  const [pushSubscriptionStatus, setPushSubscriptionStatus] = useState<"UNSUPPORTED" | "DENIED" | "GRANTED" | "CHECKING" | "SUBSCRIBED" | "NOT_SUBSCRIBED">("CHECKING");
+
+  const syncPushSubscription = async (registration: ServiceWorkerRegistration) => {
+    try {
+      const activeUser = currentUser || wargaAuth;
+      const tId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+      
+      if (!activeUser || !tId) {
+        console.log("[PWA] Waiting for authenticated user/tenant before syncing push subscription");
+        return;
+      }
+
+      // Fetch public VAPID key from our Express backend
+      const resKey = await fetch('/api/vapid-public-key');
+      const dataKey = await resKey.json();
+      if (!dataKey.publicKey) {
+        throw new Error("No public VAPID key returned from server");
+      }
+
+      // Convert VAPID key
+      const convertedVapidKey = urlBase64ToUint8Array(dataKey.publicKey);
+
+      // Subscribe user
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey
+        });
+        console.log("[PWA] Successfully subscribed to browser's Push notification server!");
+      }
+
+      // Register subscription with our server backend
+      const resSub = await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          subscription,
+          tenantId: tId,
+          userId: activeUser.id || activeUser.uid || activeUser.nik || "anonymous",
+          nama: activeUser.name || activeUser.nama || "Warga",
+          role: activeUser.role || "Warga"
+        })
+      });
+
+      const resData = await resSub.json();
+      if (resData.success) {
+        setPushSubscriptionStatus("SUBSCRIBED");
+        console.log("[PWA] Successfully registered subscription with backend database!");
+      } else {
+        throw new Error(resData.error || "Subscription registration failed");
+      }
+    } catch (err) {
+      console.error("[PWA] Push subscription sync failed:", err);
+    }
+  };
+
+  const requestPushPermission = async () => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        showNotification("Peramban Anda tidak mendukung push notifications.", "error");
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const registration = await navigator.serviceWorker.ready;
+        await syncPushSubscription(registration);
+        showNotification("Notifikasi SOS PWA Aktif! Anda kini akan menerima sinyal darurat secara real-time.", "success");
+      } else if (permission === 'denied') {
+        setPushSubscriptionStatus("DENIED");
+        showNotification("Izin notifikasi ditolak. Silakan aktifkan via peramban untuk menerima sinyal darurat.", "error");
+      }
+    } catch (error) {
+      console.error("[PWA] Failed requesting notification permission:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushSubscriptionStatus("UNSUPPORTED");
+      return;
+    }
+
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[PWA] Service Worker registered with scope:', registration.scope);
+         
+        if (Notification.permission === 'denied') {
+          setPushSubscriptionStatus("DENIED");
+        } else if (Notification.permission === 'granted') {
+          setPushSubscriptionStatus("GRANTED");
+          syncPushSubscription(registration);
+        } else {
+          setPushSubscriptionStatus("NOT_SUBSCRIBED");
+        }
+      })
+      .catch((err) => {
+        console.error('[PWA] Service Worker registration failed:', err);
+      });
+  }, [currentUser?.id, wargaAuth?.nik, currentTenant?.id]);
+
   const [isSOSConfirmOpen, setIsSOSConfirmOpen] = useState(false);
   const [isSelfRegistering, setIsSelfRegistering] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -1413,6 +1536,11 @@ export default function App() {
     return Array.from(list);
   }, [currentUser, wargaAuth, selectedTenantId, tenantsData]);
 
+  // Stable primitive string representation of active tenant IDs for useEffect dependencies
+  const activeTenantIdsStr = useMemo(() => {
+    return activeTenantIds.slice().sort().join(",");
+  }, [activeTenantIds]);
+
   // Securely resolve current active tenant ID for single context operations
   const activeTenantId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
 
@@ -1544,24 +1672,38 @@ export default function App() {
     null;
 
   // Derived Access Roles
-  const roleUpperApp = currentUser?.role?.toUpperCase() || "";
+  const roleUpperApp = currentUser?.role?.toUpperCase() || wargaAuth?.role?.toUpperCase() || (wargaAuth ? "WARGA" : "");
   const isViewer = roleUpperApp === "VIEWER" || roleUpperApp === "TAMU";
   const isCitizen = roleUpperApp === "WARGA" || (!currentUser && !!wargaAuth);
   const hasFullAccess =
     !!currentUser && !isCitizen && !isViewer && roleUpperApp !== "VIEWER";
 
   useEffect(() => {
-    if (roleUpperApp === "VIEWER" || (!currentUser && wargaAuth)) {
+    if (roleUpperApp === "VIEWER") {
       if (
-        activeTab === "dashboard" ||
         activeTab === "transaksi" ||
         activeTab === "kas" ||
         activeTab === "posyandu"
       ) {
         setActiveTab("warga");
       }
+    } else if (!currentUser && wargaAuth) {
+      const restrictedForWarga = [
+        "warga",
+        "users",
+        "super-admin",
+        "leads",
+        "daftar-trial",
+        "monitoring",
+        "audit",
+        "analitik",
+        "pengaturan"
+      ];
+      if (restrictedForWarga.includes(activeTab)) {
+        setActiveTab("dashboard");
+      }
     }
-  }, [currentUser, wargaAuth, activeTab]);
+  }, [currentUser, wargaAuth, activeTab, roleUpperApp]);
 
   const handleTriggerSOS = async () => {
     if (!currentUser && !wargaAuth) return;
@@ -1619,12 +1761,18 @@ export default function App() {
                       bestPos = pos;
                     }
                     // Exit early if accuracy is already excellent
-                    if (pos.coords.accuracy <= 20) {
+                    if (pos.coords.accuracy <= 25) {
                       navigator.geolocation.clearWatch(watchId);
                       resolve(pos);
                     }
                   },
-                  () => {}, // ignore partial failures
+                  (err) => {
+                    console.warn("[GPS] App.tsx watchPosition error:", err);
+                    if (err.code === 1) { // PERMISSION_DENIED
+                      navigator.geolocation.clearWatch(watchId);
+                      reject(err);
+                    }
+                  },
                   { enableHighAccuracy: true, maximumAge: 0 }
                 );
 
@@ -1751,6 +1899,26 @@ export default function App() {
         console.warn("Could not sync with central emergency_logs: ", errSync);
       }
 
+      // BROADCAST WEB PUSH NOTIFICATION BACKEND VIA REST API
+      try {
+        await fetch("/api/trigger-push-sos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            tenantId: profile.tenantId || "",
+            senderName: profile.nama || "Warga",
+            latitude: lat,
+            longitude: lng,
+            address: addressStr
+          })
+        });
+        console.log("[PWA] Web Push broadcast initiated successfully!");
+      } catch (errPush) {
+        console.warn("[PWA] Fetching api/trigger-push-sos failed: ", errPush);
+      }
+
       showNotification("Sinyal Darurat Terkirim!", "error");
     } catch (err) {
       handleFirestoreError(err, "create", "emergencies");
@@ -1802,7 +1970,7 @@ export default function App() {
       setIsLoadingDB(false);
       return;
     }
-    const tIds = activeTenantIds.filter(id => id && id !== "GUEST");
+    const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",").filter(id => id && id !== "GUEST") : [];
     const rawTId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
     const tId = rawTId === "GUEST" ? "" : rawTId;
 
@@ -1879,7 +2047,7 @@ export default function App() {
       unsubCurrentTenant();
       unsubEmergencies.forEach(u => u());
     };
-  }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId, chunkArray]);
+  }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId, chunkArray, activeTenantIdsStr, wargaAuth]);
 
   const [activeParentTenantId, setActiveParentTenantId] = useState<string | null>(null);
 
@@ -1991,7 +2159,7 @@ export default function App() {
     const centralTabs = ["warga", "dashboard", "users", "complaint", "landing", "search", "verifikasi", "surat", "profile"];
     if (!centralTabs.includes(activeTab || "") && !wargaAuth) return;
 
-    const tIds = activeTenantIds;
+    const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
     const unsubs: (() => void)[] = [];
     
     // Safety check: Prevent SuperAdmin from viewing all residents across all tenants by default.
@@ -2038,7 +2206,7 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTenantIds, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
+  }, [activeTenantIdsStr, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
 
   // 2. Financial Sync (Kas, Iuran, PPOB)
   useEffect(() => {
@@ -2047,7 +2215,7 @@ export default function App() {
     const rt = (currentUser?.role?.toUpperCase() === "RT" || currentUser?.role?.toUpperCase() === "WARGA" || !!wargaAuth) 
       ? getQueryRtNormalized(currentUser?.rt || wargaAuth?.rt) 
       : null;
-    const tIds = activeTenantIds;
+    const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
     const unsubs: (() => void)[] = [];
     
     if (tIds.length > 0) {
@@ -2073,7 +2241,7 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTenantIds, currentUser?.uid, hasFullAccess, chunkArray, quotaExceeded]);
+  }, [activeTenantIdsStr, currentUser?.uid, hasFullAccess, chunkArray, quotaExceeded]);
 
   // 3. Posyandu & Health Sync
   useEffect(() => {
@@ -2081,7 +2249,7 @@ export default function App() {
     if (quotaExceeded) return;
     if (activeTab !== "posyandu") return;
 
-    const tIds = activeTenantIds;
+    const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
     if (tIds.length === 0) return;
     const collections = ["balita", "ibu_hamil", "posyandu_kegiatan", "posbindu_kegiatan", "pemeriksaan_balita", "pemeriksaan_posbindu", "imunisasi"];
     const unsubs: (() => void)[] = [];
@@ -2104,13 +2272,13 @@ export default function App() {
     });
 
     return () => unsubs.forEach(unsub => unsub());
-  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray, quotaExceeded]);
+  }, [activeTab, activeTenantIdsStr, currentUser?.uid, chunkArray, quotaExceeded]);
 
   // 4. Inventory, Trash Bank, Store & more
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     if (quotaExceeded) return;
-    const tIds = activeTenantIds;
+    const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
     if (tIds.length === 0) return;
     const tIdsChunks = chunkArray(tIds, 10);
     const unsubs: (() => void)[] = [];
@@ -2160,13 +2328,13 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTab, activeTenantIds, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
+  }, [activeTab, activeTenantIdsStr, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
 
   // 5. Surat, Voting, Booking & Misc Sync
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     if (quotaExceeded) return;
-    const tIds = activeTenantIds;
+    const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
     if (tIds.length === 0) return;
     const unsubs: (() => void)[] = [];
     const tIdsChunks = chunkArray(tIds, 10);
@@ -2237,7 +2405,7 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTab, activeTenantIds, currentUser?.uid, quotaExceeded, wargaAuth, chunkArray]);
+  }, [activeTab, activeTenantIdsStr, currentUser?.uid, quotaExceeded, wargaAuth, chunkArray]);
 
   // Real-time synchronization of all tenants
   useEffect(() => {
@@ -2881,7 +3049,7 @@ export default function App() {
       },
       {
         id: "posyandu",
-        label: "Kesehatan",
+        label: "E-Posyandu",
         icon: Baby,
         plan: "posyandu",
         minPlan: "PRO",
@@ -2942,7 +3110,7 @@ export default function App() {
       { id: "pengaturan", label: "Pengaturan", icon: Settings },
     ]
       .filter((item) => {
-        const role = (currentUser?.role || "TAMU").toUpperCase();
+        const role = (currentUser?.role || (wargaAuth ? "WARGA" : "TAMU")).toUpperCase();
         const isSuperAdmin = !!currentUser?.isSuperAdmin;
         const isVerified = linkedWarga?.terverifikasi === true;
         const planConfig = getPlanFeatures(currentTenant);
@@ -3160,6 +3328,7 @@ export default function App() {
           KADER: ["dashboard", "posyandu", "bank-sampah", "chat", "panduan-admin"],
           WARGA: [
             "dashboard",
+            "verifikasi",
             "keuangan",
             "posyandu",
             "bank-sampah",
@@ -3191,7 +3360,7 @@ export default function App() {
         return hasAccess;
       })
       .map((item) => {
-        const role = (currentUser?.role || "TAMU").toUpperCase();
+        const role = (currentUser?.role || (wargaAuth ? "WARGA" : "TAMU")).toUpperCase();
         const planConfig = getPlanFeatures(currentTenant);
         const isLocked =
           item.plan &&
@@ -3206,7 +3375,7 @@ export default function App() {
 
         return { ...item, isLocked, label, icon };
       });
-  }, [currentUser, linkedWarga, currentTenant, settings]);
+  }, [currentUser, linkedWarga, currentTenant, settings, wargaAuth]);
 
   if (window.location.pathname.startsWith("/guestbook/")) {
     const tenantId = window.location.pathname.split("/")[2];
@@ -3458,7 +3627,7 @@ export default function App() {
 
   }
 
-  if (wargaAuth && !currentUser?.isSuperAdmin) {
+  if (wargaAuth && wargaAuthForceProfile && !currentUser?.isSuperAdmin) {
     return (
       <div className="relative w-full min-h-screen md:h-screen overflow-y-auto md:overflow-hidden bg-slate-50">
         <WargaProfileView
@@ -3478,6 +3647,10 @@ export default function App() {
           usersData={filteredUsersDataCentral}
           generateSuratHTML={generateSuratHTML}
           settings={settings}
+          onEnterAppPortal={() => {
+            setWargaAuthForceProfile(false);
+            setActiveTab("dashboard");
+          }}
         />
 
         {/* SOS EMERGENCY OVERLAY FOR WARGA */}
@@ -3491,7 +3664,7 @@ export default function App() {
               }}
               onCloseLocal={() => setHiddenEmergencyId(activeEmergency.id)}
               onStopSiren={() => setIsLocalAlarmActive(false)}
-              setActiveTab={() => {}}
+              setActiveTab={setActiveTab}
               canResolve={(() => {
                 const isOwner = auth.currentUser?.uid === activeEmergency.userId ||
                                 (wargaAuth && (wargaAuth.uid === activeEmergency.userId || wargaAuth.nik === activeEmergency.userId));
@@ -4450,11 +4623,15 @@ export default function App() {
             />
           )}
           {activeTab === "sos-monitor" && (
-            <SatpamDashboard tenantId={
+            <SatpamDashboard 
+              tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
                   : (wargaAuth?.tenantId || "rw26_berjuang")
-              } />
+              } 
+              pushSubscriptionStatus={pushSubscriptionStatus}
+              requestPushPermission={requestPushPermission}
+            />
           )}
           {activeTab === "organisasi" && (
             <OrganisasiView
@@ -4972,18 +5149,176 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white w-full max-w-sm rounded-[32px] p-8 text-center shadow-2xl border border-red-100"
+              className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 text-center shadow-2xl border border-red-100 dark:border-red-950 max-h-[90vh] overflow-y-auto"
             >
-              <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-red-50">
+              <div className="w-24 h-24 bg-red-100 dark:bg-red-950/50 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-red-50 dark:ring-red-950/20">
                 <Siren className="w-12 h-12 text-red-600 " />
               </div>
-              <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4">
-                Kirimi Sinyal Darurat?
+              <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-4">
+                Kirim Sinyal Darurat?
               </h2>
-              <p className="text-slate-600 text-base font-medium leading-relaxed mb-8 px-2">
+              <p className="text-slate-600 dark:text-slate-400 text-base font-medium leading-relaxed mb-6 px-2">
                 Tindakan ini akan memberitahukan seluruh pengurus dan warga RW /
                 RT secara instan. Gunakan hanya untuk keadaan mendesak.
               </p>
+
+              {/* ADVANCED GPS ACCURACY CALIBRATION FOR OFF-TRACK COORDINATES */}
+              <div className="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-left font-sans">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    Akurasi Lokasi SOS
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCalibratingSOS(!isCalibratingSOS)}
+                    className="text-[10px] font-black text-rose-600 hover:text-rose-700 uppercase tracking-tight underline border-none bg-transparent cursor-pointer"
+                  >
+                    {isCalibratingSOS ? "Tutup" : "Kalibrasi GPS"}
+                  </button>
+                </div>
+                
+                {!isCalibratingSOS ? (
+                  <div>
+                    {useCustomSOSCoords ? (
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                          GPS Terkalibrasi Aktif
+                        </p>
+                        <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                          Lat: {customSOSLat} | Lng: {customSOSLng}
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                          GPS Otomatis (Browser)
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                          Mengikuti sistem pencarian satelit perangkat Anda. Jika meleset / geser, harap lakukan **Kalibrasi GPS**.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-col gap-2">
+                      <label className="block text-[9px] font-black text-slate-500 uppercase mb-0.5">Pilih Lokasi Akurat Anda</label>
+                      <MapPicker 
+                        lat={parseFloat(customSOSLat) || 0} 
+                        lng={parseFloat(customSOSLng) || 0} 
+                        onChange={(newLat, newLng) => {
+                          setCustomSOSLat(newLat.toString());
+                          setCustomSOSLng(newLng.toString());
+                        }}
+                      />
+                      {(customSOSLat && customSOSLng) && (
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                           <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-800">
+                             <p className="text-[8px] font-bold text-slate-400 uppercase">Latitude</p>
+                             <p className="text-[10px] font-mono font-medium text-slate-700 dark:text-slate-300 truncate">{customSOSLat}</p>
+                           </div>
+                           <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-800">
+                             <p className="text-[8px] font-bold text-slate-400 uppercase">Longitude</p>
+                             <p className="text-[10px] font-mono font-medium text-slate-700 dark:text-slate-300 truncate">{customSOSLng}</p>
+                           </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-tight">
+                      💡 **Tips**: Geser pin merah di peta untuk menentukan koordinat presisi rumah Anda. Ini menjadi lokasi acuan jika terjadi SOS darurat!
+                    </p>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!customSOSLat || !customSOSLng) {
+                            alert("Harap isi Latitude dan Longitude!");
+                            return;
+                          }
+                          const latNum = parseFloat(customSOSLat);
+                          const lngNum = parseFloat(customSOSLng);
+                          
+                          safeLocalStorage.setItem("custom_sos_lat", customSOSLat.trim());
+                          safeLocalStorage.setItem("custom_sos_lng", customSOSLng.trim());
+                          setUseCustomSOSCoords(true);
+                          setIsCalibratingSOS(false);
+                          
+                          // Back up to Cloud Database synchronously
+                          try {
+                            const citizenDocId = mergedWargaProfile?.docId;
+                            if (citizenDocId) {
+                              await updateDoc(doc(db, "data_warga", citizenDocId), {
+                                latitude: latNum,
+                                longitude: lngNum
+                              });
+                            }
+                            if (currentUser?.uid) {
+                              await updateDoc(doc(db, "users", currentUser.uid), {
+                                latitude: latNum,
+                                longitude: lngNum
+                              });
+                            }
+                          } catch (err) {
+                            console.warn("Failed to backup GPS coordinates to database:", err);
+                          }
+
+                          setNotification({
+                            message: "Lokasi GPS berhasil dikalibrasi & disimpan!), jika terjadi SOS di masa mendatang koordinat ini akan digunakan otomatis.",
+                            type: "success"
+                          });
+                          setTimeout(() => setNotification(null), 2500);
+                        }}
+                        className="flex-1 py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all text-center border-none cursor-pointer"
+                      >
+                        Simpan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          safeLocalStorage.removeItem("custom_sos_lat");
+                          safeLocalStorage.removeItem("custom_sos_lng");
+                          setCustomSOSLat("");
+                          setCustomSOSLng("");
+                          setUseCustomSOSCoords(false);
+                          setIsCalibratingSOS(false);
+                          
+                          // Remove from Cloud Database as well
+                          try {
+                            const citizenDocId = mergedWargaProfile?.docId;
+                            if (citizenDocId) {
+                              await updateDoc(doc(db, "data_warga", citizenDocId), {
+                                latitude: null,
+                                longitude: null
+                              });
+                            }
+                            if (currentUser?.uid) {
+                              await updateDoc(doc(db, "users", currentUser.uid), {
+                                latitude: null,
+                                longitude: null
+                              });
+                            }
+                          } catch (err) {
+                            console.warn("Failed to delete GPS coordinates from database:", err);
+                          }
+
+                          setNotification({
+                            message: "Kalibrasi GPS dihapus.",
+                            type: "success"
+                          });
+                          setTimeout(() => setNotification(null), 2500);
+                        }}
+                        className="flex-1 py-1.5 px-2 bg-slate-250 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-[10px] font-bold transition-all text-center border-none cursor-pointer"
+                      >
+                        Hapus GPS
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col gap-4">
                 <button
                   onClick={confirmSOS}
@@ -4993,21 +5328,11 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setIsSOSConfirmOpen(false)}
-                  className="w-full py-5 bg-slate-100 text-slate-600 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                  className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-slate-200 dark:hover:bg-slate-705 transition-all active:scale-95"
                 >
                   Batal
                 </button>
               </div>
-              <button 
-                onClick={() => {
-                  setIsSOSConfirmOpen(false);
-                  setActiveTab("settings");
-                  showNotification("Harap buka menu SOS di dashboard untuk kalibrasi.", "info");
-                }}
-                className="mt-6 text-[10px] font-black text-slate-400 hover:text-brand-blue uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 mx-auto"
-              >
-                <MapPin className="w-3 h-3" /> Masalah Akurasi GPS? Kalibrasi Kustom
-              </button>
             </motion.div>
           </div>
         )}
@@ -7178,9 +7503,12 @@ function LoginView({
                       const matches = (idIsNIK && passIsKK) || (idIsNama && passIsKK) || (idIsNIK && passIsHP);
 
                       if (matches) {
-                        found = cand;
-                        console.log("Found citizen via query lookup:", d.ref.path);
-                        break;
+                        // Priority: Exact tenant match (cleanTenant) is preferred over parent or other matches.
+                        const isBetterMatch = !found || (cand.tenantId === cleanTenant && found.tenantId !== cleanTenant);
+                        if (isBetterMatch) {
+                          found = cand;
+                          console.log("Best match citizen via query lookup:", d.ref.path);
+                        }
                       }
                     }
                   }
@@ -7206,7 +7534,8 @@ function LoginView({
         }
 
         const docId = found.docId || found.id || found.nik;
-        const resolvedTenantId = found.tenantId || cleanTenant || "rw26_berjuang";
+        // Use cleanTenant from input as the priority, default to found.tenantId, then fallback
+        const resolvedTenantId = cleanTenant || found.tenantId || "rw26_berjuang";
         safeLocalStorage.setItem("lastActiveTenantId", resolvedTenantId);
 
         // 1. Create/update user document FIRST for Firestore security rules support (getUserData() mapping)
@@ -7219,7 +7548,7 @@ function LoginView({
             role: "Warga",
             nik: found.nik || "",
             name: found.nama || "Warga",
-            tenantId: found.tenantId || "rw26_berjuang",
+            tenantId: resolvedTenantId,
             linkedResidentId: docId,
             updatedAt: new Date().toISOString(),
           },
@@ -7239,7 +7568,7 @@ function LoginView({
               found.status === "Disetujui" || found.terverifikasi
                 ? "Disetujui"
                 : "Menunggu Persetujuan",
-            tenantId: found.tenantId || "rw26_berjuang",
+            tenantId: resolvedTenantId,
             lastLogin: new Date().toISOString(),
           },
           { merge: true },
@@ -9247,7 +9576,7 @@ function PosyanduView({
           </div>
           <div>
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">
-              Kesehatan
+              E-Posyandu
             </h2>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
               Manajemen Kesehatan Ibu & Anak

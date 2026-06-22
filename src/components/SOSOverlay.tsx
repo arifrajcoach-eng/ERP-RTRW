@@ -534,15 +534,24 @@ export default function SOSOverlay({
         )}
 
         {/* STOP SOS Button */}
-        {canResolve && (
-          <button
-            onClick={() => onResolve(emergency.id)}
-            className="px-10 py-5 bg-white text-rose-600 rounded-[2rem] font-black uppercase text-sm w-full tracking-widest hover:bg-rose-50 hover:scale-[1.02] transition-all active:scale-95 shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-4 flex items-center justify-center gap-3 border-2 border-white/50"
-          >
-            <CheckCircle className="w-6 h-6" />
-            OFF SOS & KEMBALI KE MENU UTAMA
-          </button>
-        )}
+        <button
+          onClick={() => {
+            onStopSiren();
+            stopSOSAlarm();
+            if (canResolve) {
+              onResolve(emergency.id);
+            } else {
+              onCloseLocal();
+            }
+            try {
+              setActiveTab("dashboard");
+            } catch (e) {}
+          }}
+          className="px-10 py-5 bg-white text-rose-600 rounded-[2rem] font-black uppercase text-[11px] w-full tracking-[0.2em] hover:bg-rose-50 hover:scale-[1.02] transition-all active:scale-95 shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-4 flex items-center justify-center gap-3 border-2 border-white/50 cursor-pointer"
+        >
+          <CheckCircle className="w-5 h-5 shrink-0 animate-pulse" />
+          STOP SOS Kembali Ke Halaman Utama
+        </button>
 
 
         <p className="mt-8 text-[10px] font-bold opacity-60 uppercase tracking-widest">

@@ -18,14 +18,27 @@ import {
   reportComplaint,
   bookFacility,
   reportKelahiran,
-  reportKematian
+  reportKematian,
+  getMadingSummary,
+  getSOSSummary,
+  getComplaintsSummary,
+  getBookingsSummary,
+  getBirthdaysSummary
 } from '../services/aiAgentTools';
 import { chatWithAI, textToSpeech } from '../services/aiService';
 
 export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string }) {
+  const roleUpper = currentUser?.role?.toUpperCase() || '';
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
-                       ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role?.toUpperCase());
+                       ['SUPER_ADMIN', 'ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(roleUpper) ||
+                       roleUpper.includes('KETUA') ||
+                       roleUpper.includes('ADMIN') ||
+                       roleUpper.includes('RW') ||
+                       roleUpper.includes('RT') ||
+                       roleUpper.includes('BENDAHARA') ||
+                       roleUpper.includes('SEKRETARIS') ||
+                       !!currentUser?.isSuperAdmin;
   const agentName = "Chaty";
   const agentTitle = isPrivileged ? "Chaty - AI Asisten Ketua" : "Chaty - AI Asisten Warga";
 
@@ -87,7 +100,6 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     console.error("Critical: Tenant ID missing in AIChatBot");
     return null;
   }
-  const roleUpper = currentUser?.role?.toUpperCase();
   
   // Calculate weeklyLimit based on plan
   const normalizedPlan = (plan || 'STARTER').toUpperCase();
@@ -125,7 +137,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const refreshContext = async () => {
     try {
       const [
-        fin, health, activity, waste, guests, letters, lapak, election, inventory, registrations
+        fin, health, activity, waste, guests, letters, lapak, election, inventory, registrations,
+        mading, sos, complaints, bookings, birthdays
       ] = await Promise.all([
         getFinancialSummary(tenantId),
         getHealthSummary(tenantId),
@@ -136,14 +149,20 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
         getELapakSummary(tenantId),
         getElectionSummary(tenantId),
         getInventorySummary(tenantId),
-        getRegistrationInfo(tenantId)
+        getRegistrationInfo(tenantId),
+        getMadingSummary(tenantId),
+        getSOSSummary(tenantId),
+        getComplaintsSummary(tenantId),
+        getBookingsSummary(tenantId),
+        getBirthdaysSummary(tenantId)
       ]);
       
       if (mountedRef.current) {
         setDataContext({ 
           financial: fin, health, activity, wasteBank: waste, 
           guestBook: guests, letters, eLapak: lapak, 
-          election, inventory, registrations 
+          election, inventory, registrations,
+          mading, sos, complaints, bookings, birthdays
         });
       }
     } catch (e) {
@@ -360,6 +379,9 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
           letters: dataContext?.letters,
           eLapak: dataContext?.eLapak,
           election: dataContext?.election,
+          mading: dataContext?.mading,
+          bookings: dataContext?.bookings,
+          birthdays: { totalThisMonth: dataContext?.birthdays?.totalThisMonth, currentMonthName: dataContext?.birthdays?.currentMonthName }
           // Excluded: inventory, registrations, sensitive financial details
         }),
         currentUserProfile: {

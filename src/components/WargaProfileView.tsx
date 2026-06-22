@@ -84,6 +84,7 @@ interface WargaProfileViewProps {
   usersData: any[];
   generateSuratHTML: any;
   settings: any;
+  onEnterAppPortal?: () => void;
 }
 
 export function WargaProfileView({ 
@@ -102,7 +103,8 @@ export function WargaProfileView({
   getSetting, 
   usersData, 
   generateSuratHTML, 
-  settings 
+  settings,
+  onEnterAppPortal
 }: WargaProfileViewProps) {
   const wargaData = React.useMemo(() => {
     return normalizeProfileData(rawWargaData);
@@ -595,7 +597,7 @@ export function WargaProfileView({
             <div className="mt-12 w-full space-y-3 pb-8 border-b border-slate-100 dark:border-slate-800">
                {[
                  { id: 'profil', label: 'Dashboard Utama', icon: User, gradient: 'from-brand-blue to-indigo-600' },
-                 { id: 'layanan', label: 'E-Administrasi', icon: FileText, gradient: 'from-purple-600 to-pink-600' },
+                 { id: 'layanan', label: 'E-SURAT PENGANTAR', icon: FileText, gradient: 'from-purple-600 to-pink-600' },
                  { id: 'riwayat', label: 'Riwayat Aktivitas', icon: Clock, gradient: 'from-amber-500 to-orange-600' }
                ].map((item) => (
                 <motion.button 
@@ -616,7 +618,18 @@ export function WargaProfileView({
             </div>
          </div>
 
-         <div className="mt-auto p-10">
+         <div className="mt-auto p-10 flex flex-col gap-3">
+            {wargaData.terverifikasi && onEnterAppPortal && (
+               <motion.button 
+                 whileHover={{ scale: 1.02, y: -2 }}
+                 whileTap={{ scale: 0.98 }}
+                 onClick={onEnterAppPortal} 
+                 className="w-full flex items-center justify-center gap-3 px-8 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.25em] bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-all"
+               >
+                  <Globe className="w-5 h-5 shrink-0" /> 
+                  Masuk Halaman Utama
+               </motion.button>
+            )}
             <motion.button 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -651,7 +664,7 @@ export function WargaProfileView({
                           className="flex items-center gap-4 px-8 py-5 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.25em] text-white hover:shadow-2xl hover:shadow-indigo-500/30 transition-all duration-300 group"
                        >
                           <Edit className="w-5 h-5 group-hover:rotate-12 transition-transform" /> 
-                          Pembaruan Berkas
+                          Update Data Kamu
                        </motion.button>
                     </div>
  
@@ -780,7 +793,7 @@ export function WargaProfileView({
              {activeCitizenTab === 'layanan' && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="max-w-4xl mx-auto space-y-12">
                    <div>
-                      <h1 className="text-[2.5rem] font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase font-elegant leading-none">E-Administrasi</h1>
+                      <h1 className="text-[2.5rem] font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase font-elegant leading-none">E-SURAT PENGANTAR</h1>
                       <p className="text-slate-500 font-bold mt-4 max-w-lg leading-relaxed">Pilih jenis persuratan yang Anda butuhkan. Sistem akan memproses data Anda secara otomatis ke otoritas RT/RW.</p>
                    </div>
 
@@ -1248,7 +1261,7 @@ export function WargaProfileView({
                     initial={{ scale: 0.95, opacity: 0 }} 
                     animate={{ scale: 1, opacity: 1 }} 
                     exit={{ scale: 0.95, opacity: 0 }} 
-                    className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 p-6 border border-slate-100 dark:border-slate-850 flex flex-col gap-4 text-slate-800 dark:text-slate-100 animate-fade-in"
+                    className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 p-6 border border-slate-100 dark:border-slate-850 flex flex-col gap-4 text-slate-800 dark:text-slate-100 animate-fade-in max-h-[95vh] overflow-y-auto"
                  >
                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">

@@ -180,7 +180,7 @@ export function IuranView({
         }
       }
 
-      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "DELETE_IURAN", "iuran", `Menghapus iuran: ${trxToDelete.namaPenyetor || id}`, tenantId);
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "DELETE_IURAN", "iuran", `Menghapus iuran: ${trxToDelete.namaPenyetor || id}`, trxToDelete.tenantId || tenantId);
 
       showNotification('Transaksi dan catatan kas terkait berhasil dihapus', 'success');
       setTrxToDelete(null);
@@ -293,6 +293,22 @@ export function IuranView({
     ));
   };
 
+  const resolveRtTenantId = (baseTenant: string, rtStr: string): string => {
+    if (!baseTenant) return "MASTER";
+    let parentRw = baseTenant;
+    if (baseTenant.toLowerCase().startsWith("rt")) {
+      const parts = baseTenant.split("_");
+      if (parts.length > 1) {
+        parentRw = parts.slice(1).join("_");
+      }
+    }
+    if (!rtStr) return baseTenant;
+    const rtNum = rtStr.replace(/\D/g, "");
+    if (!rtNum) return baseTenant;
+    const paddedRt = rtNum.padStart(2, "0");
+    return `rt${paddedRt}_${parentRw}`;
+  };
+
   const handleCreatePayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -341,10 +357,12 @@ export function IuranView({
     }
     if (!finalRt) finalRt = currentUser?.rt || "01";
 
+    const resolvedTenant = editingTrx?.tenantId || resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
+
     const payload = sanitizeForFirestore({
       ...(editingTrx || {}),
       id,
-      tenantId: tenantId || "MASTER",
+      tenantId: resolvedTenant,
       rt: finalRt.toString(),
       tanggal: dateObj.toISOString(),
       jenis: jenisPembayaran || "Iuran Warga",
@@ -378,7 +396,7 @@ export function IuranView({
           const kasId = `TRX-${Date.now()}`;
           const kasPayload = {
             id: kasId,
-            tenantId: tenantId || "MASTER",
+            tenantId: resolvedTenant,
             rt: payload.rt,
             tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
             tipe: 'Masuk',
@@ -416,7 +434,7 @@ export function IuranView({
             const kasId = `TRX-${Date.now()}`;
             const kasPayload = {
               id: kasId,
-              tenantId: tenantId || "MASTER",
+              tenantId: resolvedTenant,
               rt: payload.rt,
               tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
               tipe: 'Masuk',
@@ -434,7 +452,7 @@ export function IuranView({
         }
       }
       
-      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", editingTrx ? "UPDATE_IURAN" : "CREATE_IURAN", "iuran", `${editingTrx ? "Edit" : "Catat"} Iuran: RP ${payload.nominal} - ${payload.namaPenyetor}`, tenantId);
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", editingTrx ? "UPDATE_IURAN" : "CREATE_IURAN", "iuran", `${editingTrx ? "Edit" : "Catat"} Iuran: RP ${payload.nominal} - ${payload.namaPenyetor}`, resolvedTenant);
       showNotification(editingTrx ? 'Pembayaran berhasil diperbarui' : 'Pembayaran berhasil dicatat', 'success');
       setShowForm(false);
       setEditingTrx(null);
@@ -519,9 +537,11 @@ export function IuranView({
     }
     if (!finalRt) finalRt = currentUser?.rt || "01";
 
+    const resolvedTenant = resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
+
     const payload = sanitizeForFirestore({
       id,
-      tenantId: tenantId || "MASTER",
+      tenantId: resolvedTenant,
       rt: finalRt.toString(),
       tanggal: dateObj.toISOString(),
       jenis: pgFormState.jenis || "Iuran Warga",
@@ -549,7 +569,7 @@ export function IuranView({
       const kasId = `TRX-${Date.now()}`;
       const kasPayload = {
         id: kasId,
-        tenantId: tenantId || "MASTER",
+        tenantId: resolvedTenant,
         rt: payload.rt,
         tanggal: dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
         tipe: 'Masuk',
@@ -567,7 +587,7 @@ export function IuranView({
         return [kasPayload, ...prev];
       });
       
-      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_IURAN_ONLINE", "iuran", `Iuran Online: RP ${payload.nominal} - ${payload.namaPenyetor}`, tenantId);
+      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_IURAN_ONLINE", "iuran", `Iuran Online: RP ${payload.nominal} - ${payload.namaPenyetor}`, resolvedTenant);
       
       showNotification('Pembayaran Online Berhasil!', 'success');
       setShowPgModal(false);
@@ -592,7 +612,7 @@ export function IuranView({
       const kasId = `TRX-${Date.now()}`;
       const kasPayload = {
         id: kasId,
-        tenantId,
+        tenantId: trx.tenantId || tenantId || "MASTER",
         rt: trx.rt || '01',
         tanggal: new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
         tipe: 'Masuk',

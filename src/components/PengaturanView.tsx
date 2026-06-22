@@ -1365,8 +1365,21 @@ export default function PengaturanView({
                 <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
                   Logo Aplikasi (Sidebar)
                 </label>
+                <div className="mb-4">                
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
+                    Atau Masukkan URL Logo (Link Langsung)
+                  </label>
+                  <input
+                    name="tenant_system_logo"
+                    type="text"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="https://example.com/logo.png"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-all"
+                  />
+                </div>
                 <div className="flex gap-3 items-center">
-                  <input type="hidden" name="tenant_system_logo" value={logoUrl} />
+
                   <input
                     type="file"
                     accept="image/*"

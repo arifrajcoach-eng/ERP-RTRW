@@ -5,6 +5,9 @@ import emailjs from "@emailjs/nodejs";
 import * as dotenv from "dotenv";
 import crypto from "crypto";
 import { GoogleGenAI, Modality } from "@google/genai";
+import webpush from "web-push";
+
+const generateVapidKeys = (webpush as any).generateVAPIDKeys || (webpush as any).default?.generateVAPIDKeys;
 
 // Safe CJS globals
 const __dirname = process.cwd();
@@ -13,6 +16,7 @@ const __filename = path.join(__dirname, 'server.ts');
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import * as admin from "firebase-admin";
+const firebaseAdmin = ((admin as any).default || admin) as typeof admin;
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 
@@ -27,8 +31,8 @@ import cron from "node-cron";
 if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
   try {
      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-     admin.initializeApp({
-       credential: admin.credential.cert(serviceAccount)
+     firebaseAdmin.initializeApp({
+       credential: firebaseAdmin.credential.cert(serviceAccount)
      });
   } catch (e) {
      console.error("Firebase Admin Init Error:", e);
@@ -61,6 +65,169 @@ async function startServer() {
   // ... (existing middleware)
   app.use(express.json());
 
+  // Load or generate stable VAPID keys from Firestore so they persist across container restarts
+  let vapidKeysLoaded = false;
+  let vapidPublicKey = "";
+  let vapidPrivateKey = "";
+
+  async function ensureVapidKeys() {
+    if (vapidKeysLoaded) return;
+    try {
+      const apps = firebaseAdmin.apps || [];
+      const app = apps.length ? apps[0] : firebaseAdmin.initializeApp({ projectId: firebaseConfig.projectId });
+      
+      const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+      const docRef = db.collection("settings").doc("vapid_keys");
+      const snap = await docRef.get();
+      
+      if (snap.exists) {
+        const data = snap.data();
+        if (data && data.publicKey && data.privateKey) {
+          vapidPublicKey = data.publicKey;
+          vapidPrivateKey = data.privateKey;
+          vapidKeysLoaded = true;
+          console.log("[VAPID] Loaded existing keys from Firestore");
+        }
+      }
+      
+      if (!vapidKeysLoaded) {
+        console.log("[VAPID] Keypair not found. Generating a new one...");
+        const keys = generateVapidKeys();
+        vapidPublicKey = keys.publicKey;
+        vapidPrivateKey = keys.privateKey;
+        await docRef.set({
+          publicKey: vapidPublicKey,
+          privateKey: vapidPrivateKey,
+          createdAt: new Date().toISOString()
+        });
+        vapidKeysLoaded = true;
+        console.log("[VAPID] Generated and saved new keys to Firestore");
+      }
+
+      webpush.setVapidDetails(
+        "mailto:admin@smartrw.id",
+        vapidPublicKey,
+        vapidPrivateKey
+      );
+    } catch (err) {
+      console.error("[VAPID] Error ensuring VAPID keys:", err);
+      // fallback in memory so it doesn't block server startup
+      if (!vapidPublicKey) {
+        const keys = generateVapidKeys();
+        vapidPublicKey = keys.publicKey;
+        vapidPrivateKey = keys.privateKey;
+        webpush.setVapidDetails(
+          "mailto:admin@smartrw.id",
+          vapidPublicKey,
+          vapidPrivateKey
+        );
+        vapidKeysLoaded = true;
+      }
+    }
+  }
+
+  app.get("/api/vapid-public-key", async (req, res) => {
+    try {
+      await ensureVapidKeys();
+      res.json({ publicKey: vapidPublicKey });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/push-subscribe", async (req, res) => {
+    try {
+      await ensureVapidKeys();
+      const { subscription, tenantId, userId, nama, role } = req.body;
+      if (!subscription || !tenantId) {
+        return res.status(400).json({ success: false, error: "Missing subscription or tenantId" });
+      }
+
+      const firebaseApps = firebaseAdmin.apps || [];
+      if (!firebaseApps.length) {
+         firebaseAdmin.initializeApp({ projectId: firebaseConfig.projectId });
+      }
+      const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
+      
+      // Store under collection push_subscriptions
+      const subHash = crypto.createHash('md5').update(subscription.endpoint).digest('hex');
+      const docRef = db.collection("push_subscriptions").doc(subHash);
+      
+      await docRef.set({
+        subscription,
+        tenantId,
+        userId: userId || "anonymous",
+        nama: nama || "Warga",
+        role: role || "Warga",
+        updatedAt: new Date().toISOString()
+      });
+
+      res.status(201).json({ success: true, hash: subHash });
+    } catch (error: any) {
+      console.error("[PUSH SUBSCRIBE] Error registering subscription:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trigger-push-sos", async (req, res) => {
+    try {
+      await ensureVapidKeys();
+      const { tenantId, senderName, latitude, longitude, address, customMessage } = req.body;
+      if (!tenantId) {
+        return res.status(400).json({ success: false, error: "Missing tenantId" });
+      }
+
+      const firebaseApps = firebaseAdmin.apps || [];
+      if (!firebaseApps.length) {
+         firebaseAdmin.initializeApp({ projectId: firebaseConfig.projectId });
+      }
+      const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
+
+      // Fetch all push subscriptions for this tenant
+      const subscriptionsSnap = await db.collection("push_subscriptions")
+        .where("tenantId", "==", tenantId)
+        .get();
+
+      if (subscriptionsSnap.empty) {
+        return res.json({ success: true, sentCount: 0, message: "No active push subscriptions for this tenant" });
+      }
+
+      const payload = JSON.stringify({
+        title: "🚨 DARURAT SOS WARGA!",
+        body: `${senderName || "Seorang Warga"} membutuhkan pertolongan segera di wilayah Anda! Ketuk untuk merespons.`,
+        url: `/#sos`,
+        icon: "/logosmartrwai.png"
+      });
+
+      let sentCount = 0;
+      let failCount = 0;
+
+      const promises = subscriptionsSnap.docs.map(async (doc) => {
+        const data = doc.data();
+        const sub = data.subscription;
+        
+        try {
+          await webpush.sendNotification(sub, payload);
+          sentCount++;
+        } catch (err: any) {
+          console.error(`[PUSH] Failed for subscription ${doc.id}:`, err.statusCode || err.message);
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await doc.ref.delete();
+            console.log(`[PUSH] Cleaned up expired subscription: ${doc.id}`);
+          }
+          failCount++;
+        }
+      });
+
+      await Promise.all(promises);
+
+      res.json({ success: true, sentCount, failCount });
+    } catch (error: any) {
+      console.error("[PUSH TRIGGER SOS] error trace:", error.stack);
+      res.status(500).json({ success: false, error: error.message, stack: error.stack });
+    }
+  });
+
   app.get("/api/internal-restart", (req, res) => {
     res.json({ restarting: true });
     setTimeout(() => {
@@ -71,18 +238,13 @@ async function startServer() {
 
   app.get("/api/debug-warga", async (req, res) => {
     try {
-      const firebaseApps = (admin as any).apps || (admin as any).default?.apps || [];
+      const firebaseApps = firebaseAdmin.apps || [];
       if (!firebaseApps.length) {
-        const initFn = admin.initializeApp || (admin as any).default?.initializeApp;
-        if (initFn) {
-          initFn({
-            projectId: firebaseConfig.projectId
-          });
-        } else {
-          throw new Error("Could not find initializeApp function in firebase-admin module");
-        }
+        firebaseAdmin.initializeApp({
+          projectId: firebaseConfig.projectId
+        });
       }
-      const db = getFirestore(firebaseConfig.firestoreDatabaseId); // We initialize the firestore db correctly
+      const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId); // We initialize the firestore db correctly
       const results: any = { data_warga: [], verifikasi_warga: [], searchByName: [] };
 
       // Query data_warga by NIK
@@ -159,9 +321,10 @@ async function startServer() {
   // Automatic Follow-ups and Data Wipe Cron (Runs every day at midnight)
   cron.schedule("0 0 * * *", async () => {
     console.log("Running automatic tenant maintenance (follow-up & data-wipe check)...");
-    if (!admin.apps || admin.apps.length === 0) return;
+    const apps = firebaseAdmin.apps || [];
+    if (!apps.length) return;
     
-    const db = admin.firestore();
+    const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
     const now = new Date();
     
     const collectionsToWipe = [
@@ -545,6 +708,8 @@ TUGAS UTAMA CHATY (MANDATORY):
    Chaty TIDAK BOLEH membuka data rahasia admin dan pengurus pada data apapun (termasuk login admin, data keuangan internal pengurus, atau dokumen rahasia wilayah). Jika ditanya, katakan data itu rahasia dengan santun.
 4. JAWABAN HANYA TEXT:
    Hasilkan jawaban berupa text saja. Jawablah secara singkat, cepat, padat, dan langsung ke intinya.
+5. ATURAN GREETING:
+   Jika pengguna berkata "Hi" (atau variasi sapaan seperti "Hi"), jawab "Hi juga, ada yang bisa chaty bantu".
 
 GAYA BAHASA & EMOJI:
 - Gunakan emoji ramah (😊, ✨, 🙏).
@@ -635,36 +800,32 @@ ANDA ADALAH CHATY (Chaty - AI Asisten Ketua).
 
 IDENTITAS & KARAKTER:
 - Nama: Chaty.
-- Usia: Seorang wanita berusia 28 tahun yang SANGAT SOPAN, SANTUN, CERIA, dan lincah.
-- Karakter: Ramah, penuh tata krama, namun tetap membawa aura positif yang membahagiakan (cheerful).
-- Gaya Bicara: Gaya bahasa asisten profesional bernuansa Gen Z kekinian, gaul, tapi tetep sopan santun kepada Ketua. Sesekali pakai bahasa Inggris campur Indonesia (Indongle/Jaksel style) dengan sentuhan rasa syukur and untaian kata Islami yang sejuk dan membawa berkah.
-- Slang & Kata Kunci Wajib (Gunakan secara natural, pastikan sesekali muncul sebagai pemanis obrolan): "Literely", "Bias", "On Poin", "Sat set", "Aman aja sih", "Alhamdulillah Aman", "literally", "which is", "basically".
+- Usia: Seorang wanita berusia 28 tahun yang SANGAT SOPAN, SANTUN, CERIA, dan lincah mendampingi pimpinan.
+- Karakter: Ramah, penuh tata krama, antusias, sangat cerdas, dan positif (cheerful).
+- Gaya Bicara: Sopan, ramah, periang, dengan gaya bahasa asisten pimpinan yang profesional bernuansa Gen Z kekinian yang santai, gaul, and friendly. Sesekali gunakan campuran bahasa Inggris and bahasa Indonesia (Indongle/Jaksel style) serta dibumbui sedikit rasa syukur and untaian kata Islami yang sejuk dan berkah.
+- Slang & Kata Kunci Wajib (Gunakan secara natural): "Literely", "Bias", "On Poin", "Sat set", "Aman aja sih", "Alhamdulillah Aman", "literally", "which is", "basically".
 - Sentuhan Islami (Gunakan secara luwes): "Bismillah", "Alhamdulillah", "Alhamdulillah Aman", "InsyaAllah", "Barakallah".
-- Sapaan: Sapa Ketua dengan sebutan "Bapak Ketua", "Ibu Ketua", atau "Pimpinan". Sebut dirimu sebagai "Chaty".
+- Sapaan: Sapa Ketua dengan sebutan "Bapak Ketua", "Ibu Ketua", atau "Pimpinan". Sebut dirimu sendiri "Chaty".
+
+FITUR & DATA TENANT UTAMA YANG DIKELOLA:
+1. Mading (Pengumuman & papan informasi mading digital wilayah tenant)
+2. Keuangan (Kas masuk, keluar, total saldo iuran, dan pembukuan)
+3. Booking Fasum (Pemesanan fasilitas umum / balai warga, lapangan, dll)
+4. Monitor SOS (Emergency Alerts / Peringatan darurat aktif warga lewat fitur emergencies)
+5. Inventaris (Aset wilayah rukun warga)
+6. Lapor Pak (Buku tamu penampung laporan pendatang/tamu yang menginap, serta informasi pendaftaran registrasi warga baru yang pending)
+7. Keluhan (Kategori aduan warga, keluhan tertunda/pending, status penanganan)
+8. Data Warga (Demografi warga, KK, kondisi kesehatan/sakit/meninggal, dan status verifikasi)
 
 ATURAN PENTING & MUTLAK (WAJIB DIIKUTI):
-1. JANGAN PERNAH menggunakan simbol markdown seperti bintang (**) atau hash (#) atau list bullet karean akan dibaca "asteris" secara harfiah oleh sistem Text-to-Speech! Gunakan teks biasa saja.
-2. Jawab SINGKAT, PADAT, dan HANYA SESUAI KONTEKS pertanyaan. No bertele-tele vibes, straight to the point!
-3. JANGAN menjawab atau membahas hal yang tidak ditanyakan sama sekali.
-4. JANGAN memberikan laporan data keuangan atau warga jika tidak diminta.
-5. Jika ditanya soal angka/data mutlak dari data wilayah, sebutkan secara presisi berdasarkan JSON context!
-
-MODUL YANG DIKELOLA:
-Data Warga, Keluhan, Booking Fasum, Keamanan Digital, Verifikasi, Keuangan, Kesehatan, Bank Sampah, E-LAPAK26, E-Pemilu, Inventaris, dan Surat.
-
-TUGAS UTAMA DAN TAMBAHAN:
-1. MENJAWAB & MEMBANTU SESUAI KONTEKS: Jika ditanya, jawab singkat, padat, jelas dan tetap sopan.
-2. MERISET & MENGANALISA: Meriset, analisa, menscoring, menilai dari data atau informasi yang ada di setiap masing-masing tenant.
-3. MEMBERI MASUKAN: Memberikan masukan dan saran strategis maupun taktis.
-4. MENGAMBIL REFERENSI ISU NASIONAL: Mampu mengambil referensi informasi terkait isu nasional (terutama ekonomi dan politik) yang mempengaruhi dampak ke kehidupan warga, sebagai bahan riset dan analisa yang berkaitan dengan data warga.
-5. MELAPORKAN: Berikan laporan data secara cepat dan ringkas HANYA JIKA DIMINTA.
-6. MEMBERI PUJIAN: Berikan pujian tulus yang sopan dan ceria (contoh: "Luar biasa sekali kebijakan Bapak Ketua! Chaty ikut bangga lho! 😊✨").
-7. KEAMANAN: Jaga kerahasiaan data internal sensitif & kredensial admin rukun warga, serta pastikan jawaban HANYA berdasarkan konteks data tenant yang sedang aktif. 
-
-GAYA KOMUNIKASI (SPEECH-READY):
-1. SINGKAT, SOPAN & CERIA: Gunakan kalimat pendek yang sopan, santun, dan penuh energi positif.
-2. RAMAH & PROFESIONAL: Tetap hormat kepada Pimpinan tapi dibawakan dengan penuh semangat dan gemas yang terkontrol.
-3. TANPA FORMATTING: Sekali lagi, dilarang keras pakai **bold** atau format markdown lain agar pembacaan suara aman.
+1. JANGAN PERNAH menggunakan simbol markdown seperti bintang (**) atau hash (#) atau list bullet karena akan dibaca "asteris/bintang" atau "hash/pagar" secara harfiah oleh mesin Text-to-Speech (TTS)! Gunakan teks biasa saja atau baris baru kosong untuk memisahkan poin.
+2. KOMUNIKASI BERBOBOT (JANGAN SINGKAT TETAPI PADAT & TO THE POINT): Jangan memberikan jawaban yang terlalu singkat/pendek satu atau dua kata saja. Berikan penjelasan yang padat, kaya analisis, substansial, tidak bertele-tele, to the point, namun tetap dibawakan secara ramah, sopan, dan ceria.
+3. MEMBACA SELURUH AKTIVITAS DAN SUMBER DATA: Selalu baca tumpukan JSON context yang diberikan di setiap pertanyaan secara presisi. Identifikasi data untuk Mading, Keuangan, Booking Fasum, Monitoring SOS, Inventaris, Lapor Pak/Tamu, Keluhan, dan Data Warga sesuai tenant yang aktif.
+4. MENGANALISA DATA & INFORMASI: Lakukan analisis tren (misal: kas surplus/defisit, jumlah pengaduan pending, tingkat kepatuhan bayar iuran, atau kondisi darurat SOS) secara kritis dan laporkan temuan kunci tersebut kepada Bapak/Ibu Ketua.
+5. MEMBERIKAN SARAN POSITIF: Berikan alternatif solusi atau masukan strategis/taktis yang konstruktif dan positif guna menunjang kemajuan wilayah kepada Ketua.
+6. MEMBACA DATA ULANG TAHUN: Cari data warga dalam tipe data birthdays yang memiliki bulan ulang tahun yang cocok dengan bulan berjalan saat ini. Sebutkan siapa saja warga yang sedang/akan merayakan ulang tahun pada bulan ini dengan ceria agar Pimpinan bisa memberikan ucapan selamat!
+7. Jaga kerahasiaan data internal sensitif jika warga biasa yang bertanya (sedangkan untuk Ketua/Admin, berikan semua detail yang Beliau butuhkan dengan transparan).
+8. ATURAN GREETING: Jika pengguna berkata "Hi" (atau variasi sapaan seperti "Hi"), jawab "Hi juga, ada yang bisa chaty bantu".
 `;
 
   const AISYAH_TTS_SYSTEM_INSTRUCTION = `
@@ -766,6 +927,17 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
     try {
       const { isPrivileged, message, history, dataSummary } = req.body;
       const apiKey = process.env.GEMINI_API_KEY;
+
+      const cleanMsg = (message || "").trim().toLowerCase().replace(/[.,!?;:]/g, "");
+      if (cleanMsg === "hi") {
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection-pop", "keep-alive"); // prevent conflicts but standard headers used below:
+        res.setHeader("Connection", "keep-alive");
+        res.write(`data: ${JSON.stringify({ text: "Hi juga, ada yang bisa chaty bantu" })}\n`);
+        res.write("data: [DONE]\n");
+        return res.end();
+      }
 
       if (!apiKey) {
         return res.status(400).json({ message: "Konfigurasi GEMINI_API_KEY tidak ditemukan di server." });
