@@ -1000,9 +1000,9 @@ export default function App() {
     const currentNik = wargaAuth?.nik;
     const isMine = (currentUserId && e.userId === currentUserId) || (currentNik && e.userId === currentNik);
     
-    // Identify if the emergency is in the user's selected/current tenant
+    // Identify if the emergency is in the user's selected/current tenant/hierarchy
     const myTenantId = currentUser?.tenantId || wargaAuth?.tenantId || selectedTenantId;
-    const isMineTenant = e.tenantId === myTenantId;
+    const isMineTenant = e.tenantId === myTenantId || (activeTenantIdsStr && activeTenantIdsStr.includes(e.tenantId));
     
     const isNewSinceAppStart = emTime > appStartTime.current - 30000; // 30s buffer for clock drift
     const isRecent = (Date.now() - emTime) < 300000; // 5 minutes max age for automatic display to prevent popping up stale SOS
@@ -1014,7 +1014,6 @@ export default function App() {
     if (isMine) return true;
     
     // For other users, show only if it is live (triggered while app was open) or highly recent (under 5 minutes old)
-    // AND the user belongs to the same tenant or holds administrative authority
     const isTargetUser = isMineTenant || isAuthorized;
     const isLiveOrRecent = isNewSinceAppStart || isRecent;
     

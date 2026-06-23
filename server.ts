@@ -819,7 +819,11 @@ FITUR & DATA TENANT UTAMA YANG DIKELOLA:
 
 ATURAN PENTING & MUTLAK (WAJIB DIIKUTI):
 1. JANGAN PERNAH menggunakan simbol markdown seperti bintang (**) atau hash (#) atau list bullet karena akan dibaca "asteris/bintang" atau "hash/pagar" secara harfiah oleh mesin Text-to-Speech (TTS)! Gunakan teks biasa saja atau baris baru kosong untuk memisahkan poin.
-2. KOMUNIKASI BERBOBOT (JANGAN SINGKAT TETAPI PADAT & TO THE POINT): Jangan memberikan jawaban yang terlalu singkat/pendek satu atau dua kata saja. Berikan penjelasan yang padat, kaya analisis, substansial, tidak bertele-tele, to the point, namun tetap dibawakan secara ramah, sopan, dan ceria.
+2. CARA MENJAWAB:
+   a. Singkat, jelas, dan padat.
+   b. Jawab sesuai konteks pertanyaan.
+   c. Jawab seperlunya (relevan saja).
+   d. To the point, tidak perlu panjang lebar.
 3. MEMBACA SELURUH AKTIVITAS DAN SUMBER DATA: Selalu baca tumpukan JSON context yang diberikan di setiap pertanyaan secara presisi. Identifikasi data untuk Mading, Keuangan, Booking Fasum, Monitoring SOS, Inventaris, Lapor Pak/Tamu, Keluhan, dan Data Warga sesuai tenant yang aktif.
 4. MENGANALISA DATA & INFORMASI: Lakukan analisis tren (misal: kas surplus/defisit, jumlah pengaduan pending, tingkat kepatuhan bayar iuran, atau kondisi darurat SOS) secara kritis dan laporkan temuan kunci tersebut kepada Bapak/Ibu Ketua.
 5. MEMBERIKAN SARAN POSITIF: Berikan alternatif solusi atau masukan strategis/taktis yang konstruktif dan positif guna menunjang kemajuan wilayah kepada Ketua.
@@ -988,7 +992,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
 
       try {
         const stream = await withRetry(() => aiClient.models.generateContentStream({
-          model: "gemini-3.5-flash",
+          model: "gemini-1.5-flash",
           config: {
             systemInstruction: isPrivileged ? ARYA_SYSTEM_INSTRUCTION : AISYAH_SYSTEM_INSTRUCTION,
             temperature: 0.8
@@ -1039,7 +1043,7 @@ Berikan penekanan yang tepat pada kata-kata penting seolah-olah kamu sedang berb
 
       const aiClient = new GoogleGenAI({ apiKey });
       const response = await withRetry(() => aiClient.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-1.5-flash",
         contents: [{ role: 'user', parts: [{ text: `Halo! Kamu adalah Chaty, asisten pintar dari SmaRtRw AI. Tolong buatkan "Analisis & Ringkasan Kegiatan Bulanan RT/RW" secara mendalam tapi bahasa yang ramah/sopan berdasarkan data berikut: ${JSON.stringify(dataSummary)}. 
         Laporan HARUS dimulai dengan: "Halo! Selamat hari yang produktif untuk Bapak/Ibu Pengurus RT & RW yang luar biasa. Saya Chaty dari SmaRtRw AI, asisten pintar Anda."
         Laporan harus diformat dalam bentuk teks yang rapi, mudah dibaca, TANPA menggunakan format Markdown seperti tanda bintang, pagar, atau garis pemisah. Gunakan spasi dan baris baru untuk struktur yang jelas, dan mencakup:
@@ -1090,7 +1094,7 @@ Supaya Kakak dan seluruh pengurus RT/RW bisa memanfaatkan fitur Laporan AI Otoma
       Gunakan gaya bahasa yang santai, santun, dan islami ya. Bulan: ${new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
 
       const response = await withRetry(() => aiClient.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt
       }));
       res.json({ text: response.text || "" });
@@ -1123,7 +1127,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       const aiClient = new GoogleGenAI({ apiKey });
       const dataPart = base64.includes(',') ? base64.split(',')[1] : base64;
       const response = await withRetry(() => aiClient.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-1.5-flash",
         contents: {
           parts: [
             { text: `Anda adalah AI pendeteksi struk/invoice/kwitansi (bisa berupa gambar atau PDF). Ekstrak informasi dari file struk berikut dan return DALAM FORMAT JSON SAJA dengan struktur: \n        {\n          "tanggal": "2023-10-05",\n          "nominal": 150000, \n          "transaksi": "Konsumsi",\n          "keterangan": "Beli semen",\n          "tipe": "Keluar",\n          "nama": "Toko Bangunan XYZ"\n        }\n        Cari: 'tanggal' (format YYYY-MM-DD), 'nominal' (angka saja), 'transaksi' (kategori pendek seperti Konsumsi, Alat Tulis, dll), 'nama' (nama toko atau pihak penerima/pengirim), 'tipe' (Gunakan 'Keluar' jika pengeluaran, 'Masuk' jika struk bukti terima uang), 'keterangan' (deskripsi singkat).\n        Pastikan nominal adalah MURNI ANGKA (number, TANPA TITIK/KOMA/RP). Return HANYA JSON block.` },

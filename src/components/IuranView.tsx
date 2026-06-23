@@ -357,7 +357,15 @@ export function IuranView({
     }
     if (!finalRt) finalRt = currentUser?.rt || "01";
 
-    const resolvedTenant = editingTrx?.tenantId || resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
+    let resolvedTenant = editingTrx?.tenantId || resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
+    
+    // Auto-route Donasi Ke RW to the central RW tenant, bypassing RT
+    if ((jenisPembayaran === "Donasi Ke RW" || (formData.get('jenis') as string) === "Donasi Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
+      const parts = resolvedTenant.split("_");
+      if (parts.length > 1) {
+        resolvedTenant = parts.slice(1).join("_");
+      }
+    }
 
     const payload = sanitizeForFirestore({
       ...(editingTrx || {}),
@@ -537,7 +545,15 @@ export function IuranView({
     }
     if (!finalRt) finalRt = currentUser?.rt || "01";
 
-    const resolvedTenant = resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
+    let resolvedTenant = resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
+    
+    // Auto-route Donasi Ke RW to the central RW tenant, bypassing RT
+    if (pgFormState.jenis === "Donasi Ke RW" && resolvedTenant.toLowerCase().startsWith("rt")) {
+      const parts = resolvedTenant.split("_");
+      if (parts.length > 1) {
+        resolvedTenant = parts.slice(1).join("_");
+      }
+    }
 
     const payload = sanitizeForFirestore({
       id,
@@ -655,13 +671,27 @@ export function IuranView({
   };
 
   const rekapData = useMemo(() => {
+    let filteredWarga = wargaData.filter((w:any) => {
+      const p = (w.posisi || w.posisiKeluarga || w.status_keluarga || "").toLowerCase();
+      return p.includes('kepala') || p === 'kk' || p.includes('kk ') || p.includes('pemilik') || p.includes('suami') || p.includes('ayah') || p.includes('bapak');
+    });
+
+    if (filteredWarga.length === 0 && wargaData.length > 0) {
+       // Fallback: Group by KK or alamat to at least show 1 representative per family if no one is explicitly marked as kepala
+       const seen = new Set();
+       filteredWarga = [];
+       for (const w of wargaData) {
+          const key = (w.kk || w.kodeKeluarga || "") || (w.alamat || w.nama || "");
+          if (key && !seen.has(key)) {
+             seen.add(key);
+             filteredWarga.push(w);
+          }
+       }
+    }
+
     return Array.from(new Map(
-      wargaData
-        .filter((w:any) => {
-          const p = (w.posisi || w.posisiKeluarga || w.status_keluarga || "").toLowerCase();
-          return p.includes('kepala keluarga') || p.includes('kk') || p.includes('pemilik');
-        })
-        .map(w => [w.nik || w.id || w.docId, w])
+      filteredWarga
+        .map((w: any) => [w.nik || w.id || w.docId, w])
     ).values())
     .sort((a:any, b:any) => (a.nama || "").localeCompare(b.nama || ""))
     .map((w: any) => ({
@@ -1111,6 +1141,7 @@ export function IuranView({
                   <option value="Iuran Keamanan">Iuran Keamanan</option>
                   <option value="Organisasi">Organisasi</option>
                   <option value="Sumbangan">Sumbangan</option>
+                  <option value="Donasi Ke RW">Donasi Ke RW</option>
                   <option value="Donasi">Donasi</option>
                   <option value="Pembelian ATK">Pembelian ATK</option>
                   <option value="Pembelian Aset">Pembelian Aset</option>

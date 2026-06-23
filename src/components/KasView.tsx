@@ -860,6 +860,27 @@ export function KasView({
         });
         showNotification("Transaksi kas berhasil ditambahkan", "success");
         await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_KAS", "kas", `Tambah transaksi: ${keterangan}`, tenantId);
+
+        // Auto create RW equivalent if "Setoran Ke RW"
+        if (transaksi === "Setoran Ke RW" && trxType === "Keluar") {
+           const rwTenantId = (tenantId || "MASTER").replace(/rt\w*_/i, '').replace(/rt\d+/i, '').replace(/^_/, '');
+           if (rwTenantId !== tenantId) {
+             const rwNewId = `TRX-RW-${Date.now()}`;
+             const rwNewTrx = {
+                ...newTrx,
+                id: rwNewId,
+                tenantId: rwTenantId,
+                tipe: "Masuk",
+                transaksi: "Dana Masuk Dari RT",
+                nama: `Pengurus RT ${resolvedRt}`,
+                keterangan: `Menerima setoran iuran otomatis dari RT ${resolvedRt}`,
+                debit: nominal,
+                kredit: 0
+             };
+             await setDoc(doc(db, "kas", rwNewId), rwNewTrx);
+             setKasData((prev: any[]) => [rwNewTrx, ...prev]);
+           }
+        }
       }
       setShowMasukForm(false);
       setEditingKas(null);
@@ -1420,6 +1441,7 @@ export function KasView({
                     className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                   >
                     <option value="Iuran RT">Iuran RT</option>
+                    <option value="Setoran Ke RW">Setoran Ke RW</option>
                     <option value="Iuran RW">Iuran RW</option>
                     <option value="Iuran Warga">Iuran Warga</option>
                     <option value="Iuran Sampah">Iuran Sampah</option>
@@ -1432,6 +1454,7 @@ export function KasView({
                     <option value="Iuran Keamanan">Iuran Keamanan</option>
                     <option value="Organisasi">Organisasi</option>
                     <option value="Sumbangan">Sumbangan</option>
+                    <option value="Donasi Ke RW">Donasi Ke RW</option>
                     <option value="Donasi">Donasi</option>
                     <option value="Pembelian ATK">Pembelian ATK</option>
                     <option value="Pembelian Aset">Pembelian Aset</option>
