@@ -2167,10 +2167,6 @@ export default function App() {
       const chunks = chunkArray(tIds, 10);
       chunks.forEach(chunk => {
         const constraints: any[] = [where("tenantId", "in", chunk)];
-        if (currentUser?.role?.toUpperCase() === "RT") {
-          const rtToFilter = currentUser?.rt || (currentUser?.tenantId?.match(/rt(\d+)/i)?.[1]) || "01";
-          constraints.push(where("rt", "==", getQueryRtNormalized(rtToFilter)));
-        }
         unsubs.push(onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
           setWargaData(prev => {
             const filtered = prev.filter(p => !chunk.includes(p.tenantId));
@@ -2211,18 +2207,13 @@ export default function App() {
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     if (quotaExceeded) return;
-    const rt = (currentUser?.role?.toUpperCase() === "RT" || currentUser?.role?.toUpperCase() === "WARGA" || !!wargaAuth) 
-      ? getQueryRtNormalized(currentUser?.rt || wargaAuth?.rt) 
-      : null;
     const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
     const unsubs: (() => void)[] = [];
     
     if (tIds.length > 0) {
       const chunks = chunkArray(tIds, 10);
       chunks.forEach(chunk => {
-        const kq = rt 
-          ? query(collection(db, "kas"), where("tenantId", "in", chunk), where("rt", "==", rt), limit(1000)) 
-          : query(collection(db, "kas"), where("tenantId", "in", chunk), limit(1000));
+        const kq = query(collection(db, "kas"), where("tenantId", "in", chunk), limit(1000));
         
         unsubs.push(onSnapshot(kq, (snap) => {
           console.log("Firestore update for kas, tenant(s):", chunk, "count:", snap.size);
@@ -2232,7 +2223,7 @@ export default function App() {
         }));
         
         const iuranQ = hasFullAccess ? 
-          (rt ? query(collection(db, "iuran"), where("tenantId", "in", chunk), where("rt", "==", rt)) : query(collection(db, "iuran"), where("tenantId", "in", chunk))) :
+          query(collection(db, "iuran"), where("tenantId", "in", chunk)) :
           query(collection(db, "iuran"), where("tenantId", "in", chunk), where("userId", "==", auth.currentUser?.uid || ""));
         
         unsubs.push(onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
@@ -2240,7 +2231,7 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [activeTenantIdsStr, currentUser?.uid, hasFullAccess, chunkArray, quotaExceeded]);
+  }, [activeTenantIdsStr, currentUser?.uid, hasFullAccess, tenantRT, chunkArray, quotaExceeded]);
 
   // 3. Posyandu & Health Sync
   useEffect(() => {

@@ -12,6 +12,7 @@ import {
   Download, 
   Image, 
   CheckCircle2, 
+  Check,
   X, 
   Upload, 
   QrCode, 
@@ -627,11 +628,44 @@ export function IuranView({
       setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Lunas' } : t));
       
       const kasId = `TRX-${Date.now()}`;
+      
+      let dateparsed = new Date(trx.tanggal);
+      if (isNaN(dateparsed.getTime())) {
+        const parts = String(trx.tanggal).split(/\s+/);
+        if (parts.length === 3) {
+          const day = parseInt(parts[0], 10);
+          const year = parseInt(parts[2], 10);
+          const monthMap: Record<string, number> = {
+            jan: 0, januari: 0,
+            feb: 1, februari: 1,
+            mar: 2, maret: 2,
+            apr: 3, april: 3,
+            mei: 4,
+            jun: 5, juni: 5,
+            jul: 6, juli: 6,
+            agt: 7, agustus: 7,
+            sep: 8, september: 8,
+            okt: 9, oktober: 9,
+            nov: 10, november: 10,
+            des: 11, desember: 11
+          };
+          const mKey = parts[1].toLowerCase();
+          const month = monthMap[mKey] !== undefined ? monthMap[mKey] : 0;
+          if (!isNaN(day) && !isNaN(year)) {
+            dateparsed = new Date(year, month, day);
+          }
+        }
+      }
+      if (isNaN(dateparsed.getTime())) {
+        dateparsed = new Date();
+      }
+      const tanggalFormat = dateparsed.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
       const kasPayload = {
         id: kasId,
         tenantId: trx.tenantId || tenantId || "MASTER",
         rt: trx.rt || '01',
-        tanggal: new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        tanggal: tanggalFormat,
         tipe: 'Masuk',
         transaksi: trx.jenis,
         nama: trx.namaPenyetor,
@@ -930,6 +964,17 @@ export function IuranView({
                         </motion.button>
                         {isPengurus && (
                           <>
+                            {trx.status !== 'Lunas' && trx.status !== 'Ditolak' && trx.status !== 'Cancelled' && (
+                              <motion.button 
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={(e) => { e.stopPropagation(); handleApprove(trx); }} 
+                                className="p-3.5 text-blue-600 bg-blue-50 dark:bg-slate-800 border border-blue-100 dark:border-blue-500/20 rounded-2xl shadow-lg hover:bg-blue-600 hover:text-white transition-all" 
+                                title="Verifikasi"
+                              >
+                                <Check className="w-5 h-5" />
+                              </motion.button>
+                            )}
                             <motion.button 
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
