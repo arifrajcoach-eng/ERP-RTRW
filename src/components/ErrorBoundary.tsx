@@ -36,14 +36,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
       error.message?.toLowerCase().includes("null") || 
       error.message?.toLowerCase().includes("undefined") ||
       error.message?.toLowerCase().includes("json") ||
-      error.message?.toLowerCase().includes("parse");
+      error.message?.toLowerCase().includes("parse") ||
+      error.message?.toLowerCase().includes("internal assertion failed") ||
+      error.message?.toLowerCase().includes("firestore");
 
     if (isStateCorrupted) {
       console.warn("Potential corrupted local memory detected. Preparing auto-healing checks...");
     }
   }
 
-  private handleResetAndClean = () => {
+  private handleResetAndClean = async () => {
     try {
       const keysToKeep = [
         "firebase:auth",
@@ -61,6 +63,17 @@ export class ErrorBoundary extends React.Component<Props, State> {
       });
       
       safeSessionStorage.clear();
+      
+      // Attempt to clear IndexedDB for Firestore
+      if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+        const databases = await indexedDB.databases();
+        for (const db of databases) {
+          if (db.name && db.name.includes('firestore')) {
+            indexedDB.deleteDatabase(db.name);
+          }
+        }
+      }
+      
       window.location.reload();
     } catch (e) {
       console.error("Failed to perform auto-healing clear:", e);
