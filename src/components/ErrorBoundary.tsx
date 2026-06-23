@@ -65,15 +65,36 @@ export class ErrorBoundary extends React.Component<Props, State> {
       safeSessionStorage.clear();
       
       // Attempt to clear IndexedDB for Firestore
-      if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
-        const databases = await indexedDB.databases();
-        for (const db of databases) {
-          if (db.name && db.name.includes('firestore')) {
-            indexedDB.deleteDatabase(db.name);
+      console.log("[Auto-Heal] Starting cleanup of IndexedDB...");
+      if (typeof indexedDB !== 'undefined' && 'databases' in indexedDB) {
+        try {
+          // Check if databases is a function
+          if (typeof (indexedDB as any).databases === 'function') {
+            const databases = await (indexedDB as any).databases();
+            for (const db of databases) {
+              console.log(`[Auto-Heal] Found database: ${db.name}`);
+              if (db.name && db.name.includes('firestore')) {
+                console.log(`[Auto-Heal] Deleting Firestore database: ${db.name}`);
+                await new Promise<void>((resolve, reject) => {
+                  const req = indexedDB.deleteDatabase(db.name);
+                  req.onsuccess = () => resolve();
+                  req.onerror = () => reject(req.error);
+                  req.onblocked = () => {
+                    console.warn(`[Auto-Heal] Deletion of ${db.name} was blocked.`);
+                    resolve(); // Still resolve to continue
+                  };
+                });
+              }
+            }
           }
+        } catch (e) {
+          console.error("[Auto-Heal] Error listing/deleting databases:", e);
         }
+      } else {
+        console.warn("[Auto-Heal] indexedDB.databases not supported.");
       }
       
+      console.log("[Auto-Heal] Cleanup finished, reloading...");
       window.location.reload();
     } catch (e) {
       console.error("Failed to perform auto-healing clear:", e);

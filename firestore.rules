@@ -26,7 +26,7 @@ service cloud.firestore {
       return isSignedIn() && (
         isAdmin() ||
         (getUserData() != null && 'tenantId' in getUserData() && (
-          getUserData().tenantId == tenantId || 
+          getUserData().tenantId.lower() == tenantId.lower() || 
           getUserData().tenantId == 'MASTER' || 
           (getUserData().tenantId.lower() == 'rw26_berjuang' && tenantId.lower().matches('.*berjuang.*')) ||
           (getUserData().tenantId.lower() == 'trihprw26' && tenantId.lower().matches('.*trih.*'))
@@ -85,13 +85,14 @@ service cloud.firestore {
     }
 
     match /kas/{id} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      allow read: if isSignedIn();
       allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
     }
 
     match /iuran/{id} {
-      allow read: if isTenantMember(resource.data.tenantId) || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow write: if isPengurus() && isTenantMember(request.resource.data.tenantId);
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isPengurus() && isTenantMember(resource.data.tenantId);
     }
 
     match /branding/{tenantId} {
@@ -105,8 +106,14 @@ service cloud.firestore {
     }
 
     match /chat_messages/{id} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      allow read: if isSignedIn();
       allow create: if isTenantMember(request.resource.data.tenantId);
+    }
+
+    match /complaints/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if (isPengurus() && isTenantMember(resource.data.tenantId)) || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     match /emergencies/{id} {

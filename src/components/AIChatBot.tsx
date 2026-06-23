@@ -27,7 +27,21 @@ import {
 } from '../services/aiAgentTools';
 import { chatWithAI, textToSpeech } from '../services/aiService';
 
-export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string }) {
+export default function AIChatBot(props: any) {
+  const { currentUser } = props;
+  const tenantId = currentUser?.tenantId || localStorage.getItem('currentTenantId') || (window as any).currentTenant?.id;
+  
+  if (!tenantId) {
+    console.warn("AIChatBot: Tenant ID still missing after check.");
+    return null;
+  }
+  
+  const optimizedUser = { ...currentUser, tenantId };
+
+  return <AIChatBotInner {...props} currentUser={optimizedUser} />;
+}
+
+function AIChatBotInner({ currentUser, agentType = 'auto', plan }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string }) {
   const roleUpper = currentUser?.role?.toUpperCase() || '';
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
@@ -53,6 +67,8 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isAutoSpeak, setIsAutoSpeak] = useState(true); // New state for AutoSpeak
+  const [ttsError, setTtsError] = useState<string | null>(null);
   const [usageCount, setUsageCount] = useState(0);
   const [dataContext, setDataContext] = useState<any>(null);
   const [isMuted, setIsMuted] = useState(true);
@@ -94,29 +110,7 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
 
     return new Blob([buffer], { type: 'audio/wav' });
   };
-  
-  const tenantId = currentUser?.tenantId;
-  if (!tenantId) {
-    console.error("Critical: Tenant ID missing in AIChatBot");
-    return null;
-  }
-  
-  // Calculate weeklyLimit based on plan
-  const normalizedPlan = (plan || 'STARTER').toUpperCase();
-  const baseKey = normalizedPlan.includes('TRIAL') || normalizedPlan.includes('STARTER') ? 'TRIAL' :
-                  normalizedPlan.includes('FLASH') || normalizedPlan.includes('BASIC') ? 'BASIC' :
-                  normalizedPlan.includes('PRO') ? 'PRO' :
-                  normalizedPlan.includes('PREMIUM') ? 'PREMIUM' :
-                  normalizedPlan.includes('ENTERPRISE') ? 'ENTERPRISE' : 'TRIAL';
-  
-  const planDetails = PLAN_FEATURES[baseKey] || PLAN_FEATURES.TRIAL;
-
-  let weeklyLimit = planDetails.weeklyAiLimit || 2;
-  const isSuperUser = roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN' || roleUpper === 'SUPER ADMIN' || currentUser?.isSuperAdmin;
-  if (isSuperUser) {
-    weeklyLimit = 9999;
-  }
-
+    
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -140,21 +134,21 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
         fin, health, activity, waste, guests, letters, lapak, election, inventory, registrations,
         mading, sos, complaints, bookings, birthdays
       ] = await Promise.all([
-        getFinancialSummary(tenantId),
-        getHealthSummary(tenantId),
-        getWargaActivitySummary(tenantId),
-        getWasteBankSummary(tenantId),
-        getGuestBookSummary(tenantId),
-        getLettersSummary(tenantId),
-        getELapakSummary(tenantId),
-        getElectionSummary(tenantId),
-        getInventorySummary(tenantId),
-        getRegistrationInfo(tenantId),
-        getMadingSummary(tenantId),
-        getSOSSummary(tenantId),
-        getComplaintsSummary(tenantId),
-        getBookingsSummary(tenantId),
-        getBirthdaysSummary(tenantId)
+        getFinancialSummary(currentUser.tenantId),
+        getHealthSummary(currentUser.tenantId),
+        getWargaActivitySummary(currentUser.tenantId),
+        getWasteBankSummary(currentUser.tenantId),
+        getGuestBookSummary(currentUser.tenantId),
+        getLettersSummary(currentUser.tenantId),
+        getELapakSummary(currentUser.tenantId),
+        getElectionSummary(currentUser.tenantId),
+        getInventorySummary(currentUser.tenantId),
+        getRegistrationInfo(currentUser.tenantId),
+        getMadingSummary(currentUser.tenantId),
+        getSOSSummary(currentUser.tenantId),
+        getComplaintsSummary(currentUser.tenantId),
+        getBookingsSummary(currentUser.tenantId),
+        getBirthdaysSummary(currentUser.tenantId)
       ]);
       
       if (mountedRef.current) {
@@ -174,510 +168,154 @@ export default function AIChatBot({ currentUser, agentType = 'auto', plan }: { c
     refreshContext();
     const interval = setInterval(refreshContext, 60000);
     return () => clearInterval(interval);
-  }, [tenantId]);
+  }, [currentUser.tenantId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-   const handleSpeak = async (text: string) => {
-    if (!isPrivileged) return; // Nonaktifkan suara untuk AI Asisten Warga
-    if (isMuted) return;
-
-    if (sourceRef.current) {
-      try {
-        sourceRef.current.stop();
-      } catch (e) {}
-      sourceRef.current = null;
-    }
-
-    if (!text) return;
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const userMessage = { role: 'user' as const, text: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
 
     try {
-      setIsSpeaking(true);
-      const response = await textToSpeech(text, isPrivileged);
-      if (!response || !mountedRef.current) {
-        setIsSpeaking(false);
-        return;
-      }
-
-      const base64Audio = response.data;
-      const audioContext = audioContextRef.current || new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )({ sampleRate: 24000 });
-      audioContextRef.current = audioContext;
-
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-
-      const binary = atob(base64Audio);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-
-      // Use the pcmToWavBlob for broader compatibility (iOS, etc)
-      const blob = pcmToWavBlob(bytes, 24000);
-      const url = URL.createObjectURL(blob);
+      const response = await chatWithAI({
+        isPrivileged,
+        message: input,
+        role: currentUser.role,
+        dataSummary: dataContext,
+        history: messages.map(m => ({ 
+          role: m.role === 'user' ? 'user' as const : 'model' as const, 
+          parts: [{ text: m.text }] 
+        }))
+      });
       
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
+      let botResponse = "";
+      for await (const chunk of response) {
+        botResponse += chunk.text || "";
       }
-      
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      
-      audio.onended = () => {
-        if (mountedRef.current) {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-        }
-      };
-      
-      audio.onerror = (e) => {
-        console.error("Audio playback error:", e);
-        if (mountedRef.current) {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-        }
-      };
+      setMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
+      if (isAutoSpeak) {
+        handleSpeak(botResponse);
+      }
+    } catch (e) {
+      console.error("Chat failed", e);
+      setMessages(prev => [...prev, { role: 'bot', text: "Maaf, Chaty sedang mengalami kendala. Bisa coba lagi sebentar lagi?" }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      await audio.play();
-    } catch (error) {
-      console.error("Speech Error:", error);
-      if (mountedRef.current) {
-        setIsSpeaking(false);
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      // Browser SpeechRecognition
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.onresult = (event: any) => {
+          setInput(event.results[0][0].transcript);
+          setIsListening(false);
+        };
+        recognitionRef.current.start();
+        setIsListening(true);
       }
     }
   };
 
   const stopSpeaking = () => {
     if (audioRef.current) {
-      try {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-      } catch (e) {}
-      audioRef.current = null;
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
     setIsSpeaking(false);
   };
 
-  const toggleListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setMessages(prev => [...prev, { 
-        role: 'bot', 
-        text: "Waduh maaf Kak! 🫣 Browser yang Kakak gunakan saat ini belum mendukung fitur pengenalan suara (Mic). Chaty saranin coba buka lewat Google Chrome atau Microsoft Edge versi terbaru yaa supaya kita bisa chatingan via suara! 😊✨" 
-      }]);
+  const handleSpeak = async (text: string) => {
+    if (isSpeaking) {
+      stopSpeaking();
       return;
     }
-
-    if (isListening) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsListening(false);
-      return;
-    }
-
-    stopSpeaking();
-    setIsMuted(false);
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'id-ID';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      setIsListening(false);
-      
-      let errorHelpMsg = "Maaf, terjadi kesalahan koneksi atau konfigurasi pada speech recognition mikrofon.";
-      if (event.error === 'not-allowed') {
-        errorHelpMsg = "Izin mikrofon terblokir secara otomatis oleh browser atau iframe. Silakan berikan izin mikrofon pada peramban/browser Kakak di bar atas, atau buka aplikasi SmaRtRw AI langsung di tab baru (klik tombol panah keluar di kanan atas preview) untuk mengaktifkan mikrofon secara penuh! 😊🎤";
-      } else if (event.error === 'no-speech') {
-        errorHelpMsg = "Suara Kakak kurang terdengar atau tidak terdeteksi nih. Yuk coba bicara lagi lebih dekat ke mikrofon ya! 😉🎙️";
-      } else if (event.error === 'network') {
-        errorHelpMsg = "Gagal memproses suara karena masalah jaringan. Mohon coba beberapa saat lagi ya Kak! ⚡";
-      } else if (event.error === 'aborted') {
-        errorHelpMsg = "Perekaman suara dibatalkan.";
-      }
-      
-      setMessages(prev => [...prev, { role: 'bot', text: errorHelpMsg }]);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.onresult = (event: any) => {
-      const results = event.results;
-      if (results.length > 0) {
-        const transcript = results[results.length - 1][0].transcript;
-        setInput(transcript);
-
-        if (transcript.trim()) {
-          setTimeout(() => {
-            handleSend(transcript);
-          }, 300);
-        }
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  };
-
-  const handleSend = async (manualInput?: string, retries = 1) => {
-    const textToSend = manualInput || input;
-    if (!textToSend.trim() || isLoading) return;
-
-    if (usageCount >= weeklyLimit) {
-      setMessages(prev => [...prev, { role: 'bot', text: `Aduh maaf sekali Kakak/Pimpinan! 🫣 Kuota Chat AI Mingguan (${weeklyLimit}x per minggu) untuk Paket ${baseKey === 'TRIAL' ? 'STARTER' : baseKey} Anda sudah habis.\n\nSupaya Kakak/Pimpinan bisa bebas chatingan dengan Chaty tanpa hambatan batas mingguan, silakan lakukan Upgrade Paket dengan klik banner "SmaRtRw AI" di dashboard utama atau hubungi Tim Support kami via wa.me/6287726741143 ya! Terima kasih banyak atas pengertiannya! 😉✨` }]);
-      return;
-    }
-
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', text: textToSend }]);
-    setIsLoading(true);
-
+    
+    setTtsError(null);
+    setIsSpeaking(true);
     try {
-      // Ensure the history alternates correctly and starts with 'user'
-      let history = [];
-      let lastRole = null;
-
-      const rawHistory = messages
-        .filter(m => m.role === 'user' || m.role === 'bot')
-        .map(m => ({ 
-          role: m.role === 'user' ? 'user' : 'model' as 'user' | 'model', 
-          parts: [{ text: m.text }] 
-        }));
-
-      for (const entry of rawHistory) {
-        if (entry.role !== lastRole) {
-          if (history.length === 0 && entry.role === 'model') continue;
-          history.push(entry);
-          lastRole = entry.role;
-        }
+      const response = await textToSpeech(text);
+      if (!response || !response.data) {
+        console.warn("TTS failed: No valid audio data returned.");
+        setIsSpeaking(false);
+        setTtsError("Maaf, fitur suara sedang sibuk/habis kuota, silakan coba lagi nanti.");
+        setTimeout(() => setTtsError(null), 5000);
+        return;
       }
-
-      const isSensitiveDataAllowed = isPrivileged;
       
-      const filteredContext = {
-        ...(isSensitiveDataAllowed ? dataContext : {
-          financial: { total: dataContext?.financial?.total }, // Keep only summary, hide details
-          health: dataContext?.health,
-          activity: dataContext?.activity,
-          wasteBank: dataContext?.wasteBank,
-          guestBook: dataContext?.guestBook,
-          letters: dataContext?.letters,
-          eLapak: dataContext?.eLapak,
-          election: dataContext?.election,
-          mading: dataContext?.mading,
-          bookings: dataContext?.bookings,
-          birthdays: { totalThisMonth: dataContext?.birthdays?.totalThisMonth, currentMonthName: dataContext?.birthdays?.currentMonthName }
-          // Excluded: inventory, registrations, sensitive financial details
-        }),
-        currentUserProfile: {
-          nama: currentUser?.nama || currentUser?.name || 'Warga',
-          nik: currentUser?.nik || currentUser?.nikMapping || '-',
-          kk: currentUser?.kk || currentUser?.noKK || '-',
-          alamat: currentUser?.alamat || '-',
-          rt: currentUser?.rt || '01',
-          rw: currentUser?.rw || '26',
-          role: currentUser?.role || 'Warga',
-          terverifikasi: currentUser?.terverifikasi || false
-        }
+      // Convert base64 to Blob
+      const base64Data = response.data;
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const audioBlob = new Blob([byteArray], {type: 'audio/wav'});
+      
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(audioUrl); // Clean up memory
       };
-
-      const stream = await chatWithAI({
-        message: textToSend,
-        tenantId,
-        role: currentUser?.role || 'Warga',
-        dataSummary: filteredContext || {},
-        history,
-        isPrivileged: isPrivileged
-      } as any);
-
-      if (!mountedRef.current) return;
-
-      setMessages(prev => [...prev, { role: 'bot', text: '' }]);
-      
-      let fullText = '';
-      try {
-        for await (const chunk of (stream as any)) {
-          if (!mountedRef.current) break;
-          const chunkText = chunk.text;
-          fullText += chunkText;
-          setMessages(prev => {
-            const newMessages = [...prev];
-            if (newMessages.length > 0) {
-                newMessages[newMessages.length - 1] = { role: 'bot', text: fullText };
-            }
-            return newMessages;
-          });
-        }
-        if (fullText && mountedRef.current) {
-          // Speak clean version
-          const speakText = (text: string) => {
-             // 1. Remove markdown code blocks
-             let cleaned = text.replace(/```json[\s\S]*?```/g, '').replace(/```[\s\S]*?```/g, '').trim();
-             
-             // 2. If it's still raw JSON structure, attempt to extract 'text' field or return empty
-             if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
-                 try {
-                     const parsed = JSON.parse(cleaned);
-                     if (parsed.text) return parsed.text;
-                     return ""; // Don't speak raw internal JSON
-                 } catch(e) {
-                     // Not valid JSON, keep as is
-                 }
-             }
-             
-             // 3. Remove remaining emoji icons that might sound weird if too many
-             return cleaned;
-          };
-
-          try {
-            const cleanText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
-            const jsonAction = JSON.parse(cleanText);
-            if (jsonAction.action === 'createSurat') {
-              const params = jsonAction.params || {};
-              const res = await createSurat({ 
-                pemohon: params.pemohon || currentUser?.nama || currentUser?.name || 'Warga',
-                nik: params.nik || currentUser?.nik || '-',
-                noKK: params.noKK || params.nokk || params.kk || currentUser?.kk || currentUser?.noKK || '-',
-                kk: params.noKK || params.nokk || params.kk || currentUser?.kk || currentUser?.noKK || '-',
-                keperluan: params.keperluan || 'Dokumen Administrasi',
-                jenisSurat: params.jenisSurat || 'Pengantar',
-                jenis: params.jenisSurat || params.jenis || 'Pengantar',
-                nomorHp: params.nomorHp || params.phone || currentUser?.phone || currentUser?.nomorHp || '-',
-                tenantId,
-                userId: currentUser?.uid || currentUser?.id_user || currentUser?.id || null,
-                authUid: currentUser?.uid || currentUser?.id_user || currentUser?.id || null,
-                rt: params.rt || currentUser?.rt || '01',
-                rw: params.rw || currentUser?.rw || (tenantId.split('_').pop()?.startsWith('rw') ? tenantId.split('_').pop()?.replace('rw', '') : '')
-              });
-              const msg = res.success ? (jsonAction.text || `Alhamdulillah kak, ${params.jenisSurat || 'surat'} berhasil dibuat (ID: ${res.id}).`) : 'Maaf kak, ada kendala saat membuat surat.';
-              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
-              handleSpeak(msg);
-            } else if (jsonAction.action === 'registerELapak') {
-              const res = await registerELapak({ ...jsonAction.params, tenantId, userId: currentUser?.email || 'unknown' });
-              const msg = res.success ? `Alhamdulillah kak, pendaftaran e-lapak berhasil (ID: ${res.id}).` : 'Maaf kak, ada kendala saat mendaftar e-lapak.';
-              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
-              handleSpeak(msg);
-            } else if (jsonAction.action === 'reportKelahiran') {
-              const params = jsonAction.params || {};
-              const res = await reportKelahiran({ ...params, tenantId });
-              const msg = res.success ? (jsonAction.text || `Sip, kelahiran telah dicatat.`) : 'Maaf kak, gagal mencatat kelahiran.';
-              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
-              handleSpeak(msg);
-            } else if (jsonAction.action === 'reportKematian') {
-              const params = jsonAction.params || {};
-              const res = await reportKematian({ ...params, tenantId });
-              const msg = res.success ? (jsonAction.text || `Pelaporan kematian telah dicatat.`) : 'Maaf kak, gagal mencatat pelaporan kematian.';
-              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
-              handleSpeak(msg);
-            } else if (jsonAction.action === 'reportComplaint') {
-              const params = jsonAction.params || {};
-              const res = await reportComplaint({ ...params, tenantId, userId: currentUser?.uid });
-              const msg = res.success ? (jsonAction.text || `Keluhan telah dicatat (ID: ${res.id}).`) : 'Maaf kak, gagal mencatat keluhan.';
-              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
-              handleSpeak(msg);
-            } else if (jsonAction.action === 'bookFacility') {
-              const params = jsonAction.params || {};
-              const res = await bookFacility({ ...params, tenantId, userId: currentUser?.uid });
-              const msg = res.success ? (jsonAction.text || `Booking fasilitas telah diajukan (ID: ${res.id}).`) : 'Maaf kak, gagal melakukan booking.';
-              setMessages(prev => [...prev.slice(0, -1), { role: 'bot', text: msg }]);
-              handleSpeak(msg);
-            } else {
-              handleSpeak(speakText(fullText));
-            }
-          } catch (e) {
-            handleSpeak(speakText(fullText));
-          }
-        }
-      } catch (streamError) {
-        throw streamError; // Rethrow to be caught by outer catch
-      }
-
-      if (mountedRef.current) {
-        setUsageCount(prev => prev + 1);
-        refreshContext();
-      }
-    } catch (error: any) {
-      console.error('AI Chat Error (attempt ' + (2 - retries) + '):', error);
-      if (retries > 0) {
-        console.log('Retrying...');
-        return handleSend(textToSend, retries - 1);
-      }
-      if (mountedRef.current) {
-        const checkMsg = error.message && error.message.includes('GEMINI') ? error.message : '';
-        let errorMsg = `Maaf, ada gangguan pada koneksi atau AI saya. Detail: ${error.message || 'Error tidak diketahui'}`;
-        
-        if (error.message?.includes('GEMINI_API_KEY') || error.message?.includes('VITE_GEMINI')) {
-          errorMsg = 'Aduh maaf, kunci AI belum terdeteksi. Jika di Vercel, pastikan kamu menggunakan nama VITE_GEMINI_API_KEY, dan kamu WAJIB melakukan Redeploy setelah memasukkan kunci tersebut ya!';
-        } else if (
-          error.message?.includes('429') || 
-          error.message?.includes('503') ||
-          error.message?.includes('UNAVAILABLE') ||
-          error.message?.includes('high demand') ||
-          error.message?.includes('Quota exceeded') || 
-          error.message?.includes('RESOURCE_EXHAUSTED') ||
-          JSON.stringify(error).includes('429') ||
-          JSON.stringify(error).includes('503') ||
-          JSON.stringify(error).includes('RESOURCE_EXHAUSTED')
-        ) {
-          errorMsg = isPrivileged
-            ? `Halo Pimpinan! Mohon maaf sebesar-besarnya. 🫣 Layanan AI pintar kami saat ini sedang mencapai batas kuota harian atau sedang mengalami trafik yang cukup tinggi (Error 429/503).\n\nUntuk tetap menikmati fitur analisis AI premium, verifikasi data, laporan otomatis, dan pencetakan tanpa batas kuota, silakan hubungi tim kami untuk Aktivasi Premium dengan klik banner "SmaRtRw AI" di Dashboard utama atau hubungi WhatsApp Admin SmaRtRw AI di wa.me/6287726741143 (0877-2674-1143) sekarang juga. Terima kasih atas perhatiannya! 😉⚡`
-            : `Aduh Kakak sayang, mohon maaf banget yaa! 🫣 Kuota panggilan AI atau server Chaty saat ini literally lagi penuh/kehabisan kuota harian nih (Error 429/503). Maklum, warga komplek lain lagi ramai banget chatingan sama Chaty buat cetak surat dan tanya-tanya! 🤭✨\n\nTapi tenang aja Kak! Kakak sekeluarga bisa klik banner "SmaRtRw AI" di dashboard atau hubungi WhatsApp Admin di wa.me/6287726741143 untuk melakukan Aktivasi Premium biar bebas kuota kapan saja dengan fast response! Boleh juga dicoba lagi beberapa saat yaa. Chaty tunggu kabarnya! 😉✨`;
-        }
-
-        setMessages(prev => [...prev, { role: 'bot', text: errorMsg }]);
-        handleSpeak(errorMsg);
-      }
-    } finally {
-      if (mountedRef.current) setIsLoading(false);
+      await audioRef.current.play();
+    } catch (e) {
+      console.error("TTS failed", e);
+      setIsSpeaking(false);
+      setTtsError("Maaf, terjadi kesalahan pada fitur suara.");
+      setTimeout(() => setTtsError(null), 5000);
     }
   };
 
   return (
-    <div className="flex flex-col h-[80vh] max-h-[600px] w-full max-w-lg mx-auto bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
-      {/* Header */}
-      <div className="p-6 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand-blue rounded-2xl flex items-center justify-center shadow-lg shadow-brand-blue/20">
-            <Bot className="text-white w-6 h-6" />
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {ttsError && (
+          <div className="p-2 bg-red-100 text-red-700 text-xs rounded mb-2">
+            {ttsError}
           </div>
-          <div>
-            <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-widest">{agentTitle}</h3>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1.5 font-mono">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Sistem Cerdas Lingkungan • {weeklyLimit >= 9999 ? 'Kuota Unlimited' : `Sisa Kuota Mingguan: ${weeklyLimit - usageCount}`}
-            </p>
-          </div>
-        </div>
-        {isPrivileged && (
-          <button
-            onClick={() => {
-              const newMuted = !isMuted;
-              setIsMuted(newMuted);
-              if (newMuted) {
-                stopSpeaking();
-              } else {
-                const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot');
-                if (lastBotMsg && lastBotMsg.text) {
-                  handleSpeak(lastBotMsg.text);
-                }
-              }
-            }}
-            className={`p-2 rounded-xl border transition-all ${
-              isMuted 
-                ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500' 
-                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 shadow-sm'
-            }`}
-            title={isMuted ? "Suara Chaty: Nonaktif" : "Suara Chaty: Aktif"}
-          >
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5 animate-bounce" style={{ animationDuration: '2s' }} />}
-          </button>
         )}
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30 scrollbar-hide">
-        <AnimatePresence mode="popLayout">
-          {messages.map((msg, idx) => (
-            <motion.div
-              layout
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              key={idx}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-brand-blue' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700'}`}>
-                   {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-brand-blue" />}
-                </div>
-                <div className={`group relative p-4 rounded-2xl text-sm font-medium leading-relaxed ${
-                  msg.role === 'user' 
-                    ? 'bg-brand-blue text-white rounded-tr-none shadow-md' 
-                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm pb-8'
-                }`}>
-                  {msg.text || (isLoading && idx === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : '...')}
-                  
-                  {msg.role === 'bot' && msg.text && isPrivileged && (
-                    <button
-                      onClick={() => {
-                        setIsMuted(false);
-                        handleSpeak(msg.text);
-                      }}
-                      className="absolute right-2 bottom-2 text-slate-400 hover:text-brand-blue dark:text-slate-500 dark:hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100/50 dark:hover:bg-slate-700/50"
-                      title="Bacakan ulang pesan ini"
-                    >
-                      <Volume2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
+              {msg.text}
+              {msg.role === 'bot' && (
+                <button onClick={() => handleSpeak(msg.text)} className="ml-2 text-xs opacity-50 hover:opacity-100">
+                  {isSpeaking ? <VolumeX size={12}/> : <Volume2 size={12}/>}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {isLoading && <Loader2 className="animate-spin text-blue-600" />}
         <div ref={chatEndRef} />
       </div>
-
-      {/* Input */}
-      <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 transition-colors">
-        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-brand-blue/10 focus-within:border-brand-blue transition-all">
-          <button
-            type="button"
-            onClick={toggleListening}
-            className={`p-2.5 rounded-xl transition-all ${
-              isListening
-                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-            }`}
-            title={isListening ? "Mendengarkan... klik untuk berhenti" : "Klik & sapa Chaty melalui Mic"}
-            disabled={isLoading}
-          >
-            <Mic className={`w-4 h-4 ${isListening ? 'scale-110' : ''}`} />
-          </button>
-
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isListening ? "Mendengarkan Kakak bicara..." : "Tanya apa saja..."}
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-2 pl-2"
-            disabled={isLoading || isListening}
-          />
-
-          {isSpeaking && (
-            <button
-              onClick={stopSpeaking}
-              className="p-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 dark:bg-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 transition-all"
-              title="Hentikan suara Chaty"
-            >
-              <Square className="w-3.5 h-3.5 fill-current" />
-            </button>
-          )}
-
-          <button
-            onClick={() => handleSend()}
-            disabled={isLoading || isListening || !input.trim()}
-            className="p-3 bg-brand-blue text-white rounded-xl shadow-lg shadow-brand-blue/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-          >
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </button>
-        </div>
-        <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest text-center mt-3">
-          AI Agent • Didukung oleh Nexapps
-        </p>
+      <div className="p-4 border-t flex gap-2">
+        <button onClick={toggleListening} className={`p-2 rounded ${isListening ? 'bg-red-100 text-red-600' : 'bg-gray-100'}`}>
+          {isListening ? <Square size={20}/> : <Mic size={20}/>}
+        </button>
+        <button onClick={() => setIsAutoSpeak(!isAutoSpeak)} className={`p-2 rounded ${isAutoSpeak ? 'bg-green-100 text-green-600' : 'bg-gray-100'}`}>
+          {isAutoSpeak ? <Volume2 size={20}/> : <VolumeX size={20}/>}
+        </button>
+        <input 
+          value={input} 
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+          className="flex-1 border rounded p-2" 
+          placeholder="Tanya Chaty..." 
+        />
+        <button onClick={handleSend} className="bg-blue-600 text-white p-2 rounded"><Send size={20}/></button>
       </div>
     </div>
   );

@@ -102,7 +102,7 @@ export function IuranView({
                       currentUser?.isSuperAdmin);
   const isPengurus = canApprove;
   
-  const sortedData = [...iuranData].sort((a: any, b: any) => {
+  const sortedData = [...(iuranData || [])].sort((a: any, b: any) => {
     const dateA = new Date(a.tanggal || a.createdAt || 0).getTime();
     const dateB = new Date(b.tanggal || b.createdAt || 0).getTime();
     return dateB - dateA;
@@ -467,6 +467,7 @@ export function IuranView({
       setBuktiUrl('');
       setJenisPembayaran('Iuran Warga');
     } catch (e: any) {
+      console.error("DEBUG: Firestore error in IuranView:", e);
       handleFirestoreError(e, editingTrx ? 'update' : 'create', 'iuran');
       showNotification(editingTrx ? 'Gagal memperbarui pembayaran' : 'Gagal mencatat pembayaran', 'error');
     } finally {
@@ -850,16 +851,7 @@ export function IuranView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                {(!isPengurus) ? (
-                  <tr><td colSpan={7} className="px-10 py-32 text-center">
-                    <div className="max-w-md mx-auto">
-                      <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center mx-auto mb-8 border-4 border-white dark:border-slate-700 shadow-inner">
-                         <ShieldCheck className="w-12 h-12 text-slate-200 dark:text-slate-700" />
-                      </div>
-                      <p className="text-slate-400 dark:text-slate-500 font-bold text-sm leading-relaxed uppercase tracking-widest italic">Akses Terbatas • Secure Protocol Active</p>
-                    </div>
-                  </td></tr>
-                ) : filteredTransactions.length === 0 ? (
+                {filteredTransactions.length === 0 ? (
                   <tr><td colSpan={7} className="px-10 py-32 text-center">
                     <div className="flex flex-col items-center opacity-30 text-slate-400">
                        <CreditCard className="w-20 h-20 mb-6" />
