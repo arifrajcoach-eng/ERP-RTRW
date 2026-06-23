@@ -624,8 +624,14 @@ export function IuranView({
     if (!window.confirm("Verifikasi dan terima pembayaran ini?")) return;
     setIsLoadingDB(true);
     try {
-      await updateDoc(doc(db, 'iuran', trx.id), { status: 'Lunas', verifiedBy: currentUser.nama || currentUser.name, verifiedAt: new Date().toISOString() });
-      setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Lunas' } : t));
+      const verifiedBy = currentUser?.nama || currentUser?.name || "Admin/Pengurus";
+      const updatePayload = sanitizeForFirestore({
+        status: 'Lunas',
+        verifiedBy,
+        verifiedAt: new Date().toISOString()
+      });
+      await updateDoc(doc(db, 'iuran', trx.id), updatePayload);
+      setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Lunas', verifiedBy, verifiedAt: updatePayload.verifiedAt } : t));
       
       const kasId = `TRX-${Date.now()}`;
       
@@ -661,20 +667,20 @@ export function IuranView({
       }
       const tanggalFormat = dateparsed.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 
-      const kasPayload = {
+      const kasPayload = sanitizeForFirestore({
         id: kasId,
-        tenantId: trx.tenantId || tenantId || "MASTER",
+        tenantId: tenantId || trx.tenantId || "MASTER",
         rt: trx.rt || '01',
         tanggal: tanggalFormat,
         tipe: 'Masuk',
-        transaksi: trx.jenis,
-        nama: trx.namaPenyetor,
-        keterangan: trx.keterangan || `Pembayaran ${trx.jenis}`,
-        debit: trx.nominal,
+        transaksi: trx.jenis || 'Iuran Warga',
+        nama: trx.namaPenyetor || 'Warga',
+        keterangan: trx.keterangan || `Pembayaran ${trx.jenis || 'Iuran'}`,
+        debit: trx.nominal || 0,
         kredit: 0,
-        strukUrl: trx.buktiUrl,
-        iuranId: trx.id
-      };
+        strukUrl: trx.buktiUrl || '',
+        iuranId: trx.id || ''
+      });
       await setDoc(doc(db, 'kas', kasId), kasPayload);
       setKasData((prev: any) => {
         if (prev.some((k:any) => k.id === kasId)) return prev;

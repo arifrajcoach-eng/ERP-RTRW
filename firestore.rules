@@ -29,7 +29,9 @@ service cloud.firestore {
           getUserData().tenantId.lower() == tenantId.lower() || 
           getUserData().tenantId == 'MASTER' || 
           (getUserData().tenantId.lower() == 'rw26_berjuang' && tenantId.lower().matches('.*berjuang.*')) ||
-          (getUserData().tenantId.lower() == 'trihprw26' && tenantId.lower().matches('.*trih.*'))
+          (getUserData().tenantId.lower() == 'trihprw26' && tenantId.lower().matches('.*trih.*')) ||
+          getUserData().tenantId.lower().matches('.*_' + tenantId.lower()) ||
+          tenantId.lower().matches('.*_' + getUserData().tenantId.lower())
         )) ||
         ('email' in request.auth.token && request.auth.token.email.lower() == tenantId.lower() + "@gmail.com")
       );
@@ -37,7 +39,8 @@ service cloud.firestore {
 
     function isPengurus() {
       return isSignedIn() && getUserData() != null && (
-        getUserData().role in ['RT', 'RW', 'BENDAHARA', 'SEKRETARIS', 'KADER', 'KETUA RT', 'KETUA RW', 'PENGURUS', 'SUPER_ADMIN', 'ADMIN'] ||
+        getUserData().role in ['RT', 'RW', 'BENDAHARA', 'SEKRETARIS', 'KADER', 'KETUA RT', 'KETUA RW', 'PENGURUS', 'SUPER_ADMIN', 'ADMIN', 'rt', 'rw', 'bendahara', 'sekretaris', 'kader', 'ketua rt', 'ketua rw', 'pengurus', 'super_admin', 'admin'] ||
+        ('role' in getUserData() && getUserData().role is string && getUserData().role.lower().matches('.*(rt|rw|bendahara|sekretaris|kader|admin|pengurus|super_admin).*')) ||
         getUserData().tenantId == 'MASTER'
       );
     }
