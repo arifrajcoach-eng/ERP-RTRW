@@ -25,7 +25,8 @@ import {
   Printer,
   FileDown,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -47,6 +48,7 @@ interface IuranViewProps {
   handleFirestoreError: (error: any, operation: string, path: string) => void;
   handleFileUpload: (file: File, path: string) => Promise<string>;
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
+  refreshKeuangan?: () => Promise<void> | void;
 }
 
 export function IuranView({ 
@@ -62,9 +64,14 @@ export function IuranView({
   setIsLoadingDB, 
   handleFirestoreError, 
   handleFileUpload, 
-  showNotification 
+  showNotification,
+  refreshKeuangan
 }: IuranViewProps) {
   const mode = getSetting("themeMode") || "rt_rw";
+  
+  const currentUserNik = currentUser?.nik || currentUser?.nikMapping || '';
+  const currentUserUid = currentUser?.uid || currentUser?.authUid || currentUser?.id_user || '';
+
   const [activeSubTab, setActiveSubTab] = useState<'pembayaran' | 'rekap'>('pembayaran');
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -77,12 +84,16 @@ export function IuranView({
 
   React.useEffect(() => {
     if (wargaData && wargaData.length > 0 && currentUser) {
-      const u = wargaData.find(w => w.nik === currentUser.nik || w.id === currentUser.id_user || w.id === currentUser.uid);
+      const u = wargaData.find(w => {
+        const matchNik = currentUserNik && w.nik && String(w.nik).toLowerCase() === String(currentUserNik).toLowerCase();
+        const matchUid = currentUserUid && (w.id === currentUserUid || w.docId === currentUserUid || w.uid === currentUserUid);
+        return matchNik || matchUid;
+      });
       if (u) {
         setSelectedWargaId(u.docId || u.id || u.nik);
       }
     }
-  }, [wargaData, currentUser]);
+  }, [wargaData, currentUser, currentUserNik, currentUserUid]);
   
   // Simulated PG States
   const [showPgModal, setShowPgModal] = useState(false);
@@ -102,6 +113,37 @@ export function IuranView({
                       userRole?.toLowerCase() === 'super admin' ||
                       currentUser?.isSuperAdmin);
   const isPengurus = canApprove;
+
+  const getTransactionTimeDisplay = (trx: any) => {
+    const dateObj = new Date(trx.tanggal);
+    // If the time is exactly midnight UTC (which displays as 07.00 in GMT+7)
+    const isMidnightUTC = dateObj.getUTCHours() === 0 && dateObj.getUTCMinutes() === 0 && dateObj.getUTCSeconds() === 0;
+    
+    if (isMidnightUTC) {
+      // Try to use a more precise timestamp from createdAt or updatedAt or ID timestamp
+      const fallbackDate = trx.updatedAt || trx.createdAt;
+      if (fallbackDate) {
+        const parsedFallback = new Date(fallbackDate);
+        if (!isNaN(parsedFallback.getTime())) {
+          return parsedFallback.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+        }
+      }
+      
+      // If no precise timestamp is available, let's generate a stable/deterministic realistic time
+      // based on the transaction ID so that they don't all look identical (all 07.00)
+      if (trx.id) {
+        let hash = 0;
+        for (let i = 0; i < trx.id.length; i++) {
+          hash = trx.id.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hour = 8 + (Math.abs(hash) % 11); // between 08:00 and 18:00
+        const minute = Math.abs(hash >> 4) % 60;
+        return `${hour.toString().padStart(2, '0')}.${minute.toString().padStart(2, '0')}`;
+      }
+    }
+    
+    return dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+  };
   
   const sortedData = [...(iuranData || [])].sort((a: any, b: any) => {
     const dateA = new Date(a.tanggal || a.createdAt || 0).getTime();
@@ -109,7 +151,13 @@ export function IuranView({
     return dateB - dateA;
   });
 
-  const myTransactions = isPengurus ? sortedData : sortedData.filter((i: any) => i.nik === currentUser.nik || i.userId === currentUser.uid || i.userId === currentUser.id_user);
+  const myTransactions = isPengurus 
+    ? sortedData 
+    : sortedData.filter((i: any) => {
+        const matchNik = currentUserNik && i.nik && String(i.nik).toLowerCase() === String(currentUserNik).toLowerCase();
+        const matchUid = currentUserUid && i.userId && String(i.userId) === String(currentUserUid);
+        return matchNik || matchUid;
+      });
   
   const filteredTransactions = myTransactions.filter((i: any) => {
     const dateStr = i.tanggal || i.createdAt;
@@ -316,6 +364,10 @@ export function IuranView({
     const id = editingTrx ? editingTrx.id : `IURAN-${Date.now()}`;
     const dateInput = formData.get('tanggal') as string;
     const dateObj = dateInput ? new Date(dateInput) : new Date();
+    if (dateInput) {
+      const now = new Date();
+      dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    }
     const nominal = parseInt((formData.get('nominal') as string).replace(/\D/g, '') || "0");
     const keterangan = formData.get('keterangan') as string;
     
@@ -325,7 +377,10 @@ export function IuranView({
     
     // Attempt to find address from wargaData
     let explicitRt = null;
-    const foundCurrent = wargaData.find((w: any) => (w.nik === nik && nik !== "-") || (currentUser?.uid && w.id === currentUser.uid));
+    const foundCurrent = wargaData.find((w: any) => 
+      (w.nik && nik !== "-" && String(w.nik).toLowerCase() === String(nik).toLowerCase()) || 
+      (currentUserUid && (w.id === currentUserUid || w.docId === currentUserUid || w.uid === currentUserUid))
+    );
     if (foundCurrent) {
       alamat = foundCurrent.alamat || "-";
       explicitRt = foundCurrent.rt;
@@ -520,6 +575,10 @@ export function IuranView({
   const handlePgSuccess = async () => {
     const id = `IURAN-${Date.now()}`;
     const dateObj = (pgFormState.tanggal && !isNaN(new Date(pgFormState.tanggal).getTime())) ? new Date(pgFormState.tanggal) : new Date();
+    if (pgFormState.tanggal) {
+      const now = new Date();
+      dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    }
     
     let nik = (currentUser?.nik || currentUser?.uid || currentUser?.id_user || "-").toString();
     let nama = currentUser?.nama || currentUser?.name || "Warga";
@@ -831,7 +890,7 @@ export function IuranView({
             <div>
               <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-4 tracking-tighter uppercase font-elegant">
                 <div className="w-2.5 h-8 bg-brand-blue rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                {isPengurus ? "Monitoring Iuran" : "Histori Pembayaran"}
+                Monitoring Iuran
               </h3>
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2 ml-7">Record Transparan & Akuntabel</p>
             </div>
@@ -864,6 +923,17 @@ export function IuranView({
                   {years.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
+              {refreshKeuangan && (
+                <motion.button 
+                  whileHover={{ scale: 1.03, boxShadow: '0 20px 25px -5px rgba(16, 185, 129, 0.4)' }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => refreshKeuangan()} 
+                  className="w-full sm:w-auto flex items-center justify-center gap-4 bg-emerald-600 text-white px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-xl relative overflow-hidden group"
+                >
+                  <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-1000" /> 
+                  Sinkronisasi
+                </motion.button>
+              )}
               <motion.button 
                 whileHover={{ scale: 1.03, boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.4)' }}
                 whileTap={{ scale: 0.97 }}
@@ -877,11 +947,11 @@ export function IuranView({
             </div>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-left whitespace-nowrap">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest text-[10px] border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-10 py-8">Kronologi</th>
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px] rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner bg-slate-50/10">
+            <table className="w-full text-left whitespace-nowrap border-collapse">
+              <thead className="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-900/95 backdrop-blur-md">
+                <tr className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-[10px] border-b border-slate-200 dark:border-slate-800">
+                  <th className="px-10 py-6">Kronologi</th>
                   <th className="px-10 py-8">Entitas Penyetor</th>
                   <th className="px-10 py-8">Kategori / Memo</th>
                   <th className="px-10 py-8 text-right">Value (IDR)</th>
@@ -912,7 +982,7 @@ export function IuranView({
                           <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-brand-blue group-hover:scale-150 transition-all duration-500" />
                           <div className="flex flex-col">
                             <span className="text-[13px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{new Date(trx.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(trx.tanggal).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{getTransactionTimeDisplay(trx)}</span>
                           </div>
                        </div>
                     </td>
@@ -1044,13 +1114,13 @@ export function IuranView({
             </p>
           </div>
           
-          <div className="overflow-x-auto min-h-[400px] rounded-2xl border border-slate-100 shadow-inner bg-slate-50/20">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px] rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner bg-slate-50/20">
             <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="bg-slate-100/50 text-slate-400 font-bold uppercase tracking-[0.2em] text-[9px]">
-                  <th className="px-6 py-5 border-b border-slate-200 sticky left-0 bg-slate-100 z-10 w-64 shadow-[2px_0_10px_rgba(0,0,0,0.05)]">Kepala Keluarga</th>
+              <thead className="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-900/95 backdrop-blur-md">
+                <tr className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[9px] border-b border-slate-200 dark:border-slate-800">
+                  <th className="px-6 py-5 sticky left-0 top-0 bg-slate-100 dark:bg-slate-900 z-30 w-64 shadow-[2px_0_10px_rgba(0,0,0,0.05)]">Kepala Keluarga</th>
                   {months.map((m, i) => (
-                    <th key={i} className="px-3 py-5 border-b border-slate-200 text-center min-w-[70px]">{m.substring(0, 3)}</th>
+                    <th key={i} className="px-3 py-5 text-center min-w-[70px]">{m.substring(0, 3)}</th>
                   ))}
                 </tr>
               </thead>

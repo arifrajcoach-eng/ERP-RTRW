@@ -555,7 +555,7 @@ export function WargaProfileView({
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
        {/* Sidebar Citizen */}
-      <div className="w-full md:w-96 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border-r border-slate-100 dark:border-slate-800 flex flex-col shrink-0 relative overflow-hidden group">
+      <div className="w-full md:w-96 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border-r border-slate-100 dark:border-slate-800 flex flex-col shrink-0 relative md:overflow-y-auto overflow-x-hidden custom-scrollbar-y group">
          <div className="absolute -right-20 -top-20 w-48 h-48 bg-brand-blue/5 rounded-full blur-3xl group-hover:bg-brand-blue/10 transition-colors"></div>
          
          <div className="p-10 pb-6 flex flex-col items-center text-center relative z-10">
@@ -642,7 +642,7 @@ export function WargaProfileView({
       </div>
 
        {/* Content Citizen */}
-       <div className="flex-1 overflow-y-visible md:overflow-y-auto p-4 md:p-12">
+       <div className="flex-1 overflow-y-visible md:overflow-y-auto custom-scrollbar-y p-4 md:p-12">
           <AnimatePresence mode="wait">
               {activeCitizenTab === 'profil' && (
                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="max-w-4xl mx-auto space-y-12">
@@ -821,7 +821,7 @@ export function WargaProfileView({
                          </motion.button>
                       </div>
 
-                      <div ref={scrollContainerRef} className="flex overflow-x-auto pb-10 gap-6 snap-x no-scrollbar scroll-smooth px-4 -mx-4">
+                      <div ref={scrollContainerRef} className="flex overflow-x-auto pb-6 gap-6 snap-x custom-scrollbar-x scroll-smooth px-4 -mx-4">
                         {[
                            { id: 'ktp', name: 'PENGANTAR KTP/KK', icon: UserPlus, color: 'bg-blue-50 text-blue-600' },
                            { id: 'domisili', name: 'KET. DOMISILI', icon: MapPin, color: 'bg-rose-50 text-rose-600' },
@@ -1234,6 +1234,19 @@ export function WargaProfileView({
                              </div>
                           </div>
                        )}
+
+                        {!['ktp', 'usaha', 'domisili', 'skck', 'sktm'].includes(selectedLetter || "") && (
+                           <div>
+                              <label className="text-[10px] font-black text-slate-400 uppercase mb-1.5 block">Maksud / Keperluan</label>
+                              <textarea 
+                                 required
+                                 value={formKeperluan}
+                                 onChange={e => setFormKeperluan(e.target.value)}
+                                 placeholder={`Contoh: Keperluan pengurusan ${selectedLetterName?.toLowerCase() || 'dokumen'}...`} 
+                                 className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-850 dark:border-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none min-h-[100px] text-slate-800 dark:text-slate-200"
+                              />
+                           </div>
+                        )}
 
                        <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex gap-4 shrink-0 font-bold">
                           <button type="button" onClick={() => setSelectedLetter(null)} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-450 hover:text-slate-700 dark:hover:text-slate-200 transition-all">Batal</button>

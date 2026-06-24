@@ -343,6 +343,20 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export default function App() {
   console.log("App Component: Mounting...");
+
+  // Clear any legacy financial sync locks from sessionStorage on initial page mount/restart
+  useEffect(() => {
+    try {
+      const keys = Object.keys(sessionStorage || {});
+      keys.forEach((k) => {
+        if (k.startsWith("smartrw_kas_loaded_") || k.startsWith("smartrw_iuran_loaded_")) {
+          sessionStorage.removeItem(k);
+        }
+      });
+    } catch (e) {
+      console.warn("Storage cleanup error:", e);
+    }
+  }, []);
   
   // --- CORE SYSTEM STATES ---
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -853,6 +867,63 @@ export default function App() {
     }
   };
 
+  const handleRefreshKeuangan = async () => {
+    setIsLoadingDB(true);
+    try {
+      const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
+      if (tIds.length > 0) {
+        const chunks = chunkArray(tIds, 10);
+        let fetchedKas: any[] = [];
+        let fetchedIuran: any[] = [];
+        
+        for (const chunk of chunks) {
+          const cacheKeyKas = `smartrw_kas_loaded_${chunk.join("_")}`;
+          const cacheKeyIuran = `smartrw_iuran_loaded_${chunk.join("_")}`;
+          
+          // Clear session storage & local storage locks
+          safeSessionStorage.removeItem(cacheKeyKas);
+          safeLocalStorage.removeItem(cacheKeyKas);
+          safeSessionStorage.removeItem(cacheKeyIuran);
+          safeLocalStorage.removeItem(cacheKeyIuran);
+          
+          // Fetch Kas
+          const kq = query(collection(db, "kas"), where("tenantId", "in", chunk), limit(1000));
+          const snapKas = await getDocs(kq);
+          fetchedKas = [...fetchedKas, ...snapKas.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))];
+          setLoadedKasChunks(prev => ({ ...prev, [cacheKeyKas]: true }));
+          
+          // Fetch Iuran
+          const currentUserId = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || "";
+          const iuranQ = hasFullAccess ? 
+            query(collection(db, "iuran"), where("tenantId", "in", chunk)) :
+            query(collection(db, "iuran"), where("tenantId", "in", chunk), where("userId", "==", currentUserId));
+          const snapIuran = await getDocs(query(iuranQ, limit(1000)));
+          fetchedIuran = [...fetchedIuran, ...snapIuran.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))];
+          setLoadedIuranChunks(prev => ({ ...prev, [cacheKeyIuran]: true }));
+        }
+        
+        // Update state
+        setKasData(prev => {
+          const filtered = prev.filter(p => !tIds.includes(p.tenantId));
+          return [...filtered, ...fetchedKas];
+        });
+        setIuranData(prev => {
+          const filtered = prev.filter(p => !tIds.includes(p.tenantId));
+          return [...filtered, ...fetchedIuran];
+        });
+        
+        showNotification("Data Keuangan berhasil disinkronisasi langsung dari database!", "success");
+      } else {
+        showNotification("Tidak ada wilayah aktif untuk sinkronisasi.", "info");
+      }
+    } catch (err: any) {
+      console.error("Failed to refresh keuangan:", err);
+      showNotification("Gagal menyegarkan data keuangan: " + (err.message || String(err)), "error");
+    } finally {
+      setIsLoadingDB(false);
+    }
+  };
+
   // --- CENTRAL STATE WITH LOCALSTORAGE PERSISTENCE ---
   const [globalSelectedRw, setGlobalSelectedRw] = useState<string>("Semua");
 
@@ -879,6 +950,8 @@ export default function App() {
   const [suratData, setSuratData] = useState<any[]>(INITIAL_SURAT_DATA);
 
   const [iuranData, setIuranData] = useState<any[]>([]);
+  const [loadedKasChunks, setLoadedKasChunks] = useState<Record<string, boolean>>({});
+  const [loadedIuranChunks, setLoadedIuranChunks] = useState<Record<string, boolean>>({});
   const [ppobData, setPpobData] = useState<any[]>([]);
 
   const [inventarisData, setInventarisData] = useState<any[]>(INITIAL_INVENTARIS_DATA);
@@ -2203,35 +2276,47 @@ export default function App() {
     return () => unsubs.forEach(u => u());
   }, [activeTenantIdsStr, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
 
-  // 2. Financial Sync (Kas, Iuran, PPOB)
+  // 2. Financial Sync (Kas, Iuran, PPOB) - ONE-TIME MANUAL PULL (highly optimized to save free tier quota)
   useEffect(() => {
     if (!currentUser && !wargaAuth) return;
     if (quotaExceeded) return;
     const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
-    const unsubs: (() => void)[] = [];
     
     if (tIds.length > 0) {
       const chunks = chunkArray(tIds, 10);
-      chunks.forEach(chunk => {
-        const kq = query(collection(db, "kas"), where("tenantId", "in", chunk), limit(1000));
+      chunks.forEach(async (chunk) => {
+        try {
+          const cacheKeyKas = `smartrw_kas_loaded_${chunk.join("_")}`;
+          // Use loadedKasChunks React state to prevent re-fetching in same session, but fetch fresh on page reload/restart
+          const isKasLoaded = loadedKasChunks[cacheKeyKas];
+          if (!isKasLoaded) {
+            const kq = query(collection(db, "kas"), where("tenantId", "in", chunk), limit(1000));
+            const snap = await getDocs(kq);
+            setKasData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))]);
+            setLoadedKasChunks(prev => ({ ...prev, [cacheKeyKas]: true }));
+          }
+        } catch (err) {
+          console.warn("Failed to pull kas via manual getDocs:", err);
+        }
         
-        unsubs.push(onSnapshot(kq, (snap) => {
-          console.log("Firestore update for kas, tenant(s):", chunk, "count:", snap.size);
-          setKasData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))]);
-        }, (err) => {
-          console.warn("Failed to subscribe to kas:", err);
-        }));
-        
-        const iuranQ = hasFullAccess ? 
-          query(collection(db, "iuran"), where("tenantId", "in", chunk)) :
-          query(collection(db, "iuran"), where("tenantId", "in", chunk), where("userId", "==", auth.currentUser?.uid || ""));
-        
-        unsubs.push(onSnapshot(query(iuranQ, limit(1000)), (snap) => setIuranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))])));
+        try {
+          const cacheKeyIuran = `smartrw_iuran_loaded_${chunk.join("_")}`;
+          const isIuranLoaded = loadedIuranChunks[cacheKeyIuran];
+          if (!isIuranLoaded) {
+            const currentUserId = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || "";
+            const iuranQ = hasFullAccess ? 
+              query(collection(db, "iuran"), where("tenantId", "in", chunk)) :
+              query(collection(db, "iuran"), where("tenantId", "in", chunk), where("userId", "==", currentUserId));
+            const snap = await getDocs(query(iuranQ, limit(1000)));
+            setIuranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))]);
+            setLoadedIuranChunks(prev => ({ ...prev, [cacheKeyIuran]: true }));
+          }
+        } catch (err) {
+          console.warn("Failed to pull iuran via manual getDocs:", err);
+        }
       });
     }
-
-    return () => unsubs.forEach(u => u());
-  }, [activeTenantIdsStr, currentUser?.uid, hasFullAccess, tenantRT, chunkArray, quotaExceeded]);
+  }, [activeTenantIdsStr, currentUser?.uid, wargaAuth?.authUid, wargaAuth?.uid, hasFullAccess, tenantRT, chunkArray, quotaExceeded, loadedKasChunks, loadedIuranChunks]);
 
   // 3. Posyandu & Health Sync
   useEffect(() => {
@@ -3626,7 +3711,7 @@ export default function App() {
           suratData={suratData}
           setSuratData={setSuratData}
           setWargaAuth={setWargaAuth}
-          tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
+          tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
           isLoadingDB={isLoadingDB}
           setIsLoadingDB={setIsLoadingDB}
           handleFileUpload={handleFileUpload}
@@ -4690,6 +4775,7 @@ export default function App() {
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
               plan={currentTenant?.status}
+              refreshKeuangan={handleRefreshKeuangan}
               isPengurus={["ADMIN", "SUPER_ADMIN", "OWNER", "RW", "RT", "BENDAHARA", "SEKRETARIS", "KADER"].includes(
                 (currentUser?.role || wargaAuth?.role || "").toUpperCase(),
               )}
@@ -4833,7 +4919,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile.tenantId || "rw26_berjuang"}
+                tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -6372,7 +6458,7 @@ function SelfRegistrationView({
 
     // Basic validation
     if (!tenantExists || !currentTenantId) {
-      showNotification("Kode Area Wilayah (Tenant ID) tidak valid atau tidak terdaftar.", "error");
+      showNotification("Kantor Wilayah (Tenant ID) tidak valid atau tidak terdaftar.", "error");
       return;
     }
     if (!formData.nik || formData.nik.length < 10) {
@@ -7238,12 +7324,12 @@ function LoginView({
 
     const cleanTenant = String(tenantInput || "").trim().toLowerCase();
     if (!cleanTenant) {
-      setError("Kode Area Wilayah (Tenant ID) harus diisi agar pencarian data tepat sasaran.");
+      setError("Kantor Wilayah (Tenant ID) harus diisi agar pencarian data tepat sasaran.");
       setIsLoading(false);
       return;
     }
     if (!tenantExists) {
-      setError(`Kode Area Wilayah "${cleanTenant}" tidak valid atau tidak terdaftar di sistem.`);
+      setError(`Kantor Wilayah "${cleanTenant}" tidak valid atau tidak terdaftar di sistem.`);
       setIsLoading(false);
       return;
     }
@@ -7685,7 +7771,7 @@ function LoginView({
 
         if (userData && !isMaster && userData.tenantId !== tenantInput) {
             await signOut(auth);
-            throw new Error(`Tenant ID tidak sesuai. Akun Anda terdaftar di wilayah ${userData.tenantId}, bukan ${tenantInput}. Harap periksa Kode Area Wilayah.`);
+            throw new Error(`Tenant ID tidak sesuai. Akun Anda terdaftar di wilayah ${userData.tenantId}, bukan ${tenantInput}. Harap periksa Kantor Wilayah.`);
         }
 
         // --- Package Check: Ensure minimal STARTER package ---
@@ -8177,7 +8263,7 @@ function LoginView({
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">
-                  KODE AREA WILAYAH (TENANT ID)
+                  KANTOR WILAYAH (TENANT ID)
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
@@ -8227,7 +8313,7 @@ function LoginView({
               {/* [NEW] Tenant ID input for Google Login to improve system disambiguation */}
               <div className="px-1">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">
-                  KODE AREA WILAYAH (OPSIONAL)
+                  KANTOR WILAYAH (OPSIONAL)
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
@@ -8346,7 +8432,7 @@ function LoginView({
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">
-                    KODE AREA WILAYAH (TENANT ID)
+                    KANTOR WILAYAH (TENANT ID)
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-pink transition-colors">

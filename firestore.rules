@@ -9,9 +9,13 @@ service cloud.firestore {
       return isSignedIn() && 'email' in request.auth.token 
         ? (exists(/databases/$(database)/documents/users/$(request.auth.uid))
            ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
-           : (exists(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower()))
-              ? get(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower())).data
-              : null))
+           : (exists(/databases/$(database)/documents/users/$(request.auth.token.email.lower()))
+              ? get(/databases/$(database)/documents/users/$(request.auth.token.email.lower())).data
+              : (exists(/databases/$(database)/documents/users/$(request.auth.token.email))
+                 ? get(/databases/$(database)/documents/users/$(request.auth.token.email)).data
+                 : (exists(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower()))
+                    ? get(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower())).data
+                    : null))))
         : null;
     }
     
@@ -31,7 +35,32 @@ service cloud.firestore {
           (getUserData().tenantId.lower() == 'rw26_berjuang' && tenantId.lower().matches('.*berjuang.*')) ||
           (getUserData().tenantId.lower() == 'trihprw26' && tenantId.lower().matches('.*trih.*')) ||
           getUserData().tenantId.lower().matches('.*_' + tenantId.lower()) ||
-          tenantId.lower().matches('.*_' + getUserData().tenantId.lower())
+          tenantId.lower().matches('.*_' + getUserData().tenantId.lower()) ||
+          ((getUserData().tenantId.lower().matches('.*rw26.*') || getUserData().tenantId.lower().matches('.*berjuang.*')) && 
+           (tenantId.lower().matches('.*rw26.*') || tenantId.lower().matches('.*berjuang.*')) && (
+             (getUserData().tenantId.lower().matches('.*rt0?1.*') && tenantId.lower().matches('.*rt0?1.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?2.*') && tenantId.lower().matches('.*rt0?2.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?3.*') && tenantId.lower().matches('.*rt0?3.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?4.*') && tenantId.lower().matches('.*rt0?4.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?5.*') && tenantId.lower().matches('.*rt0?5.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?6.*') && tenantId.lower().matches('.*rt0?6.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?7.*') && tenantId.lower().matches('.*rt0?7.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?8.*') && tenantId.lower().matches('.*rt0?8.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?9.*') && tenantId.lower().matches('.*rt0?9.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?10.*') && tenantId.lower().matches('.*rt0?10.*'))
+          )) ||
+          (getUserData().tenantId.lower().matches('.*trih.*') && tenantId.lower().matches('.*trih.*') && (
+             (getUserData().tenantId.lower().matches('.*rt0?1.*') && tenantId.lower().matches('.*rt0?1.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?2.*') && tenantId.lower().matches('.*rt0?2.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?3.*') && tenantId.lower().matches('.*rt0?3.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?4.*') && tenantId.lower().matches('.*rt0?4.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?5.*') && tenantId.lower().matches('.*rt0?5.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?6.*') && tenantId.lower().matches('.*rt0?6.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?7.*') && tenantId.lower().matches('.*rt0?7.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?8.*') && tenantId.lower().matches('.*rt0?8.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?9.*') && tenantId.lower().matches('.*rt0?9.*')) ||
+             (getUserData().tenantId.lower().matches('.*rt0?10.*') && tenantId.lower().matches('.*rt0?10.*'))
+          ))
         )) ||
         ('email' in request.auth.token && request.auth.token.email.lower() == tenantId.lower() + "@gmail.com")
       );

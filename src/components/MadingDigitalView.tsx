@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import imageCompression from 'browser-image-compression';
 
 interface MadingItem {
   id: string;
@@ -99,6 +100,10 @@ export default function MadingDigitalView({
   const [editImageUrl, setEditImageUrl] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
   const [isUploadingLocal, setIsUploadingLocal] = useState(false);
+
+  // Synchronization & Local Storage Cache States
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Live Camera API States
   const [isLiveCameraActive, setIsLiveCameraActive] = useState(false);
@@ -243,17 +248,45 @@ export default function MadingDigitalView({
     };
   };
 
-  // 1. Fetch data in real-time, filtered by tenantId (compliant with tenant security rules)
+  // 1. Pull manual fetch with localStorage caching
   useEffect(() => {
     if (!tId) return;
 
-    setLoading(true);
-    const q = query(collection(db, "mading"), where("tenantId", "==", tId));
+    const cacheKey = `smartrw_mading_cache_${tId}`;
+    const syncTimeKey = `smartrw_mading_cache_time_${tId}`;
+    
+    const cachedData = localStorage.getItem(cacheKey);
+    const cachedTime = localStorage.getItem(syncTimeKey);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    if (cachedData) {
+      try {
+        setAllMadingDocs(JSON.parse(cachedData));
+        setLastSyncTime(cachedTime);
+        setLoading(false);
+      } catch (e) {
+        console.warn("Error parsing cached mading data:", e);
+        fetchMadingData(false);
+      }
+    } else {
+      fetchMadingData(false);
+    }
+  }, [tId]);
+
+  const fetchMadingData = async (forceRefresh = false) => {
+    if (!tId) return;
+
+    if (forceRefresh) {
+      setIsSyncing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const q = query(collection(db, "mading"), where("tenantId", "==", tId));
+      const querySnapshot = await getDocs(q);
       const itemsList: MadingItem[] = [];
       
-      snapshot.forEach((doc) => {
+      querySnapshot.forEach((doc) => {
         const data = doc.data() as MadingItem;
         if (data) {
           itemsList.push({ ...data, id: doc.id });
@@ -261,14 +294,25 @@ export default function MadingDigitalView({
       });
 
       setAllMadingDocs(itemsList);
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, "list", "mading");
-      setLoading(false);
-    });
+      
+      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const fullDateStr = `${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} ${nowStr}`;
+      setLastSyncTime(fullDateStr);
 
-    return () => unsubscribe();
-  }, [tId]);
+      localStorage.setItem(`smartrw_mading_cache_${tId}`, JSON.stringify(itemsList));
+      localStorage.setItem(`smartrw_mading_cache_time_${tId}`, fullDateStr);
+
+      if (forceRefresh) {
+        showNotification("Mading disinkronkan dengan data cloud terbaru!", "success");
+      }
+    } catch (error: any) {
+      console.error("Error fetching mading:", error);
+      handleFirestoreError(error, "list", "mading");
+    } finally {
+      setLoading(false);
+      setIsSyncing(false);
+    }
+  };
 
   // Compute madingItems in-memory based on selectedYear and selectedMonth
   const madingItems = React.useMemo(() => {
@@ -369,39 +413,56 @@ export default function MadingDigitalView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 15 * 1024 * 1024) {
-      showNotification("Ukuran foto terlalu besar (maksimal 15MB)!", "error");
+    if (file.size > 20 * 1024 * 1024) {
+      showNotification("Ukuran foto terlalu besar (maksimal 20MB)!", "error");
       return;
     }
 
     setIsUploadingLocal(true);
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const originalBase64 = event.target?.result as string;
-      if (!originalBase64) {
-        showNotification("Gagal membaca file foto!", "error");
-        setIsUploadingLocal(false);
-        return;
-      }
+    try {
+      showNotification("Mengompresi gambar di sisi klien...", "info");
+      
+      const options = {
+        maxSizeMB: 0.3, // Compress to ~300KB as requested
+        maxWidthOrHeight: 1200, // Good crisp resolution
+        useWebWorker: true,
+      };
 
-      try {
-        const compressedBase64 = await compressImage(originalBase64, 1000, 1000);
-        setEditImageUrl(compressedBase64);
-        showNotification("Foto berhasil diunggah langsung & dioptimalkan otomatis!", "success");
-      } catch (err) {
-        console.error("Error compressing image:", err);
-        showNotification("Gagal memproses & kompresi foto!", "error");
-      } finally {
-        setIsUploadingLocal(false);
-      }
-    };
+      // Perform primary compression using browser-image-compression
+      const compressedFile = await imageCompression(file, options);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        setEditImageUrl(base64data);
+        showNotification("Foto berhasil diunggah & dikompresi ke ~300KB!", "success");
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (err) {
+      console.warn("browser-image-compression failed, falling back to canvas compressor:", err);
+      
+      // Fallback to Canvas
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const originalBase64 = event.target?.result as string;
+        if (!originalBase64) {
+          showNotification("Gagal membaca file foto!", "error");
+          return;
+        }
 
-    reader.onerror = () => {
-      showNotification("Terjadi kesalahan membaca file gambar!", "error");
+        try {
+          const compressedBase64 = await compressImage(originalBase64, 1000, 1000);
+          setEditImageUrl(compressedBase64);
+          showNotification("Foto berhasil diunggah langsung & dikompresi otomatis!", "success");
+        } catch (canvasErr) {
+          console.error("Canvas compression error:", canvasErr);
+          showNotification("Gagal memproses & kompresi foto!", "error");
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
       setIsUploadingLocal(false);
-    };
-
-    reader.readAsDataURL(file);
+    }
   };
 
   // Open Edit Dialog
@@ -444,6 +505,16 @@ export default function MadingDigitalView({
 
     try {
       await setDoc(doc(db, "mading", docId), payload);
+      
+      // Instantly update local memory state & localStorage cache to keep UI responsive and cheap on reads
+      setAllMadingDocs(prev => {
+        const filtered = prev.filter(doc => doc.id !== docId);
+        const updatedList = [...filtered, payload];
+        
+        localStorage.setItem(`smartrw_mading_cache_${tId}`, JSON.stringify(updatedList));
+        return updatedList;
+      });
+
       showNotification(`Mading Foto ${editingSlot} untuk ${editDate} berhasil diperbarui!`, "success");
       handleCloseEdit();
     } catch (err: any) {
@@ -488,14 +559,33 @@ export default function MadingDigitalView({
           </div>
         </div>
         
-        {isPengurus && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-1.5 rounded-xl border border-emerald-100 dark:border-emerald-950/50 flex items-center gap-1.5 shrink-0">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-              Mode Pengurus Aktif
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Cache last sync indicator */}
+          {lastSyncTime && (
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-1 shrink-0">
+              <Clock className="w-3 h-3 text-indigo-500 shrink-0" />
+              <span>CACHED: {lastSyncTime}</span>
             </span>
-          </div>
-        )}
+          )}
+
+          {/* Manual On-Demand Pull Button */}
+          <button
+            onClick={() => fetchMadingData(true)}
+            disabled={isSyncing}
+            className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 hover:bg-brand-blue hover:text-white dark:hover:bg-brand-blue text-brand-blue dark:text-indigo-400 px-3.5 py-2 rounded-xl border border-indigo-100 dark:border-brand-blue/10 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+            title="Klik untuk menarik data Mading terbaru dari cloud (Pull Manual)"
+          >
+            <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
+            <span>{isSyncing ? "Menyinkronkan..." : "Sinkronkan Cloud"}</span>
+          </button>
+
+          {isPengurus && (
+            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 px-3.5 py-2 rounded-xl border border-emerald-150 dark:border-emerald-950/50 flex items-center gap-1.5 shrink-0">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span>Mode Pengurus</span>
+            </span>
+          )}
+        </div>
       </div>
 
 

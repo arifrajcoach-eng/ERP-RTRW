@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { 
   initializeFirestore, 
   persistentLocalCache, 
-  persistentMultipleTabManager,
+  persistentSingleTabManager,
   memoryLocalCache 
 } from 'firebase/firestore';                
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
@@ -20,7 +20,7 @@ try {
   
   if (hasStorage && !isIframe) {
     cacheConfig = persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
+      tabManager: persistentSingleTabManager({ forceOwnership: true }),
     });
   } else {
     // In iframe or Node, use memory cache to avoid IndexedDB lock hangs and timeouts

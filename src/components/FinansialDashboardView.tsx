@@ -30,6 +30,7 @@ interface FinansialDashboardViewProps {
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   isPengurus: boolean;
   plan?: string;
+  refreshKeuangan?: () => Promise<void> | void;
 }
 
 export function FinansialDashboardView(props: FinansialDashboardViewProps) {

@@ -30,9 +30,12 @@ import {
   Store,
   ShieldCheck,
   FileUp,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
-import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
+import imageCompression from 'browser-image-compression';
 import { logAuditEvent } from "../services/auditLogService";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
@@ -109,6 +112,64 @@ export function KasView({
   const [pgVirtualAccount, setPgVirtualAccount] = useState("");
   const [pgFormState, setPgFormState] = useState<any>(null);
 
+  // Synchronization & Local Storage Cache States
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const syncTimeKey = `smartrw_kas_cache_time_${tenantId}`;
+    const cachedTime = localStorage.getItem(syncTimeKey);
+    if (cachedTime) {
+      setLastSyncTime(cachedTime);
+    } else {
+      // If never synced, pull initial data from cloud
+      fetchKasAndIuranData(false);
+    }
+  }, [tenantId]);
+
+  const fetchKasAndIuranData = async (forceRefresh = false) => {
+    if (!tenantId) return;
+
+    if (forceRefresh) {
+      setIsSyncing(true);
+    } else {
+      setIsLoadingDB(true);
+    }
+
+    try {
+      // 1. Pull Kas from Cloud
+      const kq = query(collection(db, "kas"), where("tenantId", "==", tenantId));
+      const kasSnap = await getDocs(kq);
+      const kasList = kasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setKasData(kasList);
+
+      // 2. Pull Iuran from Cloud
+      const iuranQ = query(collection(db, "iuran"), where("tenantId", "==", tenantId));
+      const iuranSnap = await getDocs(iuranQ);
+      const iuranList = iuranSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setIuranData(iuranList);
+
+      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const fullDateStr = `${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} ${nowStr}`;
+      setLastSyncTime(fullDateStr);
+
+      localStorage.setItem(`smartrw_kas_cache_time_${tenantId}`, fullDateStr);
+      localStorage.setItem(`smartrw_kas_loaded_${tenantId}`, "true");
+      localStorage.setItem(`smartrw_iuran_loaded_${tenantId}`, "true");
+
+      if (forceRefresh) {
+        showNotification("Buku Kas & Iuran disinkronkan dengan data cloud terbaru!", "success");
+      }
+    } catch (error: any) {
+      console.error("Error manual sync kas/iuran:", error);
+      handleFirestoreError(error, "list", "kas");
+    } finally {
+      setIsLoadingDB(false);
+      setIsSyncing(false);
+    }
+  };
+
   const sanitizeForFirestore = (obj: any) => {
     return JSON.parse(JSON.stringify(obj, (key, value) => 
       value === undefined ? null : value
@@ -117,7 +178,14 @@ export function KasView({
 
   useEffect(() => {
     if (wargaData && wargaData.length > 0 && currentUser && showMasukForm && !editingKas) {
-      const u = wargaData.find(w => w.nik === currentUser.nik || w.id === currentUser.id_user || w.id === currentUser.uid);
+      const currentUserNik = currentUser?.nik || currentUser?.nikMapping || '';
+      const currentUserUid = currentUser?.uid || currentUser?.authUid || currentUser?.id_user || '';
+      
+      const u = wargaData.find(w => {
+        const matchNik = currentUserNik && w.nik && String(w.nik).toLowerCase() === String(currentUserNik).toLowerCase();
+        const matchUid = currentUserUid && (w.id === currentUserUid || w.docId === currentUserUid || w.uid === currentUserUid);
+        return matchNik || matchUid;
+      });
       if (u) {
         setSelectedWargaId(u.docId || u.id || u.nik);
       }
@@ -229,8 +297,24 @@ export function KasView({
     showNotification("AI sedang memindai struk...", "info");
 
     try {
+      showNotification("Mengompresi gambar struk di sisi klien...", "info");
+      
+      const options = {
+        maxSizeMB: 0.3, // Compress to ~300KB
+        maxWidthOrHeight: 1200, // Sharp crisp resolution
+        useWebWorker: true,
+      };
+
+      let processedFile = file;
+      try {
+        processedFile = await imageCompression(file, options);
+        console.log(`Struk compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(processedFile.size / 1024).toFixed(2)}KB`);
+      } catch (compErr) {
+        console.warn("Client-side image compression failed, falling back to original:", compErr);
+      }
+
       // 1. Upload to Firebase first to get URL (and for storage)
-      const url = await handleFileUpload(file, "kas_struk_ai");
+      const url = await handleFileUpload(processedFile, "kas_struk_ai");
       setStrukUrl(url);
 
       // 2. Convert to base64 for Gemini
@@ -241,7 +325,7 @@ export function KasView({
           resolve(base64);
         };
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(processedFile);
       });
       const base64Data = await base64Promise;
 
@@ -599,6 +683,10 @@ export function KasView({
   const handlePgSuccess = async () => {
     const id = `IURAN-${Date.now()}`;
     const dateObj = (pgFormState.tanggal && !isNaN(new Date(pgFormState.tanggal).getTime())) ? new Date(pgFormState.tanggal) : new Date();
+    if (pgFormState.tanggal) {
+      const now = new Date();
+      dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    }
     
     let nik = (currentUser?.nik || currentUser?.uid || currentUser?.id_user || "-").toString();
     let nama = currentUser?.nama || currentUser?.name || "Warga";
@@ -724,6 +812,10 @@ export function KasView({
     const formData = new FormData(e.currentTarget);
     const dateInput = formData.get("tanggal") as string;
     const dateObj = dateInput ? new Date(dateInput) : new Date();
+    if (dateInput) {
+      const now = new Date();
+      dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    }
     const formattedDate = (() => {
       const day = String(dateObj.getDate()).padStart(2, '0');
       const month = INDONESIAN_MONTHS[dateObj.getMonth()];
@@ -1051,6 +1143,28 @@ export function KasView({
               <span className="text-brand-blue font-black tracking-tighter" style={{ fontSize: '22px', height: '57.0069px' }}>Buku Kas</span>
             </h3>
             <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mt-1.5 ml-6 leading-relaxed">Pencatatan alur keuangan digital secara sistematis</p>
+            
+            <div className="flex flex-wrap items-center gap-2.5 mt-3.5 ml-6">
+              {/* Cache last sync indicator */}
+              {lastSyncTime && (
+                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-1 shrink-0">
+                  <Clock className="w-3 h-3 text-indigo-500 shrink-0" />
+                  <span>TERAKHIR SYNC: {lastSyncTime}</span>
+                </span>
+              )}
+
+              {/* Manual On-Demand Pull Button */}
+              <button
+                type="button"
+                onClick={() => fetchKasAndIuranData(true)}
+                disabled={isSyncing}
+                className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 hover:bg-brand-blue hover:text-white dark:hover:bg-brand-blue text-brand-blue dark:text-indigo-400 px-3.5 py-2 rounded-xl border border-indigo-100 dark:border-brand-blue/10 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+                title="Klik untuk menarik data Buku Kas terbaru dari cloud (Pull Manual)"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
+                <span>{isSyncing ? "Menyinkronkan..." : "Sinkronkan Cloud"}</span>
+              </button>
+            </div>
           </div>
           
           <div className="flex flex-wrap gap-3 items-center w-full xl:w-auto">
@@ -1497,10 +1611,28 @@ export function KasView({
                     <div className="w-full">
                       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={async (e) => {
                         if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
                           setUploading(true);
                           try {
-                            const url = await handleFileUpload(e.target.files[0], 'kas_struk');
-                            if (url) setStrukUrl(url);
+                            showNotification("Mengompresi lampiran bukti di sisi klien...", "info");
+                            const options = {
+                              maxSizeMB: 0.3, // Compress to ~300KB
+                              maxWidthOrHeight: 1200,
+                              useWebWorker: true,
+                            };
+                            let processedFile = file;
+                            try {
+                              processedFile = await imageCompression(file, options);
+                              console.log(`Struk compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(processedFile.size / 1024).toFixed(2)}KB`);
+                            } catch (compErr) {
+                              console.warn("Client-side image compression failed, falling back to original:", compErr);
+                            }
+                            
+                            const url = await handleFileUpload(processedFile, 'kas_struk');
+                            if (url) {
+                              setStrukUrl(url);
+                              showNotification("Bukti berhasil diunggah & dioptimalkan otomatis!", "success");
+                            }
                           } catch (err) {
                             showNotification("Gagal upload bukti", "error");
                           }
