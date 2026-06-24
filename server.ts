@@ -183,13 +183,23 @@ async function startServer() {
       }
       const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
 
-      // Fetch all push subscriptions for this tenant
+      // Fetch the tenant document to find its parentId for cross-tenant SOS broadcasting (RT -> RW)
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      const parentId = tenantDoc.exists ? tenantDoc.data()?.parentId : null;
+      
+      const targetTenantIds = [tenantId];
+      if (parentId) {
+        targetTenantIds.push(parentId);
+        console.log(`[PUSH SOS] Including parent tenant ${parentId} in broadcast for ${tenantId}`);
+      }
+
+      // Fetch all push subscriptions for the sender's tenant and its parent context
       const subscriptionsSnap = await db.collection("push_subscriptions")
-        .where("tenantId", "==", tenantId)
+        .where("tenantId", "in", targetTenantIds)
         .get();
 
       if (subscriptionsSnap.empty) {
-        return res.json({ success: true, sentCount: 0, message: "No active push subscriptions for this tenant" });
+        return res.json({ success: true, sentCount: 0, message: "No active push subscriptions for these tenants" });
       }
 
       const payload = JSON.stringify({
@@ -1184,7 +1194,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
-               prebuiltVoiceConfig: { voiceName: "Kore" }
+               prebuiltVoiceConfig: { voiceName: isChairman ? "Aoede" : "Kore" }
             }
           },
           temperature: 1.0

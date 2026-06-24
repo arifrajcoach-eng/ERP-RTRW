@@ -6,16 +6,20 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     
     function getUserData() {
-      return isSignedIn() && 'email' in request.auth.token 
+      return isSignedIn() 
         ? (exists(/databases/$(database)/documents/users/$(request.auth.uid))
            ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
-           : (exists(/databases/$(database)/documents/users/$(request.auth.token.email.lower()))
-              ? get(/databases/$(database)/documents/users/$(request.auth.token.email.lower())).data
-              : (exists(/databases/$(database)/documents/users/$(request.auth.token.email))
-                 ? get(/databases/$(database)/documents/users/$(request.auth.token.email)).data
-                 : (exists(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower()))
-                    ? get(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower())).data
-                    : null))))
+           : (exists(/databases/$(database)/documents/data_warga/$(request.auth.uid))
+              ? get(/databases/$(database)/documents/data_warga/$(request.auth.uid)).data
+              : ('email' in request.auth.token
+                 ? (exists(/databases/$(database)/documents/users/$(request.auth.token.email.lower()))
+                    ? get(/databases/$(database)/documents/users/$(request.auth.token.email.lower())).data
+                    : (exists(/databases/$(database)/documents/users/$(request.auth.token.email))
+                       ? get(/databases/$(database)/documents/users/$(request.auth.token.email)).data
+                       : (exists(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower()))
+                          ? get(/databases/$(database)/documents/users/$("PRE_" + request.auth.token.email.lower())).data
+                          : null)))
+                 : null)))
         : null;
     }
     
@@ -86,7 +90,7 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       allow get: if true;
       allow list: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
     }
 
     match /data_warga/{nik} {
@@ -166,6 +170,11 @@ service cloud.firestore {
       allow write: if isPengurus();
     }
     
+    match /settings/{tenantId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
+    }
+
     // Catch-all
     match /{document=**} {
       allow read, write: if isAdmin();

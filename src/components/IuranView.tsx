@@ -160,6 +160,30 @@ export function IuranView({
       });
   
   const filteredTransactions = myTransactions.filter((i: any) => {
+    if (isPengurus) {
+      const isViewingRT = tenantId && tenantId.toLowerCase().startsWith('rt');
+      const isViewingRW = !isViewingRT;
+      
+      const isDestinedToRT = i.tenantId && i.tenantId.toLowerCase().startsWith("rt");
+      const isDestinedToRW = i.tenantId && !i.tenantId.toLowerCase().startsWith("rt");
+      const isFromWarga = i.nik && i.nik !== "-";
+      
+      if (isViewingRW) {
+        // Skema 1: RW tidak melihat transaksi ke RT
+        if (isDestinedToRT) {
+          return false;
+        }
+      }
+      
+      if (isViewingRT) {
+        // Skema 2: RT tidak melihat transaksi Warga ke RW
+        if (isDestinedToRW && isFromWarga) {
+          return false;
+        }
+        // Skema 3: RT melihat transaksi RT ke RW (isDestinedToRW && !isFromWarga) secara otomatis
+      }
+    }
+
     const dateStr = i.tanggal || i.createdAt;
     if (!dateStr) return false;
     
@@ -415,8 +439,24 @@ export function IuranView({
 
     let resolvedTenant = editingTrx?.tenantId || resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
     
-    // Auto-route Donasi Ke RW to the central RW tenant, bypassing RT
-    if ((jenisPembayaran === "Donasi Ke RW" || (formData.get('jenis') as string) === "Donasi Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
+    const currentJenis = formData.get('jenis') as string || jenisPembayaran;
+
+    // Automatically set Penyetor name to the RT if it is Iuran Pengurus RT Ke RW
+    if (currentJenis === "Iuran Pengurus RT Ke RW") {
+        let rtString = "RT";
+        // Get from explicit finalRt or tenant string
+        if (finalRt) {
+            rtString = "RT " + finalRt.toString().padStart(2, '0');
+        } else if (resolvedTenant.toLowerCase().startsWith('rt')) {
+            rtString = "RT " + resolvedTenant.split('_')[0].replace(/\D/g, '');
+        }
+        nama = rtString;
+        nik = "-";
+        alamat = "Kas RT";
+    }
+
+    // Auto-route to central RW tenant, bypassing RT
+    if ((currentJenis === "Warga Donasi Ke RW" || currentJenis === "Iuran Pengurus RT Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
       const parts = resolvedTenant.split("_");
       if (parts.length > 1) {
         resolvedTenant = parts.slice(1).join("_");
@@ -608,8 +648,21 @@ export function IuranView({
 
     let resolvedTenant = resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
     
-    // Auto-route Donasi Ke RW to the central RW tenant, bypassing RT
-    if (pgFormState.jenis === "Donasi Ke RW" && resolvedTenant.toLowerCase().startsWith("rt")) {
+    // Automatically set Penyetor name to the RT if it is Iuran Pengurus RT Ke RW
+    if (pgFormState.jenis === "Iuran Pengurus RT Ke RW") {
+        let rtString = "RT";
+        if (finalRt) {
+            rtString = "RT " + finalRt.toString().padStart(2, '0');
+        } else if (resolvedTenant.toLowerCase().startsWith('rt')) {
+            rtString = "RT " + resolvedTenant.split('_')[0].replace(/\D/g, '');
+        }
+        nama = rtString;
+        nik = "-";
+        alamat = "Kas RT";
+    }
+
+    // Auto-route to central RW tenant, bypassing RT
+    if ((pgFormState.jenis === "Warga Donasi Ke RW" || pgFormState.jenis === "Iuran Pengurus RT Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
       const parts = resolvedTenant.split("_");
       if (parts.length > 1) {
         resolvedTenant = parts.slice(1).join("_");
@@ -992,7 +1045,7 @@ export function IuranView({
                     </td>
                     <td className="px-10 py-6">
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5 border border-slate-200 dark:border-slate-700">
-                         {trx.jenis}
+                         {trx.jenis === 'Setoran RT Ke RW' ? 'Iuran Pengurus RT Ke RW' : trx.jenis}
                       </div>
                       <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 italic truncate max-w-[220px]" title={trx.keterangan}>Memo: {trx.keterangan || '-'}</p>
                     </td>
@@ -1241,6 +1294,8 @@ export function IuranView({
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Alokasi / Jenis Pembayaran</label>
                 <select value={jenisPembayaran} onChange={(e) => setJenisPembayaran(e.target.value)} name="jenis" className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm">
+                  <option value="Iuran Pengurus RT Ke RW">Iuran Pengurus RT Ke RW</option>
+                  <option value="Warga Donasi Ke RW">Warga Donasi Ke RW</option>
                   <option value="Iuran RT">Iuran RT</option>
                   <option value="Iuran RW">Iuran RW</option>
                   <option value="Iuran Warga">Iuran Warga</option>
@@ -1254,7 +1309,6 @@ export function IuranView({
                   <option value="Iuran Keamanan">Iuran Keamanan</option>
                   <option value="Organisasi">Organisasi</option>
                   <option value="Sumbangan">Sumbangan</option>
-                  <option value="Donasi Ke RW">Donasi Ke RW</option>
                   <option value="Donasi">Donasi</option>
                   <option value="Pembelian ATK">Pembelian ATK</option>
                   <option value="Pembelian Aset">Pembelian Aset</option>
@@ -1490,7 +1544,7 @@ export function IuranView({
                 </div>
                 <div className="col-span-2 border-t border-slate-100 pt-4">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Jenis Pembayaran</p>
-                  <p className="text-xs font-black text-blue-600">{viewingTrx.jenis}</p>
+                  <p className="text-xs font-black text-blue-600">{viewingTrx.jenis === 'Setoran RT Ke RW' ? 'Iuran Pengurus RT Ke RW' : viewingTrx.jenis}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Keterangan</p>

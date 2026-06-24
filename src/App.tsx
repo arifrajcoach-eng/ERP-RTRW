@@ -4750,12 +4750,16 @@ export default function App() {
             )
           )}
           {activeTab === "ai-bot" && (
-            <AIChatBot currentUser={{
-              ...currentUser,
-              ...mergedWargaProfile,
-              uid: currentUser?.uid || mergedWargaProfile?.uid || mergedWargaProfile?.nik || null,
-              id: currentUser?.uid || mergedWargaProfile?.uid || mergedWargaProfile?.nik || null
-            }} plan={currentTenant?.status} />
+            <AIChatBot 
+              currentUser={{
+                ...currentUser,
+                ...mergedWargaProfile,
+                uid: currentUser?.uid || mergedWargaProfile?.uid || mergedWargaProfile?.nik || null,
+                id: currentUser?.uid || mergedWargaProfile?.uid || mergedWargaProfile?.nik || null
+              }} 
+              plan={currentTenant?.status} 
+              onClose={() => setActiveTab("dashboard")}
+            />
           )}
           {activeTab === "keuangan" && (
             <FinansialDashboardView

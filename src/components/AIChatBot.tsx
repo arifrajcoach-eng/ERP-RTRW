@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square } from 'lucide-react';
+import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square, X, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PLAN_FEATURES } from '../constants';
 import { 
@@ -28,7 +28,7 @@ import {
 import { chatWithAI, textToSpeech } from '../services/aiService';
 
 export default function AIChatBot(props: any) {
-  const { currentUser } = props;
+  const { currentUser, onClose } = props;
   const tenantId = currentUser?.tenantId || localStorage.getItem('currentTenantId') || (window as any).currentTenant?.id;
   
   if (!tenantId) {
@@ -41,7 +41,7 @@ export default function AIChatBot(props: any) {
   return <AIChatBotInner {...props} currentUser={optimizedUser} />;
 }
 
-function AIChatBotInner({ currentUser, agentType = 'auto', plan }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string }) {
+function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string, onClose?: () => void }) {
   const roleUpper = currentUser?.role?.toUpperCase() || '';
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
@@ -244,7 +244,7 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan }: { currentUser
     setTtsError(null);
     setIsSpeaking(true);
     try {
-      const response = await textToSpeech(text);
+      const response = await textToSpeech(text, isPrivileged);
       if (!response || !response.data) {
         console.warn("TTS failed: No valid audio data returned.");
         setIsSpeaking(false);
@@ -279,43 +279,198 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan }: { currentUser
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {ttsError && (
-          <div className="p-2 bg-red-100 text-red-700 text-xs rounded mb-2">
-            {ttsError}
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
-              {msg.text}
-              {msg.role === 'bot' && (
-                <button onClick={() => handleSpeak(msg.text)} className="ml-2 text-xs opacity-50 hover:opacity-100">
-                  {isSpeaking ? <VolumeX size={12}/> : <Volume2 size={12}/>}
-                </button>
-              )}
+    <div className={`flex flex-col h-full rounded-2xl shadow-2xl overflow-hidden transition-colors duration-500 ${isPrivileged ? 'bg-slate-950 border border-slate-800/60' : 'bg-white border border-slate-200'}`}>
+      
+      {/* Premium Header for Chairman */}
+      {isPrivileged ? (
+        <div className="px-6 py-4 border-b border-slate-800/60 bg-slate-900/50 backdrop-blur-md flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {onClose && (
+              <button 
+                onClick={onClose}
+                className="mr-1 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all border border-slate-700/50"
+                title="Kembali"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            )}
+            <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/30">
+              <Bot className="w-4 h-4 text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-200 tracking-wide">{agentTitle}</h2>
+              <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Sistem Intelijen Aktif</p>
             </div>
           </div>
-        ))}
-        {isLoading && <Loader2 className="animate-spin text-blue-600" />}
+          <div className="flex items-center gap-3">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+            </span>
+            {onClose && (
+              <button 
+                onClick={onClose}
+                className="p-1.5 rounded-full hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-all"
+                title="Tutup Chat"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        onClose && (
+          <div className="px-5 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={onClose}
+                className="p-1.5 rounded-full hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-all"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <h2 className="text-sm font-semibold text-slate-700">{agentTitle}</h2>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-1.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )
+      )}
+
+      {/* Main Chat Area */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
+        {ttsError && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-center gap-2">
+            <VolumeX className="w-4 h-4 shrink-0" />
+            {ttsError}
+          </motion.div>
+        )}
+        
+        <AnimatePresence initial={false}>
+          {messages.map((msg, i) => (
+            <motion.div 
+              key={i} 
+              initial={{ opacity: 0, y: 10, scale: 0.98 }} 
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}
+            >
+              {msg.role === 'bot' && !isPrivileged && (
+                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 shrink-0 mt-1">
+                   <Bot className="w-4 h-4 text-blue-600" />
+                 </div>
+              )}
+              {msg.role === 'bot' && isPrivileged && (
+                 <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mr-3 shrink-0 mt-1">
+                   <Bot className="w-4 h-4 text-blue-400" />
+                 </div>
+              )}
+              
+              <div className={`
+                relative px-5 py-3.5 rounded-2xl max-w-[85%] text-[13px] md:text-sm leading-relaxed
+                ${msg.role === 'user' 
+                  ? isPrivileged 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 rounded-tr-sm' 
+                    : 'bg-blue-600 text-white shadow-md rounded-tr-sm' 
+                  : isPrivileged
+                    ? 'bg-slate-900/80 text-slate-300 border border-slate-800/80 rounded-tl-sm backdrop-blur-sm'
+                    : 'bg-slate-100 text-slate-800 rounded-tl-sm'
+                }
+              `}>
+                <div className="whitespace-pre-wrap">{msg.text}</div>
+                
+                {msg.role === 'bot' && (
+                  <button 
+                    onClick={() => handleSpeak(msg.text)} 
+                    className={`absolute -bottom-3 ${isPrivileged ? '-right-3 bg-slate-800 border-slate-700 text-slate-400 hover:text-blue-400' : '-right-3 bg-white border-slate-200 text-slate-500 hover:text-blue-600'} p-1.5 rounded-full border shadow-sm transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100`}
+                    title="Putar Suara"
+                  >
+                    {isSpeaking ? <VolumeX size={12}/> : <Volume2 size={12}/>}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        
+        {isLoading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`flex justify-start`}>
+            {isPrivileged && (
+                 <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mr-3 shrink-0">
+                   <Bot className="w-4 h-4 text-blue-400" />
+                 </div>
+            )}
+            <div className={`px-5 py-4 rounded-2xl rounded-tl-sm ${isPrivileged ? 'bg-slate-900/80 border border-slate-800/80' : 'bg-slate-100'} flex items-center gap-2`}>
+              <span className={`w-1.5 h-1.5 rounded-full animate-bounce ${isPrivileged ? 'bg-blue-400' : 'bg-blue-600'}`} style={{ animationDelay: '0ms' }} />
+              <span className={`w-1.5 h-1.5 rounded-full animate-bounce ${isPrivileged ? 'bg-blue-400' : 'bg-blue-600'}`} style={{ animationDelay: '150ms' }} />
+              <span className={`w-1.5 h-1.5 rounded-full animate-bounce ${isPrivileged ? 'bg-blue-400' : 'bg-blue-600'}`} style={{ animationDelay: '300ms' }} />
+            </div>
+          </motion.div>
+        )}
         <div ref={chatEndRef} />
       </div>
-      <div className="p-4 border-t flex gap-2">
-        <button onClick={toggleListening} className={`p-2 rounded ${isListening ? 'bg-red-100 text-red-600' : 'bg-gray-100'}`}>
-          {isListening ? <Square size={20}/> : <Mic size={20}/>}
-        </button>
-        <button onClick={() => setIsAutoSpeak(!isAutoSpeak)} className={`p-2 rounded ${isAutoSpeak ? 'bg-green-100 text-green-600' : 'bg-gray-100'}`}>
-          {isAutoSpeak ? <Volume2 size={20}/> : <VolumeX size={20}/>}
-        </button>
-        <input 
-          value={input} 
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-          className="flex-1 border rounded p-2" 
-          placeholder="Tanya Chaty..." 
-        />
-        <button onClick={handleSend} className="bg-blue-600 text-white p-2 rounded"><Send size={20}/></button>
+
+      {/* Input Area */}
+      <div className={`p-4 md:p-5 ${isPrivileged ? 'bg-slate-900 border-t border-slate-800/80' : 'bg-white border-t border-slate-100'}`}>
+        <div className="flex items-center gap-2 md:gap-3">
+          <button 
+            onClick={toggleListening} 
+            className={`p-3 rounded-xl transition-all shrink-0
+              ${isListening 
+                ? 'bg-red-500/20 text-red-500 animate-pulse' 
+                : isPrivileged 
+                  ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white' 
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+              }`}
+            title="Dikte Suara"
+          >
+            {isListening ? <Square size={18}/> : <Mic size={18}/>}
+          </button>
+          
+          <button 
+            onClick={() => setIsAutoSpeak(!isAutoSpeak)} 
+            className={`p-3 rounded-xl transition-all shrink-0 hidden sm:flex
+              ${isAutoSpeak 
+                ? isPrivileged ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600' 
+                : isPrivileged ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            title={isAutoSpeak ? "Suara Otomatis Aktif" : "Suara Otomatis Nonaktif"}
+          >
+            {isAutoSpeak ? <Volume2 size={18}/> : <VolumeX size={18}/>}
+          </button>
+          
+          <div className="flex-1 relative">
+            <input 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              className={`w-full pl-4 pr-12 py-3.5 rounded-xl text-sm transition-all focus:outline-none focus:ring-2
+                ${isPrivileged 
+                  ? 'bg-slate-800 border-none text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50' 
+                  : 'bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white'
+                }
+              `}
+              placeholder="Tanya Chaty sesuatu..." 
+              disabled={isLoading}
+            />
+            <button 
+              onClick={handleSend} 
+              disabled={isLoading || !input.trim()}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all
+                ${!input.trim() 
+                  ? 'opacity-50 cursor-not-allowed text-slate-400' 
+                  : 'bg-blue-600 text-white hover:bg-blue-500 shadow-md hover:shadow-blue-600/25 shadow-blue-600/20'
+                }
+              `}
+            >
+              <Send size={16} className={isLoading ? 'opacity-0' : 'opacity-100'} />
+              {isLoading && <Loader2 size={16} className="absolute inset-0 m-auto animate-spin" />}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
