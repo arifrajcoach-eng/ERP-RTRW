@@ -903,7 +903,7 @@ export default function MadingDigitalView({
                 <div className="flex justify-end pt-4">
                   <button 
                     onClick={() => setSelectedItem(null)}
-                    className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-black uppercase text-xs tracking-wider transition-colors hover:bg-slate-200 hover:dark:bg-slate-700"
+                    className="flex-1 sm:flex-none px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-black uppercase text-xs tracking-wider transition-colors hover:bg-slate-200 hover:dark:bg-slate-700"
                   >
                     Tutup Detail
                   </button>

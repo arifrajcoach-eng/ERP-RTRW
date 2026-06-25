@@ -94,6 +94,7 @@ import {
   Ticket,
   Gift,
   HelpCircle,
+  Share2,
 } from "lucide-react";
 import BelanjaView from "./components/toko/BelanjaView";
 import jsPDF from "jspdf";
@@ -196,7 +197,7 @@ import { StyledButton } from "./components/StyledButton";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
 import KependudukanView from "./components/KependudukanView";
 import InventarisView from "./components/InventarisView";
-import { MessageSquare, Bot, Send, Mail, Share2 } from "lucide-react";
+import { MessageSquare, Bot, Send, Mail } from "lucide-react";
 import { getTranslatedLabel } from "./lib/langUtils";
 import { getTenantId } from "./lib/appUtils";
 import CommandPalette from "./components/CommandPalette";
@@ -8766,6 +8767,7 @@ function PosyanduView({
     | "timeline"
     | "ibuhamil_detail"
   >("dashboard");
+  const [isSharing, setIsSharing] = useState(false);
   const [showBalitaForm, setShowBalitaForm] = useState(false);
   const [showIbuHamilForm, setShowIbuHamilForm] = useState(false);
   const [showKegiatanForm, setShowKegiatanForm] = useState(false);
@@ -10556,12 +10558,40 @@ function PosyanduView({
                     Kartu kesehatan digital ini berisi informasi lengkap
                     pertumbuhan dan riwayat imunisasi anak.
                   </p>
-                  <button
-                    onClick={() => exportBalitaKardPDF(selectedBalita)}
-                    className="w-full py-4 bg-white text-pink-600 rounded-2xl font-black hover:bg-pink-50 transition-all shadow-lg uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95"
-                  >
-                    <Download className="w-5 h-5" /> Generate PDF
-                  </button>
+                  <div className="flex gap-4 mb-8">
+                    <button
+                      onClick={() => exportBalitaKardPDF(selectedBalita)}
+                      className="flex-1 py-4 bg-white text-pink-600 rounded-2xl font-black hover:bg-pink-50 transition-all shadow-lg uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95"
+                    >
+                      <Download className="w-5 h-5" /> Generate PDF
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (isSharing) return;
+                        setIsSharing(true);
+                        const shareText = `📢 Digital Health Card Balita: ${selectedBalita.nama}\nStatus: ${selectedBalita.statusStunting || "Normal"}\nPosyandu: ${getSetting('nama_rt') || "SmaRtRw AI"}`;
+                        try {
+                          if (navigator.share) {
+                            await navigator.share({ title: "Digital Health Card", text: shareText, url: window.location.href });
+                          } else {
+                            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, "_blank");
+                          }
+                        } catch (err: any) {
+                          if (err.name !== 'AbortError') {
+                            console.error("Error sharing:", err);
+                            showNotification("Gagal membagikan konten. Silakan coba lagi.", "error");
+                          }
+                        } finally {
+                          setIsSharing(false);
+                        }
+                      }}
+                      className="p-4 bg-pink-400 text-white rounded-2xl font-black hover:bg-pink-300 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                      title="Share to Social Media"
+                      disabled={isSharing}
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -10660,12 +10690,40 @@ function PosyanduView({
                     Dokumen ringkasan kesehatan ibu hamil dan perkiraan
                     kelahiran (HPL) siap untuk dicetak.
                   </p>
-                  <button
-                    onClick={() => exportIbuHamilKardPDF(selectedIbuHamil)}
-                    className="w-full py-4 bg-white text-blue-600 rounded-2xl font-black hover:bg-blue-50 transition-all shadow-lg uppercase text-xs tracking-widest flex items-center justify-center gap-3 active:scale-95"
-                  >
-                    <Download className="w-5 h-5" /> Download Digital Card
-                  </button>
+                  <div className="flex gap-4 mb-8">
+                    <button
+                      onClick={() => exportIbuHamilKardPDF(selectedIbuHamil)}
+                      className="flex-1 py-4 bg-white text-blue-600 rounded-2xl font-black hover:bg-blue-50 transition-all shadow-lg uppercase text-xs tracking-widest flex items-center justify-center gap-3 active:scale-95"
+                    >
+                      <Download className="w-5 h-5" /> Download Digital Card
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (isSharing) return;
+                        setIsSharing(true);
+                        const shareText = `📢 Digital Health Card Ibu Hamil: ${selectedIbuHamil.nama}\nUsia Kehamilan: ${selectedIbuHamil.usiaKehamilan} Minggu\nPosyandu: ${getSetting('nama_rt') || "SmaRtRw AI"}`;
+                        try {
+                          if (navigator.share) {
+                            await navigator.share({ title: "Digital Health Card", text: shareText, url: window.location.href });
+                          } else {
+                            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, "_blank");
+                          }
+                        } catch (err: any) {
+                          if (err.name !== 'AbortError') {
+                            console.error("Error sharing:", err);
+                            showNotification("Gagal membagikan konten. Silakan coba lagi.", "error");
+                          }
+                        } finally {
+                          setIsSharing(false);
+                        }
+                      }}
+                      className="p-4 bg-blue-400 text-white rounded-2xl font-black hover:bg-blue-300 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                      title="Share to Social Media"
+                      disabled={isSharing}
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
