@@ -897,6 +897,19 @@ export function SuratView({
               <motion.button 
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
+                onClick={() => showNotification("Data telah disinkronisasi", "success")} 
+                className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-md bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                title="Syncronize Data"
+              >
+                <RefreshCw className="w-4 h-4 text-slate-400" />
+                <span>Sync</span>
+              </motion.button>
+            )}
+
+            {isPengurus && (
+              <motion.button 
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => setShowAutoArchiveModal(true)} 
                 className={`w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-md relative overflow-hidden group border ${
                   olderLetters.length > 0

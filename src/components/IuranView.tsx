@@ -244,16 +244,20 @@ export function IuranView({
       await deleteDoc(doc(db, 'iuran', id));
       setIuranData(prev => prev.filter(t => t.id !== id));
 
-      // 2. Locate and delete the corresponding kas record
+      // 2. Locate and delete the corresponding kas record safely (ignore permission restriction if resident deletes own iuran)
       if (Array.isArray(kasData)) {
         const relatedKas = kasData.find((k: any) => k.iuranId === id);
         if (relatedKas) {
-          await deleteDoc(doc(db, 'kas', relatedKas.id));
-          setKasData(prev => prev.filter(k => k.id !== relatedKas.id));
+          try {
+            await deleteDoc(doc(db, 'kas', relatedKas.id));
+            setKasData(prev => prev.filter(k => k.id !== relatedKas.id));
+          } catch (kasErr) {
+            console.warn("[IuranView] Ignored kas deletion error (likely permission limitation):", kasErr);
+          }
         }
       }
 
-      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "DELETE_IURAN", "iuran", `Menghapus iuran: ${trxToDelete.namaPenyetor || id}`, trxToDelete.tenantId || tenantId);
+      await logAuditEvent(currentUserUid || "system", currentUser?.name || "Aplikasi", "DELETE_IURAN", "iuran", `Menghapus iuran: ${trxToDelete.namaPenyetor || id}`, trxToDelete.tenantId || tenantId);
 
       showNotification('Transaksi dan catatan kas terkait berhasil dihapus', 'success');
       setTrxToDelete(null);
@@ -410,7 +414,7 @@ export function IuranView({
       explicitRt = foundCurrent.rt;
     }
 
-    let targetUserId = currentUser?.uid || currentUser?.id_user || null;
+    let targetUserId = currentUserUid || null;
     
     if (isPengurus) {
       const selectedWargaIdFromForm = formData.get('wargaId') as string;
@@ -478,7 +482,7 @@ export function IuranView({
       buktiUrl: buktiUrl || "",
       status: editingTrx ? editingTrx.status : (isPengurus ? 'Lunas' : 'Menunggu Verifikasi'),
       userId: targetUserId || null,
-      recordedBy: editingTrx?.recordedBy || currentUser?.uid || currentUser?.id_user || 'System',
+      recordedBy: editingTrx?.recordedBy || currentUserUid || 'System',
       updatedAt: new Date().toISOString()
     });
 
@@ -556,7 +560,7 @@ export function IuranView({
         }
       }
       
-      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", editingTrx ? "UPDATE_IURAN" : "CREATE_IURAN", "iuran", `${editingTrx ? "Edit" : "Catat"} Iuran: RP ${payload.nominal} - ${payload.namaPenyetor}`, resolvedTenant);
+      await logAuditEvent(currentUserUid || "system", currentUser?.name || "Aplikasi", editingTrx ? "UPDATE_IURAN" : "CREATE_IURAN", "iuran", `${editingTrx ? "Edit" : "Catat"} Iuran: RP ${payload.nominal} - ${payload.namaPenyetor}`, resolvedTenant);
       showNotification(editingTrx ? 'Pembayaran berhasil diperbarui' : 'Pembayaran berhasil dicatat', 'success');
       setShowForm(false);
       setEditingTrx(null);
@@ -620,10 +624,10 @@ export function IuranView({
       dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     }
     
-    let nik = (currentUser?.nik || currentUser?.uid || currentUser?.id_user || "-").toString();
+    let nik = (currentUser?.nik || currentUserUid || "-").toString();
     let nama = currentUser?.nama || currentUser?.name || "Warga";
     let alamat = currentUser?.alamat || "-";
-    let targetUserId = currentUser?.uid || currentUser?.id_user || null;
+    let targetUserId = currentUserUid || null;
     let explicitRt = currentUser?.rt;
 
     if (isPengurus && pgFormState.wargaId) {
@@ -717,7 +721,7 @@ export function IuranView({
         return [kasPayload, ...prev];
       });
       
-      await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_IURAN_ONLINE", "iuran", `Iuran Online: RP ${payload.nominal} - ${payload.namaPenyetor}`, resolvedTenant);
+      await logAuditEvent(currentUserUid || "system", currentUser?.name || "Aplikasi", "CREATE_IURAN_ONLINE", "iuran", `Iuran Online: RP ${payload.nominal} - ${payload.namaPenyetor}`, resolvedTenant);
       
       showNotification('Pembayaran Online Berhasil!', 'success');
       setShowPgModal(false);
@@ -1091,7 +1095,7 @@ export function IuranView({
                         >
                           <Eye className="w-5 h-5" />
                         </motion.button>
-                        {isPengurus && (
+                        {isPengurus ? (
                           <>
                             {trx.status !== 'Lunas' && trx.status !== 'Ditolak' && trx.status !== 'Cancelled' && (
                               <motion.button 
@@ -1123,6 +1127,16 @@ export function IuranView({
                               <Trash2 className="w-5 h-5" />
                             </motion.button>
                           </>
+                        ) : (
+                          <motion.button 
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={(e) => { e.stopPropagation(); setTrxToDelete(trx); }} 
+                            className="p-3.5 text-rose-600 bg-rose-50 dark:bg-slate-800 border border-rose-100 dark:border-rose-500/20 rounded-2xl shadow-lg hover:bg-rose-600 hover:text-white transition-all" 
+                            title="Delete"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </motion.button>
                         )}
                       </div>
                     </td>

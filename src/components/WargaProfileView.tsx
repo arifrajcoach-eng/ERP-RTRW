@@ -37,7 +37,7 @@ import {
   Globe,
   Trash2
 } from 'lucide-react';
-import { doc, setDoc, updateDoc, onSnapshot, query, where, collection, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, query, where, collection, deleteDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -116,6 +116,29 @@ export function WargaProfileView({
   const [formData, setFormData] = useState<any>(wargaData || {});
   const [sosHistory, setSosHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncSurat = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const q = query(collection(db, "surat"), where("tenantId", "==", tenantId));
+      const snap = await getDocs(q);
+      const fetchedSurat = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      
+      setSuratData(prev => {
+        const otherTenants = (prev || []).filter(p => p.tenantId !== tenantId);
+        return [...otherTenants, ...fetchedSurat];
+      });
+      
+      showNotification("Data surat berhasil disinkronisasi langsung dari database", "success");
+    } catch (err: any) {
+      console.error("[WargaProfileView] Error syncing surat:", err);
+      showNotification(`Gagal menyinkronkan data: ${err.message}`, "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const [isProfileCalibrating, setIsProfileCalibrating] = useState(false);
   const [profileLat, setProfileLat] = useState<string>(wargaData?.latitude?.toString() || "");
@@ -507,9 +530,27 @@ export function WargaProfileView({
       const rtNorm = normalizeRtVal(wargaData.rt);
       const rwNorm = normalizeRwVal(wargaData.rw);
 
+      const resolveRtTenantId = (baseTenant: string, rtStr: string): string => {
+        if (!baseTenant) return "MASTER";
+        let parentRw = baseTenant;
+        if (baseTenant.toLowerCase().startsWith("rt")) {
+          const parts = baseTenant.split("_");
+          if (parts.length > 1) {
+            parentRw = parts.slice(1).join("_");
+          }
+        }
+        if (!rtStr) return baseTenant;
+        const rtNum = rtStr.replace(/\D/g, "");
+        if (!rtNum) return baseTenant;
+        const paddedRt = rtNum.padStart(2, "0");
+        return `rt${paddedRt}_${parentRw}`;
+      };
+
+      const finalTenantId = resolveRtTenantId(tenantId || wargaData.tenantId || "rw26_berjuang", rtNorm);
+
       const payload = {
         id,
-        tenantId,
+        tenantId: finalTenantId,
         rt: rtNorm,
         rw: rwNorm,
         tanggal: nowStr,
@@ -876,9 +917,21 @@ export function WargaProfileView({
 
                    {/* Riwayat Pengajuan Surat */}
                    <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
-                      <div>
-                         <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant">Riwayat Pengajuan Surat Anda</h2>
-                         <p className="text-slate-400 text-xs font-bold uppercase mt-1 tracking-wider">Lacak status persetujuan surat pengantar mandiri secara live</p>
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                         <div>
+                            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight font-elegant">Riwayat Pengajuan Surat Anda</h2>
+                            <p className="text-slate-400 text-xs font-bold uppercase mt-1 tracking-wider">Lacak status persetujuan surat pengantar mandiri secara live</p>
+                         </div>
+                         <motion.button 
+                           whileHover={{ scale: 1.03 }}
+                           whileTap={{ scale: 0.97 }} disabled={isSyncing}
+                           onClick={handleSyncSurat} 
+                           className={`flex items-center justify-center gap-3 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border text-slate-700 dark:text-slate-300 ${isSyncing ? "bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 cursor-not-allowed opacity-80" : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700"}`}
+                           title="Syncronize Data"
+                         >
+                           <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${isSyncing ? "animate-spin text-blue-500" : ""}`} />
+                           <span>{isSyncing ? "Syncing..." : "Sync"}</span>
+                         </motion.button>
                       </div>
 
                       {mySurat.length === 0 ? (

@@ -20,11 +20,28 @@ const firebaseAdmin = ((admin as any).default || admin) as typeof admin;
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 
+import { initializeApp as initializeClientApp } from "firebase/app";
+import { 
+  initializeFirestore as initializeClientFirestore, 
+  doc as clientDoc, 
+  getDoc as clientGetDoc, 
+  setDoc as clientSetDoc, 
+  deleteDoc as clientDeleteDoc,
+  collection as clientCollection, 
+  query as clientQuery, 
+  where as clientWhere, 
+  getDocs as clientGetDocs 
+} from "firebase/firestore";
+
 const configPath = path.resolve(process.cwd(), "firebase-applet-config.json");
 if (!fs.existsSync(configPath)) {
   throw new Error(`Config file not found at: ${configPath}`);
 }
 const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+
+const clientApp = initializeClientApp(firebaseConfig);
+const clientDb = initializeClientFirestore(clientApp, {}, firebaseConfig.firestoreDatabaseId);
+
 import cron from "node-cron";
 
 // Initialize Firebase Admin
@@ -35,8 +52,10 @@ try {
        credential: firebaseAdmin.credential.cert(serviceAccount)
      });
   } else {
+     console.log("DEBUG: Initializing Firebase Admin with projectId:", firebaseConfig.projectId);
      firebaseAdmin.initializeApp({
-       projectId: "gen-lang-client-0332165962"
+       credential: firebaseAdmin.credential.applicationDefault(),
+       projectId: firebaseConfig.projectId
      });
   }
 } catch (e) {
@@ -77,11 +96,10 @@ async function startServer() {
   async function ensureVapidKeys() {
     if (vapidKeysLoaded) return;
     try {
-      const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
-      const docRef = db.collection("settings").doc("vapid_keys");
-      const snap = await docRef.get();
+      const docRef = clientDoc(clientDb, "settings", "vapid_keys");
+      const snap = await clientGetDoc(docRef);
       
-      if (snap.exists) {
+      if (snap.exists()) {
         const data = snap.data();
         if (data && data.publicKey && data.privateKey) {
           vapidPublicKey = data.publicKey;
@@ -96,7 +114,7 @@ async function startServer() {
         const keys = generateVapidKeys();
         vapidPublicKey = keys.publicKey;
         vapidPrivateKey = keys.privateKey;
-        await docRef.set({
+        await clientSetDoc(docRef, {
           publicKey: vapidPublicKey,
           privateKey: vapidPrivateKey,
           createdAt: new Date().toISOString()
@@ -144,17 +162,11 @@ async function startServer() {
         return res.status(400).json({ success: false, error: "Missing subscription or tenantId" });
       }
 
-      const firebaseApps = firebaseAdmin.apps || [];
-      if (!firebaseApps.length) {
-         firebaseAdmin.initializeApp({ projectId: firebaseConfig.projectId });
-      }
-      const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
-      
       // Store under collection push_subscriptions
       const subHash = crypto.createHash('md5').update(subscription.endpoint).digest('hex');
-      const docRef = db.collection("push_subscriptions").doc(subHash);
+      const docRef = clientDoc(clientDb, "push_subscriptions", subHash);
       
-      await docRef.set({
+      await clientSetDoc(docRef, {
         subscription,
         tenantId,
         userId: userId || "anonymous",
@@ -178,15 +190,10 @@ async function startServer() {
         return res.status(400).json({ success: false, error: "Missing tenantId" });
       }
 
-      const firebaseApps = firebaseAdmin.apps || [];
-      if (!firebaseApps.length) {
-         firebaseAdmin.initializeApp({ projectId: firebaseConfig.projectId });
-      }
-      const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
-
       // Fetch the tenant document to find its parentId for cross-tenant SOS broadcasting (RT -> RW)
-      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
-      const parentId = tenantDoc.exists ? tenantDoc.data()?.parentId : null;
+      const tenantDocRef = clientDoc(clientDb, "tenants", tenantId);
+      const tenantDoc = await clientGetDoc(tenantDocRef);
+      const parentId = tenantDoc.exists() ? tenantDoc.data()?.parentId : null;
       
       const targetTenantIds = [tenantId];
       if (parentId) {
@@ -195,9 +202,11 @@ async function startServer() {
       }
 
       // Fetch all push subscriptions for the sender's tenant and its parent context
-      const subscriptionsSnap = await db.collection("push_subscriptions")
-        .where("tenantId", "in", targetTenantIds)
-        .get();
+      const q = clientQuery(
+        clientCollection(clientDb, "push_subscriptions"),
+        clientWhere("tenantId", "in", targetTenantIds)
+      );
+      const subscriptionsSnap = await clientGetDocs(q);
 
       if (subscriptionsSnap.empty) {
         return res.json({ success: true, sentCount: 0, message: "No active push subscriptions for these tenants" });
@@ -213,18 +222,22 @@ async function startServer() {
       let sentCount = 0;
       let failCount = 0;
 
-      const promises = subscriptionsSnap.docs.map(async (doc) => {
-        const data = doc.data();
+      const promises = subscriptionsSnap.docs.map(async (docSnap) => {
+        const data = docSnap.data();
         const sub = data.subscription;
         
         try {
           await webpush.sendNotification(sub, payload);
           sentCount++;
         } catch (err: any) {
-          console.error(`[PUSH] Failed for subscription ${doc.id}:`, err.statusCode || err.message);
+          console.error(`[PUSH] Failed for subscription ${docSnap.id}:`, err.statusCode || err.message);
           if (err.statusCode === 410 || err.statusCode === 404) {
-            await doc.ref.delete();
-            console.log(`[PUSH] Cleaned up expired subscription: ${doc.id}`);
+            try {
+              await clientDeleteDoc(clientDoc(clientDb, "push_subscriptions", docSnap.id));
+              console.log(`[PUSH] Cleaned up expired subscription: ${docSnap.id}`);
+            } catch (delErr) {
+              console.error(`[PUSH] Failed deleting expired subscription ${docSnap.id}:`, delErr);
+            }
           }
           failCount++;
         }
@@ -249,43 +262,36 @@ async function startServer() {
 
   app.get("/api/debug-warga", async (req, res) => {
     try {
-      const firebaseApps = firebaseAdmin.apps || [];
-      if (!firebaseApps.length) {
-        firebaseAdmin.initializeApp({
-          projectId: firebaseConfig.projectId
-        });
-      }
-      const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId); // We initialize the firestore db correctly
       const results: any = { data_warga: [], verifikasi_warga: [], searchByName: [] };
 
       // Query data_warga by NIK
-      const wargaSnap = await db.collection("data_warga").where("nik", "==", "1234567890987654").get();
-      wargaSnap.forEach(doc => {
-        results.data_warga.push({ id: doc.id, ...doc.data() });
+      const wargaSnap = await clientGetDocs(clientQuery(clientCollection(clientDb, "data_warga"), clientWhere("nik", "==", "1234567890987654")));
+      wargaSnap.forEach(docSnap => {
+        results.data_warga.push({ id: docSnap.id, ...docSnap.data() });
       });
 
       // Query verifikasi_warga by NIK
-      const verifSnap = await db.collection("verifikasi_warga").where("nik", "==", "1234567890987654").get();
-      verifSnap.forEach(doc => {
-        results.verifikasi_warga.push({ id: doc.id, ...doc.data() });
+      const verifSnap = await clientGetDocs(clientQuery(clientCollection(clientDb, "verifikasi_warga"), clientWhere("nik", "==", "1234567890987654")));
+      verifSnap.forEach(docSnap => {
+        results.verifikasi_warga.push({ id: docSnap.id, ...docSnap.data() });
       });
 
       // Search and match "arif" in name
-      const allWarga = await db.collection("data_warga").get();
-      allWarga.forEach(doc => {
-        const data = doc.data();
+      const allWarga = await clientGetDocs(clientCollection(clientDb, "data_warga"));
+      allWarga.forEach(docSnap => {
+        const data = docSnap.data();
         const nama = String(data.nama || "").toLowerCase();
         if (nama.includes("arif")) {
-          results.searchByName.push({ source: "data_warga", id: doc.id, ...data });
+          results.searchByName.push({ source: "data_warga", id: docSnap.id, ...data });
         }
       });
 
-      const allVerif = await db.collection("verifikasi_warga").get();
-      allVerif.forEach(doc => {
-        const data = doc.data();
+      const allVerif = await clientGetDocs(clientCollection(clientDb, "verifikasi_warga"));
+      allVerif.forEach(docSnap => {
+        const data = docSnap.data();
         const nama = String(data.nama || "").toLowerCase();
         if (nama.includes("arif")) {
-          results.searchByName.push({ source: "verifikasi_warga", id: doc.id, ...data });
+          results.searchByName.push({ source: "verifikasi_warga", id: docSnap.id, ...data });
         }
       });
 
