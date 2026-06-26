@@ -1966,6 +1966,8 @@ export default function App() {
             lat: lat,
             lng: lng
           },
+          userLocation: userLocation,
+          userAddress: addressStr,
           status: "pending",
           timestamp: new Date().toISOString()
         });

@@ -12,6 +12,9 @@ export interface EmergencyLog {
   timestamp: string;
   tenantId: string;
   resolvedAt?: string;
+  userLocation?: string;
+  userAddress?: string;
+  locationNotes?: string;
 }
 
 export interface VisitorLog {

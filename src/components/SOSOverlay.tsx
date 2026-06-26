@@ -75,6 +75,19 @@ export default function SOSOverlay({
       try {
         item.mainGain.disconnect();
       } catch (e) {}
+      if (item.subOsc) {
+        try {
+          item.subOsc.stop();
+        } catch (e) {}
+        try {
+          item.subOsc.disconnect();
+        } catch (e) {}
+      }
+      if (item.subGain) {
+        try {
+          item.subGain.disconnect();
+        } catch (e) {}
+      }
     });
     activePlaybackComponentsRef.current = [];
 
@@ -153,6 +166,10 @@ export default function SOSOverlay({
           const lfoGain = ctx.createGain();
           const mainGain = ctx.createGain();
 
+          // Sub-bass oscillator to trigger physical haptic resonance on smartphone stereo speakers (especially iPhone)
+          const subOsc = ctx.createOscillator();
+          const subGain = ctx.createGain();
+
           osc1.type = "sawtooth";
           osc2.type = "sawtooth";
 
@@ -169,12 +186,23 @@ export default function SOSOverlay({
           lfo.frequency.setValueAtTime(0.8, now); 
           lfoGain.gain.setValueAtTime(300, now); // +/- 300Hz sweep for intense pitch variation
 
+          // Sub-bass setup for physical speaker vibration (65Hz sine wave)
+          subOsc.type = "sine";
+          subOsc.frequency.setValueAtTime(65, now);
+
           // Volume Envelope: Get loud almost instantly (0.3s) and keep max volume until the very end
           mainGain.gain.setValueAtTime(0, now);
           mainGain.gain.linearRampToValueAtTime(0.95, now + 0.3); 
           mainGain.gain.setValueAtTime(0.95, now + 4.5);
           mainGain.gain.linearRampToValueAtTime(0.01, now + 4.8); // fade out nicely to prevent pops
           mainGain.gain.setValueAtTime(0, now + 4.9);
+
+          // Sub-bass volume envelope
+          subGain.gain.setValueAtTime(0, now);
+          subGain.gain.linearRampToValueAtTime(0.95, now + 0.3);
+          subGain.gain.setValueAtTime(0.95, now + 4.5);
+          subGain.gain.linearRampToValueAtTime(0.01, now + 4.8);
+          subGain.gain.setValueAtTime(0, now + 4.9);
 
           lfo.connect(lfoGain);
           lfoGain.connect(osc1.frequency);
@@ -184,13 +212,18 @@ export default function SOSOverlay({
           osc2.connect(mainGain);
           mainGain.connect(ctx.destination);
 
+          subOsc.connect(subGain);
+          subGain.connect(ctx.destination);
+
           osc1.start(now);
           osc2.start(now);
           lfo.start(now);
+          subOsc.start(now);
 
           osc1.stop(now + 4.9);
           osc2.stop(now + 4.9);
           lfo.stop(now + 4.9);
+          subOsc.stop(now + 4.9);
 
           // Track only the active playback components for clean disposal/muting at any time
           activePlaybackComponentsRef.current.forEach((item) => {
@@ -201,9 +234,16 @@ export default function SOSOverlay({
             try { item.lfo.stop(); } catch (e) {}
             try { item.lfo.disconnect(); } catch (e) {}
             try { item.mainGain.disconnect(); } catch (e) {}
+            if (item.subOsc) {
+              try { item.subOsc.stop(); } catch (e) {}
+              try { item.subOsc.disconnect(); } catch (e) {}
+            }
+            if (item.subGain) {
+              try { item.subGain.disconnect(); } catch (e) {}
+            }
           });
 
-          activePlaybackComponentsRef.current = [{ osc1, osc2, lfo, mainGain }];
+          activePlaybackComponentsRef.current = [{ osc1, osc2, lfo, mainGain, subOsc, subGain }];
         } catch (err) {
           console.warn("Siren wail component exception:", err);
         }
@@ -333,10 +373,27 @@ export default function SOSOverlay({
     startSOSAlarm();
   };
 
+  const shakeTransition = isMuted 
+    ? { duration: 0.1 } 
+    : { repeat: Infinity, duration: 0.2, ease: "linear" as any };
+
+  const verticalShakeTransition = isMuted 
+    ? { duration: 0.1 } 
+    : { repeat: Infinity, duration: 0.15, ease: "linear" as any };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      animate={{ 
+        opacity: 1,
+        x: isMuted ? 0 : [0, -3, 3, -3, 3, -2, 2, 0],
+        y: isMuted ? 0 : [0, 2, -2, 2, -2, 1, -1, 0]
+      }}
+      transition={{ 
+        opacity: { duration: 0.2 },
+        x: shakeTransition,
+        y: verticalShakeTransition
+      }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[9999] bg-red-600 flex flex-col items-center p-6 text-white text-center sm:p-12 overflow-y-auto"
     >
