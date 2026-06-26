@@ -518,6 +518,17 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
               </div>
             )}
             <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'signatureRt')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+            
+            <div className="mt-4">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Atau Gunakan Link / URL Gambar</label>
+              <input 
+                 type="text" 
+                 value={signatureRtUrl} 
+                 onChange={(e) => setSignatureRtUrl(e.target.value)} 
+                 placeholder="https://..." 
+                 className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+              />
+            </div>
         </div>
 
         <div className="mb-4 pt-4 border-t border-slate-100">
@@ -539,6 +550,17 @@ function BrandingForm({ currentUser, settings, showNotification, handleFirestore
               </div>
             )}
             <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'signatureRw')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+
+            <div className="mt-4">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Atau Gunakan Link / URL Gambar</label>
+              <input 
+                 type="text" 
+                 value={signatureRwUrl} 
+                 onChange={(e) => setSignatureRwUrl(e.target.value)} 
+                 placeholder="https://..." 
+                 className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+              />
+            </div>
         </div>
 
         <div className="mb-4 pt-4 border-t border-slate-100">

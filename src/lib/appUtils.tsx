@@ -44,7 +44,6 @@ export const getPlanFeatures = (tenantOrStatus: any) => {
   if (addons.includes("ePemilu")) features.ePemilu = true;
   if (addons.includes("bankSampah")) features.bankSampah = true;
   if (addons.includes("eLapakFull")) features.eLapak = "FULL";
-  if (addons.includes("ppob")) features.keuangan = "FULL";
   if (addons.includes("booking")) features.booking = true;
   if (addons.includes("warga_100")) features.maxWarga = (features.maxWarga || 0) + 100;
   if (addons.includes("warga_500")) features.maxWarga = (features.maxWarga || 0) + 500;

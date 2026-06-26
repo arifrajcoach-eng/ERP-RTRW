@@ -111,4 +111,25 @@ Sistem telah dilengkapi dengan kapabilitas desain UI/UX tingkat tinggi dari `nex
 3. **Misi Penghilang "AI Slop":**
    - Hasil akhir harus memisahkan standar desain $10K (memiliki "taste", tipografi tegas) dibandingkan boilerplate murahan (seperti gradien ungu AI default yang berulang).
 
+---
+
+## 🛡️ ATURAN EMAS 7: Stabilitas SaaS & Pencegahan Regresi (CRITICAL)
+Untuk memastikan aplikasi tetap konsisten dan tidak rusak saat digunakan oleh banyak tenant (SaaS), setiap AI Agent wajib mematuhi protokol stabilitas berikut:
+
+1. **Prinsip "Don't Break What Works":**
+   - Dilarang keras mengubah, menghapus, atau memodifikasi logika fungsi, state management, atau tombol yang sudah berjalan stabil kecuali diminta secara eksplisit.
+   - Jika melakukan penambahan fitur baru, pastikan tidak ada efek samping (*side-effects*) pada fitur lama.
+
+2. **Konsistensi State Management:**
+   - Selalu gunakan variabel state yang unik dan terlokalisasi. Jangan menggunakan variabel global yang berpotensi tabrakan (*collision*) jika tidak diperlukan.
+   - Pastikan setiap fungsi `onClick` memiliki penanganan error (*try-catch*) agar satu kegagalan kecil tidak mematikan seluruh aplikasi.
+
+3. **Verifikasi Tombol & Navigasi:**
+   - Sebelum mengakhiri tugas, AI wajib memastikan tombol-tombol navigasi utama (Dashboard, Keuangan, Kependudukan) tetap berfungsi dengan benar.
+   - Pastikan tidak ada "tombol hantu" (tombol yang muncul tanpa fungsi) atau tombol yang mati akibat perubahan CSS/Layout.
+
+4. **Kualitas SaaS Pro-Ready:**
+   - Gunakan `loading states` pada setiap tombol yang melakukan proses asinkron (seperti simpan data atau API call) untuk mencegah klik ganda yang merusak data.
+   - Setiap perubahan kode harus melewati tahap `lint_applet` untuk memastikan tidak ada variabel yang hilang (*undefined*).
+
 

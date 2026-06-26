@@ -54,9 +54,10 @@ interface PosyanduViewProps {
   setImunisasiData: React.Dispatch<React.SetStateAction<any[]>>;
   wargaData: any[];
   currentUser: any;
+  wargaAuth: any;
   tenantId: string;
   setIsLoadingDB: (loading: boolean) => void;
-  handleFirestoreError: (err: any) => void;
+  handleFirestoreError: (err: any, op?: string, path?: string) => void;
   showNotification: (msg: string, type?: "success" | "error" | "info") => void;
   getSetting?: (key: string) => any;
 }

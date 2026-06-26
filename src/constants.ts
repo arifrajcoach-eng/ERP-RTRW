@@ -50,7 +50,6 @@ export const PLAN_FEATURES: Record<string, any> = {
     oldPrice: "Rp 85rb",
     coreFeatures: [
       "Kapasitas Warga: Maksimal hingga 300 Warga.",
-      "PPOB & Iuran Digital Integrasi",
       "Surat Digital & Layanan Sipil Batas 20 Laporan.",
       "Booking Fasum & Kelola Inventaris",
       "AI Scan Struk: Batas 3x / minggu.",
@@ -244,7 +243,6 @@ export const PLAN_CONFIG = {
       "AI Chatbot: Maksimal 2x Chat / minggu (setara ~8x sebulan, diatur per minggu untuk menghindari spam massal).",
       "AI Scan Struk: Maksimal 1x Scan / minggu (setara ~4x sebulan).",
       "Pencatatan Transaksi: Batas 25 Transaksi Kas / bulan (sangat aman untuk lingkungan kecil yang sedang uji coba).",
-      "Fitur PPOB (Bagi-Hasil): Fasilitas pembayaran tagihan (Listrik, PDAM, dll) yang hasilnya bisa menjadi pemasukan Kas RT.",
       "AI Scan Struk (Trial): Fitur unggulan AI untuk memindai foto struk/nota belanja menjadi laporan keuangan otomatis (Batas 3x per bulan).",
       "AI Chatbot: Akses asisten pintar untuk tanya jawab (Batas 5x per bulan).",
       "Sistem SOS: Tombol darurat untuk keamanan lingkungan.",
@@ -263,7 +261,7 @@ export const PLAN_CONFIG = {
     priceYearly: 550000, 
     features: [
       "Kapasitas Warga: Maksimal hingga 300 Warga.",
-      "Iuran Digital & PPOB: Integrasi pembayaran iuran warga secara digital dan fitur PPOB (Listrik, PDAM, dll) sebagai sumber income Kas RT.\n      NB : Bukan bagian dari paket (Kemitraan 50:50)",
+      "Iuran Digital: Integrasi pembayaran iuran warga secara digital.\n      NB : Bukan bagian dari paket (Kemitraan 50:50)",
       "Surat Digital & Keuangan: Manajemen surat menyurat digital dan pencatatan modul keuangan dasar.",
       "Booking Fasum: Fitur peminjaman fasilitas umum (lapangan, balai warga, dll).",
       "Keamanan Digital & SOS: Fitur tombol darurat (SOS) untuk keamanan lingkungan.",
@@ -345,7 +343,6 @@ export const ADDON_CONFIG = {
   EVOTING: { id: 'addon_evoting', name: 'Modul E-Voting & Pemilu - 45k/ bln', hpp: 20000, priceMonthly: 45000, featureKey: 'ePemilu' },
   BANK_SAMPAH: { id: 'addon_banksampah', name: 'Modul Bank Sampah - 35k/ bln', hpp: 15000, priceMonthly: 35000, featureKey: 'bankSampah' },
   ELAPAK: { id: 'addon_elapak', name: 'E-Lapak (Pasar Warga) - 50k/ bln', hpp: 20000, priceMonthly: 50000, featureKey: 'eLapakFull' },
-  PPOB: { id: 'addon_ppob', name: 'Modul PPOB (Payment Point Online Bank) - 50k/ bln', hpp: 20000, priceMonthly: 50000, featureKey: 'ppob' },
   BOOKING: { id: 'addon_booking', name: 'Modul Booking Fasilitas - 5k/ bln', hpp: 2000, priceMonthly: 5000, featureKey: 'booking' },
   JUMLAH_WARGA_100: { id: 'addon_warga_100', name: 'Ekstra +100 Warga - 15k/ bln', hpp: 5000, priceMonthly: 15000, featureKey: 'warga_100' },
   JUMLAH_WARGA_500: { id: 'addon_warga_500', name: 'Ekstra +500 Warga - 50k/ bln', hpp: 20000, priceMonthly: 50000, featureKey: 'warga_500' },

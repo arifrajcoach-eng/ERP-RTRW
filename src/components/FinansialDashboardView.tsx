@@ -3,13 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   CreditCard, 
   Wallet, 
-  Smartphone,
   PieChart
 } from 'lucide-react';
 import { StyledButton } from './StyledButton';
 import { IuranView } from './IuranView';
 import { KasView } from './KasView';
-import { PPOBView } from './PPOBView';
 import { RekomendasiHargaView } from './RekomendasiHargaView';
 
 interface FinansialDashboardViewProps {
@@ -17,8 +15,6 @@ interface FinansialDashboardViewProps {
   setIuranData: React.Dispatch<React.SetStateAction<any[]>>;
   kasData: any[];
   setKasData: React.Dispatch<React.SetStateAction<any[]>>;
-  ppobData: any[];
-  setPpobData: React.Dispatch<React.SetStateAction<any[]>>;
   wargaData: any[];
   userRole: string;
   currentUser: any;
@@ -35,7 +31,7 @@ interface FinansialDashboardViewProps {
 
 export function FinansialDashboardView(props: FinansialDashboardViewProps) {
   const isApt = props.getSetting("themeMode") === "apartemen";
-  const [activeFinTab, setActiveFinTab] = useState<'iuran' | 'kas' | 'rekomendasi' | 'ppob'>('iuran');
+  const [activeFinTab, setActiveFinTab] = useState<'iuran' | 'kas' | 'rekomendasi'>('iuran');
 
   return (
     <div className="space-y-8">
@@ -44,8 +40,7 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
         {[
           { id: 'iuran', label: isApt ? "Internal IPL" : "Iuran Kolektif", icon: CreditCard, gradient: 'from-brand-blue to-indigo-600' },
           { id: 'kas', label: "Ledger Kas", icon: Wallet, gradient: 'from-emerald-500 to-teal-600' },
-          { id: 'rekomendasi', label: "Hitung Biaya", icon: PieChart, gradient: 'from-amber-500 to-orange-600' },
-          { id: 'ppob', label: "Digital Hub", icon: Smartphone, gradient: 'from-purple-600 to-pink-600' }
+          { id: 'rekomendasi', label: "Hitung Biaya", icon: PieChart, gradient: 'from-amber-500 to-orange-600' }
         ].filter(tab => (tab.id !== 'kas' && tab.id !== 'rekomendasi') || props.isPengurus).map((tab) => (
           <motion.button
             key={tab.id}
@@ -79,7 +74,6 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
             {activeFinTab === 'iuran' && <IuranView {...props} />}
             {activeFinTab === 'kas' && <KasView {...props} />}
             {activeFinTab === 'rekomendasi' && <RekomendasiHargaView {...props} />}
-            {activeFinTab === 'ppob' && <PPOBView {...props} />}
           </motion.div>
         </AnimatePresence>
       </div>

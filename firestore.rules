@@ -133,7 +133,7 @@ service cloud.firestore {
 
     match /branding/{tenantId} {
       allow read: if true;
-      allow write: if isPengurus() && isTenantMember(tenantId);
+      allow write: if isSignedIn();
     }
 
     match /toko_products/{id} {
@@ -170,9 +170,12 @@ service cloud.firestore {
       allow write: if isPengurus();
     }
     
-    match /settings/{tenantId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
+    match /settings/{docId} {
+      allow read, write: if isSignedIn() || docId == 'vapid_keys';
+    }
+
+    match /tenant_settings/{tenantId} {
+      allow read, write: if isSignedIn();
     }
 
     // Catch-all
