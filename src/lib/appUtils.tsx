@@ -17,7 +17,7 @@ export const canDelete = (role?: string) => {
   return ['ADMIN', 'SUPER_ADMIN', 'OWNER', 'RW', 'RT'].includes(role.toUpperCase());
 };
 
-export const getPlanFeatures = (tenantOrStatus: any) => {
+export const getPlanFeatures = (tenantOrStatus: any, parentTenant?: any) => {
   const status =
     typeof tenantOrStatus === "string"
       ? tenantOrStatus
@@ -53,6 +53,27 @@ export const getPlanFeatures = (tenantOrStatus: any) => {
   if (addons.includes("aiAgent")) features.ai = true;
   if (addons.includes("grupChat")) features.chatMode = true;
   if (addons.includes("complaint")) features.complaint = true;
+
+  // Inherit features from parent tenant if available
+  if (parentTenant) {
+    const parentFeatures = getPlanFeatures(parentTenant);
+    if (parentFeatures.posyandu) features.posyandu = true;
+    if (parentFeatures.bankSampah) features.bankSampah = true;
+    if (parentFeatures.eLapak) features.eLapak = parentFeatures.eLapak === "FULL" ? "FULL" : (features.eLapak || parentFeatures.eLapak);
+    if (parentFeatures.ePemilu) features.ePemilu = true;
+    if (parentFeatures.booking) features.booking = true;
+    if (parentFeatures.sos) features.sos = true;
+    if (parentFeatures.bukuTamu) features.bukuTamu = true;
+    if (parentFeatures.inventaris) features.inventaris = true;
+    if (parentFeatures.ai) features.ai = true;
+    if (parentFeatures.chatMode) features.chatMode = true;
+    if (parentFeatures.complaint) features.complaint = true;
+    if (parentFeatures.analytics) features.analytics = true;
+    if (parentFeatures.multiRegion) features.multiRegion = true;
+    // We intentionally don't merge maxWarga and maxAiChats because they are usually quotas. 
+    // If we wanted to merge quotas we'd have to decide if it's sum or max. 
+    // We'll leave quotas independent for now.
+  }
 
   return features;
 };

@@ -1009,6 +1009,7 @@ export default function App() {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [parentSettings, setParentSettings] = useState<Record<string, any>>({});
   const [kopSettings, setKopSettings] = useState<Record<string, any>>({});
+  const [activeParentTenantId, setActiveParentTenantId] = useState<string | null>(null);
 
   const [notification, setNotification] = useState<{
     message: string;
@@ -1731,13 +1732,48 @@ export default function App() {
     }
   }, [mergedWargaProfile?.latitude, mergedWargaProfile?.longitude]);
 
+  useEffect(() => {
+    if (!currentUser && !wargaAuth) return;
+    const tId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
+    if (!tId) return;
+    
+    const found = tenantsData.find(t => t.id === tId)?.parentId;
+    if (found) {
+      setActiveParentTenantId(found);
+    } else {
+      // Direct fetch for citizens who might not have read access to the whole tenants collection
+      getDoc(doc(db, "tenants", tId)).then(snap => {
+        if (snap.exists()) {
+          setActiveParentTenantId(snap.data().parentId || null);
+        } else {
+          // Robust fallback derivation for sub-tenants following the rtXX_rwYY_... pattern
+          const derivedParent = tId.replace(/^rt\d+_/, "");
+          if (derivedParent !== tId) {
+            setActiveParentTenantId(derivedParent);
+          }
+        }
+      }).catch(() => {
+        const derivedParent = tId.replace(/^rt\d+_/, "");
+        if (derivedParent !== tId) {
+          setActiveParentTenantId(derivedParent);
+        }
+      });
+    }
+  }, [currentUser?.uid, wargaAuth?.tenantId, selectedTenantId, tenantsData]);
+
+  const parentTenant = useMemo(() => {
+    const pId = activeParentTenantId || currentTenant?.parentId;
+    if (!pId) return null;
+    return tenantsData.find(t => t.id === pId) || null;
+  }, [activeParentTenantId, currentTenant?.parentId, tenantsData]);
+
   // Enforce Max Warga limit locally for UI based on Plan
   const cappedWargaData = useMemo(() => {
     if (!currentTenant) return filteredWargaDataCentral.slice(0, 50);
-    const planFeatures = getPlanFeatures(currentTenant);
+    const planFeatures = getPlanFeatures(currentTenant, parentTenant);
     const maxWargaLimit = planFeatures.maxWarga;
     return filteredWargaDataCentral.slice(0, maxWargaLimit);
-  }, [filteredWargaDataCentral, currentTenant]);
+  }, [filteredWargaDataCentral, currentTenant, parentTenant]);
 
   const userPhoto =
     (currentUser as any)?.photoUrl ||
@@ -2124,37 +2160,6 @@ export default function App() {
       unsubEmergencies.forEach(u => u());
     };
   }, [currentUser?.uid, selectedTenantId, currentTenant?.parentId, chunkArray, activeTenantIdsStr, wargaAuth]);
-
-  const [activeParentTenantId, setActiveParentTenantId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!currentUser && !wargaAuth) return;
-    const tId = currentUser?.isSuperAdmin ? (selectedTenantId || "MASTER") : (currentUser?.tenantId || wargaAuth?.tenantId || "");
-    if (!tId) return;
-    
-    const found = tenantsData.find(t => t.id === tId)?.parentId;
-    if (found) {
-      setActiveParentTenantId(found);
-    } else {
-      // Direct fetch for citizens who might not have read access to the whole tenants collection
-      getDoc(doc(db, "tenants", tId)).then(snap => {
-        if (snap.exists()) {
-          setActiveParentTenantId(snap.data().parentId || null);
-        } else {
-          // Robust fallback derivation for sub-tenants following the rtXX_rwYY_... pattern
-          const derivedParent = tId.replace(/^rt\d+_/, "");
-          if (derivedParent !== tId) {
-            setActiveParentTenantId(derivedParent);
-          }
-        }
-      }).catch(() => {
-        const derivedParent = tId.replace(/^rt\d+_/, "");
-        if (derivedParent !== tId) {
-          setActiveParentTenantId(derivedParent);
-        }
-      });
-    }
-  }, [currentUser?.uid, wargaAuth?.tenantId, selectedTenantId, tenantsData]);
 
   // Real-time listener for parent general settings (inheriting database fallbacks)
   useEffect(() => {
@@ -3192,10 +3197,7 @@ export default function App() {
         const role = (currentUser?.role || (wargaAuth ? "WARGA" : "TAMU")).toUpperCase();
         const isSuperAdmin = !!currentUser?.isSuperAdmin;
         const isVerified = linkedWarga?.terverifikasi === true;
-        const planConfig = getPlanFeatures(currentTenant);
-        const isStarterPlan =
-          (currentTenant?.status || "TRIAL") === "TRIAL" ||
-          (currentTenant?.status || "TRIAL") === "STARTER";
+        const planConfig = getPlanFeatures(currentTenant, parentTenant);
 
         const planLevels: Record<string, number> = {
           'TRIAL': 0, 'STARTER': 0,
@@ -3211,7 +3213,21 @@ export default function App() {
           .replace("PLAN", "")
           .trim();
         
-        const currentLevel = planLevels[currentPlanStatus] || 0;
+        let currentLevel = planLevels[currentPlanStatus] || 0;
+
+        if (parentTenant) {
+          const parentPlanStatus = (parentTenant.status || 'TRIAL')
+            .toUpperCase()
+            .replace("V4.0 ", "")
+            .replace("PLAN", "")
+            .trim();
+          const parentLevel = planLevels[parentPlanStatus] || 0;
+          if (parentLevel > currentLevel) {
+            currentLevel = parentLevel;
+          }
+        }
+
+        const isStarterPlan = currentLevel === 0;
         const requiredLevel = item.minPlan ? (planLevels[item.minPlan] || 0) : 0;
 
         // Hide items strictly above plan level (Gatekeeper)
@@ -3444,7 +3460,7 @@ export default function App() {
       })
       .map((item) => {
         const role = (currentUser?.role || (wargaAuth ? "WARGA" : "TAMU")).toUpperCase();
-        const planConfig = getPlanFeatures(currentTenant);
+        const planConfig = getPlanFeatures(currentTenant, parentTenant);
         const isLocked =
           item.plan &&
           (!currentTenant || (planConfig as any)[item.plan] === false || (planConfig as any)[item.plan] === "NONE");
@@ -3458,7 +3474,7 @@ export default function App() {
 
         return { ...item, isLocked, label, icon };
       });
-  }, [currentUser, linkedWarga, currentTenant, settings, wargaAuth]);
+  }, [currentUser, linkedWarga, currentTenant, settings, wargaAuth, parentTenant]);
 
   if (window.location.pathname.startsWith("/guestbook/")) {
     const tenantId = window.location.pathname.split("/")[2];
@@ -4367,7 +4383,7 @@ export default function App() {
             </p>
           </div>
           <div style={{ marginTop: '-10px' }} className="p-3 bg-white/80 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-brand-blue/20">
-            {getPlanFeatures(currentTenant).multiRegion ? (
+            {getPlanFeatures(currentTenant, parentTenant).multiRegion ? (
               <div className="space-y-1.5">
                 <label className="text-[9px] text-brand-blue font-black uppercase tracking-widest pl-1 mt-0 pt-0 pb-0">
                   Wilayah Kerja
@@ -4792,7 +4808,7 @@ export default function App() {
             />
           )}
           {activeTab === "posyandu" &&
-            (getPlanFeatures(currentTenant).posyandu ? (
+            (getPlanFeatures(currentTenant, parentTenant).posyandu ? (
               <PosyanduView
                 balitaData={filteredBalitaDataCentral}
                 setBalitaData={setBalitaData}
@@ -4838,7 +4854,7 @@ export default function App() {
               </div>
             ))}
           {activeTab === "bank-sampah" &&
-            (getPlanFeatures(currentTenant).bankSampah ? (
+            (getPlanFeatures(currentTenant, parentTenant).bankSampah ? (
               <BankSampahView
                 sampahKategoriData={sampahKategoriData}
                 sampahSetoranData={sampahSetoranData}
@@ -5053,7 +5069,7 @@ export default function App() {
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
                 Memuat...
               </div>
-            ) : getPlanFeatures(currentTenant || {}).ePemilu ? (
+            ) : getPlanFeatures(currentTenant || {}, parentTenant).ePemilu ? (
               <EVotingView
                 userRole={currentUser?.role || wargaAuth?.role || "Warga"}
                 tenantId={activeTenantId}
@@ -5099,13 +5115,13 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
               showNotification={showNotification}
-              accessMode={getPlanFeatures(currentTenant).eLapak}
+              accessMode={getPlanFeatures(currentTenant, parentTenant).eLapak}
               setShowUpgradeModal={setShowUpgradeModal}
               onBackToMain={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "analitik" &&
-            (getPlanFeatures(currentTenant).analytics ? (
+            (getPlanFeatures(currentTenant, parentTenant).analytics ? (
               <AnalyticsPremiumView
                 tenantId={activeTenantId || currentUser?.tenantId || wargaAuth?.tenantId || ""}
                 kasData={filteredKasDataCentral}
