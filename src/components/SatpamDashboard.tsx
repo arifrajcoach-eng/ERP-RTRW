@@ -69,6 +69,7 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
   const [showMap, setShowMap] = useState(true);
   const [notesState, setNotesState] = useState<Record<string, string>>({});
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleNoteChange = (id: string, value: string) => {
     setNotesState(prev => ({ ...prev, [id]: value }));
@@ -234,9 +235,6 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus laporan darurat ini secara permanen dari basis data?")) {
-      return;
-    }
     try {
       await deleteDoc(doc(db, 'emergency_logs', id));
       try {
@@ -244,6 +242,7 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
       } catch (eCent) {
         console.warn("Central emergencies delete failed (non-blocking):", eCent);
       }
+      setConfirmDeleteId(null);
     } catch (e) {
       console.error("Error deleting emergency log:", e);
       handleFirestoreError(e, OperationType.DELETE, `emergency_logs/${id}`);
@@ -339,10 +338,24 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
                         </p>
                       )}
                       <p className="text-[11px] text-slate-300 font-mono leading-relaxed bg-slate-900/50 p-2 rounded-xl border border-slate-800/30">
-                        <span className="font-extrabold text-slate-500 block mb-0.5 uppercase tracking-wider text-[9px]">Sinyal & Koordinat GPS Kejadian:</span>
-                        <span>
-                          {emergency.userLocation || (
-                            `📍 Koordinat GPS: ${emergency.location?.lat?.toFixed(6) ?? 0}, ${emergency.location?.lng?.toFixed(6) ?? 0}`
+                        <span className="font-extrabold text-slate-500 block mb-1 uppercase tracking-wider text-[9px]">Sinyal & Koordinat GPS Kejadian:</span>
+                        <span className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span>
+                            {emergency.userLocation || (
+                              `📍 Koordinat GPS: ${emergency.location?.lat?.toFixed(6) ?? 0}, ${emergency.location?.lng?.toFixed(6) ?? 0}`
+                            )}
+                          </span>
+                          {emergency.location && typeof emergency.location.lat === 'number' && typeof emergency.location.lng === 'number' && (
+                            <a 
+                              href={`https://www.google.com/maps?q=${emergency.location.lat},${emergency.location.lng}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-1.5 bg-blue-500/10 text-blue-400 hover:text-blue-300 px-2.5 py-1 rounded-lg border border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/20 transition-all font-bold text-[9px] uppercase tracking-wider sm:ml-2 w-fit cursor-pointer"
+                              title="Buka titik koordinat di Google Maps"
+                            >
+                              <MapIcon size={10} />
+                              Buka di Maps
+                            </a>
                           )}
                         </span>
                       </p>
@@ -401,13 +414,30 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
                   >
                       <CheckCircle className="w-5 h-5 text-white" />
                   </button>
-                  <button 
-                      onClick={() => handleDelete(emergency.id)}
-                      className="bg-red-950/60 hover:bg-red-800 text-red-400 hover:text-white p-3.5 rounded-2xl transition-all hover:scale-105 active:scale-95 border border-red-900/40 hover:border-red-600 shadow-md cursor-pointer flex items-center justify-center"
-                      title="Hapus Laporan"
-                  >
-                      <Trash2 className="w-5 h-5" />
-                  </button>
+                  {confirmDeleteId === emergency.id ? (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleDelete(emergency.id)}
+                        className="bg-red-600 text-white p-3.5 rounded-2xl font-bold text-xs shadow-md transition-all hover:scale-105 cursor-pointer"
+                      >
+                        Yakin?
+                      </button>
+                      <button 
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="bg-slate-700 text-white p-3.5 rounded-2xl font-bold text-xs shadow-md transition-all hover:scale-105 cursor-pointer"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                        onClick={() => setConfirmDeleteId(emergency.id)}
+                        className="bg-red-950/60 hover:bg-red-800 text-red-400 hover:text-white p-3.5 rounded-2xl transition-all hover:scale-105 active:scale-95 border border-red-900/40 hover:border-red-600 shadow-md cursor-pointer flex items-center justify-center"
+                        title="Hapus Laporan"
+                    >
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
                 </div>
             </div>
@@ -450,9 +480,23 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
                             <span className="font-extrabold text-slate-500">Alamat:</span> {item.userAddress}
                           </p>
                         )}
-                        <p className="text-slate-400 font-mono text-[10px]">
-                          <span className="font-extrabold text-slate-500">Lokasi:</span> {item.userLocation || `📍 Koordinat GPS: ${item.location?.lat?.toFixed(6) ?? 0}, ${item.location?.lng?.toFixed(6) ?? 0}`}
-                        </p>
+                        <div className="text-slate-400 font-mono text-[10px] flex flex-col sm:flex-row sm:items-center gap-2">
+                          <div>
+                            <span className="font-extrabold text-slate-500">Lokasi:</span> {item.userLocation || `📍 Koordinat GPS: ${item.location?.lat?.toFixed(6) ?? 0}, ${item.location?.lng?.toFixed(6) ?? 0}`}
+                          </div>
+                          {item.location && typeof item.location.lat === 'number' && typeof item.location.lng === 'number' && (
+                            <a 
+                              href={`https://www.google.com/maps?q=${item.location.lat},${item.location.lng}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-1.5 bg-blue-500/10 text-blue-400 hover:text-blue-300 px-2.5 py-1 rounded-lg border border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/20 transition-all font-bold text-[9px] uppercase tracking-wider w-fit cursor-pointer"
+                              title="Buka titik koordinat di Google Maps"
+                            >
+                              <MapIcon size={10} />
+                              Buka di Maps
+                            </a>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -468,13 +512,30 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
                       <CheckCircle size={12} />
                       Resolved
                     </div>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="text-red-400 hover:text-white hover:bg-red-950/60 p-2 rounded-xl transition-all border border-transparent hover:border-red-900/40 cursor-pointer flex items-center justify-center shrink-0"
-                      title="Hapus Riwayat"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {confirmDeleteId === item.id ? (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleDelete(item.id)}
+                          className="bg-red-600 text-white px-3 py-1.5 rounded-xl font-bold text-[10px] shadow-md transition-all hover:scale-105 cursor-pointer"
+                        >
+                          Yakin?
+                        </button>
+                        <button 
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="bg-slate-700 text-white px-3 py-1.5 rounded-xl font-bold text-[10px] shadow-md transition-all hover:scale-105 cursor-pointer"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setConfirmDeleteId(item.id)}
+                        className="text-red-400 hover:text-white hover:bg-red-950/60 p-2 rounded-xl transition-all border border-transparent hover:border-red-900/40 cursor-pointer flex items-center justify-center shrink-0"
+                        title="Hapus Riwayat"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
               </div>
           ))}
