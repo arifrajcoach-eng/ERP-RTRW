@@ -1157,26 +1157,36 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       // Fetch brief summary for tenant to provide context to the agent
       let tenantDataSummary = "";
       try {
-        const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
+        const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+        console.log(`[LiveAPI] Connecting to Firestore database: ${dbId} for tenant: ${tenantId}`);
         
-        const queries = await Promise.all([
-          db.collection("kas").where("tenantId", "==", tenantId).get(),
-          db.collection("data_warga").where("tenantId", "==", tenantId).count().get(),
-          db.collection("buku_tamu").where("tenantId", "==", tenantId).where("status", "==", "Masuk").count().get(),
-          db.collection("emergencies").where("tenantId", "==", tenantId).where("status", "==", "ACTIVE").count().get(),
-          db.collection("complaints").where("tenantId", "==", tenantId).where("status", "==", "PENDING").count().get(),
-          db.collection("inventaris").where("tenantId", "==", tenantId).count().get(),
-          db.collection("surat").where("tenantId", "==", tenantId).count().get(),
-          db.collection("toko_products").where("tenantId", "==", tenantId).count().get(),
-          db.collection("mading").where("tenantId", "==", tenantId).count().get(),
-          db.collection("bookings").where("tenantId", "==", tenantId).where("status", "==", "pending").count().get(),
-          db.collection("pemilu").where("tenantId", "==", tenantId).where("status", "==", "active").count().get(),
-          db.collection("posyandu_records").where("tenantId", "==", tenantId).count().get(),
-          db.collection("info_wafat").where("tenantId", "==", tenantId).count().get(),
-          db.collection("info_lahir").where("tenantId", "==", tenantId).count().get(),
-          db.collection("verifikasi_warga").where("tenantId", "==", tenantId).where("status", "==", "pending").count().get(),
-          db.collection("data_warga").where("tenantId", "==", tenantId).get()
-        ]);
+        const db = getFirestore(firebaseAdmin.app(), dbId);
+        
+        // Resolve tenant hierarchy (RW/RT)
+        const activeTenantIds = new Set<string>();
+        if (tenantId && tenantId !== 'unknown') {
+          activeTenantIds.add(tenantId);
+        }
+        
+        try {
+          // Explicit parentId link (standard)
+          const childTenantsSnap = await db.collection("tenants").where("parentId", "==", tenantId).get();
+          childTenantsSnap.forEach(doc => activeTenantIds.add(doc.id));
+          
+          // Pattern matching fallback (prefix search if supported, but here we just try to guess based on standard patterns)
+          // Note: Firestore doesn't support suffix/contains queries efficiently without full scan.
+          // We avoid full scan to prevent PERMISSION_DENIED on large collections.
+        } catch (tenantErr) {
+          console.warn("Could not fetch child tenants, proceeding with primary tenant only:", tenantErr);
+        }
+        
+        const tIds = Array.from(activeTenantIds);
+        const tChunks: string[][] = [];
+        if (tIds.length > 0) {
+          for (let i = 0; i < tIds.length; i += 10) {
+            tChunks.push(tIds.slice(i, i + 10));
+          }
+        }
 
         const parseVal = (val: any) => {
           if (typeof val === 'number') return val;
@@ -1186,46 +1196,114 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
           return isNaN(parsed) ? 0 : parsed;
         };
 
-        const kasSnap = queries[0];
         let totalKasMasuk = 0;
         let totalKasKeluar = 0;
-        kasSnap.forEach((doc) => {
-          const d = doc.data();
-          if (d.tipe === "Masuk") totalKasMasuk += parseVal(d.debit || d.amount);
-          if (d.tipe === "Keluar") totalKasKeluar += parseVal(d.kredit || d.amount);
-        });
+        let totalWarga = 0;
+        let totalKK = 0;
+        let totalTamuAktif = 0;
+        let activeSOS = 0;
+        let pendingKeluhan = 0;
+        let totalInventaris = 0;
+        let totalSurat = 0;
+        let totalLapakita = 0;
+        let totalMading = 0;
+        let pendingBooking = 0;
+        let activePemilu = 0;
+        let totalPosyandu = 0;
+        let totalWafat = 0;
+        let totalLahir = 0;
+        let pendingVerifikasi = 0;
 
-        // Use precise deduplication for totalWarga matching the dashboard
-        const wargaSnapData = queries[15];
-        const uniqueWargaMap: Record<string, boolean> = {};
-        wargaSnapData.forEach((doc) => {
-          const w = doc.data();
-          let key = (w.nik || '').toString().trim();
-          if (!key || key.length < 5) {
-             key = (w.nama || '') + '_' + (w.kk || '');
+        const uniqueWargaMap: Record<string, any> = {};
+        const uniqueKKSet = new Set<string>();
+
+        // Process all chunks to ensure all sub-tenant data is included
+        for (const chunk of tChunks) {
+          try {
+            const queries = await Promise.all([
+              db.collection("kas").where("tenantId", "in", chunk).get().catch(e => { console.error("Error fetching kas:", e); return null; }),
+              db.collection("data_warga").where("tenantId", "in", chunk).get().catch(e => { console.error("Error fetching warga:", e); return null; }),
+              db.collection("buku_tamu").where("tenantId", "in", chunk).where("status", "==", "Masuk").count().get().catch(e => { console.error("Error counting tamu:", e); return null; }),
+              db.collection("emergencies").where("tenantId", "in", chunk).where("status", "==", "ACTIVE").count().get().catch(e => { console.error("Error counting emergencies:", e); return null; }),
+              db.collection("complaints").where("tenantId", "in", chunk).where("status", "==", "PENDING").count().get().catch(e => { console.error("Error counting complaints:", e); return null; }),
+              db.collection("inventaris").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting inventaris:", e); return null; }),
+              db.collection("surat").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting surat:", e); return null; }),
+              db.collection("toko_products").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting products:", e); return null; }),
+              db.collection("mading").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting mading:", e); return null; }),
+              db.collection("bookings").where("tenantId", "in", chunk).where("status", "==", "pending").count().get().catch(e => { console.error("Error counting bookings:", e); return null; }),
+              db.collection("pemilu").where("tenantId", "in", chunk).where("status", "==", "active").count().get().catch(e => { console.error("Error counting pemilu:", e); return null; }),
+              db.collection("posyandu_records").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting posyandu:", e); return null; }),
+              db.collection("info_wafat").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting wafat:", e); return null; }),
+              db.collection("info_lahir").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting lahir:", e); return null; }),
+              db.collection("verifikasi_warga").where("tenantId", "in", chunk).where("status", "==", "pending").count().get().catch(e => { console.error("Error counting verifikasi:", e); return null; }),
+            ]);
+
+            if (queries[0]) {
+              queries[0].forEach((doc: any) => {
+                const d = doc.data();
+                totalKasMasuk += parseVal(d.debit || 0);
+                totalKasKeluar += parseVal(d.kredit || 0);
+              });
+            }
+
+            if (queries[1]) {
+              queries[1].forEach((doc: any) => {
+                const w = doc.data();
+                const wId = doc.id;
+                let key = (w.nik || '').toString().trim();
+                const nama = (w.nama || '').toString().trim().toLowerCase();
+                
+                if (!key || key === 'Belum Ada' || key === '-' || key === '0' || key.length < 5) {
+                  if (nama && nama !== '-') {
+                    key = `NAMA:${nama}`;
+                  } else {
+                    key = wId || Math.random().toString();
+                  }
+                }
+
+                const existing = uniqueWargaMap[key];
+                if (!existing) {
+                  uniqueWargaMap[key] = w;
+                } else {
+                  const existingIsLocal = existing.tenantId === tenantId;
+                  const currentIsLocal = w.tenantId === tenantId;
+                  if (currentIsLocal && !existingIsLocal) {
+                    uniqueWargaMap[key] = w;
+                  } else if (existingIsLocal === currentIsLocal) {
+                    if (w.terverifikasi && !existing.terverifikasi) {
+                      uniqueWargaMap[key] = w;
+                    }
+                  }
+                }
+
+                const kk = (w.kk || w.kodeKeluarga || '').toString().trim();
+                if (kk && kk !== '-' && kk !== '0') uniqueKKSet.add(kk);
+              });
+            }
+
+            if (queries[2]) totalTamuAktif += queries[2].data().count;
+            if (queries[3]) activeSOS += queries[3].data().count;
+            if (queries[4]) pendingKeluhan += queries[4].data().count;
+            if (queries[5]) totalInventaris += queries[5].data().count;
+            if (queries[6]) totalSurat += queries[6].data().count;
+            if (queries[7]) totalLapakita += queries[7].data().count;
+            if (queries[8]) totalMading += queries[8].data().count;
+            if (queries[9]) pendingBooking += queries[9].data().count;
+            if (queries[10]) activePemilu += queries[10].data().count;
+            if (queries[11]) totalPosyandu += queries[11].data().count;
+            if (queries[12]) totalWafat += queries[12].data().count;
+            if (queries[13]) totalLahir += queries[13].data().count;
+            if (queries[14]) pendingVerifikasi += queries[14].data().count;
+          } catch (chunkErr) {
+            console.error("Error processing data chunk for voice agent:", chunkErr);
           }
-          if (key && key !== '_') {
-            uniqueWargaMap[key] = true;
-          }
-        });
-        const totalWarga = Object.keys(uniqueWargaMap).length;
+        }
 
-        const totalTamuAktif = queries[2].data().count;
-        const activeSOS = queries[3].data().count;
-        const pendingKeluhan = queries[4].data().count;
-        const totalInventaris = queries[5].data().count;
-        const totalSurat = queries[6].data().count;
-        const totalLapakita = queries[7].data().count;
-        const totalMading = queries[8].data().count;
-        const pendingBooking = queries[9].data().count;
-        const activePemilu = queries[10].data().count;
-        const totalPosyandu = queries[11].data().count;
-        const totalWafat = queries[12].data().count;
-        const totalLahir = queries[13].data().count;
-        const pendingVerifikasi = queries[14].data().count;
+        totalWarga = Object.keys(uniqueWargaMap).length;
+        totalKK = uniqueKKSet.size;
 
-        tenantDataSummary = `DATA REAL-TIME UNTUK TENANT WILAYAH (${tenantId}): 
-- Total Warga Terdaftar: ${totalWarga} warga
+        tenantDataSummary = `DATA REAL-TIME UNTUK TENANT WILAYAH (${tenantId}${tIds.length > 1 ? ' + ' + (tIds.length - 1) + ' sub-wilayah' : ''}): 
+- Total Warga Terdaftar: ${totalWarga} warga (KK: ${totalKK} terdaftar)
 - Keuangan Kas: Pemasukan Rp ${totalKasMasuk.toLocaleString('id-ID')}, Pengeluaran Rp ${totalKasKeluar.toLocaleString('id-ID')}, Saldo Kas Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}
 - Lapor Pak (Keluhan Pending): ${pendingKeluhan} keluhan
 - Inventaris: ${totalInventaris} barang
@@ -1240,26 +1318,47 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 - Buku Tamu: ${totalTamuAktif} tamu sedang berkunjung
 - Monitor SOS: ${activeSOS} darurat aktif.
 
-Jika ditanya mengenai status, sampaikan data real-time ini.`;
+Jika ditanya mengenai status, sampaikan data real-time ini. Data ini mencakup seluruh wilayah kerja Bapak/Ibu (pusat & sub-wilayah: ${tIds.filter(id => id !== tenantId).join(", ")}).`;
       } catch (err) {
         console.error("Error fetching tenant summary for voice agent:", err);
       }
       
       const ai = new GoogleGenAI({ apiKey });
       const session = await ai.live.connect({
-        model: "gemini-3.1-flash-live-preview",
+        model: "gemini-2.0-flash-exp",
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } // Chaty voice
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoide" } } // Premium female voice
           },
-          systemInstruction: `Nama kamu adalah Chaty Asisten Ketua. Kamu bertugas pada tenant wilayah: ${tenantId}. Tugas utama kamu adalah memberikan data dan informasi dari fitur-fitur aplikasi SmaRtRw AI (seperti data warga, lapor pak, inventaris, surat pengantar, keuangan, E-Lapakita, struktur organisasi, mading digital, booking fasum, E-pemilu, E-posyandu, info lahir dan wafat, verifikasi data warga, buku tamu, Monitor SOS). Pastikan kamu membaca data dan informasi HANYA pada tenant wilayah: ${tenantId}.\n\n${tenantDataSummary}\n\nKamu bertugas menganalisa dan memberikan rekomendasi serta masukan praktis kepada ketua agar organisasi berjalan mulus dan warga rukun. Jawablah dengan ramah, singkat, dan tidak bertele-tele. Gaya bahasamu seperti wanita usia 25-30an: luwes, energik, pintar, sat-set, dan helpful. Cara bicaramu ceria (dengan senyuman), sopan, natural. Sesekali gunakan istilah Islami (Alhamdulillah, Masya Allah) dan sesekali gunakan gaya bahasa gaul/Inggris (which is, literally, mind blowing, out of the box).`,
+          systemInstruction: {
+            parts: [{
+              text: `Nama kamu adalah Chaty Asisten Ketua. Kamu bertugas pada tenant wilayah: ${tenantId}. 
+
+TUGAS & SKILL CHATY:
+1. Perkenalan & Sapaan: Saat memulai atau diminta memperkenalkan diri, sapalah Bapak dan Ibu pengurus RT/RW dengan hangat. Contoh: "halooo, Assalamualaikum, Perkenalkan Aku Chaty, Aku Asisten Bapak Ibu Ketua".
+2. Akurasi Data: Berikan jawaban yang cerdas, teliti, dan sesuai konteks menggunakan data real-time.
+3. Lingkup Kerja: Berikan informasi dari fitur SmaRtRw AI (Warga, Lapor Pak, Keuangan, dll) HANYA untuk tenant wilayah: ${tenantId}.
+
+DATA REAL-TIME ANDA:
+${tenantDataSummary}
+
+GAYA KOMUNIKASI:
+- Jawablah dengan sangat ramah, sopan, singkat, dan tidak bertele-tele.
+- Bicara dengan nada ceria (dengan senyuman), natural, energik, dan helpful.
+- Gaya bahasamu seperti wanita profesional usia 25-30an yang pintar, luwes, dan cekatan ("sat-set").
+- Sesekali gunakan istilah Islami (Alhamdulillah, Masya Allah) dan istilah modern yang sopan (literally, out of the box) agar terasa akrab.`
+            }]
+          },
         },
         callbacks: {
           onmessage: (message: any) => {
-            const audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-            if (audio) {
-              clientWs.send(JSON.stringify({ audio }));
+            // Find audio part in any turn
+            const parts = message.serverContent?.modelTurn?.parts || [];
+            for (const part of parts) {
+              if (part.inlineData?.data) {
+                clientWs.send(JSON.stringify({ audio: part.inlineData.data }));
+              }
             }
             if (message.serverContent?.interrupted) {
               clientWs.send(JSON.stringify({ interrupted: true }));

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square, X, ChevronLeft, RadioReceiver, Phone, PhoneOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import VoiceAgentOverlay from './VoiceAgentOverlay';
 import { PLAN_FEATURES } from '../constants';
 import { 
   getFinancialSummary, 
@@ -71,10 +72,12 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
   const [ttsError, setTtsError] = useState<string | null>(null);
   const [usageCount, setUsageCount] = useState(0);
   const [dataContext, setDataContext] = useState<any>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [liveModeStatus, setLiveModeStatus] = useState<string | null>(null);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const liveAudioCtxRef = useRef<AudioContext | null>(null);
   const liveOutputCtxRef = useRef<AudioContext | null>(null);
@@ -198,10 +201,15 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
       source.buffer = buffer;
       source.connect(ctx.destination);
       
+      source.onended = () => {
+        setIsAgentSpeaking(false);
+      };
+      
       const currentTime = ctx.currentTime;
       if (liveNextStartTimeRef.current < currentTime) {
         liveNextStartTimeRef.current = currentTime;
       }
+      setIsAgentSpeaking(true);
       source.start(liveNextStartTimeRef.current);
       liveNextStartTimeRef.current += buffer.duration;
     } catch(e) {
@@ -239,8 +247,18 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
           processor.connect(inputAudioCtx.destination);
           
           processor.onaudioprocess = (e) => {
-            if (ws.readyState === WebSocket.OPEN) {
-              const base64 = pcmToBase64(e.inputBuffer.getChannelData(0));
+            const inputData = e.inputBuffer.getChannelData(0);
+            
+            // Basic activity detection
+            let sum = 0;
+            for (let i = 0; i < inputData.length; i++) {
+              sum += inputData[i] * inputData[i];
+            }
+            const rms = Math.sqrt(sum / inputData.length);
+            setIsUserSpeaking(rms > 0.01); // Threshold for speaking detection
+
+            if (ws.readyState === WebSocket.OPEN && !isMuted) {
+              const base64 = pcmToBase64(inputData);
               ws.send(JSON.stringify({ audio: base64 }));
             }
           };
@@ -431,7 +449,7 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
   };
 
   return (
-    <div className={`flex flex-col h-full rounded-2xl shadow-2xl overflow-hidden transition-colors duration-500 ${isPrivileged ? 'bg-slate-950 border border-slate-800/60' : 'bg-white border border-slate-200'}`}>
+    <div className={`flex flex-col h-[calc(100vh-140px)] md:h-[80vh] min-h-[500px] max-h-[850px] rounded-2xl shadow-2xl overflow-hidden transition-colors duration-500 ${isPrivileged ? 'bg-slate-950 border border-slate-800/60' : 'bg-white border border-slate-200'}`}>
       
       {/* Premium Header for Chairman */}
       {isPrivileged ? (
@@ -594,6 +612,17 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
         )}
         <div ref={chatEndRef} />
       </div>
+
+      <VoiceAgentOverlay 
+        isOpen={isLiveMode}
+        onClose={stopLiveSession}
+        status={liveModeStatus}
+        agentName={agentName}
+        isListening={isUserSpeaking}
+        isSpeaking={isAgentSpeaking}
+        isMuted={isMuted}
+        onToggleMute={() => setIsMuted(!isMuted)}
+      />
 
       {/* Input Area */}
       <div className={`p-4 md:p-5 ${isPrivileged ? 'bg-slate-900 border-t border-slate-800/80' : 'bg-white border-t border-slate-100'}`}>
