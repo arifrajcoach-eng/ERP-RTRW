@@ -6,6 +6,7 @@ import * as dotenv from "dotenv";
 import crypto from "crypto";
 import { GoogleGenAI, Modality } from "@google/genai";
 import webpush from "web-push";
+import { WebSocketServer } from "ws";
 
 const generateVapidKeys = (webpush as any).generateVAPIDKeys || (webpush as any).default?.generateVAPIDKeys;
 
@@ -1134,8 +1135,166 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  // Setup WebSocket Server for Live API Voice Conversation
+  const wss = new WebSocketServer({ server: httpServer, path: '/api/ai/live' });
+
+  wss.on("connection", async (clientWs: any, req: any) => {
+    try {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const tenantId = url.searchParams.get("tenantId") || "unknown";
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        clientWs.send(JSON.stringify({ error: "No API Key" }));
+        clientWs.close();
+        return;
+      }
+
+      // Fetch brief summary for tenant to provide context to the agent
+      let tenantDataSummary = "";
+      try {
+        const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
+        
+        const queries = await Promise.all([
+          db.collection("kas").where("tenantId", "==", tenantId).get(),
+          db.collection("data_warga").where("tenantId", "==", tenantId).count().get(),
+          db.collection("buku_tamu").where("tenantId", "==", tenantId).where("status", "==", "Masuk").count().get(),
+          db.collection("emergencies").where("tenantId", "==", tenantId).where("status", "==", "ACTIVE").count().get(),
+          db.collection("complaints").where("tenantId", "==", tenantId).where("status", "==", "PENDING").count().get(),
+          db.collection("inventaris").where("tenantId", "==", tenantId).count().get(),
+          db.collection("surat").where("tenantId", "==", tenantId).count().get(),
+          db.collection("toko_products").where("tenantId", "==", tenantId).count().get(),
+          db.collection("mading").where("tenantId", "==", tenantId).count().get(),
+          db.collection("bookings").where("tenantId", "==", tenantId).where("status", "==", "pending").count().get(),
+          db.collection("pemilu").where("tenantId", "==", tenantId).where("status", "==", "active").count().get(),
+          db.collection("posyandu_records").where("tenantId", "==", tenantId).count().get(),
+          db.collection("info_wafat").where("tenantId", "==", tenantId).count().get(),
+          db.collection("info_lahir").where("tenantId", "==", tenantId).count().get(),
+          db.collection("verifikasi_warga").where("tenantId", "==", tenantId).where("status", "==", "pending").count().get(),
+          db.collection("data_warga").where("tenantId", "==", tenantId).get()
+        ]);
+
+        const parseVal = (val: any) => {
+          if (typeof val === 'number') return val;
+          if (!val) return 0;
+          const cleaned = val.toString().replace(/[^0-9.-]/g, '');
+          const parsed = parseFloat(cleaned);
+          return isNaN(parsed) ? 0 : parsed;
+        };
+
+        const kasSnap = queries[0];
+        let totalKasMasuk = 0;
+        let totalKasKeluar = 0;
+        kasSnap.forEach((doc) => {
+          const d = doc.data();
+          if (d.tipe === "Masuk") totalKasMasuk += parseVal(d.debit || d.amount);
+          if (d.tipe === "Keluar") totalKasKeluar += parseVal(d.kredit || d.amount);
+        });
+
+        // Use precise deduplication for totalWarga matching the dashboard
+        const wargaSnapData = queries[15];
+        const uniqueWargaMap: Record<string, boolean> = {};
+        wargaSnapData.forEach((doc) => {
+          const w = doc.data();
+          let key = (w.nik || '').toString().trim();
+          if (!key || key.length < 5) {
+             key = (w.nama || '') + '_' + (w.kk || '');
+          }
+          if (key && key !== '_') {
+            uniqueWargaMap[key] = true;
+          }
+        });
+        const totalWarga = Object.keys(uniqueWargaMap).length;
+
+        const totalTamuAktif = queries[2].data().count;
+        const activeSOS = queries[3].data().count;
+        const pendingKeluhan = queries[4].data().count;
+        const totalInventaris = queries[5].data().count;
+        const totalSurat = queries[6].data().count;
+        const totalLapakita = queries[7].data().count;
+        const totalMading = queries[8].data().count;
+        const pendingBooking = queries[9].data().count;
+        const activePemilu = queries[10].data().count;
+        const totalPosyandu = queries[11].data().count;
+        const totalWafat = queries[12].data().count;
+        const totalLahir = queries[13].data().count;
+        const pendingVerifikasi = queries[14].data().count;
+
+        tenantDataSummary = `DATA REAL-TIME UNTUK TENANT WILAYAH (${tenantId}): 
+- Total Warga Terdaftar: ${totalWarga} warga
+- Keuangan Kas: Pemasukan Rp ${totalKasMasuk.toLocaleString('id-ID')}, Pengeluaran Rp ${totalKasKeluar.toLocaleString('id-ID')}, Saldo Kas Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}
+- Lapor Pak (Keluhan Pending): ${pendingKeluhan} keluhan
+- Inventaris: ${totalInventaris} barang
+- Surat Pengantar: ${totalSurat} surat terdaftar
+- E-Lapakita: ${totalLapakita} produk/lapak
+- Mading Digital: ${totalMading} pengumuman
+- Booking Fasum: ${pendingBooking} permintaan pending
+- E-Pemilu: ${activePemilu} pemilihan aktif
+- E-Posyandu: ${totalPosyandu} catatan kesehatan
+- Info Lahir & Wafat: ${totalLahir} kelahiran, ${totalWafat} kematian
+- Verifikasi Data Warga: ${pendingVerifikasi} warga butuh verifikasi
+- Buku Tamu: ${totalTamuAktif} tamu sedang berkunjung
+- Monitor SOS: ${activeSOS} darurat aktif.
+
+Jika ditanya mengenai status, sampaikan data real-time ini.`;
+      } catch (err) {
+        console.error("Error fetching tenant summary for voice agent:", err);
+      }
+      
+      const ai = new GoogleGenAI({ apiKey });
+      const session = await ai.live.connect({
+        model: "gemini-3.1-flash-live-preview",
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } // Chaty voice
+          },
+          systemInstruction: `Nama kamu adalah Chaty Asisten Ketua. Kamu bertugas pada tenant wilayah: ${tenantId}. Tugas utama kamu adalah memberikan data dan informasi dari fitur-fitur aplikasi SmaRtRw AI (seperti data warga, lapor pak, inventaris, surat pengantar, keuangan, E-Lapakita, struktur organisasi, mading digital, booking fasum, E-pemilu, E-posyandu, info lahir dan wafat, verifikasi data warga, buku tamu, Monitor SOS). Pastikan kamu membaca data dan informasi HANYA pada tenant wilayah: ${tenantId}.\n\n${tenantDataSummary}\n\nKamu bertugas menganalisa dan memberikan rekomendasi serta masukan praktis kepada ketua agar organisasi berjalan mulus dan warga rukun. Jawablah dengan ramah, singkat, dan tidak bertele-tele. Gaya bahasamu seperti wanita usia 25-30an: luwes, energik, pintar, sat-set, dan helpful. Cara bicaramu ceria (dengan senyuman), sopan, natural. Sesekali gunakan istilah Islami (Alhamdulillah, Masya Allah) dan sesekali gunakan gaya bahasa gaul/Inggris (which is, literally, mind blowing, out of the box).`,
+        },
+        callbacks: {
+          onmessage: (message: any) => {
+            const audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            if (audio) {
+              clientWs.send(JSON.stringify({ audio }));
+            }
+            if (message.serverContent?.interrupted) {
+              clientWs.send(JSON.stringify({ interrupted: true }));
+            }
+          }
+        }
+      });
+
+      clientWs.on("message", (data: any) => {
+        try {
+          const { audio, text } = JSON.parse(data.toString());
+          if (audio) {
+            session.sendRealtimeInput({
+              audio: { data: audio, mimeType: "audio/pcm;rate=16000" },
+            });
+          }
+          if (text) {
+             session.sendRealtimeInput({
+               text
+             });
+          }
+        } catch(e) {
+          console.error("Live API WS Error:", e);
+        }
+      });
+
+      clientWs.on("close", () => {
+        try {
+          session.close();
+        } catch(e) {}
+      });
+    } catch(err) {
+      console.error("Failed to connect to Live API:", err);
+      clientWs.close();
+    }
   });
 }
 

@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square, X, ChevronLeft } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square, X, ChevronLeft, RadioReceiver, Phone, PhoneOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PLAN_FEATURES } from '../constants';
 import { 
@@ -73,6 +73,15 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
   const [dataContext, setDataContext] = useState<any>(null);
   const [isMuted, setIsMuted] = useState(true);
   
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [liveModeStatus, setLiveModeStatus] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const liveAudioCtxRef = useRef<AudioContext | null>(null);
+  const liveOutputCtxRef = useRef<AudioContext | null>(null);
+  const liveStreamRef = useRef<MediaStream | null>(null);
+  const liveProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const liveNextStartTimeRef = useRef(0);
+  
   const chatEndRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -125,8 +134,151 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
           sourceRef.current.stop();
         } catch (e) {}
       }
+      stopLiveSession();
     };
   }, []);
+
+  const stopLiveSession = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (liveStreamRef.current) {
+      liveStreamRef.current.getTracks().forEach(track => track.stop());
+      liveStreamRef.current = null;
+    }
+    if (liveProcessorRef.current) {
+      liveProcessorRef.current.disconnect();
+      liveProcessorRef.current = null;
+    }
+    if (liveAudioCtxRef.current) {
+      liveAudioCtxRef.current.close();
+      liveAudioCtxRef.current = null;
+    }
+    if (liveOutputCtxRef.current) {
+      liveOutputCtxRef.current.close();
+      liveOutputCtxRef.current = null;
+    }
+    setIsLiveMode(false);
+    setLiveModeStatus(null);
+  }, []);
+
+  const pcmToBase64 = (pcmData: Float32Array) => {
+    const buffer = new ArrayBuffer(pcmData.length * 2);
+    const view = new DataView(buffer);
+    for (let i = 0; i < pcmData.length; i++) {
+      let s = Math.max(-1, Math.min(1, pcmData[i]));
+      view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  };
+
+  const playLiveAudioChunk = (ctx: AudioContext, base64: string) => {
+    try {
+      const binaryString = atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const view = new DataView(bytes.buffer);
+      const floatData = new Float32Array(len / 2);
+      for (let i = 0; i < floatData.length; i++) {
+        floatData[i] = view.getInt16(i * 2, true) / 32768;
+      }
+      const buffer = ctx.createBuffer(1, floatData.length, 24000);
+      buffer.getChannelData(0).set(floatData);
+      
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      
+      const currentTime = ctx.currentTime;
+      if (liveNextStartTimeRef.current < currentTime) {
+        liveNextStartTimeRef.current = currentTime;
+      }
+      source.start(liveNextStartTimeRef.current);
+      liveNextStartTimeRef.current += buffer.duration;
+    } catch(e) {
+      console.error("Audio playback error:", e);
+    }
+  };
+
+  const startLiveSession = async () => {
+    if (isLiveMode) {
+      stopLiveSession();
+      return;
+    }
+    setIsLiveMode(true);
+    setLiveModeStatus("Connecting...");
+    try {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ai/live?tenantId=${currentUser?.tenantId}`);
+      wsRef.current = ws;
+
+      const inputAudioCtx = new AudioContext({ sampleRate: 16000 });
+      const outputAudioCtx = new AudioContext({ sampleRate: 24000 });
+      liveAudioCtxRef.current = inputAudioCtx;
+      liveOutputCtxRef.current = outputAudioCtx;
+      liveNextStartTimeRef.current = 0;
+
+      ws.onopen = async () => {
+        setLiveModeStatus("Connected. Say Hi!");
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          liveStreamRef.current = stream;
+          const source = inputAudioCtx.createMediaStreamSource(stream);
+          const processor = inputAudioCtx.createScriptProcessor(4096, 1, 1);
+          liveProcessorRef.current = processor;
+          source.connect(processor);
+          processor.connect(inputAudioCtx.destination);
+          
+          processor.onaudioprocess = (e) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              const base64 = pcmToBase64(e.inputBuffer.getChannelData(0));
+              ws.send(JSON.stringify({ audio: base64 }));
+            }
+          };
+        } catch(e) {
+          console.error("Mic error:", e);
+          setLiveModeStatus("Microphone access denied.");
+          setTimeout(stopLiveSession, 3000);
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.error) {
+            setLiveModeStatus("Connection Error: " + msg.error);
+            setTimeout(stopLiveSession, 3000);
+          }
+          if (msg.audio) {
+            playLiveAudioChunk(outputAudioCtx, msg.audio);
+          }
+          if (msg.interrupted) {
+            liveNextStartTimeRef.current = 0; // stop and reset playback queue logically
+          }
+        } catch(e) {}
+      };
+
+      ws.onerror = () => {
+        setLiveModeStatus("Connection lost.");
+        setTimeout(stopLiveSession, 3000);
+      };
+      ws.onclose = () => {
+        stopLiveSession();
+      };
+    } catch(err) {
+      console.error(err);
+      stopLiveSession();
+    }
+  };
 
   const refreshContext = async () => {
     try {
@@ -303,6 +455,16 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={startLiveSession}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                isLiveMode ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700/50'
+              }`}
+              title={isLiveMode ? "Stop Voice Mode" : "Start Live Voice Mode (Deep Thinking)"}
+            >
+              {isLiveMode ? <PhoneOff size={14} className="animate-pulse" /> : <Phone size={14} />}
+              {isLiveMode ? "LIVE" : "VOICE MODE"}
+            </button>
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
@@ -319,29 +481,49 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
           </div>
         </div>
       ) : (
-        onClose && (
-          <div className="px-5 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        <div className="px-5 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {onClose && (
               <button 
                 onClick={onClose}
                 className="p-1.5 rounded-full hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-all"
               >
                 <ChevronLeft size={20} />
               </button>
-              <h2 className="text-sm font-semibold text-slate-700">{agentTitle}</h2>
-            </div>
-            <button 
-              onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
-            >
-              <X size={18} />
-            </button>
+            )}
+            <h2 className="text-sm font-semibold text-slate-700">{agentTitle}</h2>
           </div>
-        )
+          <div className="flex items-center gap-2">
+            <button
+              onClick={startLiveSession}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                isLiveMode ? 'bg-red-500/10 text-red-500 border border-red-500/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+              }`}
+              title={isLiveMode ? "Stop Voice Mode" : "Start Live Voice Mode"}
+            >
+              {isLiveMode ? <PhoneOff size={14} className="animate-pulse" /> : <Phone size={14} />}
+              {isLiveMode ? "LIVE" : "VOICE MODE"}
+            </button>
+            {onClose && (
+              <button 
+                onClick={onClose}
+                className="p-1.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Main Chat Area */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
+        {isLiveMode && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-medium rounded-xl flex items-center justify-center gap-3 mb-4">
+            <RadioReceiver className="w-5 h-5 animate-pulse" />
+            {liveModeStatus || "Voice Mode Active"}
+          </motion.div>
+        )}
         {ttsError && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-center gap-2">
             <VolumeX className="w-4 h-4 shrink-0" />
