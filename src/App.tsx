@@ -2469,14 +2469,12 @@ export default function App() {
     }
 
     // Verifikasi
-    if (activeTab === "verifikasi" || activeTab === "dashboard") {
-      tIdsChunks.forEach(chunk => {
+    tIdsChunks.forEach(chunk => {
          unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk), limit(500)), 
            snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))]),
            err => handleFirestoreError(err, "list", "verifikasi_warga")
          ));
-      });
-    }
+    });
 
     // Audit Logs
     if (activeTab === "audit") {

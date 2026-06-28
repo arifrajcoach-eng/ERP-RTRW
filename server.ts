@@ -342,7 +342,24 @@ async function startServer() {
     const apps = firebaseAdmin.apps || [];
     if (!apps.length) return;
     
-    const db = getFirestore(firebaseAdmin.app(), firebaseConfig.firestoreDatabaseId);
+    const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+    let db: admin.firestore.Firestore;
+    try {
+      // Use the getFirestore function with database ID
+      db = getFirestore(firebaseAdmin.app(), dbId);
+      // Verify access with a very simple request
+      await db.collection("tenants").limit(1).get();
+    } catch (e: any) {
+      console.log(`[CRON] Access to DB ${dbId} failed (${e.message}), trying default...`);
+      try {
+        db = getFirestore(firebaseAdmin.app());
+        await db.collection("tenants").limit(1).get();
+      } catch (e2: any) {
+        console.error(`[CRON] Total DB failure:`, e2.message);
+        return;
+      }
+    }
+    
     const now = new Date();
     
     const collectionsToWipe = [
@@ -1158,26 +1175,32 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
       let tenantDataSummary = "";
       try {
         const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
-        console.log(`[LiveAPI] Connecting to Firestore database: ${dbId} for tenant: ${tenantId}`);
+        console.log(`[LiveAPI] Connecting to Firestore for tenant: ${tenantId}, intended DB: ${dbId}`);
         
-        const db = getFirestore(firebaseAdmin.app(), dbId);
+        let db: admin.firestore.Firestore;
+        try {
+          db = getFirestore(firebaseAdmin.app(), dbId);
+          // Test access
+          await db.collection("tenants").limit(1).get();
+        } catch (dbErr: any) {
+          console.warn(`[LiveAPI] Access to database ${dbId} failed (${dbErr.message}), falling back to default`);
+          db = getFirestore(firebaseAdmin.app());
+        }
         
         // Resolve tenant hierarchy (RW/RT)
         const activeTenantIds = new Set<string>();
-        if (tenantId && tenantId !== 'unknown') {
+        if (tenantId && tenantId !== 'unknown' && tenantId !== 'undefined' && tenantId !== 'null') {
           activeTenantIds.add(tenantId);
         }
         
         try {
-          // Explicit parentId link (standard)
-          const childTenantsSnap = await db.collection("tenants").where("parentId", "==", tenantId).get();
-          childTenantsSnap.forEach(doc => activeTenantIds.add(doc.id));
-          
-          // Pattern matching fallback (prefix search if supported, but here we just try to guess based on standard patterns)
-          // Note: Firestore doesn't support suffix/contains queries efficiently without full scan.
-          // We avoid full scan to prevent PERMISSION_DENIED on large collections.
-        } catch (tenantErr) {
-          console.warn("Could not fetch child tenants, proceeding with primary tenant only:", tenantErr);
+          if (activeTenantIds.size > 0) {
+            // Explicit parentId link (standard)
+            const childTenantsSnap = await db.collection("tenants").where("parentId", "==", tenantId).get();
+            childTenantsSnap.forEach(doc => activeTenantIds.add(doc.id));
+          }
+        } catch (tenantErr: any) {
+          console.warn(`[LiveAPI] Could not fetch child tenants for ${tenantId}:`, tenantErr.message);
         }
         
         const tIds = Array.from(activeTenantIds);
@@ -1325,7 +1348,7 @@ Jika ditanya mengenai status, sampaikan data real-time ini. Data ini mencakup se
       
       const ai = new GoogleGenAI({ apiKey });
       const session = await ai.live.connect({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-3.1-flash-live-preview",
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
@@ -1353,6 +1376,10 @@ GAYA KOMUNIKASI:
         },
         callbacks: {
           onmessage: (message: any) => {
+            if (message.error) {
+              console.error("[LiveAPI] Model Error:", message.error);
+              return;
+            }
             // Find audio part in any turn
             const parts = message.serverContent?.modelTurn?.parts || [];
             for (const part of parts) {

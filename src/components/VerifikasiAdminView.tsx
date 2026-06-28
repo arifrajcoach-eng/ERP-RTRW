@@ -146,16 +146,20 @@ export function VerifikasiAdminView({
     }
 
     setActionLoading(true);
+    console.log("handleApprove started for item:", item);
     try {
       const batch = writeBatch(db);
       const docId = item.id;
       if (!docId) throw new Error("ID data verifikasi tidak ditemukan.");
+      console.log("docId:", docId);
 
       const vRef = doc(db, 'verifikasi_warga', docId);
       const approveNote = catatan.trim() || 'Disetujui oleh admin';
+      console.log("vRef created, approveNote:", approveNote);
       
       // Use the tenantId from the item itself to ensure it stays in the correct RT/RW node
       const recordTenantId = item.tenantId || tenantId;
+      console.log("recordTenantId:", recordTenantId);
 
       batch.set(vRef, {
         id: docId,
@@ -165,18 +169,22 @@ export function VerifikasiAdminView({
         tenantId: recordTenantId,
         status: 'Disetujui',
         approvedAt: new Date().toISOString(),
-        approvedBy: currentUser.name || currentUser.displayName || 'Admin',
+        approvedBy: (currentUser && (currentUser.name || currentUser.displayName)) || 'Admin',
         catatan: approveNote,
         type: item.type || 'REGISTRASI_BARU'
       }, { merge: true });
+      console.log("batch.set(vRef) called");
 
       const standardDocId = `${recordTenantId}_${item.nik}`;
       const targetRef = doc(db, 'data_warga', standardDocId);
+      console.log("targetRef:", targetRef.path);
       const targetSnap = await getDoc(targetRef);
+      console.log("targetSnap exists:", targetSnap.exists());
       
       const legacyRef = doc(db, 'data_warga', item.nik);
       const legacySnap = (item.nik !== standardDocId) ? await getDoc(legacyRef) : null;
       const legacyData = legacySnap?.exists() ? legacySnap.data() : null;
+      console.log("legacySnap exists:", legacySnap?.exists());
 
       const updatedData = {
         nama: item.nama || targetSnap.data()?.nama || legacyData?.nama || "",
@@ -204,15 +212,18 @@ export function VerifikasiAdminView({
         keteranganVerifikasi: approveNote,
         updatedAt: new Date().toISOString()
       };
+      console.log("updatedData prepared");
 
       batch.set(targetRef, {
         tenantId: recordTenantId,
         status: 'Warga Tetap',
         ...updatedData
       }, { merge: true });
+      console.log("batch.set(targetRef) called");
 
       if (legacySnap?.exists() && standardDocId !== item.nik) {
         batch.delete(legacyRef);
+        console.log("batch.delete(legacyRef) called");
       }
 
       // Sync verified status to user auth document immediately
@@ -226,19 +237,22 @@ export function VerifikasiAdminView({
           linkedResidentId: standardDocId,
           updatedAt: new Date().toISOString()
         }, { merge: true });
+        console.log("batch.set(userRef) called");
       }
 
       await batch.commit();
+      console.log("batch committed");
       showNotification(`Data ${item.nama} telah disetujui.`, "success");
       setSelectedItem(null);
       setCatatan('');
     } catch (err) {
-      console.error("Approve Error:", err);
+      console.error("Approve Error Detail:", err);
       handleFirestoreError(err, 'update', 'verifikasi_warga');
-      showNotification("Gagal memproses persetujuan.", "error");
+      showNotification("Gagal memproses persetujuan: " + (err instanceof Error ? err.message : String(err)), "error");
     } finally {
       setActionLoading(false);
     }
+
   };
 
   const handleReject = async (item: any) => {
@@ -326,7 +340,7 @@ export function VerifikasiAdminView({
           batch.update(vRef, {
             status: 'Disetujui',
             approvedAt: new Date().toISOString(),
-            approvedBy: currentUser.name || currentUser.displayName || 'Admin',
+            approvedBy: (currentUser && (currentUser.name || currentUser.displayName)) || 'Admin',
             catatan: 'Disetujui secara masal'
           });
           
@@ -425,7 +439,7 @@ export function VerifikasiAdminView({
           batch.update(vRef, {
             status: 'Disetujui',
             approvedAt: new Date().toISOString(),
-            approvedBy: currentUser.name || currentUser.displayName || 'Admin',
+            approvedBy: (currentUser && (currentUser.name || currentUser.displayName)) || 'Admin',
             catatan: 'Disetujui secara masal'
           });
           

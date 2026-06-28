@@ -267,17 +267,17 @@ export function WargaProfileView({
     return {
         ...base,
         ...sub,
-        nama: sub.nama || base.nama,
-        nik: sub.nik || base.nik,
-        kk: sub.kk || base.kk,
-        hp: sub.hp || base.hp,
-        blok: sub.blok || base.blok,
-        alamat: sub.alamat || base.alamat,
-        rt: sub.rt || base.rt,
-        rw: sub.rw || base.rw,
-        kelurahan: sub.kelurahan || base.kelurahan,
-        kecamatan: sub.kecamatan || base.kecamatan,
-        kabupaten: sub.kabupaten || base.kabupaten,
+        nama: sub.nama !== undefined ? sub.nama : base.nama,
+        nik: sub.nik !== undefined ? sub.nik : base.nik,
+        kk: sub.kk !== undefined ? sub.kk : base.kk,
+        hp: sub.hp !== undefined ? sub.hp : base.hp,
+        blok: sub.blok !== undefined ? sub.blok : base.blok,
+        alamat: sub.alamat !== undefined ? sub.alamat : base.alamat,
+        rt: sub.rt !== undefined ? sub.rt : base.rt,
+        rw: sub.rw !== undefined ? sub.rw : base.rw,
+        kelurahan: sub.kelurahan !== undefined ? sub.kelurahan : base.kelurahan,
+        kecamatan: sub.kecamatan !== undefined ? sub.kecamatan : base.kecamatan,
+        kabupaten: sub.kabupaten !== undefined ? sub.kabupaten : base.kabupaten,
         kewarganegaraan: sub.kewarganegaraan || base.kewarganegaraan,
     };
   }, [activeSubmission, wargaData]);
@@ -307,40 +307,54 @@ export function WargaProfileView({
         kkUrl = await handleFileUpload(files.kk, 'verifikasi_kk');
       }
 
-      const submissionId = `VERIF-${wargaData.nik}-${Date.now()}`;
-      const payload = {
-        id: submissionId,
-        tenantId,
-        nik: formData.nik !== undefined ? formData.nik : (wargaData.nik || ""),
-        authUid: auth.currentUser?.uid || wargaData.authUid || "",
-        nama: formData.nama !== undefined ? formData.nama : (currentData.nama || ""),
-        kk: formData.kk !== undefined ? formData.kk : (currentData.kk || ""),
-        hp: formData.hp !== undefined ? formData.hp : (currentData.hp || ""),
-        blok: formData.blok !== undefined ? formData.blok : (currentData.blok || ""),
-        alamat: formData.alamat !== undefined ? formData.alamat : (currentData.alamat || ""),
-        rt: formData.rt !== undefined ? formData.rt : (currentData.rt || "01"),
-        rw: formData.rw !== undefined ? formData.rw : (currentData.rw || "26"),
-        agama: formData.agama !== undefined ? formData.agama : (currentData.agama || "Islam"),
-        jk: formData.jk !== undefined ? formData.jk : (currentData.jk || ""),
-        tempatLahir: formData.tempatLahir !== undefined ? formData.tempatLahir : (currentData.tempatLahir || ""),
-        tglLahir: formData.tglLahir !== undefined ? formData.tglLahir : (currentData.tglLahir || ""),
-        profesi: formData.profesi !== undefined ? formData.profesi : (currentData.profesi || ""),
-        pendidikanTerakhir: formData.pendidikanTerakhir !== undefined ? formData.pendidikanTerakhir : (currentData.pendidikanTerakhir || ""),
-        kawin: formData.kawin !== undefined ? formData.kawin : (currentData.kawin || ""),
-        posisi: formData.posisi !== undefined ? formData.posisi : (currentData.posisi || ""),
-        kewarganegaraan: formData.kewarganegaraan !== undefined ? formData.kewarganegaraan : (currentData.kewarganegaraan || "WNI"),
-        email: formData.email !== undefined ? formData.email : (currentData.email || ""),
-        kelurahan: formData.kelurahan !== undefined ? formData.kelurahan : (currentData.kelurahan || ""),
-        kecamatan: formData.kecamatan !== undefined ? formData.kecamatan : (currentData.kecamatan || ""),
-        kabupaten: formData.kabupaten !== undefined ? formData.kabupaten : (currentData.kabupaten || ""),
-        ktpUrl,
-        kkUrl,
-        submittedAt: new Date().toISOString(),
-        status: 'Menunggu Persetujuan'
-      };
+      const currentUserInUsers = usersData.find(u => u.uid === auth.currentUser?.uid);
+      const isAdmin = currentUserInUsers && ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT'].includes(currentUserInUsers.role?.toUpperCase());
 
-      await setDoc(doc(db, 'verifikasi_warga', submissionId), payload);
-      showNotification("Pengajuan pembaruan data berhasil dikirim. Menunggu verifikasi admin.", "success");
+      if (isAdmin) {
+        // Langsung edit data warga
+        await updateDoc(doc(db, 'data_warga', wargaData.id), {
+           ...formData,
+           ktpUrl,
+           kkUrl
+        });
+        showNotification("Data warga berhasil diperbarui oleh admin.", "success");
+      } else {
+        // Flow verifikasi seperti semula
+        const submissionId = `VERIF-${wargaData.nik}-${Date.now()}`;
+        const payload = {
+          id: submissionId,
+          tenantId,
+          nik: formData.nik !== undefined ? formData.nik : (wargaData.nik || ""),
+          authUid: auth.currentUser?.uid || wargaData.authUid || "",
+          nama: formData.nama !== undefined ? formData.nama : (currentData.nama || ""),
+          kk: formData.kk !== undefined ? formData.kk : (currentData.kk || ""),
+          hp: formData.hp !== undefined ? formData.hp : (currentData.hp || ""),
+          blok: formData.blok !== undefined ? formData.blok : (currentData.blok || ""),
+          alamat: formData.alamat !== undefined ? formData.alamat : (currentData.alamat || ""),
+          rt: formData.rt !== undefined ? formData.rt : (currentData.rt || "01"),
+          rw: formData.rw !== undefined ? formData.rw : (currentData.rw || "26"),
+          agama: formData.agama !== undefined ? formData.agama : (currentData.agama || "Islam"),
+          jk: formData.jk !== undefined ? formData.jk : (currentData.jk || ""),
+          tempatLahir: formData.tempatLahir !== undefined ? formData.tempatLahir : (currentData.tempatLahir || ""),
+          tglLahir: formData.tglLahir !== undefined ? formData.tglLahir : (currentData.tglLahir || ""),
+          profesi: formData.profesi !== undefined ? formData.profesi : (currentData.profesi || ""),
+          pendidikanTerakhir: formData.pendidikanTerakhir !== undefined ? formData.pendidikanTerakhir : (currentData.pendidikanTerakhir || ""),
+          kawin: formData.kawin !== undefined ? formData.kawin : (currentData.kawin || ""),
+          posisi: formData.posisi !== undefined ? formData.posisi : (currentData.posisi || ""),
+          kewarganegaraan: formData.kewarganegaraan !== undefined ? formData.kewarganegaraan : (currentData.kewarganegaraan || "WNI"),
+          email: formData.email !== undefined ? formData.email : (currentData.email || ""),
+          kelurahan: formData.kelurahan !== undefined ? formData.kelurahan : (currentData.kelurahan || ""),
+          kecamatan: formData.kecamatan !== undefined ? formData.kecamatan : (currentData.kecamatan || ""),
+          kabupaten: formData.kabupaten !== undefined ? formData.kabupaten : (currentData.kabupaten || ""),
+          ktpUrl,
+          kkUrl,
+          submittedAt: new Date().toISOString(),
+          status: 'Menunggu Persetujuan'
+        };
+
+        await setDoc(doc(db, 'verifikasi_warga', submissionId), payload);
+        showNotification("Pengajuan pembaruan data berhasil dikirim. Menunggu verifikasi admin.", "success");
+      }
       setFormData({});
       setIsEditing(false);
     } catch (err) {
