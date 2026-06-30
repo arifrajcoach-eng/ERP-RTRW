@@ -177,7 +177,6 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ currentUser }) => {
             address: userLocation
           })
         });
-        console.log("[PWA] Web Push broadcast initiated from SOSButton successfully!");
       } catch (errPush) {
         console.warn("[PWA] Fetching api/trigger-push-sos from SOSButton failed: ", errPush);
       }
