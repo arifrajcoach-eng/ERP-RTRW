@@ -560,7 +560,7 @@ export function WargaProfileView({
         return `rt${paddedRt}_${parentRw}`;
       };
 
-      const finalTenantId = resolveRtTenantId(tenantId || wargaData.tenantId || "rw26_berjuang", rtNorm);
+      const finalTenantId = resolveRtTenantId(tenantId || wargaData.tenantId || '', rtNorm);
 
       const payload = {
         id,
