@@ -32,7 +32,6 @@ export default function SOSOverlay({
   canResolve,
   setActiveTab,
 }: SOSOverlayProps) {
-  console.log("SOSOverlay: Rendering with emergency:", emergency);
   // Save to log when viewed (implied)
   useEffect(() => {
     if (emergency && !emergency.logged) {
