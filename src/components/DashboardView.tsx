@@ -133,7 +133,7 @@ export default function DashboardView({
     return new Date(0);
   };
 
-  const isWarga = userRole === 'WARGA';
+  const isWarga = userRole?.toUpperCase() === 'WARGA';
 
   const hasSuperAdminAccess = useMemo(() => {
     return allowedMenuItems?.some(item => item.id === 'super-admin');

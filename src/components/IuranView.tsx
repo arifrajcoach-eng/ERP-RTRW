@@ -441,7 +441,7 @@ export function IuranView({
     }
     if (!finalRt) finalRt = currentUser?.rt || "01";
 
-    let resolvedTenant = editingTrx?.tenantId || resolveRtTenantId(tenantId || currentUser?.tenantId || '', finalRt.toString());
+    let resolvedTenant = editingTrx?.tenantId || resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
     
     const currentJenis = formData.get('jenis') as string || jenisPembayaran;
 
@@ -650,7 +650,7 @@ export function IuranView({
     }
     if (!finalRt) finalRt = currentUser?.rt || "01";
 
-    let resolvedTenant = resolveRtTenantId(tenantId || currentUser?.tenantId || '', finalRt.toString());
+    let resolvedTenant = resolveRtTenantId(tenantId || currentUser?.tenantId || "rw26_berjuang", finalRt.toString());
     
     // Automatically set Penyetor name to the RT if it is Iuran Pengurus RT Ke RW
     if (pgFormState.jenis === "Iuran Pengurus RT Ke RW") {

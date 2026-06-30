@@ -31,7 +31,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { generateAIReport, textToSpeech } from "../services/aiService";
 import UpgradeModal from "./UpgradeModal";
@@ -618,13 +618,52 @@ export function AnalyticsPremiumView({
     });
   }, [complaintData, filterMode, selectedMonth, selectedYear, startMonth, endMonth]);
 
-  const generateReport = async () => {
+  const generateReport = async (force: boolean | React.MouseEvent = false) => {
+    const isForce = force === true;
     setIsGenerating(true);
     try {
       const selectedMonthLabel = MONTHS_NAMES.find(m => m.val === selectedMonth)?.label || "";
       const startMonthLabel = MONTHS_NAMES.find(m => m.val === startMonth)?.label || "";
       const endMonthLabel = MONTHS_NAMES.find(m => m.val === endMonth)?.label || "";
 
+      // Deterministic reportId based on tenant and period parameters to prevent infinite document creation
+      const reportId = filterMode === "all"
+        ? `report_${tenantId}_all_time`
+        : filterMode === "monthly"
+          ? `report_${tenantId}_${selectedYear}_${selectedMonth}`
+          : `report_${tenantId}_${selectedYear}_range_${startMonth}_to_${endMonth}`;
+
+      const cacheKey = `srw_report_cache_${tenantId}_${reportId}`;
+
+      // 1. Check Local Storage Cache first (if not force-regenerating)
+      if (!isForce) {
+        const cachedReport = localStorage.getItem(cacheKey);
+        if (cachedReport) {
+          setReport(cachedReport);
+          showNotification?.("Laporan berhasil dimuat dari cache lokal (hemat Firestore Reads & Writes)!", "success");
+          setIsGenerating(false);
+          return;
+        }
+
+        // 2. Check Firestore direct document getDoc (no real-time listener)
+        try {
+          const docSnap = await getDoc(doc(db, "monthly_reports", reportId));
+          if (docSnap.exists()) {
+            const docData = docSnap.data();
+            if (docData && docData.content) {
+              setReport(docData.content);
+              localStorage.setItem(cacheKey, docData.content);
+              showNotification?.("Laporan ditemukan di database & berhasil dimuat!", "success");
+              setIsGenerating(false);
+              return;
+            }
+          }
+        } catch (dbReadErr) {
+          console.error("Gagal membaca laporan dari Firestore:", dbReadErr);
+        }
+      }
+
+      // 3. Fallback: Call Gemini API (Generate fresh analysis)
       const dataSummary = {
         financial: filteredKas.slice(-30),
         warga: wargaData.length,
@@ -651,15 +690,10 @@ export function AnalyticsPremiumView({
 
       const aiReportText = await generateAIReport(dataSummary);
       setReport(aiReportText);
+      localStorage.setItem(cacheKey, aiReportText);
 
-      // Save to Firestore
+      // Save to Firestore (overwrites existing document with deterministic ID to minimize storage & write volume)
       try {
-        const reportId = filterMode === "all"
-          ? `report_all_time_${Date.now()}`
-          : filterMode === "monthly"
-            ? `report_${selectedYear}_${selectedMonth}`
-            : `report_${selectedYear}_range_${startMonth}_to_${endMonth}`;
-
         await setDoc(doc(db, "monthly_reports", reportId), {
           tenantId,
           month: filterMode === "all" 
@@ -672,8 +706,9 @@ export function AnalyticsPremiumView({
           createdAt: new Date().toISOString(),
           generatedBy: "AI_SYSTEM",
         });
+        showNotification?.("Analisis AI berhasil disimpan secara permanen!", "success");
       } catch (err) {
-        console.error("Failed to save report to firestore");
+        console.error("Failed to save report to firestore:", err);
       }
     } catch (e) {
       alert("Gagal membuat laporan AI");
@@ -1038,6 +1073,15 @@ export function AnalyticsPremiumView({
               shareFormat={shareFormat}
               setShareFormat={setShareFormat}
             />
+
+            <button
+              onClick={() => generateReport(true)}
+              disabled={isGenerating}
+              className="py-4 px-6 bg-indigo-800 hover:bg-indigo-750 disabled:opacity-50 text-indigo-100 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-950/25"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
+              Re-analisis (Paksa Refresh)
+            </button>
 
 
           </div>

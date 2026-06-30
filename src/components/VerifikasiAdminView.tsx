@@ -146,16 +146,20 @@ export function VerifikasiAdminView({
     }
 
     setActionLoading(true);
+    console.log("handleApprove started for item:", item);
     try {
       const batch = writeBatch(db);
       const docId = item.id;
       if (!docId) throw new Error("ID data verifikasi tidak ditemukan.");
+      console.log("docId:", docId);
 
       const vRef = doc(db, 'verifikasi_warga', docId);
       const approveNote = catatan.trim() || 'Disetujui oleh admin';
+      console.log("vRef created, approveNote:", approveNote);
       
       // Use the tenantId from the item itself to ensure it stays in the correct RT/RW node
       const recordTenantId = item.tenantId || tenantId;
+      console.log("recordTenantId:", recordTenantId);
 
       batch.set(vRef, {
         id: docId,
@@ -169,50 +173,92 @@ export function VerifikasiAdminView({
         catatan: approveNote,
         type: item.type || 'REGISTRASI_BARU'
       }, { merge: true });
+      console.log("batch.set(vRef) called");
 
       const standardDocId = `${recordTenantId}_${item.nik}`;
       const targetRef = doc(db, 'data_warga', standardDocId);
+      console.log("targetRef:", targetRef.path);
       const targetSnap = await getDoc(targetRef);
+      console.log("targetSnap exists:", targetSnap.exists());
       
       const legacyRef = doc(db, 'data_warga', item.nik);
       const legacySnap = (item.nik !== standardDocId) ? await getDoc(legacyRef) : null;
       const legacyData = legacySnap?.exists() ? legacySnap.data() : null;
+      console.log("legacySnap exists:", legacySnap?.exists());
+
+      const approvedHp = item.hp || item.telepon || targetSnap.data()?.hp || targetSnap.data()?.telepon || legacyData?.hp || legacyData?.telepon || "";
+      const approvedProfesi = item.profesi || item.pekerjaan || targetSnap.data()?.profesi || targetSnap.data()?.pekerjaan || legacyData?.profesi || legacyData?.pekerjaan || "";
+      const approvedPendidikan = item.pendidikanTerakhir || item.pendidikan || targetSnap.data()?.pendidikanTerakhir || targetSnap.data()?.pendidikan || legacyData?.pendidikanTerakhir || legacyData?.pendidikan || "";
+      const approvedKawin = item.kawin || item.statusKawin || targetSnap.data()?.kawin || targetSnap.data()?.statusKawin || legacyData?.kawin || legacyData?.statusKawin || "";
+      const approvedJk = item.jk || item.jenisKelamin || targetSnap.data()?.jk || targetSnap.data()?.jenisKelamin || legacyData?.jk || legacyData?.jenisKelamin || "";
+      const approvedPosisi = item.posisi || item.posisiKeluarga || targetSnap.data()?.posisi || targetSnap.data()?.posisiKeluarga || legacyData?.posisi || legacyData?.posisiKeluarga || "";
+      const approvedAlamat = item.alamat || item.blok || targetSnap.data()?.alamat || targetSnap.data()?.blok || legacyData?.alamat || legacyData?.blok || "";
+      const approvedKabupaten = item.kabupaten || item.kota || targetSnap.data()?.kabupaten || targetSnap.data()?.kota || legacyData?.kabupaten || legacyData?.kota || "";
+      const approvedFoto = item.ktpUrl || item.fotoKTP || item.foto || targetSnap.data()?.foto || targetSnap.data()?.ktpUrl || targetSnap.data()?.fotoKTP || legacyData?.foto || legacyData?.ktpUrl || legacyData?.fotoKTP || "";
+      const approvedFotoKK = item.fotoKK || item.kkUrl || targetSnap.data()?.fotoKK || targetSnap.data()?.kkUrl || legacyData?.fotoKK || legacyData?.kkUrl || "";
 
       const updatedData = {
         nama: item.nama || targetSnap.data()?.nama || legacyData?.nama || "",
         email: item.email || targetSnap.data()?.email || legacyData?.email || "",
         kk: item.kk || targetSnap.data()?.kk || legacyData?.kk || "",
-        blok: item.alamat || item.blok || targetSnap.data()?.blok || legacyData?.blok || "",
-        hp: item.hp || targetSnap.data()?.hp || legacyData?.hp || "",
-        profesi: item.profesi || item.pekerjaan || targetSnap.data()?.profesi || legacyData?.profesi || "",
-        pendidikanTerakhir: item.pendidikanTerakhir || item.pendidikan || targetSnap.data()?.pendidikanTerakhir || legacyData?.pendidikanTerakhir || "",
-        kawin: item.kawin || item.statusKawin || targetSnap.data()?.kawin || legacyData?.kawin || "",
-        foto: item.ktpUrl || targetSnap.data()?.foto || legacyData?.foto || "",
-        ktpUrl: item.ktpUrl || targetSnap.data()?.ktpUrl || legacyData?.ktpUrl || "",
+        
+        blok: approvedAlamat,
+        alamat: approvedAlamat,
+        
+        hp: approvedHp,
+        telepon: approvedHp,
+        
+        profesi: approvedProfesi,
+        pekerjaan: approvedProfesi,
+        
+        pendidikanTerakhir: approvedPendidikan,
+        pendidikan: approvedPendidikan,
+        
+        kawin: approvedKawin,
+        statusKawin: approvedKawin,
+        
+        jk: approvedJk,
+        jenisKelamin: approvedJk,
+        
+        posisi: approvedPosisi,
+        posisiKeluarga: approvedPosisi,
+        
+        foto: approvedFoto,
+        fotoKTP: approvedFoto,
+        ktpUrl: approvedFoto,
+        
+        fotoKK: approvedFotoKK,
+        kkUrl: approvedFotoKK,
+        
         rt: item.rt || targetSnap.data()?.rt || legacyData?.rt || "01",
         rw: item.rw || targetSnap.data()?.rw || legacyData?.rw || "26",
         tempatLahir: item.tempatLahir || targetSnap.data()?.tempatLahir || legacyData?.tempatLahir || "",
         tglLahir: item.tglLahir || targetSnap.data()?.tglLahir || legacyData?.tglLahir || "",
-        jk: item.jk || item.jenisKelamin || targetSnap.data()?.jk || legacyData?.jk || "",
         agama: item.agama || targetSnap.data()?.agama || legacyData?.agama || "Islam",
-        posisi: item.posisi || item.posisiKeluarga || targetSnap.data()?.posisi || legacyData?.posisi || "",
         kewarganegaraan: item.kewarganegaraan || targetSnap.data()?.kewarganegaraan || legacyData?.kewarganegaraan || "WNI",
         kelurahan: item.kelurahan || targetSnap.data()?.kelurahan || legacyData?.kelurahan || "",
         kecamatan: item.kecamatan || targetSnap.data()?.kecamatan || legacyData?.kecamatan || "",
-        kabupaten: item.kabupaten || item.kota || targetSnap.data()?.kabupaten || targetSnap.data()?.kota || legacyData?.kabupaten || legacyData?.kota || "",
+        
+        kabupaten: approvedKabupaten,
+        kota: approvedKabupaten,
+        kota_kab: approvedKabupaten,
+        
         terverifikasi: true,
         keteranganVerifikasi: approveNote,
         updatedAt: new Date().toISOString()
       };
+      console.log("updatedData prepared");
 
       batch.set(targetRef, {
         tenantId: recordTenantId,
         status: 'Warga Tetap',
         ...updatedData
       }, { merge: true });
+      console.log("batch.set(targetRef) called");
 
       if (legacySnap?.exists() && standardDocId !== item.nik) {
         batch.delete(legacyRef);
+        console.log("batch.delete(legacyRef) called");
       }
 
       // Sync verified status to user auth document immediately
@@ -226,9 +272,11 @@ export function VerifikasiAdminView({
           linkedResidentId: standardDocId,
           updatedAt: new Date().toISOString()
         }, { merge: true });
+        console.log("batch.set(userRef) called");
       }
 
       await batch.commit();
+      console.log("batch committed");
       showNotification(`Data ${item.nama} telah disetujui.`, "success");
       setSelectedItem(null);
       setCatatan('');
@@ -952,7 +1000,7 @@ export function VerifikasiAdminView({
                         <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.kawin || '-'}</p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">Posisi Keluarga</label>
+                        <label className="text-[10px] text-slate-400 uppercase mb-1 block font-bold">HUBUNGAN DALAM KELUARGA</label>
                         <p className="text-slate-800 border-b border-slate-100 pb-1 font-bold">{selectedItem.posisi || '-'}</p>
                       </div>
                     </div>

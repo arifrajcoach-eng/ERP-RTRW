@@ -188,7 +188,7 @@ export default function MadingDigitalView({
   };
 
   const tId = currentTenant?.id || '';
-  const isPengurus = userRole !== 'WARGA';
+  const isPengurus = userRole?.toUpperCase() !== 'WARGA';
 
   // Default fallback values for slots 1 - 5 to ensure a always-beautiful initial UI
   const getFallbackItem = (slot: number, yr?: number, mo?: number): MadingItem => {

@@ -383,7 +383,7 @@ export default function App() {
   // Synchronous security repair for the main platform owner
   useEffect(() => {
     const emailLow = currentUser?.email?.toLowerCase() || auth.currentUser?.email?.toLowerCase();
-    const isOwnerEmail = emailLow === "arifrajcoach@gmail.com" || emailLow === "arifrajmci@gmail.com";
+    const isOwnerEmail = emailLow === "arifrajcoach@gmail.com";
     
     if (isOwnerEmail) {
       const isIncorrect =
@@ -407,6 +407,25 @@ export default function App() {
             tenantId: "MASTER",
           };
         });
+      }
+    } else if (emailLow === "arifrajmci@gmail.com") {
+      // Force Warga for arifrajmci
+      if (currentUser?.role === "SUPER_ADMIN" || currentUser?.isSuperAdmin) {
+        console.log("Forcing Warga role for", emailLow);
+        setCurrentUser((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            role: "Warga",
+            isSuperAdmin: false
+          };
+        });
+        if (currentUser?.uid) {
+          updateDoc(doc(db, "users", currentUser.uid), {
+            role: "Warga",
+            isSuperAdmin: false
+          }).catch(console.error);
+        }
       }
     }
   }, [currentUser, isAuthInitializing]);
@@ -630,11 +649,25 @@ export default function App() {
           }
 
           if (userDoc && userDoc.exists()) {
-            let userData = userDoc.data() as any;
-            const userEmailLow = user.email?.toLowerCase();
-            const isMasterEmail = userEmailLow === "arifrajcoach@gmail.com" || userEmailLow === "arifrajmci@gmail.com";
-            const isTrihUser = userEmailLow?.includes("trihprw26") || userEmailLow?.includes("handoko");
+            let userData = { ...userDoc.data() } as any;
             let needsUpdate = false;
+
+            // Self-healing / Auto-repair for multi-tenant array values
+            if (Array.isArray(userData.role)) {
+              const hasSekertaris = userData.role.some((r: any) => String(r).toLowerCase().includes("sek"));
+              userData.role = hasSekertaris ? "sekertaris" : (userData.role[0] || "warga");
+              needsUpdate = true;
+              console.log("App Auto-Repair: Converted role array to string:", userData.role);
+            }
+            if (Array.isArray(userData.tenantId)) {
+              userData.tenantId = userData.tenantId[0] || "rt01_rw26_berjuang";
+              needsUpdate = true;
+              console.log("App Auto-Repair: Converted tenantId array to string:", userData.tenantId);
+            }
+
+            const userEmailLow = user.email?.toLowerCase();
+            const isMasterEmail = userEmailLow === "arifrajcoach@gmail.com";
+            const isTrihUser = userEmailLow?.includes("trihprw26") || userEmailLow?.includes("handoko");
             const allowedStatuses = ["STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE", "AKTIF"];
             const userStatus = (userData.status || "TRIAL").toUpperCase();
             
@@ -664,7 +697,7 @@ export default function App() {
                     const qw = query(wargaRef, where("email", "==", user.email));
                     const snap = await getDocs(qw);
                     if (!snap.empty) {
-                       const verified = snap.docs.find(d => d.data().terverifikasi === true);
+                       const verified = snap.docs.find(d => d.data().terverifikasi === true || d.data().terverifikasi === 'true' || d.data().terverifikasi === 'TRUE');
                        if (verified) {
                           userData.tenantId = verified.data().tenantId;
                           userData.nik = verified.data().nik || userData.nik;
@@ -749,7 +782,7 @@ export default function App() {
                   const wargaSnapshot = await getDocs(qWarga);
                   if (!wargaSnapshot.empty) {
                     const matchedWarga = wargaSnapshot.docs[0].data();
-                    if (matchedWarga.terverifikasi === true) {
+                    if (matchedWarga.terverifikasi === true || matchedWarga.terverifikasi === 'true' || matchedWarga.terverifikasi === 'TRUE') {
                       preRegUserData = matchedWarga;
                     }
                   }
@@ -763,7 +796,7 @@ export default function App() {
             }
 
             if (preRegUserData) {
-              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com" || user.email?.toLowerCase() === "arifrajmci@gmail.com";
+              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
               const newUser = { ...preRegUserData, id_user: user.uid, uid: user.uid };
               if (isMasterEmail) {
                 newUser.isSuperAdmin = true;
@@ -775,7 +808,7 @@ export default function App() {
               if (docToDeleteRef) await deleteDoc(docToDeleteRef);
               setCurrentUser({ uid: user.uid, ...newUser } as any);
             } else {
-              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com" || user.email?.toLowerCase() === "arifrajmci@gmail.com";
+              const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
               const isTrihUser = user.email?.toLowerCase().includes("trihprw26") || user.email?.toLowerCase().includes("handoko");
               if (isMasterEmail || isTrihUser) {
                 const newUser = {
@@ -783,7 +816,7 @@ export default function App() {
                   name: isMasterEmail ? "Admin Master" : "Admin RW Berjuang",
                   role: isMasterEmail ? "SUPER_ADMIN" : "RW",
                   email: user.email,
-                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || ''),
+                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"),
                   isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
@@ -1709,7 +1742,7 @@ export default function App() {
       rt: linkedWarga?.rt || wargaAuth?.rt || currentUser?.rt || (activeTenantId?.toLowerCase()?.includes('rt') ? activeTenantId.toLowerCase().split('_')[0].replace('rt', '') : ""),
       rw: linkedWarga?.rw || wargaAuth?.rw || currentUser?.rw || (activeTenantId?.toLowerCase()?.includes('rw') ? activeTenantId.toLowerCase().split('_')[1].replace('rw', '') : ""),
       tenantId: linkedWarga?.tenantId || wargaAuth?.tenantId || currentUser?.tenantId || activeTenantId || "",
-      terverifikasi: linkedWarga?.terverifikasi === true || wargaAuth?.terverifikasi === true || currentUser?.status === "Disetujui" || false
+      terverifikasi: (linkedWarga?.terverifikasi === true || linkedWarga?.terverifikasi === 'true' || linkedWarga?.terverifikasi === 'TRUE') || (wargaAuth?.terverifikasi === true || wargaAuth?.terverifikasi === 'true' || wargaAuth?.terverifikasi === 'TRUE') || currentUser?.status === "Disetujui" || false
     };
   }, [linkedWarga, wargaAuth, currentUser]);
 
@@ -2252,7 +2285,7 @@ export default function App() {
         unsubs.push(onSnapshot(query(collection(db, "data_warga"), ...constraints), (snap) => {
           setWargaData(prev => {
             const filtered = prev.filter(p => !chunk.includes(p.tenantId));
-            return [...filtered, ...snap.docs.map(doc => ({ docId: doc.id, ...doc.data() } as any))];
+            return [...filtered, ...snap.docs.map(doc => ({ ...doc.data(), docId: doc.id, id: doc.id } as any))];
           });
         }, (err) => handleFirestoreError(err, "list", "data_warga")));
       });
@@ -2440,28 +2473,29 @@ export default function App() {
       if (activeTenantId) {
         unsubs.push(onSnapshot(doc(db, "voting_config", activeTenantId), snap => snap.exists() && setVotingConfig(snap.data())));
       }
-      if (["ADMIN", "SUPER_ADMIN", "RT", "RW"].includes(currentUser?.role?.toUpperCase())) {
+      const voterId = wargaAuth?.nik || currentUser?.uid || currentUser?.id_user || "";
+      if (false) {
          tIdsChunks.forEach(chunk => {
             unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("tenantId", "in", chunk), limit(1000)), snap => setUserVotes(prev => [...prev.filter(p => !chunk.includes((p as any).tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
          });
       } else {
-         if (currentUser?.id) {
-           unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", currentUser?.id || wargaAuth?.nik || ""), limit(50)), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+         if (voterId) {
+           unsubs.push(onSnapshot(query(collection(db, "voting_votes"), where("voterId", "==", voterId), limit(5)), snap => setUserVotes(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
          }
       }
     }
 
     // Booking
-    if (activeTab === "booking" || activeTab === "dashboard" || activeTab === "ai-bot") {
+    if (activeTab === "dashboard" || activeTab === "ai-bot") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", chunk), limit(500)), snap => setBookingsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
+         unsubs.push(onSnapshot(query(collection(db, "bookings"), where("tenantId", "in", chunk), limit(5)), snap => setBookingsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))])));
       });
     }
 
     // Complaints
-    if (activeTab === "complaint" || activeTab === "dashboard" || activeTab === "ai-bot") {
+    if (activeTab === "dashboard" || activeTab === "ai-bot") {
       tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", chunk), limit(500)), 
+         unsubs.push(onSnapshot(query(collection(db, "complaints"), where("tenantId", "in", chunk), limit(5)), 
            snap => setComplaintsData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))]),
            err => handleFirestoreError(err, "list", "complaints")
          ));
@@ -2469,12 +2503,14 @@ export default function App() {
     }
 
     // Verifikasi
-    tIdsChunks.forEach(chunk => {
-         unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk), limit(500)), 
+    if (activeTab === "dashboard" || activeTab === "ai-bot" || activeTab === "warga") {
+      tIdsChunks.forEach(chunk => {
+         unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk), limit(5)), 
            snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))]),
            err => handleFirestoreError(err, "list", "verifikasi_warga")
          ));
-    });
+      });
+    }
 
     // Audit Logs
     if (activeTab === "audit") {
@@ -2495,7 +2531,7 @@ export default function App() {
     
     const q = query(collection(db, "tenants"), orderBy("createdAt", "desc"));
     const unsubTenants = onSnapshot(q, (snap) => {
-      setTenantsData(snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() })));
+      setTenantsData(snap.docs.map(doc => ({ ...doc.data(), id: doc.id, docId: doc.id })));
     }, (err) => {
       console.warn("Failed to subscribe to tenants:", err);
     });
@@ -3194,7 +3230,7 @@ export default function App() {
       .filter((item) => {
         const role = (currentUser?.role || (wargaAuth ? "WARGA" : "TAMU")).toUpperCase();
         const isSuperAdmin = !!currentUser?.isSuperAdmin;
-        const isVerified = linkedWarga?.terverifikasi === true;
+        const isVerified = linkedWarga?.terverifikasi === true || linkedWarga?.terverifikasi === 'true' || linkedWarga?.terverifikasi === 'TRUE';
         const planConfig = getPlanFeatures(currentTenant, parentTenant);
 
         const planLevels: Record<string, number> = {
@@ -3588,7 +3624,7 @@ export default function App() {
   if (isSelfRegistering) {
     return (
       <SelfRegistrationView
-        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || ''}
+        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"}
         onClose={() => setIsSelfRegistering(false)}
         handleFileUpload={handleFileUpload}
         showNotification={showNotification}
@@ -3730,10 +3766,11 @@ export default function App() {
         <WargaProfileView
           wargaData={mergedWargaProfile}
           verifikasiData={verifikasiWargaData}
+          setVerifikasiWargaData={setVerifikasiWargaData}
           suratData={suratData}
           setSuratData={setSuratData}
           setWargaAuth={setWargaAuth}
-          tenantId={mergedWargaProfile?.tenantId || ''}
+          tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
           isLoadingDB={isLoadingDB}
           setIsLoadingDB={setIsLoadingDB}
           handleFileUpload={handleFileUpload}
@@ -4705,14 +4742,12 @@ export default function App() {
           )}
           {activeTab === "buku-tamu" && (
             <BukuTamuView
-              tamuData={bukuTamuData}
-              setTamuData={setBukuTamuData}
               userRole={currentUser?.role || wargaAuth?.role || "Warga"}
               currentUser={currentUser || wargaAuth}
               tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
-                  : (wargaAuth?.tenantId || '')
+                  : (wargaAuth?.tenantId || "rw26_berjuang")
               }
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
@@ -4724,7 +4759,7 @@ export default function App() {
               tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
-                  : (wargaAuth?.tenantId || '')
+                  : (wargaAuth?.tenantId || "rw26_berjuang")
               } 
               pushSubscriptionStatus={pushSubscriptionStatus}
               requestPushPermission={requestPushPermission}
@@ -4743,10 +4778,11 @@ export default function App() {
               <WargaProfileView
                 wargaData={mergedWargaProfile}
                 verifikasiData={verifikasiWargaData}
+                setVerifikasiWargaData={setVerifikasiWargaData}
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile?.tenantId || ''}
+                tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4762,7 +4798,7 @@ export default function App() {
               <VerifikasiAdminView
                 verifikasiData={filteredVerifikasiWargaDataCentral}
                 wargaData={filteredWargaDataCentral}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 showNotification={showNotification}
@@ -4793,7 +4829,7 @@ export default function App() {
               userRole={currentUser?.role || wargaAuth?.role || "Warga"}
               currentUser={currentUser || wargaAuth}
               getSetting={getSetting}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -4825,7 +4861,7 @@ export default function App() {
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 wargaAuth={wargaAuth}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4860,7 +4896,7 @@ export default function App() {
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 wargaAuth={wargaAuth}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
@@ -4914,7 +4950,7 @@ export default function App() {
                 inventarisSupplier={inventarisSupplier}
                 userRole={currentUser?.role || wargaAuth?.role || "Warga"}
                 currentUser={currentUser || wargaAuth}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4928,7 +4964,7 @@ export default function App() {
               kelahiranData={kelahiranData}
               kematianData={kematianData}
               currentUser={currentUser || wargaAuth}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
@@ -4940,10 +4976,11 @@ export default function App() {
               <WargaProfileView
                 wargaData={mergedWargaProfile}
                 verifikasiData={verifikasiWargaData}
+                setVerifikasiWargaData={setVerifikasiWargaData}
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile?.tenantId || ''}
+                tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4965,7 +5002,7 @@ export default function App() {
                 currentUser={currentUser || wargaAuth}
                 getSetting={getSetting}
                 kopSettings={kopSettings}
-                tenantId={activeTenantId || ''}
+                tenantId={activeTenantId || "rw26_berjuang"}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -4981,7 +5018,6 @@ export default function App() {
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               settings={settings}
-              complaintsData={complaintsData}
               wargaData={wargaData}
               verifikasiWargaData={verifikasiWargaData}
               quotaExceeded={quotaExceeded}
@@ -4993,7 +5029,6 @@ export default function App() {
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               settings={settings}
-              bookingsData={bookingsData}
               wargaData={wargaData}
             />
           )}
@@ -5022,7 +5057,7 @@ export default function App() {
               wargaData={filteredWargaDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser || wargaAuth}
@@ -5049,7 +5084,7 @@ export default function App() {
           )}
           {activeTab === "pengaturan" && (
             <PengaturanView
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               currentTenant={currentTenant}
               wargaData={filteredWargaDataCentral}
               settings={settings}
@@ -5104,7 +5139,7 @@ export default function App() {
           {activeTab === "etoko" && (
             <ETokoView
               userRole={currentUser?.role || wargaAuth?.role || "Warga"}
-              tenantId={activeTenantId || ''}
+              tenantId={activeTenantId || "rw26_berjuang"}
               products={tokoProducts}
               orders={tokoOrders}
               reviews={tokoReviews}
@@ -6438,7 +6473,7 @@ function SelfRegistrationView({
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
 
-  const [currentTenantId, setCurrentTenantId] = useState(tenantId || '');
+  const [currentTenantId, setCurrentTenantId] = useState(tenantId || "rw26_berjuang");
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
 
@@ -7292,7 +7327,7 @@ function LoginView({
   const [kodeKeluarga, setKodeKeluarga] = useState("");
 
   const [tenantInput, setTenantInput] = useState(() => {
-    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || '';
+    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang";
   });
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
@@ -7635,7 +7670,7 @@ function LoginView({
 
         const docId = found.docId || found.id || found.nik;
         // Use cleanTenant from input as the priority, default to found.tenantId, then fallback
-        const resolvedTenantId = cleanTenant || found.tenantId || '';
+        const resolvedTenantId = cleanTenant || found.tenantId || "rw26_berjuang";
         safeLocalStorage.setItem("lastActiveTenantId", resolvedTenantId);
 
         // 1. Create/update user document FIRST for Firestore security rules support (getUserData() mapping)
@@ -7665,7 +7700,7 @@ function LoginView({
             kk: found.kk || found.kodeKeluarga || "",
             nama: found.nama,
             status:
-              found.status === "Disetujui" || found.terverifikasi
+              found.status === "Disetujui" || found.terverifikasi === true || found.terverifikasi === "true" || found.terverifikasi === "TRUE"
                 ? "Disetujui"
                 : "Menunggu Persetujuan",
             tenantId: resolvedTenantId,
@@ -7721,6 +7756,13 @@ function LoginView({
     const targetPass = (quickPass || password || "").trim();
 
     try {
+      if (
+        inputEmail.toLowerCase() === "lintar" ||
+        inputEmail.toLowerCase() === "varialintar@gmail.com"
+      ) {
+        throw new Error("LINTAR_BLOCKED");
+      }
+
       // Logic for username OR email login
       let loginEmail = inputEmail;
 
@@ -7852,7 +7894,9 @@ function LoginView({
       console.error("Login Error:", err);
       let msg = `Gagal masuk (${err.code || "ERR"}). Periksa kembali email dan password Anda.`;
 
-      if (err.message === "NIK_DETECTED") {
+      if (err.message === "LINTAR_BLOCKED") {
+        msg = "AKSES DITUTUP: Akun Pengurus Wilayah dengan username 'lintar' dilarang masuk menggunakan metode Username & Password. Silakan gunakan tombol 'Masuk dengan Google' jika diizinkan.";
+      } else if (err.message === "NIK_DETECTED") {
         msg = "PENGGUNAAN NIK TERDETEKSI: Jika Anda ingin masuk sebagai Warga menggunakan NIK, silakan pilih tab 'NIK & KK' (Verifikasi Warga) di atas.";
       } else if (err.message === "Username tidak ditemukan.") {
         msg = "Gagal masuk (ERR). Username tidak ditemukan.";
@@ -7907,8 +7951,7 @@ function LoginView({
       console.log("Auth state check (auth.currentUser):", auth.currentUser ? "SIGNED IN" : "NOT SIGNED IN");
 
       const isArif = 
-        user.email?.toLowerCase() === "arifrajcoach@gmail.com" || 
-        user.email?.toLowerCase() === "arifrajmci@gmail.com";
+        user.email?.toLowerCase() === "arifrajcoach@gmail.com";
       let tenantId = "";
       if (isArif) {
         tenantId = "MASTER";
@@ -7958,8 +8001,10 @@ function LoginView({
             const sortedDocs = [...docs].sort((a, b) => {
               const da = a.data();
               const db = b.data();
-              if (da.terverifikasi && !db.terverifikasi) return -1;
-              if (!da.terverifikasi && db.terverifikasi) return 1;
+              const isVerifiedA = da.terverifikasi === true || da.terverifikasi === 'true' || da.terverifikasi === 'TRUE';
+              const isVerifiedB = db.terverifikasi === true || db.terverifikasi === 'true' || db.terverifikasi === 'TRUE';
+              if (isVerifiedA && !isVerifiedB) return -1;
+              if (!isVerifiedA && isVerifiedB) return 1;
               const isTrialA = (da.tenantId || "").startsWith("TRIAL_");
               const isTrialB = (db.tenantId || "").startsWith("TRIAL_");
               if (!isTrialA && isTrialB) return -1;
@@ -7970,7 +8015,7 @@ function LoginView({
             const matchedWargaDoc = sortedDocs[0];
             const matchedWarga = matchedWargaDoc.data();
             
-            if (matchedWarga.terverifikasi === true) {
+            if (matchedWarga.terverifikasi === true || matchedWarga.terverifikasi === 'true' || matchedWarga.terverifikasi === 'TRUE') {
               isPreRegistered = true;
               isVerifiedResident = true;
               preRegisteredRole = "Warga";
@@ -8052,16 +8097,38 @@ function LoginView({
       }
 
       // 4. Setup User Profile
+      let finalRole = isArif
+        ? "SUPER_ADMIN"
+        : (userDoc && userDoc.exists() && userDoc.data()?.role)
+          ? userDoc.data().role
+          : isVerifiedResident 
+            ? "Warga"
+            : preRegisteredRole;
+
+      let finalTenantId = isVerifiedResident
+        ? preRegisteredTenant // Priority: If verified resident, use that tenant from data_warga
+        : isArif
+          ? (userDoc && userDoc.exists() && userDoc.data()?.tenantId ? userDoc.data().tenantId : "MASTER")
+          : (userDoc && userDoc.exists())
+            ? userDoc.data()?.tenantId || preRegisteredTenant
+            : preRegisteredTenant;
+
+      // Ensure that role and tenantId are NOT arrays (self-healing for multi-tenant data)
+      if (Array.isArray(finalRole)) {
+        const hasSekertaris = finalRole.some((r: any) => String(r).toLowerCase().includes("sek"));
+        finalRole = hasSekertaris ? "sekertaris" : (finalRole[0] || "warga");
+      }
+      if (Array.isArray(finalTenantId)) {
+        finalTenantId = finalTenantId[0] || "rt01_rw26_berjuang";
+      }
+
+      if (typeof finalRole === "string") finalRole = finalRole.trim();
+      if (typeof finalTenantId === "string") finalTenantId = finalTenantId.trim();
+
       const userData = {
         uid: user.uid,
         email: user.email,
-        role: isArif
-          ? "SUPER_ADMIN"
-          : isVerifiedResident 
-            ? "Warga"
-            : (userDoc && userDoc.exists())
-              ? userDoc.data()?.role 
-              : preRegisteredRole,
+        role: finalRole,
         isSuperAdmin: isArif,
         status: (isArif || isVerifiedResident) ? "ACTIVE" : "STARTER", 
         name: isArif
@@ -8069,13 +8136,7 @@ function LoginView({
           : (userDoc && userDoc.exists())
             ? userDoc.data()?.name || user.displayName || "User"
             : user.displayName || "User",
-        tenantId: isVerifiedResident
-          ? preRegisteredTenant // Priority: If verified resident, use that tenant from data_warga
-          : isArif
-            ? (userDoc && userDoc.exists() && userDoc.data()?.tenantId ? userDoc.data().tenantId : "MASTER")
-            : (userDoc && userDoc.exists())
-              ? userDoc.data()?.tenantId || preRegisteredTenant
-              : preRegisteredTenant,
+        tenantId: finalTenantId,
         createdAt: (userDoc && userDoc.exists())
           ? userDoc.data()?.createdAt || new Date().toISOString()
           : new Date().toISOString(),

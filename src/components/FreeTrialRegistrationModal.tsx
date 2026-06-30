@@ -244,6 +244,7 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
       if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
         console.error('Registration Error:', err);
       } else {
+        console.log('Registration cancelled/interrupted by user:', err.code);
       }
       
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
@@ -573,3 +574,4 @@ export function FreeTrialRegistrationModal({ onClose, showNotification, onSucces
     </div>
   );
 }
+

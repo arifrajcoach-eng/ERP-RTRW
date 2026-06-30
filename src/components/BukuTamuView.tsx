@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -23,13 +23,24 @@ import {
   Image,
   RefreshCw
 } from 'lucide-react';
-import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc,
+  orderBy,
+  limit,
+  startAfter,
+  setDoc
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import Webcam from 'react-webcam';
 
 interface BukuTamuViewProps {
-  tamuData: any[];
-  setTamuData: React.Dispatch<React.SetStateAction<any[]>>;
   userRole: string;
   currentUser: any;
   tenantId: string;
@@ -39,8 +50,6 @@ interface BukuTamuViewProps {
 }
 
 export function BukuTamuView({ 
-  tamuData, 
-  setTamuData, 
   userRole, 
   currentUser, 
   tenantId, 
@@ -48,6 +57,57 @@ export function BukuTamuView({
   handleFirestoreError, 
   showNotification 
 }: BukuTamuViewProps) {
+  const [tamuData, setTamuData] = useState<any[]>([]);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setIsLoadingDB(true);
+    try {
+      const q = query(
+        collection(db, 'buku_tamu'),
+        where('tenantId', '==', tenantId),
+        orderBy('tanggal', 'desc'),
+        limit(20)
+      );
+      const snapshot = await getDocs(q);
+      setTamuData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 20);
+    } catch (error) {
+      handleFirestoreError(error, 'read', 'buku_tamu');
+    } finally {
+      setIsLoadingDB(false);
+    }
+  }, [tenantId, setIsLoadingDB, handleFirestoreError]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    fetchData();
+  }, [tenantId, fetchData]);
+
+  const fetchMore = async () => {
+    if (!lastVisible || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const q = query(
+        collection(db, 'buku_tamu'),
+        where('tenantId', '==', tenantId),
+        orderBy('tanggal', 'desc'),
+        startAfter(lastVisible),
+        limit(20)
+      );
+      const snapshot = await getDocs(q);
+      setTamuData(prev => [...prev, ...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))]);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 20);
+    } catch (error) {
+      handleFirestoreError(error, 'read', 'buku_tamu');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedTamu, setSelectedTamu] = useState<any>(null);
@@ -381,6 +441,17 @@ export function BukuTamuView({
               ))}
             </tbody>
           </table>
+          {hasMore && (
+            <div className="flex justify-center mt-6 p-4">
+              <button 
+                onClick={fetchMore} 
+                disabled={isLoadingMore}
+                className="px-6 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all disabled:opacity-50"
+              >
+                {isLoadingMore ? "Memuat..." : "Tampilkan Lebih Banyak"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

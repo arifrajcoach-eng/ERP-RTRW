@@ -179,12 +179,21 @@ function WargaView(props: WargaViewProps) {
         const currentIsLocal = w.tenantId === tenantId;
         
         let replace = false;
-        if (currentIsLocal && !existingIsLocal) {
+        
+        // Priority 1: Verified status
+        if (w.terverifikasi && !existing.terverifikasi) {
           replace = true;
-        } else if (existingIsLocal === currentIsLocal) {
-          if (w.terverifikasi && !existing.terverifikasi) {
+        } else if (existing.terverifikasi && !w.terverifikasi) {
+          replace = false;
+        } else {
+          // Priority 2: Local match
+          const existingIsLocal = existing.tenantId === tenantId;
+          const currentIsLocal = w.tenantId === tenantId;
+          
+          if (currentIsLocal && !existingIsLocal) {
             replace = true;
-          } else if (w.terverifikasi === existing.terverifikasi) {
+          } else if (existingIsLocal === currentIsLocal) {
+            // Priority 3: More filled fields
             if (Object.keys(w).length > Object.keys(existing).length) {
               replace = true;
             }
@@ -202,7 +211,7 @@ function WargaView(props: WargaViewProps) {
       const normalize = (val: string) => val ? val.toString().replace(/^0+/, '') : "";
       const filterRTNormalized = filterRT === "Semua" ? "Semua" : filterRT.replace(/^0+/, '');
       const filterRWNormalized = filterRW === "Semua" ? "Semua" : filterRW.replace(/^0+/, '');
-      const matchRT = filterRT === "Semua" || normalize(w.rt || "") === filterRTNormalized;
+      const matchRT = filterRT === "Semua" || normalize(w.rt || "") === filterRTNormalized || (!!detectedRT && w.tenantId === tenantId);
       const matchRW = filterRW === "Semua" || normalize(w.rw || "") === filterRWNormalized;
       
       let matchUmur = true;
@@ -228,7 +237,7 @@ function WargaView(props: WargaViewProps) {
   const canEdit = useMemo(() => {
     if (currentUser?.isSuperAdmin) return true;
     const role = (userRole || currentUser?.role || "").toUpperCase();
-    return ["ADMIN", "RT", "RW", "SUPER_ADMIN", "BENDAHARA", "KADER"].includes(role);
+    return ["ADMIN", "RT", "RW", "SUPER_ADMIN", "BENDAHARA", "KADER", "WARGA", "USER"].includes(role);
   }, [userRole, currentUser]);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -338,6 +347,7 @@ function WargaView(props: WargaViewProps) {
             docs = docs.concat(snapshot.docs.map(d => ({id: d.id, ...(d.data() as any)})));
         }
         
+        console.log(`Analyzing ${docs.length} documents for duplicates across tenants: ${uniqueTids.join(', ')}...`);
         
         const map = new Map<string, any[]>();
         
@@ -355,10 +365,12 @@ function WargaView(props: WargaViewProps) {
             map.get(nik)!.push(doc);
         }
         
+        console.log(`Processed ${map.size} unique NIKs.`);
         
         const toDelete: any[] = [];
         for (const [nik, items] of map.entries()) {
             if (items.length > 1) {
+                console.log(`Found ${items.length} docs for NIK: '${nik}'`);
                 // Sort to keep the "best" one. 
                 // Priorities:
                 // 1. the one that matches current tenantId directly
@@ -378,6 +390,7 @@ function WargaView(props: WargaViewProps) {
             return;
         }
         
+        console.log(`Preparing to delete ${toDelete.length} documents.`);
         
         // Batch delete
         const CHUNK_SIZE = 450; 
@@ -388,6 +401,7 @@ function WargaView(props: WargaViewProps) {
                 batch.delete(doc(db, 'data_warga', d.id));
             });
             await batch.commit();
+            console.log(`Deleted chunk ${Math.floor(i / CHUNK_SIZE) + 1}`);
         }
         
         showNotification(`Berhasil menghapus ${toDelete.length} data duplikat.`, 'success');
@@ -411,11 +425,13 @@ function WargaView(props: WargaViewProps) {
     const allowPull = currentSyncMode === "two_way" || currentSyncMode === "rw_to_rt";
     const allowPush = currentSyncMode === "two_way" || currentSyncMode === "rt_to_rw";
     
+    console.log(`Starting sync for RT "${detectedRT}" to/from parent RW with mode: "${currentSyncMode}"`);
     try {
         const potentialParentIDs = [currentTenant?.parentId]
             .filter(Boolean)
             .filter(pId => isBelongsToParent(tenantId, pId)) as string[];
 
+        console.log("Querying potential parent tenants:", potentialParentIDs);
 
         let allParentDocs: any[] = [];
         if (allowPull) {
@@ -434,6 +450,7 @@ function WargaView(props: WargaViewProps) {
                             where('rt', '==', rtVal)
                         );
                         const snapshot = await getDocs(q);
+                        console.log(`Parent tenant "${pId}" (RT filter "${rtVal}") returned ${snapshot.docs.length} citizen documents.`);
                         snapshot.docs.forEach(docSnap => {
                             allParentDocs.push({ id: docSnap.id, data: docSnap.data(), parentId: pId });
                         });
@@ -444,6 +461,7 @@ function WargaView(props: WargaViewProps) {
             }
         }
 
+        console.log(`Found total ${allParentDocs.length} potential parent documents across all queried tenants.`);
         
         const cleanNumberNode = (val: any): string => {
             if (val === null || val === undefined) return "";
@@ -451,6 +469,7 @@ function WargaView(props: WargaViewProps) {
         };
         
         const targetRTCode = cleanNumberNode(detectedRT);
+        console.log(`Normalized target RT code to match is "${targetRTCode}" (from raw "${detectedRT}")`);
 
         // Filter parent documents with lenient and comprehensive matching rules
         const parentDocsToPull = allowPull ? allParentDocs.filter(item => {
@@ -475,18 +494,53 @@ function WargaView(props: WargaViewProps) {
         );
         const localSnapshot = await getDocs(localQuery);
         const localDocs = localSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as any) }));
+        console.log(`Found ${localDocs.length} local citizens in tenant "${tenantId}".`);
 
         let pullCount = 0;
         let pushCount = 0;
 
         // Perform Pull (Write from RW parent into this RT child tenant)
-        if (allowPull && parentDocsToPull.length > 0) {
-            const localNIKs = new Set(localDocs.map(d => (d.nik || '').toString().trim()).filter(Boolean));
+        if (allowPull && potentialParentIDs.length > 0) {
+            let allParentDocs: any[] = [];
+            for (const pId of potentialParentIDs) {
+                try {
+                    const q = query(
+                        collection(db, 'data_warga'),
+                        where('tenantId', '==', pId)
+                    );
+                    const snapshot = await getDocs(q);
+                    console.log(`Parent tenant "${pId}" returned ${snapshot.docs.length} citizen documents.`);
+                    snapshot.docs.forEach(docSnap => {
+                        allParentDocs.push({ id: docSnap.id, data: docSnap.data(), parentId: pId });
+                    });
+                } catch (err) {
+                    console.warn(`Query for parent tenant "${pId}" failed:`, err);
+                }
+            }
+
+            const cleanNumberNode = (val: any): string => {
+                if (val === null || val === undefined) return "";
+                return val.toString().replace(/[^0-9]/g, '').replace(/^0+/, '');
+            };
+            
+            const targetRTCode = cleanNumberNode(detectedRT);
+            console.log(`Normalized target RT code to match is "${targetRTCode}" (from raw "${detectedRT}")`);
+
+            const parentDocsToPull = allParentDocs.filter(item => {
+                const docRT = item.data.rt;
+                if (!docRT) return false;
+                
+                const normalizedDocRT = cleanNumberNode(docRT);
+                
+                return normalizedDocRT === targetRTCode;
+            });
+            console.log(`Found ${parentDocsToPull.length} docs matching target RT ${targetRTCode}`);
+
             const docsToPull = parentDocsToPull.filter(item => {
                 const nik = (item.data.nik || '').toString().trim();
+                const localNIKs = new Set(localDocs.map(d => (d.nik || '').toString().trim()).filter(Boolean));
                 return !nik || !localNIKs.has(nik);
             });
-
             if (docsToPull.length > 0) {
                 const CHUNK_SIZE = 450;
                 for (let i = 0; i < docsToPull.length; i += CHUNK_SIZE) {
@@ -573,6 +627,7 @@ function WargaView(props: WargaViewProps) {
     }
 
     setIsLoadingDB(true);
+    console.log(`Starting reverse sync from RTs to RW tenant "${tenantId}"...`);
     try {
         const fallbackChildIds = [
             "rt01_rw26", "rt02_rw26", "rt03_rw26", "rt04_rw26",
@@ -622,6 +677,7 @@ function WargaView(props: WargaViewProps) {
             const mode = getChildSyncMode(childId);
             const isAllowed = mode === "two_way" || mode === "rt_to_rw";
             if (!isAllowed) {
+                console.log(`Child RT "${childId}" has syncMode "${mode}". Skipping citizen pull to RW parent.`);
             }
             return isAllowed;
         });
@@ -629,6 +685,7 @@ function WargaView(props: WargaViewProps) {
         let allRTDocs: any[] = [];
         
         for (const childId of allowedChildIDs) {
+            console.log(`Fetching citizens from RT child: "${childId}"`);
             try {
                 const q = query(
                     collection(db, 'data_warga'),
@@ -643,6 +700,7 @@ function WargaView(props: WargaViewProps) {
             }
         }
         
+        console.log(`Found total of ${allRTDocs.length} citizens in all allowed RTs.`);
         
         if (allRTDocs.length === 0) {
             showNotification("Tidak ada data warga ditemukan di tenant-tenant RT anggota.", "info");
@@ -674,6 +732,7 @@ function WargaView(props: WargaViewProps) {
             return;
         }
 
+        console.log(`Syncing ${docsToSync.length} new records from RTs to RW tenant.`);
         
         const CHUNK_SIZE = 450;
         for (let i = 0; i < docsToSync.length; i += CHUNK_SIZE) {
@@ -853,6 +912,7 @@ function WargaView(props: WargaViewProps) {
         deleteId = `${tenantId}_${wargaToDelete.nik}`;
     }
     
+    console.log("Deleting warga with ID:", deleteId);
     
     if (!deleteId) {
         showNotification("Gagal: ID tidak ditemukan.", 'error');
@@ -1676,6 +1736,8 @@ function WargaView(props: WargaViewProps) {
                           fotoKKUrl = await handleFileUpload(fileKK, `warga_docs/KK_${fd.get('nik')}`);
                         }
 
+                        const resolvedTenantId = editingWarga?.tenantId || tenantId;
+
                         const data = {
                           nik: fd.get('nik'),
                           nama: fd.get('nama'),
@@ -1683,25 +1745,37 @@ function WargaView(props: WargaViewProps) {
                           tempatLahir: fd.get('tempatLahir'),
                           tglLahir: fd.get('tglLahir'),
                           jenisKelamin: fd.get('jenisKelamin'),
+                          jk: fd.get('jenisKelamin'),
                           kewarganegaraan: fd.get('kewarganegaraan'),
                           agama: fd.get('agama'),
                           statusKawin: fd.get('statusKawin'),
+                          kawin: fd.get('statusKawin'),
                           pendidikan: fd.get('pendidikan'),
+                          pendidikanTerakhir: fd.get('pendidikan'),
                           pekerjaan: fd.get('pekerjaan'),
+                          profesi: fd.get('pekerjaan'),
                           posisiKeluarga: fd.get('posisiKeluarga'),
+                          posisi: fd.get('posisiKeluarga'),
                           alamat: fd.get('alamat'),
+                          blok: fd.get('alamat') || '',
                           rt: fd.get('rt'),
                           rw: fd.get('rw'),
                           kelurahan: fd.get('kelurahan'),
                           kecamatan: fd.get('kecamatan'),
                           kabupaten: fd.get('kabupaten'),
+                          kota: fd.get('kabupaten') || '',
+                          kota_kab: fd.get('kabupaten') || '',
                           telepon: fd.get('telepon'),
+                          hp: fd.get('telepon'),
                           email: fd.get('email'),
                           status: fd.get('status'),
                           terverifikasi: fd.get('terverifikasi') === 'on',
                           fotoKTP: fotoKTPUrl,
+                          foto: fotoKTPUrl || editingWarga?.foto || '',
+                          ktpUrl: fotoKTPUrl || editingWarga?.ktpUrl || '',
                           fotoKK: fotoKKUrl,
-                          tenantId,
+                          kkUrl: fotoKKUrl || editingWarga?.kkUrl || '',
+                          tenantId: resolvedTenantId,
                           role: 'WARGA'
                         };
                         
@@ -1711,15 +1785,15 @@ function WargaView(props: WargaViewProps) {
                         
                         // Use consistent ID logic with import process
                         const docId = nik && nik.length >= 5 
-                          ? `${tenantId}_${nik}` 
-                          : `${tenantId}_STABLE_${cleanNama}_${nik}`;
+                          ? `${resolvedTenantId}_${nik}` 
+                          : `${resolvedTenantId}_STABLE_${cleanNama}_${nik}`;
                         
                         const finalData = { ...data, docId, nik: nik || 'Belum Ada' };
                         
                         if (showEditForm && editingWarga) {
-                          const targetId = editingWarga.docId || editingWarga.id || `${tenantId}_${editingWarga.nik}`;
-                          await updateDoc(doc(db, 'data_warga', targetId), finalData);
-                          setWargaData(wargaData.map((w: any) => (w.docId || w.id || `${tenantId}_${w.nik}`) === targetId ? { ...w, ...finalData } : w));
+                          const targetId = editingWarga.docId || editingWarga.id || `${resolvedTenantId}_${editingWarga.nik}`;
+                          await setDoc(doc(db, 'data_warga', targetId), finalData, { merge: true });
+                          setWargaData(wargaData.map((w: any) => (w.docId || w.id || `${w.tenantId || tenantId}_${w.nik}`) === targetId ? { ...w, ...finalData } : w));
                           showNotification('Data warga berhasil diubah', 'success');
                           await logAuditEvent(currentUser?.uid || 'system', currentUser?.name || 'Aplikasi', 'UPDATE_WARGA', 'data_warga', `Mengubah data warga: ${finalData.nama}`, tenantId);
                         } else {
@@ -1759,7 +1833,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Telepon/WhatsApp</label>
-                            <input name="telepon" defaultValue={editingWarga?.telepon} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                            <input name="telepon" defaultValue={editingWarga?.telepon || editingWarga?.hp || ''} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tempat Lahir</label>
@@ -1771,7 +1845,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Jenis Kelamin</label>
-                            <select name="jenisKelamin" defaultValue={editingWarga?.jenisKelamin || 'Laki-laki'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                            <select name="jenisKelamin" defaultValue={editingWarga?.jenisKelamin || editingWarga?.jk || 'Laki-laki'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
                                <option value="Laki-laki">Laki-laki</option>
                                <option value="Perempuan">Perempuan</option>
                             </select>
@@ -1785,7 +1859,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left border-t border-slate-100 pt-4 md:col-span-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Alamat Lengkap KTP</label>
-                            <textarea name="alamat" defaultValue={editingWarga?.alamat} rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue"></textarea>
+                            <textarea name="alamat" defaultValue={editingWarga?.alamat || editingWarga?.blok || ''} rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue"></textarea>
                          </div>
                          <div className="grid grid-cols-2 gap-4 text-left">
                            <div className="flex flex-col">
@@ -1807,7 +1881,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kabupaten/Kota</label>
-                            <input name="kabupaten" defaultValue={editingWarga?.kabupaten} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                            <input name="kabupaten" defaultValue={editingWarga?.kabupaten || editingWarga?.kota || editingWarga?.kota_kab || ''} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          
                          <div className="flex flex-col text-left border-t border-slate-100 pt-4 md:col-span-2"></div>
@@ -1826,7 +1900,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status Kawin</label>
-                            <select name="statusKawin" defaultValue={editingWarga?.statusKawin || 'Belum Kawin'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                            <select name="statusKawin" defaultValue={editingWarga?.statusKawin || editingWarga?.kawin || 'Belum Kawin'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
                                <option value="Belum Kawin">Belum Kawin</option>
                                <option value="Kawin">Kawin</option>
                                <option value="Cerai Hidup">Cerai Hidup</option>
@@ -1835,7 +1909,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pendidikan Terakhir</label>
-                            <select name="pendidikan" defaultValue={editingWarga?.pendidikan || 'SMA'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                            <select name="pendidikan" defaultValue={editingWarga?.pendidikan || editingWarga?.pendidikanTerakhir || 'SMA'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
                                <option value="BELUM SEKOLAH">BELUM SEKOLAH</option>
                                <option value="SD">SD</option>
                                <option value="SMP">SMP</option>
@@ -1851,7 +1925,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Posisi Dalam Keluarga</label>
-                            <select name="posisiKeluarga" defaultValue={editingWarga?.posisiKeluarga || 'Anak'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
+                            <select name="posisiKeluarga" defaultValue={editingWarga?.posisiKeluarga || editingWarga?.posisi || 'Anak'} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue">
                                <option value="Kepala Keluarga">Kepala Keluarga</option>
                                <option value="Istri">Istri</option>
                                <option value="Suami">Suami</option>
@@ -1862,7 +1936,7 @@ function WargaView(props: WargaViewProps) {
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Profesi/Pekerjaan</label>
-                            <input name="pekerjaan" defaultValue={editingWarga?.pekerjaan} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
+                            <input name="pekerjaan" defaultValue={editingWarga?.pekerjaan || editingWarga?.profesi || ''} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue" />
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Email</label>
@@ -1897,12 +1971,12 @@ function WargaView(props: WargaViewProps) {
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Upload Foto KTP</label>
                             <input type="file" name="fileKTP" accept="image/*" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-blue file:text-white hover:file:bg-brand-blue/90" />
-                            {editingWarga?.fotoKTP && <p className="text-xs text-emerald-600 font-bold mt-2 truncate">File tersimpan: {editingWarga.fotoKTP.substring(0,25)}...</p>}
+                            {(editingWarga?.fotoKTP || editingWarga?.foto || editingWarga?.ktpUrl) && <p className="text-xs text-emerald-600 font-bold mt-2 truncate">File tersimpan: {(editingWarga.fotoKTP || editingWarga.foto || editingWarga.ktpUrl).substring(0,25)}...</p>}
                          </div>
                          <div className="flex flex-col text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Upload Foto KK</label>
                             <input type="file" name="fileKK" accept="image/*" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-blue file:text-white hover:file:bg-brand-blue/90" />
-                            {editingWarga?.fotoKK && <p className="text-xs text-emerald-600 font-bold mt-2 truncate">File tersimpan: {editingWarga.fotoKK.substring(0,25)}...</p>}
+                            {(editingWarga?.fotoKK || editingWarga?.kkUrl) && <p className="text-xs text-emerald-600 font-bold mt-2 truncate">File tersimpan: {(editingWarga.fotoKK || editingWarga.kkUrl).substring(0,25)}...</p>}
                          </div>
                       </div>
                    </form>

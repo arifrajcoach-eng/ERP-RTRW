@@ -1,4 +1,5 @@
 import { PLAN_FEATURES, PLAN_ALIASES } from "../constants";
+import imageCompression from 'browser-image-compression';
 
 export type AppRole = 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'OWNER' | 'RW' | 'RT' | 'WARGA' | 'USER';
 
@@ -320,7 +321,6 @@ export const generateSuratHTML = (surat: any, kop: any, settings: any, isDownloa
     </html>
   `;
 };
-
 export const toBase64 = async (url: any, isWatermark: boolean = false): Promise<string> => {
   const transparentSpacer = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
   if (!url || typeof url !== 'string' || url.trim() === '') return transparentSpacer;
@@ -338,11 +338,21 @@ export const toBase64 = async (url: any, isWatermark: boolean = false): Promise<
       const response = await fetch(targetUrl);
       if (!response.ok) throw new Error('Fetch status error');
       const blob = await response.blob();
+      
+      // Compress image
+      const file = new File([blob], "image.png", { type: blob.type });
+      const options = {
+        maxSizeMB: 0.1, // Compress to 100KB
+        maxWidthOrHeight: 800,
+        useWebWorker: true,
+      };
+      const compressedFile = await imageCompression(file, options);
+      
       base64Result = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string || transparentSpacer);
         reader.onerror = () => resolve(transparentSpacer);
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(compressedFile);
       });
     } catch (err) {
       console.warn(`Failed to convert image to base64, using fallback: ${url}`, err);

@@ -240,7 +240,7 @@ export function SuratView({
                             (currentUser?.role?.toUpperCase() === "WARGA" && currentUser?.status === "Disetujui") ||
                             isGlobalSuperAdmin;
                             
-    if (!isWargaVerified) {
+    if (!isWargaVerified && !isPengurus && surat.status !== 'Selesai') {
         showNotification('Surat tidak dapat dicetak: Identitas belum terverifikasi oleh Admin.', 'error');
         return;
     }
@@ -310,7 +310,7 @@ export function SuratView({
                             (currentUser?.role?.toUpperCase() === "WARGA" && currentUser?.status === "Disetujui") ||
                             isGlobalSuperAdmin;
                             
-    if (!isWargaVerified) {
+    if (!isWargaVerified && !isPengurus && surat.status !== 'Selesai') {
         showNotification('Surat tidak dapat diunduh: Identitas belum terverifikasi.', 'error');
         return;
     }
@@ -408,13 +408,13 @@ export function SuratView({
 
     try {
       const canvas = await html2canvas(pdfNode, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
       
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.6);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -526,6 +526,7 @@ export function SuratView({
   };
 
   const handleApproveSurat = (s: any) => {
+    console.log("[SuratView] handleApproveSurat invoked", {
       status: s?.status,
       isRTUser,
       isRWUser,
@@ -556,7 +557,7 @@ export function SuratView({
                             (warga?.statusVerification === "Verified") ||
                             (String(currentUser?.nik || '').trim() === normalizedTargetNik && (currentUser?.terverifikasi || currentUser?.status === "Disetujui"));
     
-    if (!isWargaVerified && !isGlobalSuperAdmin) {
+    if (!isWargaVerified && !isGlobalSuperAdmin && !isPengurus) {
         showNotification('Identitas pemohon (Nama, NIK, KK) belum terverifikasi oleh Admin.', 'error');
         return;
     }
@@ -614,6 +615,7 @@ export function SuratView({
     if (!approvalConfirm) return;
     const { s, action, msg, nextStatus } = approvalConfirm;
 
+    console.log("[SuratView] executeApprovalConfirm executing", {
       suratId: s?.id,
       action,
       nextStatus,
@@ -626,7 +628,8 @@ export function SuratView({
       if (action === 'approve') {
         const updateData: any = { 
           status: nextStatus, 
-          updatedAt: new Date().toISOString() 
+          updatedAt: new Date().toISOString(),
+          tenantId: s.tenantId || tenantId || ''
         };
         
         if (nextStatus === 'Selesai') {
@@ -650,10 +653,12 @@ export function SuratView({
           }
         }
 
+        console.log("[SuratView] Writing approved status update to firestore", { id: s.id, updateData });
         await updateDoc(doc(db, 'surat', s.id), updateData);
         showNotification(msg, 'success');
       } else if (action === 'reject') {
-        await updateDoc(doc(db, 'surat', s.id), { status: 'Ditolak' });
+        console.log("[SuratView] Writing rejected status update to firestore", { id: s.id });
+        await updateDoc(doc(db, 'surat', s.id), { status: 'Ditolak', tenantId: s.tenantId || tenantId || '' });
         showNotification('Surat ditolak', 'success');
       }
     } catch (err: any) {
@@ -688,7 +693,7 @@ export function SuratView({
           await deleteDoc(doc(db, 'surat', s.id));
           deletedCount++;
         } else {
-          await updateDoc(doc(db, 'surat', s.id), { status: 'Diarsipkan', archivedAt: new Date().toISOString() });
+          await updateDoc(doc(db, 'surat', s.id), { status: 'Diarsipkan', archivedAt: new Date().toISOString(), tenantId: s.tenantId || tenantId || '' });
           archivedCount++;
         }
       }
@@ -954,54 +959,61 @@ export function SuratView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredSurat.map((s, idx) => (
-                    <tr key={`surat-${s.id || idx}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                      <td className="px-6 py-4">
-                        {new Date(s.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-6 py-4 font-bold">{s.jenis || s.jenisSurat || 'Surat Pengantar'}</td>
-                      <td className="px-6 py-4">{s.pemohon || s.nama || 'Warga'}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                          s.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' :
-                          s.status === 'Ditolak' ? 'bg-rose-100 text-rose-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
-                          {s.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 flex items-center justify-center gap-2">
-                        {s.status === 'Selesai' ? (
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => downloadSuratPDF(s)} 
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-blue-500/30"
-                              title="Unduh PDF Langsung"
-                            >
-                              <FileDown className="w-4 h-4 drop-shadow-sm" />
-                              <span className="drop-shadow-sm">Download PDF</span>
-                            </button>
-                          </div>
-                        ) : isPengurus && (
-                          <>
-                            {(((s.status.includes('Persetujuan RT') || s.status === 'Menunggu Persetujuan' || s.status === 'Diajukan') && isRTUser) || 
-                               (s.status.includes('Persetujuan RW') && isRWUser)) && (
+                  {filteredSurat.map((s, idx) => {
+                    const statusUpper = (s.status || '').toUpperCase();
+                    const isWaitingRT = statusUpper.includes('RT') || statusUpper === 'MENUNGGU PERSETUJUAN' || statusUpper === 'DIAJUKAN' || statusUpper.includes('PENDING');
+                    const isWaitingRW = statusUpper.includes('RW');
+                    const canApprove = (isWaitingRT && isRTUser) || (isWaitingRW && isRWUser);
+                    const canReject = isWaitingRT || isWaitingRW || statusUpper === 'DIAJUKAN';
+
+                    return (
+                      <tr key={`surat-${s.id || idx}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4">
+                          {new Date(s.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-4 font-bold">{s.jenis || s.jenisSurat || 'Surat Pengantar'}</td>
+                        <td className="px-6 py-4">{s.pemohon || s.nama || 'Warga'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                            s.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' :
+                            s.status === 'Ditolak' ? 'bg-rose-100 text-rose-700' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            {s.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 flex items-center justify-center gap-2">
+                          {s.status === 'Selesai' ? (
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => downloadSuratPDF(s)} 
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-blue-500/30"
+                                title="Unduh PDF Langsung"
+                              >
+                                <FileDown className="w-4 h-4 drop-shadow-sm" />
+                                <span className="drop-shadow-sm">Download PDF</span>
+                              </button>
+                            </div>
+                          ) : isPengurus && (
+                            <>
+                              {canApprove && (
                                 <button onClick={() => handleApproveSurat(s)} className="p-2 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:from-emerald-500 hover:to-emerald-400 text-emerald-600 hover:text-white rounded-xl shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all active:scale-95 group"><CheckCircle2 className="w-4 h-4" /></button>
                               )}
-                            {(s.status.includes('Menunggu') || s.status === 'Diajukan') && (
-                              <button onClick={() => handleRejectSurat(s)} className="p-2 border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-rose-500/5 hover:from-rose-500 hover:to-rose-400 text-rose-600 hover:text-white rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.1)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all active:scale-95 group"><X className="w-4 h-4" /></button>
-                            )}
-                          </>
-                        )}
-                        {(!isWarga && (isPengurus || s.userId === (currentUser?.uid || currentUser?.id_user) || s.authUid === (currentUser?.uid || currentUser?.id_user))) && (
-                          <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 border border-slate-500/20 bg-gradient-to-br from-slate-500/10 to-slate-500/5 hover:from-slate-600 hover:to-slate-500 text-slate-500 hover:text-white rounded-xl shadow-[0_0_10px_rgba(100,116,139,0.1)] hover:shadow-[0_0_20px_rgba(100,116,139,0.4)] transition-all active:scale-95 group flex-shrink-0" title="Edit"><Edit className="w-4 h-4" /></button>
-                        )}
-                         {isPengurus && (
-                          <button onClick={() => setSuratToDelete(s)} className="p-2 border border-slate-500/20 bg-gradient-to-br from-slate-500/10 to-slate-500/5 hover:from-rose-600 hover:to-rose-500 text-slate-400 hover:text-white rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.0)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all active:scale-95 group flex-shrink-0" title="Hapus"><Trash2 className="w-4 h-4" /></button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                              {canReject && (
+                                <button onClick={() => handleRejectSurat(s)} className="p-2 border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-rose-500/5 hover:from-rose-500 hover:to-rose-400 text-rose-600 hover:text-white rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.1)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all active:scale-95 group"><X className="w-4 h-4" /></button>
+                              )}
+                            </>
+                          )}
+                          {(!isWarga && (isPengurus || s.userId === (currentUser?.uid || currentUser?.id_user) || s.authUid === (currentUser?.uid || currentUser?.id_user))) && (
+                            <button onClick={() => { setEditingSurat(s); setShowForm(true); }} className="p-2 border border-slate-500/20 bg-gradient-to-br from-slate-500/10 to-slate-500/5 hover:from-slate-600 hover:to-slate-500 text-slate-500 hover:text-white rounded-xl shadow-[0_0_10px_rgba(100,116,139,0.1)] hover:shadow-[0_0_20px_rgba(100,116,139,0.4)] transition-all active:scale-95 group flex-shrink-0" title="Edit"><Edit className="w-4 h-4" /></button>
+                          )}
+                           {isPengurus && (
+                            <button onClick={() => setSuratToDelete(s)} className="p-2 border border-slate-500/20 bg-gradient-to-br from-slate-500/10 to-slate-500/5 hover:from-rose-600 hover:to-rose-500 text-slate-400 hover:text-white rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.0)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all active:scale-95 group flex-shrink-0" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
 
@@ -1458,7 +1470,7 @@ export function SuratView({
                                <p className="text-sm font-bold text-slate-800">{viewingSurat.statusKawin || '-'}</p>
                             </div>
                             <div className="space-y-0.5">
-                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Posisi Keluarga</p>
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">HUBUNGAN DALAM KELUARGA</p>
                                <p className="text-sm font-bold text-slate-800">{viewingSurat.posisiKeluarga || '-'}</p>
                             </div>
                          </div>
@@ -1630,8 +1642,8 @@ export function SuratView({
                 </div>
                 
                 <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
-                   {(((viewingSurat.status === 'Menunggu Persetujuan RT' || viewingSurat.status === 'Menunggu Persetujuan' || viewingSurat.status === 'Diajukan') && isRTUser) || 
-                     (viewingSurat.status === 'Menunggu Persetujuan RW' && isRWUser)) && (
+                   {((((viewingSurat.status || '').toUpperCase().includes('RT') || (viewingSurat.status || '').toUpperCase() === 'MENUNGGU PERSETUJUAN' || (viewingSurat.status || '').toUpperCase() === 'DIAJUKAN') && isRTUser) || 
+                     ((viewingSurat.status || '').toUpperCase().includes('RW') && isRWUser)) && (
                      <>
                         <button onClick={() => { handleApproveSurat(viewingSurat); setViewingSurat(null); }} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-200">Setujui</button>
                         <button onClick={() => { handleRejectSurat(viewingSurat); setViewingSurat(null); }} className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-200">Tolak</button>

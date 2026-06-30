@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
-import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc, limit, startAfter, getDocs } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer, RefreshCw, Eye, User, ShieldCheck } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
@@ -20,13 +20,82 @@ export function ComplaintView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewingReporter, setViewingReporter] = useState<any>(null);
 
-  // Filter complaints for regular users to only show their own, unless they are pengurus
+  const [complaints, setComplaints] = useState<any[]>([]);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const role = (currentUser?.role || "").toUpperCase();
   const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS', 'OPERATOR'].some(r => role.includes(r)) || role === 'PENGURUS';
-  
-  const complaints = isAtLeastPengurus 
-    ? (complaintsData || [])
-    : (complaintsData || []).filter((c: any) => c.userId === (currentUser?.uid || currentUser?.id_user || currentUser?.nik || 'anonymous'));
+
+  const fetchComplaints = useCallback(async () => {
+    if (!currentUser?.tenantId) return;
+    try {
+      let q;
+      if (isAtLeastPengurus) {
+        q = query(
+          collection(db, 'complaints'),
+          where('tenantId', '==', currentUser.tenantId),
+          orderBy('createdAt', 'desc'),
+          limit(20)
+        );
+      } else {
+        q = query(
+          collection(db, 'complaints'),
+          where('tenantId', '==', currentUser.tenantId),
+          where('userId', '==', (currentUser?.uid || currentUser?.id_user || currentUser?.nik || 'anonymous')),
+          orderBy('createdAt', 'desc'),
+          limit(20)
+        );
+      }
+      
+      const snapshot = await getDocs(q);
+      setComplaints(snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })));
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 20);
+    } catch (e) {
+      handleFirestoreError(e, 'read', 'complaints');
+    }
+  }, [currentUser?.tenantId, currentUser?.uid, currentUser?.id_user, currentUser?.nik, isAtLeastPengurus, handleFirestoreError]);
+
+  const fetchMoreComplaints = async () => {
+    if (!lastVisible || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      let q;
+      if (isAtLeastPengurus) {
+        q = query(
+          collection(db, 'complaints'),
+          where('tenantId', '==', currentUser.tenantId),
+          orderBy('createdAt', 'desc'),
+          startAfter(lastVisible),
+          limit(20)
+        );
+      } else {
+        q = query(
+          collection(db, 'complaints'),
+          where('tenantId', '==', currentUser.tenantId),
+          where('userId', '==', (currentUser?.uid || currentUser?.id_user || currentUser?.nik || 'anonymous')),
+          orderBy('createdAt', 'desc'),
+          startAfter(lastVisible),
+          limit(20)
+        );
+      }
+      
+      const snapshot = await getDocs(q);
+      setComplaints(prev => [...prev, ...snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }))]);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 20);
+    } catch (e) {
+      handleFirestoreError(e, 'read', 'complaints');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchComplaints();
+  }, [fetchComplaints]);
 
   const handleUpdateStatus = async (complaintId: string, newStatus: string) => {
     try {
@@ -269,6 +338,8 @@ export function ComplaintView({
           )}
           
           {complaints.map((c: any, i: number) => {
+            // ... (rest of the map function)
+            // I need the map code. Let me read it first to be safe.
             const searchId = String(c.userId || "").trim();
             const reporterInfoDataWarga = wargaData 
               ? wargaData.find((w: any) => 
@@ -467,6 +538,17 @@ export function ComplaintView({
             </div>
             );
           })}
+          {hasMore && (
+            <div className="flex justify-center mt-6 p-4">
+              <button 
+                onClick={fetchMoreComplaints} 
+                disabled={isLoadingMore}
+                className="px-6 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all disabled:opacity-50"
+              >
+                {isLoadingMore ? "Memuat..." : "Tampilkan Lebih Banyak"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {/* Reporter Detail Modal */}

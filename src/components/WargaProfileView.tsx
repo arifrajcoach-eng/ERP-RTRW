@@ -72,6 +72,7 @@ interface WargaProfileViewProps {
   verifikasiData: any[];
   suratData?: any[];
   setSuratData: React.Dispatch<React.SetStateAction<any[]>>;
+  setVerifikasiWargaData: React.Dispatch<React.SetStateAction<any[]>>;
   setWargaAuth: any;
   tenantId: string;
   isLoadingDB: boolean;
@@ -92,6 +93,7 @@ export function WargaProfileView({
   verifikasiData, 
   suratData = [], 
   setSuratData, 
+  setVerifikasiWargaData,
   setWargaAuth, 
   tenantId, 
   isLoadingDB, 
@@ -117,6 +119,43 @@ export function WargaProfileView({
   const [sosHistory, setSosHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  const activeSubmission = React.useMemo(() => {
+    const matched = verifikasiData.filter(v => v.nik === wargaData.nik || (v.authUid && v.authUid === wargaData.authUid));
+    if (matched.length === 0) return null;
+    
+    // 1. Prioritize pending submission
+    const pending = matched.find(v => v.status === 'Menunggu Persetujuan');
+    if (pending) return pending;
+    
+    // 2. Sort other submissions by submittedAt descending to return the newest one
+    return [...matched].sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''))[0];
+  }, [verifikasiData, wargaData]);
+
+  const currentData = React.useMemo(() => {
+    const base = normalizeProfileData(wargaData);
+    if (!activeSubmission) return base;
+    
+    const sub = normalizeProfileData(activeSubmission);
+    
+    // Merge: Active submission has priority, but fallback to base if blank
+    return {
+        ...base,
+        ...sub,
+        nama: sub.nama !== undefined ? sub.nama : base.nama,
+        nik: sub.nik !== undefined ? sub.nik : base.nik,
+        kk: sub.kk !== undefined ? sub.kk : base.kk,
+        hp: sub.hp !== undefined ? sub.hp : base.hp,
+        blok: sub.blok !== undefined ? sub.blok : base.blok,
+        alamat: sub.alamat !== undefined ? sub.alamat : base.alamat,
+        rt: sub.rt !== undefined ? sub.rt : base.rt,
+        rw: sub.rw !== undefined ? sub.rw : base.rw,
+        kelurahan: sub.kelurahan !== undefined ? sub.kelurahan : base.kelurahan,
+        kecamatan: sub.kecamatan !== undefined ? sub.kecamatan : base.kecamatan,
+        kabupaten: sub.kabupaten !== undefined ? sub.kabupaten : base.kabupaten,
+        kewarganegaraan: sub.kewarganegaraan || base.kewarganegaraan,
+    };
+  }, [activeSubmission, wargaData]);
 
   const handleSyncSurat = async () => {
     if (isSyncing) return;
@@ -149,9 +188,9 @@ export function WargaProfileView({
     if (wargaData) {
       setProfileLat(wargaData.latitude?.toString() || "");
       setProfileLng(wargaData.longitude?.toString() || "");
-      setFormData(wargaData);
+      if (!isEditing) setFormData(currentData);
     }
-  }, [wargaData]);
+  }, [wargaData, currentData, isEditing]);
   
   useEffect(() => {
     if (activeCitizenTab === 'riwayat' && tenantId) {
@@ -244,43 +283,6 @@ export function WargaProfileView({
       setIsDeleting(false);
     }
   };
-
-  const activeSubmission = React.useMemo(() => {
-    const matched = verifikasiData.filter(v => v.nik === wargaData.nik || (v.authUid && v.authUid === wargaData.authUid));
-    if (matched.length === 0) return null;
-    
-    // 1. Prioritize pending submission
-    const pending = matched.find(v => v.status === 'Menunggu Persetujuan');
-    if (pending) return pending;
-    
-    // 2. Sort other submissions by submittedAt descending to return the newest one
-    return [...matched].sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''))[0];
-  }, [verifikasiData, wargaData]);
-
-  const currentData = React.useMemo(() => {
-    const base = normalizeProfileData(wargaData);
-    if (!activeSubmission) return base;
-    
-    const sub = normalizeProfileData(activeSubmission);
-    
-    // Merge: Active submission has priority, but fallback to base if blank
-    return {
-        ...base,
-        ...sub,
-        nama: sub.nama !== undefined ? sub.nama : base.nama,
-        nik: sub.nik !== undefined ? sub.nik : base.nik,
-        kk: sub.kk !== undefined ? sub.kk : base.kk,
-        hp: sub.hp !== undefined ? sub.hp : base.hp,
-        blok: sub.blok !== undefined ? sub.blok : base.blok,
-        alamat: sub.alamat !== undefined ? sub.alamat : base.alamat,
-        rt: sub.rt !== undefined ? sub.rt : base.rt,
-        rw: sub.rw !== undefined ? sub.rw : base.rw,
-        kelurahan: sub.kelurahan !== undefined ? sub.kelurahan : base.kelurahan,
-        kecamatan: sub.kecamatan !== undefined ? sub.kecamatan : base.kecamatan,
-        kabupaten: sub.kabupaten !== undefined ? sub.kabupaten : base.kabupaten,
-        kewarganegaraan: sub.kewarganegaraan || base.kewarganegaraan,
-    };
-  }, [activeSubmission, wargaData]);
   const familyNiks = wargaData.listWargaInKK?.map((m: any) => m.nik).filter(Boolean) || [];
   const mySurat = suratData.filter(s => s.nik === wargaData.nik || (s.nik && familyNiks.includes(s.nik)));
 
@@ -296,6 +298,7 @@ export function WargaProfileView({
   const handleUpdateMandiri = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploading(true);
+    console.log("[WargaProfileView] Submitting data:", { formData, currentData, tenantId });
     try {
       let ktpUrl = formData.ktpUrl || currentData.ktpUrl || "";
       let kkUrl = formData.kkUrl || currentData.kkUrl || "";
@@ -351,13 +354,17 @@ export function WargaProfileView({
           submittedAt: new Date().toISOString(),
           status: 'Menunggu Persetujuan'
         };
+        console.log("[WargaProfileView] Payload to be saved:", payload);
 
         await setDoc(doc(db, 'verifikasi_warga', submissionId), payload);
+        console.log("[WargaProfileView] Saved to Firestore successfully");
+        setVerifikasiWargaData(prev => [payload, ...prev]);
         showNotification("Pengajuan pembaruan data berhasil dikirim. Menunggu verifikasi admin.", "success");
       }
       setFormData({});
       setIsEditing(false);
     } catch (err) {
+      console.error("[WargaProfileView] Error updating data:", err);
       handleFirestoreError(err, 'create', 'verifikasi_warga');
       showNotification("Gagal mengirim pengajuan.", "error");
     } finally {
@@ -560,7 +567,7 @@ export function WargaProfileView({
         return `rt${paddedRt}_${parentRw}`;
       };
 
-      const finalTenantId = resolveRtTenantId(tenantId || wargaData.tenantId || '', rtNorm);
+      const finalTenantId = resolveRtTenantId(tenantId || wargaData.tenantId || "rw26_berjuang", rtNorm);
 
       const payload = {
         id,
@@ -1447,7 +1454,7 @@ export function WargaProfileView({
                              <UserPlus className="w-6 h-6" />
                           </div>
                           <div>
-                             <h2 className="text-lg sm:text-xl font-black text-slate-850 dark:text-white uppercase tracking-tight leading-none">Sinkronisasi Data Mandiri</h2>
+                             <h2 className="text-lg sm:text-xl font-black text-blue-900 dark:text-blue-200 uppercase tracking-tight leading-none">Sinkronisasi Data Mandiri</h2>
                              <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5">Lengkapi data administrasi mandiri</p>
                           </div>
                        </div>
@@ -1607,7 +1614,15 @@ export function WargaProfileView({
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Agama</label>
+                                   <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Jenis Kelamin</label>
+                                    <select value={formData.jenisKelamin || 'Laki-laki'} onChange={e => setFormData({...formData, jenisKelamin: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
+                                       <option value="Laki-laki">Laki-laki</option>
+                                       <option value="Perempuan">Perempuan</option>
+                                    </select>
+                                 </div>
+                                 <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Agama</label>
                                    <select value={formData.agama || 'Islam'} onChange={e => setFormData({...formData, agama: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
                                       <option value="Islam">Islam</option>
                                       <option value="Kristen">Kristen</option>
@@ -1618,7 +1633,7 @@ export function WargaProfileView({
                                    </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hubungan dalam Keluarga</label>
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">HUBUNGAN DALAM KELUARGA</label>
                                    <select value={formData.posisi || ''} onChange={e => setFormData({...formData, posisi: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none">
                                       <option value="Kepala Keluarga">Kepala Keluarga</option>
                                       <option value="Suami">Suami</option>
@@ -1727,6 +1742,7 @@ export function WargaProfileView({
                                 Kirim Pengajuan
                              </button>
                           </div>
+                       </div>
                        </div>
                     </form>
                 </motion.div>

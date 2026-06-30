@@ -1,21 +1,139 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
-import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { 
+  addDoc, 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  doc, 
+  updateDoc, 
+  limit, 
+  startAfter, 
+  getDocs 
+} from 'firebase/firestore';
 import { motion } from 'motion/react';
-import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer, ShieldCheck, Eye } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer, ShieldCheck, Eye, RefreshCw } from 'lucide-react';
 
-export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, bookingsData, wargaData }: any) {
+export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, wargaData }: any) {
   const [namaFasilitas, setNamaFasilitas] = useState('Aula RW');
   const [tanggal, setTanggal] = useState('');
   const [keperluan, setKeperluan] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   // Filter bookings for regular users to only show their own, unless they are pengurus
   const isAtLeastPengurus = ['ADMIN', 'SUPER_ADMIN', 'RW', 'RT', 'BENDAHARA', 'SEKRETARIS'].includes(currentUser?.role);
-  
-  const myBookings = isAtLeastPengurus 
-    ? bookingsData 
-    : bookingsData.filter((b: any) => b.userId === (currentUser.uid || currentUser.id_user));
+
+  const fetchBookings = useCallback(async () => {
+    if (!currentUser?.tenantId) return;
+    setIsLoading(true);
+    try {
+      let q;
+      if (isAtLeastPengurus) {
+        q = query(
+          collection(db, 'bookings'),
+          where('tenantId', '==', currentUser.tenantId),
+          orderBy('createdAt', 'desc'),
+          limit(20)
+        );
+      } else {
+        try {
+          q = query(
+            collection(db, 'bookings'),
+            where('tenantId', '==', currentUser.tenantId),
+            where('userId', '==', (currentUser.uid || currentUser.id_user || 'anonymous')),
+            orderBy('createdAt', 'desc'),
+            limit(20)
+          );
+        } catch (err) {
+          q = query(
+            collection(db, 'bookings'),
+            where('tenantId', '==', currentUser.tenantId),
+            where('userId', '==', (currentUser.uid || currentUser.id_user || 'anonymous'))
+          );
+        }
+      }
+
+      const snapshot = await getDocs(q);
+      let docs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      
+      if (!isAtLeastPengurus && snapshot.docs.length > 0) {
+        docs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      }
+
+      setBookings(docs);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 20);
+    } catch (e) {
+      console.error("Error fetching bookings, trying self-healing fallback: ", e);
+      try {
+        const fallbackQ = query(
+          collection(db, 'bookings'),
+          where('tenantId', '==', currentUser.tenantId)
+        );
+        const snapshot = await getDocs(fallbackQ);
+        let docs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+        if (!isAtLeastPengurus) {
+          docs = docs.filter(b => b.userId === (currentUser.uid || currentUser.id_user));
+        }
+        docs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        setBookings(docs.slice(0, 20));
+        setHasMore(docs.length > 20);
+      } catch (fallbackErr) {
+        handleFirestoreError(fallbackErr, 'read', 'bookings');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser?.tenantId, currentUser?.uid, currentUser?.id_user, isAtLeastPengurus, handleFirestoreError]);
+
+  const fetchMoreBookings = async () => {
+    if (!lastVisible || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      let q;
+      if (isAtLeastPengurus) {
+        q = query(
+          collection(db, 'bookings'),
+          where('tenantId', '==', currentUser.tenantId),
+          orderBy('createdAt', 'desc'),
+          startAfter(lastVisible),
+          limit(20)
+        );
+      } else {
+        q = query(
+          collection(db, 'bookings'),
+          where('tenantId', '==', currentUser.tenantId),
+          where('userId', '==', (currentUser.uid || currentUser.id_user || 'anonymous')),
+          orderBy('createdAt', 'desc'),
+          startAfter(lastVisible),
+          limit(20)
+        );
+      }
+      const snapshot = await getDocs(q);
+      const newDocs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      setBookings(prev => [...prev, ...newDocs]);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 20);
+    } catch (e) {
+      console.error("Error fetching more bookings: ", e);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  const myBookings = bookings;
 
   const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
     try {
@@ -26,6 +144,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
         updatedBy: currentUser.uid || currentUser.id_user
       });
       showNotification(`Booking berhasil ${newStatus === 'APPROVED' ? 'disetujui' : 'ditolak'}!`, 'success');
+      fetchBookings();
     } catch (e) {
       handleFirestoreError(e, 'update', `bookings/${bookingId}`);
     }
@@ -63,8 +182,8 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
             </div>
 
             <div class="text-center mb-8">
-              <h2 class="text-lg font-bold underline uppercase">SURAT IZIN PEMAKAIAN FASILITAS / INVENTARIS</h2>
-              <p class="text-xs font-mono mt-1">Nomor Booking: ${b.id}</p>
+               <h2 class="text-lg font-bold underline uppercase">SURAT IZIN PEMAKAIAN FASILITAS / INVENTARIS</h2>
+               <p class="text-xs font-mono mt-1">Nomor Booking: ${b.id}</p>
             </div>
 
             <p class="mb-6 leading-relaxed">
@@ -143,6 +262,7 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
       showNotification('Booking berhasil dikirim!', 'success');
       setTanggal('');
       setKeperluan('');
+      fetchBookings();
     } catch (e) {
       handleFirestoreError(e, 'create', 'bookings');
     } finally {
@@ -339,6 +459,17 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
               </motion.div>
             ))}
           </div>
+          {hasMore && (
+            <div className="flex justify-center mt-6 p-4">
+              <button 
+                onClick={fetchMoreBookings} 
+                disabled={isLoadingMore}
+                className="px-6 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all disabled:opacity-50"
+              >
+                {isLoadingMore ? "Memuat..." : "Tampilkan Lebih Banyak"}
+              </button>
+            </div>
+          )}
       </div>
     </div>
   );

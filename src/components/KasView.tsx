@@ -33,7 +33,7 @@ import {
   Clock,
   RefreshCw,
 } from "lucide-react";
-import { doc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, orderBy, limit, startAfter } from "firebase/firestore";
 import { db } from "../firebase";
 import imageCompression from 'browser-image-compression';
 import { logAuditEvent } from "../services/auditLogService";
@@ -113,6 +113,10 @@ export function KasView({
   const [pgFormState, setPgFormState] = useState<any>(null);
 
   // Synchronization & Local Storage Cache States
+  const [kasSummary, setKasSummary] = useState<any>(null);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -126,7 +130,31 @@ export function KasView({
       // If never synced, pull initial data from cloud
       fetchKasAndIuranData(false);
     }
+    fetchKasSummary();
   }, [tenantId]);
+
+  const fetchKasSummary = async () => {
+    if (!tenantId) return;
+    try {
+      const summaryDoc = await getDocs(query(collection(db, "kas_summary"), where("tenantId", "==", tenantId)));
+      if (!summaryDoc.empty) {
+        setKasSummary(summaryDoc.docs[0].data());
+      } else {
+        // Initialize if empty
+        const initialSummary = {
+          tenantId,
+          totalMasuk: 0,
+          totalKeluar: 0,
+          saldo: 0,
+          lastUpdated: new Date().toISOString()
+        };
+        await setDoc(doc(collection(db, "kas_summary"), tenantId), initialSummary);
+        setKasSummary(initialSummary);
+      }
+    } catch (e) {
+      console.error("Error fetching kas summary:", e);
+    }
+  };
 
   const fetchKasAndIuranData = async (forceRefresh = false) => {
     if (!tenantId) return;
@@ -138,11 +166,13 @@ export function KasView({
     }
 
     try {
-      // 1. Pull Kas from Cloud
-      const kq = query(collection(db, "kas"), where("tenantId", "==", tenantId));
+      // 1. Pull Kas from Cloud (Initial 20)
+      const kq = query(collection(db, "kas"), where("tenantId", "==", tenantId), orderBy("tanggal", "desc"), limit(20));
       const kasSnap = await getDocs(kq);
       const kasList = kasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setKasData(kasList);
+      setLastVisible(kasSnap.docs[kasSnap.docs.length - 1]);
+      setHasMore(kasSnap.docs.length === 20);
 
       // 2. Pull Iuran from Cloud
       const iuranQ = query(collection(db, "iuran"), where("tenantId", "==", tenantId));
@@ -168,6 +198,54 @@ export function KasView({
       setIsLoadingDB(false);
       setIsSyncing(false);
     }
+  };
+
+  const fetchMoreKas = async () => {
+    if (!tenantId || !lastVisible || isFetchingMore) return;
+    setIsFetchingMore(true);
+    try {
+      const kq = query(collection(db, "kas"), where("tenantId", "==", tenantId), orderBy("tanggal", "desc"), startAfter(lastVisible), limit(20));
+      const kasSnap = await getDocs(kq);
+      const newKasList = kasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setKasData(prev => [...prev, ...newKasList]);
+      setLastVisible(kasSnap.docs[kasSnap.docs.length - 1]);
+      setHasMore(kasSnap.docs.length === 20);
+    } catch (e) {
+      console.error("Error fetching more kas:", e);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
+
+  const updateKasSummary = async (newDebit: number, newKredit: number, oldDebit: number = 0, oldKredit: number = 0, operation: 'add' | 'update' | 'delete') => {
+    if (!tenantId) return;
+    
+    let currentSummary = kasSummary || { totalMasuk: 0, totalKeluar: 0, saldo: 0 };
+    
+    let deltaMasuk = 0;
+    let deltaKeluar = 0;
+    
+    if (operation === 'add') {
+      deltaMasuk = newDebit;
+      deltaKeluar = newKredit;
+    } else if (operation === 'update') {
+      deltaMasuk = newDebit - oldDebit;
+      deltaKeluar = newKredit - oldKredit;
+    } else if (operation === 'delete') {
+      deltaMasuk = -oldDebit;
+      deltaKeluar = -oldKredit;
+    }
+    
+    const newSummary = {
+      tenantId,
+      totalMasuk: currentSummary.totalMasuk + deltaMasuk,
+      totalKeluar: currentSummary.totalKeluar + deltaKeluar,
+      saldo: (currentSummary.totalMasuk + deltaMasuk) - (currentSummary.totalKeluar + deltaKeluar),
+      lastUpdated: new Date().toISOString()
+    };
+    
+    await setDoc(doc(collection(db, "kas_summary"), tenantId), newSummary);
+    setKasSummary(newSummary);
   };
 
   const sanitizeForFirestore = (obj: any) => {
@@ -291,6 +369,7 @@ export function KasView({
       return;
     }
 
+    console.log("File detected:", file.name, file.type, file.size);
 
     setIsScanning(true);
     showNotification("AI sedang memindai struk...", "info");
@@ -307,6 +386,7 @@ export function KasView({
       let processedFile = file;
       try {
         processedFile = await imageCompression(file, options);
+        console.log(`Struk compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(processedFile.size / 1024).toFixed(2)}KB`);
       } catch (compErr) {
         console.warn("Client-side image compression failed, falling back to original:", compErr);
       }
@@ -589,6 +669,8 @@ export function KasView({
       }
 
       await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "DELETE_KAS", "kas", `Menghapus transaksi: ${kasToDelete.keterangan}`, tenantId);
+      
+      await updateKasSummary(0, 0, kasToDelete.debit || 0, kasToDelete.kredit || 0, 'delete');
 
       setKasData((prev: any[]) => prev.filter((t) => t.id !== kasToDelete.id));
       setKasToDelete(null);
@@ -894,6 +976,7 @@ export function KasView({
 
     setIsLoadingDB(true);
     try {
+      console.log("Saving transaction to Firestore:", newTrx);
       if (isIuran) {
         const iuranPayload = sanitizeForFirestore({
           id: targetIuranId,
@@ -934,6 +1017,7 @@ export function KasView({
 
       if (editingKas) {
         await updateDoc(doc(db, "kas", editingKas.id), newTrx);
+        await updateKasSummary(newTrx.debit, newTrx.kredit, editingKas.debit || 0, editingKas.kredit || 0, 'update');
         setKasData((prev: any[]) =>
           prev.map((t) => (t.id === editingKas.id ? newTrx : t)),
         );
@@ -941,6 +1025,7 @@ export function KasView({
         await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "UPDATE_KAS", "kas", `Edit transaksi: ${keterangan}`, tenantId);
       } else {
         await setDoc(doc(db, "kas", newId), newTrx);
+        await updateKasSummary(newTrx.debit, newTrx.kredit, 0, 0, 'add');
         setKasData((prev: any[]) => {
           if (prev.some(t => t.id === newId)) {
             return prev.map(t => t.id === newId ? newTrx : t);
@@ -949,6 +1034,8 @@ export function KasView({
         });
         showNotification("Transaksi kas berhasil ditambahkan", "success");
         await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_KAS", "kas", `Tambah transaksi: ${keterangan}`, tenantId);
+        
+        await updateKasSummary(newTrx.debit, newTrx.kredit, 0, 0, 'add');
 
         // Auto create RW equivalent if "Setoran Ke RW"
         if (transaksi === "Setoran Ke RW" && trxType === "Keluar") {
@@ -1042,15 +1129,9 @@ export function KasView({
     currentPage * itemsPerPage,
   );
 
-  const totalMasuk = currentMonthTransactions.reduce(
-    (acc, t) => acc + (t.debit || 0),
-    0,
-  );
-  const totalKeluar = currentMonthTransactions.reduce(
-    (acc, t) => acc + (t.kredit || 0),
-    0,
-  );
-  const saldo = totalMasuk - totalKeluar;
+  const totalMasuk = kasSummary ? kasSummary.totalMasuk : currentMonthTransactions.reduce((acc, t) => acc + (t.debit || 0), 0);
+  const totalKeluar = kasSummary ? kasSummary.totalKeluar : currentMonthTransactions.reduce((acc, t) => acc + (t.kredit || 0), 0);
+  const saldo = kasSummary ? kasSummary.saldo : totalMasuk - totalKeluar;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -1620,6 +1701,7 @@ export function KasView({
                             let processedFile = file;
                             try {
                               processedFile = await imageCompression(file, options);
+                              console.log(`Struk compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(processedFile.size / 1024).toFixed(2)}KB`);
                             } catch (compErr) {
                               console.warn("Client-side image compression failed, falling back to original:", compErr);
                             }

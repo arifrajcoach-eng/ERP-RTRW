@@ -56,6 +56,8 @@ const GRADIENT_THEMES = [
 
 export function OrganisasiView({ currentUser, currentTenant, settings, showNotification }: OrganisasiViewProps) {
   const [members, setMembers] = useState<Member[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<Member[]>([]);
+  const [hasPendingChanges, setHasPendingChanges] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"visual" | "list">("visual");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -81,15 +83,62 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
     fetchOrganisasi();
   }, [tenantId]);
 
-  const fetchOrganisasi = async () => {
+  // Keep pendingMembers in sync with validated members if we don't have pending edits
+  useEffect(() => {
+    if (!hasPendingChanges) {
+      setPendingMembers(members);
+    }
+  }, [members, hasPendingChanges]);
+
+  const fetchOrganisasi = async (forceRefresh = false) => {
+    if (!tenantId) return;
     setLoading(true);
+
+    const cacheKey = `smartrw_org_cache_${tenantId}`;
+
+    // 1. Try Cache-First approach (reduce reads)
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { members: cachedMembers, timestamp } = JSON.parse(cached);
+          const age = Date.now() - timestamp;
+          const TTL = 10 * 60 * 1000; // 10 minutes cache TTL
+          if (age < TTL) {
+            setMembers(cachedMembers);
+            setPendingMembers(cachedMembers);
+            setHasPendingChanges(false);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Error parsing local cache, falling back to network read:", e);
+      }
+    }
+
     try {
       const docRef = doc(db, "organisasi_struktur", tenantId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists() && docSnap.data().members) {
-        setMembers(docSnap.data().members as Member[]);
+        const fetchedMembers = docSnap.data().members as Member[];
+        setMembers(fetchedMembers);
+        setPendingMembers(fetchedMembers);
+        setHasPendingChanges(false);
+
+        // Update local cache
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            members: fetchedMembers,
+            timestamp: Date.now()
+          }));
+        } catch (storageErr) {
+          console.warn("LocalStorage cache quota full:", storageErr);
+        }
       } else {
         setMembers([]);
+        setPendingMembers([]);
+        setHasPendingChanges(false);
       }
     } catch (error) {
       console.error("Error fetching organisasi data:", error);
@@ -99,25 +148,46 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
     }
   };
 
-  const saveToFirestore = async (newMembers: Member[]) => {
+  const handleCloudSave = async () => {
+    if (!isPengurus) {
+      showNotification("Hanya pengurus yang dapat menyimpan struktur organisasi.", "error");
+      return;
+    }
+    setLoading(true);
     try {
       const docRef = doc(db, "organisasi_struktur", tenantId);
       await setDoc(docRef, {
         tenantId,
-        members: newMembers,
+        members: pendingMembers,
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser?.email || "system",
       });
-      setMembers(newMembers);
-      return true;
+
+      // Update confirmed members state
+      setMembers(pendingMembers);
+      setHasPendingChanges(false);
+
+      // Save to Cache instantly
+      const cacheKey = `smartrw_org_cache_${tenantId}`;
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          members: pendingMembers,
+          timestamp: Date.now()
+        }));
+      } catch (cacheErr) {
+        console.warn("Failed saving cache to LocalStorage:", cacheErr);
+      }
+
+      showNotification("Struktur organisasi berhasil disimpan ke cloud!", "success");
     } catch (error) {
       console.error("Error saving organisasi data:", error);
       showNotification("Gagal menyimpan perubahan ke database.", "error");
-      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loadDefaultPresets = async () => {
+  const loadDefaultPresets = () => {
     if (!isPengurus) {
       showNotification("Hanya pengurus yang dapat memuat preset.", "error");
       return;
@@ -182,10 +252,9 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
       }
     ];
 
-    const success = await saveToFirestore(defaultPreset);
-    if (success) {
-      showNotification(`Preset Pengurus ${getTranslatedLabel("RT/RW", settings?.themeMode)} berhasil dimuat!`, "success");
-    }
+    setPendingMembers(defaultPreset);
+    setHasPendingChanges(true);
+    showNotification(`Preset Pengurus ${getTranslatedLabel("RT/RW", settings?.themeMode)} berhasil dimuat ke draf!`, "success");
   };
 
   const handleOpenAdd = () => {
@@ -212,7 +281,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
     setIsModalOpen(true);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPengurus) {
       showNotification("Hanya pengurus yang dapat mengubah struktur organisasi.", "error");
@@ -223,17 +292,15 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
       return;
     }
 
-    // Determine parent Id logic
     const selectedParent = formParentId === "" ? null : formParentId;
 
     if (editingId) {
-      // Avoid cycles (a member cannot report to itself)
       if (selectedParent === editingId) {
         showNotification("Anggota tidak boleh melapor kepada diri sendiri", "error");
         return;
       }
 
-      const updated = members.map(m => {
+      const updated = pendingMembers.map(m => {
         if (m.id === editingId) {
           return {
             ...m,
@@ -249,11 +316,10 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
         return m;
       });
 
-      const success = await saveToFirestore(updated);
-      if (success) {
-        showNotification("Personel berhasil diperbarui!", "success");
-        setIsModalOpen(false);
-      }
+      setPendingMembers(updated);
+      setHasPendingChanges(true);
+      setIsModalOpen(false);
+      showNotification("Personel berhasil diperbarui di draf!", "success");
     } else {
       const newMember: Member = {
         id: "m-" + Date.now().toString(),
@@ -266,28 +332,26 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
         colorTheme: formColor,
       };
 
-      const success = await saveToFirestore([...members, newMember]);
-      if (success) {
-        showNotification("Personel baru berhasil ditambahkan!", "success");
-        setIsModalOpen(false);
-      }
+      setPendingMembers([...pendingMembers, newMember]);
+      setHasPendingChanges(true);
+      setIsModalOpen(false);
+      showNotification("Personel baru ditambahkan ke draf!", "success");
     }
   };
 
-  const handleDelete = async (idOfMember: string) => {
+  const handleDelete = (idOfMember: string) => {
     if (!isPengurus) {
       showNotification("Hanya pengurus yang dapat menghapus personel.", "error");
       return;
     }
-    if (!confirm("Apakah Anda yakin ingin menghapus personel ini dari struktur organisasi?")) {
+    if (!confirm("Apakah Anda yakin ingin menghapus personel ini dari draf struktur organisasi?")) {
       return;
     }
 
-    // Find children reporting to this member and reset their parent to this member's parent
-    const memberToDelete = members.find(m => m.id === idOfMember);
+    const memberToDelete = pendingMembers.find(m => m.id === idOfMember);
     const delegatedParent = memberToDelete ? memberToDelete.parentId : null;
 
-    const updated = members
+    const updated = pendingMembers
       .filter(m => m.id !== idOfMember)
       .map(m => {
         if (m.parentId === idOfMember) {
@@ -296,14 +360,13 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
         return m;
       });
 
-    const success = await saveToFirestore(updated);
-    if (success) {
-      showNotification("Personel berhasil dihapus dari struktur.", "success");
-    }
+    setPendingMembers(updated);
+    setHasPendingChanges(true);
+    showNotification("Personel dihapus dari draf.", "success");
   };
 
-  // Hierarchy matching
-  const filteredMembers = members.filter(m => {
+  // Hierarchy matching based on pendingMembers
+  const filteredMembers = pendingMembers.filter(m => {
     const matchesSearch = 
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.role.toLowerCase().includes(searchQuery.toLowerCase());
@@ -314,23 +377,22 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
   });
 
   // Organize by hierarchy level for Visual View
-  const topLevel = members.filter(m => m.level === "TOP" || m.parentId === null);
-  const midLevel = members.filter(m => m.level === "MIDDLE" && m.parentId !== null);
-  const staffLevel = members.filter(m => m.level === "STAFF" && m.parentId !== null);
+  const topLevel = pendingMembers.filter(m => m.level === "TOP" || m.parentId === null);
+  const midLevel = pendingMembers.filter(m => m.level === "MIDDLE" && m.parentId !== null);
+  const staffLevel = pendingMembers.filter(m => m.level === "STAFF" && m.parentId !== null);
 
-  // Helper functions
   const getThemeClasses = (themeId: string) => {
     return GRADIENT_THEMES.find(t => t.id === themeId) || GRADIENT_THEMES[0];
   };
 
   const getParentName = (parentId: string | null) => {
     if (!parentId) return null;
-    const parent = members.find(m => m.id === parentId);
+    const parent = pendingMembers.find(m => m.id === parentId);
     return parent ? parent.name : null;
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/10 min-h-screen">
+    <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/10 min-h-screen relative pb-24">
       {/* Visual Ambient Panel */}
       <div className="bg-gradient-to-r from-brand-blue/10 via-indigo-500/5 to-purple-500/10 p-6 md:p-8 shrink-0">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -342,16 +404,25 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2" style={{ fontFamily: 'Outfit' }}>
                 STRUKTUR ORGANISASI
                 <span className="text-[10px] uppercase font-black tracking-widest bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full px-3 py-1 font-sans">
-                  Interactive
+                  Optimized
                 </span>
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
-                Peta jabatan kepengurusan rukun tetangga dan rukun warga dalam struktur bento moderen
+                Peta kepengurusan rukun tetangga dan rukun warga dengan optimasi penyimpanan dan performa kilat
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              id="btn-refresh-org"
+              onClick={() => fetchOrganisasi(true)}
+              className="p-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-200 outline-none hover:shadow-md hover:text-brand-blue transition-all active:scale-95 cursor-pointer"
+              title="Paksa Ambil Data Terbaru dari Cloud"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
+
             <button
               id="btn-presetal-org"
               onClick={() => {
@@ -390,7 +461,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">
         
         {/* Empty State / Initial Preset Selector */}
-        {members.length === 0 && !loading && (
+        {pendingMembers.length === 0 && !loading && (
           <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 md:p-12 text-center max-w-2xl mx-auto shadow-sm space-y-6 my-10 relative overflow-hidden">
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-amber-400 via-brand-blue to-indigo-600"></div>
             <div className="w-16 h-16 bg-brand-blue/10 rounded-2xl mx-auto flex items-center justify-center">
@@ -409,7 +480,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
                     onClick={loadDefaultPresets}
                     className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
-                    <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                    <RefreshCw className="w-4 h-4" />
                     Muat Preset Pengurus RW
                   </button>
                   <button
@@ -430,7 +501,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
         )}
 
         {/* Loading Indicator */}
-        {loading && (
+        {loading && pendingMembers.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <div className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-black">Mengambil Data Bagan...</p>
@@ -438,7 +509,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
         )}
 
         {/* Interactive Controls Panel when we have data */}
-        {members.length > 0 && !loading && (
+        {pendingMembers.length > 0 && (
           <div className="space-y-6">
             
             {/* Search and Quick Filters bar */}
@@ -463,7 +534,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
                 >
                   <option value="ALL">Semua Atasan</option>
                   <option value="TOP">Level Tertinggi (Tanpa Atasan)</option>
-                  {members.map(m => (
+                  {pendingMembers.map(m => (
                     <option key={m.id} value={m.id}>Lapor ke: {m.name}</option>
                   ))}
                 </select>
@@ -500,14 +571,14 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
                                     <div className="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
                                       <button 
                                         onClick={() => handleOpenEdit(m)}
-                                        className="p-1.5 bg-slate-50 hover:bg-amber-100 hover:text-amber-700 dark:bg-slate-900 rounded-lg text-slate-500 transition-colors"
+                                        className="p-1.5 bg-slate-50 hover:bg-amber-100 hover:text-amber-700 dark:bg-slate-900 rounded-lg text-slate-500 transition-colors cursor-pointer"
                                         title="Edit"
                                       >
                                         <Edit3 className="w-3.5 h-3.5" />
                                       </button>
                                       <button 
                                         onClick={() => handleDelete(m.id)}
-                                        className="p-1.5 bg-slate-50 hover:bg-rose-100 hover:text-rose-700 dark:bg-slate-900 rounded-lg text-slate-500 transition-colors"
+                                        className="p-1.5 bg-slate-50 hover:bg-rose-100 hover:text-rose-700 dark:bg-slate-900 rounded-lg text-slate-500 transition-colors cursor-pointer"
                                         title="Hapus"
                                       >
                                         <Trash2 className="w-3.5 h-3.5" />
@@ -584,8 +655,8 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
                               
                               {isPengurus && (
                                 <div className="flex gap-2 mt-2 justify-end">
-                                  <button onClick={() => handleOpenEdit(m)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-amber-100 hover:text-amber-700 text-xs font-bold transition-all">Edit</button>
-                                  <button onClick={() => handleDelete(m.id)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-rose-100 hover:text-rose-700 text-xs font-bold transition-all">Hapus</button>
+                                  <button onClick={() => handleOpenEdit(m)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-amber-100 hover:text-amber-700 text-xs font-bold transition-all cursor-pointer">Edit</button>
+                                  <button onClick={() => handleDelete(m.id)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-rose-100 hover:text-rose-700 text-xs font-bold transition-all cursor-pointer">Hapus</button>
                                 </div>
                               )}
                             </div>
@@ -638,8 +709,8 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
                               
                               {isPengurus && (
                                 <div className="flex gap-2 mt-2 justify-end">
-                                  <button onClick={() => handleOpenEdit(m)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-amber-100 hover:text-amber-700 rounded-lg text-xs font-bold transition-all">Edit</button>
-                                  <button onClick={() => handleDelete(m.id)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-rose-100 hover:text-rose-700 rounded-lg text-xs font-bold transition-all">Hapus</button>
+                                  <button onClick={() => handleOpenEdit(m)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-amber-100 hover:text-amber-700 rounded-lg text-xs font-bold transition-all cursor-pointer">Edit</button>
+                                  <button onClick={() => handleDelete(m.id)} className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-rose-100 hover:text-rose-700 rounded-lg text-xs font-bold transition-all cursor-pointer">Hapus</button>
                                 </div>
                               )}
                             </div>
@@ -726,10 +797,43 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
 
       </div>
 
+      {/* Floating Pending Changes Action Bar */}
+      {hasPendingChanges && isPengurus && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-lg bg-slate-900 text-white dark:bg-slate-950 rounded-2xl shadow-2xl border border-slate-800/90 p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">Draf Belum Disimpan</p>
+              <p className="text-[10px] text-slate-300 font-medium truncate">Ada perubahan bagan yang belum disimpan ke cloud.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setPendingMembers(members);
+                setHasPendingChanges(false);
+                showNotification("Semua draf perubahan telah dibatalkan.", "success");
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleCloudSave}
+              className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-[10px] font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+            >
+              Simpan ke Cloud
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* COMPREHENSIVE ADD / EDIT DIALOG (MODAL) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden border border-slate-100 dark:border-slate-750 flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden border border-slate-100 dark:border-slate-750 flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand-blue via-indigo-500 to-purple-600"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
@@ -741,7 +845,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 rounded-xl transition"
+                className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 rounded-xl transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -809,7 +913,7 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
                   className="w-full px-3 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none"
                 >
                   <option value="">-- Tanpa Atasan (Mandiri) --</option>
-                  {members
+                  {pendingMembers
                     .filter(m => m.id !== editingId) // Exclude self
                     .map(m => (
                       <option key={m.id} value={m.id}>{m.name} ({m.role})</option>
@@ -845,13 +949,13 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold active:scale-95"
+                  className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold active:scale-95 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-gradient-to-r from-brand-blue to-indigo-600 text-white rounded-xl text-xs font-black uppercase shadow-md active:scale-95 transition-all"
+                  className="px-5 py-2 bg-gradient-to-r from-brand-blue to-indigo-600 text-white rounded-xl text-xs font-black uppercase shadow-md active:scale-95 transition-all cursor-pointer"
                 >
                   {editingId ? "Simpan Perubahan" : "Tambah Personel"}
                 </button>
