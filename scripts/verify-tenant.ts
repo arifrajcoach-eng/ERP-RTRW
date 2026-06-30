@@ -85,6 +85,42 @@ checkRule(
   "Detected a generic localStorage.clear() in src/App.tsx which will wipe clean the necessary parent-child impersonation keys."
 );
 
+// 5. Detect addDoc() calls missing tenantId — prevents new components from leaking cross-tenant data
+checkRule(
+  "All addDoc() Calls Include tenantId",
+  () => {
+    const srcDir = path.join(process.cwd(), "src");
+    if (!fs.existsSync(srcDir)) return true;
+
+    let violation = false;
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) { walk(full); continue; }
+        if (!/\.tsx?$/.test(entry.name)) continue;
+
+        const lines = fs.readFileSync(full, "utf-8").split("\n");
+        lines.forEach((line, i) => {
+          if (/addDoc\(/.test(line) && !line.trim().startsWith("//")) {
+            const block = lines.slice(i, i + 15).join("\n");
+            // Skip: tenant creation itself, or tenantId arrives via spread
+            if (/collection\(db,\s*['"`]tenants['"`]\)/.test(block)) return;
+            if (/\.\.\.data/.test(block)) return;
+            if (!/tenantId/.test(block)) {
+              const rel = path.relative(process.cwd(), full);
+              console.error(`  ${RED}✘ ${rel}:${i + 1} — addDoc() tanpa tenantId${RESET}`);
+              violation = true;
+            }
+          }
+        });
+      }
+    };
+    walk(srcDir);
+    return !violation;
+  },
+  "Setiap addDoc() wajib menyertakan tenantId dalam payload untuk mencegah cross-tenant data leakage."
+);
+
 console.log("\n=============================================");
 if (hasErrors) {
   console.error(`${RED}STATUS: FAILED. Integrity checks failed.${RESET}`);
