@@ -783,7 +783,7 @@ export default function App() {
                   name: isMasterEmail ? "Admin Master" : "Admin RW Berjuang",
                   role: isMasterEmail ? "SUPER_ADMIN" : "RW",
                   email: user.email,
-                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"),
+                  tenantId: isMasterEmail ? "MASTER" : (safeLocalStorage.getItem("lastActiveTenantId") || ''),
                   isSuperAdmin: isMasterEmail,
                   rt: "01",
                   status: "AKTIF",
@@ -3588,7 +3588,7 @@ export default function App() {
   if (isSelfRegistering) {
     return (
       <SelfRegistrationView
-        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang"}
+        tenantId={currentUser?.tenantId || safeLocalStorage.getItem("lastActiveTenantId") || ''}
         onClose={() => setIsSelfRegistering(false)}
         handleFileUpload={handleFileUpload}
         showNotification={showNotification}
@@ -3733,7 +3733,7 @@ export default function App() {
           suratData={suratData}
           setSuratData={setSuratData}
           setWargaAuth={setWargaAuth}
-          tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
+          tenantId={mergedWargaProfile?.tenantId || ''}
           isLoadingDB={isLoadingDB}
           setIsLoadingDB={setIsLoadingDB}
           handleFileUpload={handleFileUpload}
@@ -4712,7 +4712,7 @@ export default function App() {
               tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
-                  : (wargaAuth?.tenantId || "rw26_berjuang")
+                  : (wargaAuth?.tenantId || '')
               }
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
@@ -4724,7 +4724,7 @@ export default function App() {
               tenantId={
                 (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
                   ? currentUser?.tenantId
-                  : (wargaAuth?.tenantId || "rw26_berjuang")
+                  : (wargaAuth?.tenantId || '')
               } 
               pushSubscriptionStatus={pushSubscriptionStatus}
               requestPushPermission={requestPushPermission}
@@ -4746,7 +4746,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
+                tenantId={mergedWargaProfile?.tenantId || ''}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4762,7 +4762,7 @@ export default function App() {
               <VerifikasiAdminView
                 verifikasiData={filteredVerifikasiWargaDataCentral}
                 wargaData={filteredWargaDataCentral}
-                tenantId={activeTenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || ''}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 showNotification={showNotification}
@@ -4793,7 +4793,7 @@ export default function App() {
               userRole={currentUser?.role || wargaAuth?.role || "Warga"}
               currentUser={currentUser || wargaAuth}
               getSetting={getSetting}
-              tenantId={activeTenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || ''}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               handleFileUpload={handleFileUpload}
@@ -4825,7 +4825,7 @@ export default function App() {
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 wargaAuth={wargaAuth}
-                tenantId={activeTenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || ''}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4860,7 +4860,7 @@ export default function App() {
                 wargaData={filteredWargaDataCentral}
                 currentUser={currentUser}
                 wargaAuth={wargaAuth}
-                tenantId={activeTenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || ''}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
@@ -4914,7 +4914,7 @@ export default function App() {
                 inventarisSupplier={inventarisSupplier}
                 userRole={currentUser?.role || wargaAuth?.role || "Warga"}
                 currentUser={currentUser || wargaAuth}
-                tenantId={activeTenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || ''}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
@@ -4928,7 +4928,7 @@ export default function App() {
               kelahiranData={kelahiranData}
               kematianData={kematianData}
               currentUser={currentUser || wargaAuth}
-              tenantId={activeTenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || ''}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
@@ -4943,7 +4943,7 @@ export default function App() {
                 suratData={suratData}
                 setSuratData={setSuratData}
                 setWargaAuth={handleLogout}
-                tenantId={mergedWargaProfile?.tenantId || "rw26_berjuang"}
+                tenantId={mergedWargaProfile?.tenantId || ''}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFileUpload={handleFileUpload}
@@ -4965,7 +4965,7 @@ export default function App() {
                 currentUser={currentUser || wargaAuth}
                 getSetting={getSetting}
                 kopSettings={kopSettings}
-                tenantId={activeTenantId || "rw26_berjuang"}
+                tenantId={activeTenantId || ''}
                 isLoadingDB={isLoadingDB}
                 setIsLoadingDB={setIsLoadingDB}
                 handleFirestoreError={handleFirestoreError}
@@ -5022,7 +5022,7 @@ export default function App() {
               wargaData={filteredWargaDataCentral}
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
-              tenantId={activeTenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || ''}
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser || wargaAuth}
@@ -5049,7 +5049,7 @@ export default function App() {
           )}
           {activeTab === "pengaturan" && (
             <PengaturanView
-              tenantId={activeTenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || ''}
               currentTenant={currentTenant}
               wargaData={filteredWargaDataCentral}
               settings={settings}
@@ -5104,7 +5104,7 @@ export default function App() {
           {activeTab === "etoko" && (
             <ETokoView
               userRole={currentUser?.role || wargaAuth?.role || "Warga"}
-              tenantId={activeTenantId || "rw26_berjuang"}
+              tenantId={activeTenantId || ''}
               products={tokoProducts}
               orders={tokoOrders}
               reviews={tokoReviews}
@@ -6438,7 +6438,7 @@ function SelfRegistrationView({
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
 
-  const [currentTenantId, setCurrentTenantId] = useState(tenantId || "rw26_berjuang");
+  const [currentTenantId, setCurrentTenantId] = useState(tenantId || '');
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
 
@@ -7292,7 +7292,7 @@ function LoginView({
   const [kodeKeluarga, setKodeKeluarga] = useState("");
 
   const [tenantInput, setTenantInput] = useState(() => {
-    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || "rw26_berjuang";
+    return tenantId || safeLocalStorage.getItem("lastActiveTenantId") || '';
   });
   const [tenantNameForDisplay, setTenantNameForDisplay] = useState("");
   const [tenantExists, setTenantExists] = useState(true);
@@ -7635,7 +7635,7 @@ function LoginView({
 
         const docId = found.docId || found.id || found.nik;
         // Use cleanTenant from input as the priority, default to found.tenantId, then fallback
-        const resolvedTenantId = cleanTenant || found.tenantId || "rw26_berjuang";
+        const resolvedTenantId = cleanTenant || found.tenantId || '';
         safeLocalStorage.setItem("lastActiveTenantId", resolvedTenantId);
 
         // 1. Create/update user document FIRST for Firestore security rules support (getUserData() mapping)
