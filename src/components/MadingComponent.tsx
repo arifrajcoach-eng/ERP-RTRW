@@ -4,6 +4,7 @@ import {
   collection, 
   addDoc, 
   query, 
+  where,
   orderBy, 
   limit, 
   onSnapshot, 
@@ -19,7 +20,7 @@ interface MadingItem {
   createdAt: any;
 }
 
-export const MadingComponent: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
+export const MadingComponent: React.FC<{ isAdmin: boolean; tenantId: string }> = ({ isAdmin, tenantId }) => {
   const [madingItems, setMadingItems] = useState<MadingItem[]>([]);
   const [title, setTitle] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -27,8 +28,10 @@ export const MadingComponent: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => 
 
   // Display Mading (Cache-First via Firestore local cache)
   useEffect(() => {
+    if (!tenantId) return;
     const q = query(
       collection(db, 'mading'),
+      where('tenantId', '==', tenantId),
       orderBy('createdAt', 'desc'),
       limit(5)
     );
@@ -39,14 +42,20 @@ export const MadingComponent: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => 
         ...doc.data()
       })) as MadingItem[];
       setMadingItems(items);
+    }, (error) => {
+      console.error('[MadingComponent] Gagal memuat data:', error.message);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [tenantId]);
 
   // Upload Mading
   const handleUpload = async () => {
     if (!imageFile || !title) return;
+    if (!tenantId) {
+      console.error('[MadingComponent] DITOLAK: tenantId tidak ditemukan.');
+      return;
+    }
     setUploading(true);
 
     try {
@@ -66,6 +75,7 @@ export const MadingComponent: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => 
 
       // 3. Save to Firestore
       await addDoc(collection(db, 'mading'), {
+        tenantId,
         title,
         imageUrl,
         createdAt: serverTimestamp()
