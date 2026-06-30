@@ -82,10 +82,15 @@ export function BukuTamuView({
     }
   }, [tenantId, setIsLoadingDB, handleFirestoreError]);
 
+  const fetchDataRef = useRef(fetchData);
+  useEffect(() => {
+    fetchDataRef.current = fetchData;
+  }, [fetchData]);
+
   useEffect(() => {
     if (!tenantId) return;
-    fetchData();
-  }, [tenantId, fetchData]);
+    fetchDataRef.current();
+  }, [tenantId]);
 
   const fetchMore = async () => {
     if (!lastVisible || isLoadingMore) return;

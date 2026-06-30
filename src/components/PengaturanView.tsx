@@ -15,6 +15,9 @@ import { motion } from "motion/react";
 import {
   doc,
   setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
   writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -111,6 +114,175 @@ export default function PengaturanView({
   const [namaEpemilu, setNamaEpemilu] = useState(currentTenant?.nama_epemilu || "e-Pemilu");
   const [namaKesehatan, setNamaKesehatan] = useState(currentTenant?.nama_kesehatan || "Kesehatan");
   const [tagline, setTagline] = useState(settings?.tagline || "");
+
+  // Firestore Manual Editor State
+  const [settingsTab, setSettingsTab] = useState<"umum" | "firestore">("umum");
+  const [editorSubTab, setEditorSubTab] = useState<"iuran" | "kas" | "custom">("iuran");
+  const [executingWrite, setExecutingWrite] = useState(false);
+  const [editorLog, setEditorLog] = useState<string[]>([]);
+  
+  // 1. Iuran Manual State
+  const [iuranForm, setIuranForm] = useState({
+    id: `IUR-${Date.now()}`,
+    tenantId: tenantId || "rt03_rw26_berjuang",
+    rt: "03",
+    nik: "",
+    namaPenyetor: "",
+    jenis: "Iuran Kebersihan",
+    nominal: 50000,
+    tanggal: new Date().toISOString().split('T')[0],
+    status: "Lunas",
+    buktiUrl: "",
+    keterangan: "Pembayaran iuran mandiri",
+    verifiedBy: currentUser?.nama || currentUser?.name || "Admin/Pengurus",
+    verifiedAt: new Date().toISOString()
+  });
+
+  // 2. Kas Manual State
+  const [kasForm, setKasForm] = useState({
+    id: `TRX-${Date.now()}`,
+    tenantId: tenantId || "rt03_rw26_berjuang",
+    rt: "03",
+    tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+    tipe: "Masuk",
+    transaksi: "Iuran Warga",
+    nama: "Warga",
+    keterangan: "Penerimaan iuran warga",
+    debit: 50000,
+    kredit: 0,
+    strukUrl: "",
+    iuranId: ""
+  });
+
+  // 3. Custom Write State
+  const [customCollection, setCustomCollection] = useState("iuran");
+  const [customDocId, setCustomDocId] = useState("");
+  const [customOp, setCustomOp] = useState<"set" | "update" | "delete">("set");
+  const [customJson, setCustomJson] = useState(`{\n  "tenantId": "${tenantId || "rt03_rw26_berjuang"}",\n  "status": "Lunas"\n}`);
+
+  const addEditorLog = (msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    setEditorLog(prev => [`[${time}] ${msg}`, ...prev]);
+  };
+
+  const handleManualIuranWrite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setExecutingWrite(true);
+    addEditorLog(`Memulai penulisan dokumen iuran dengan ID: ${iuranForm.id}`);
+    try {
+      const payload = {
+        ...iuranForm,
+        nominal: Number(iuranForm.nominal),
+        tanggal: new Date(iuranForm.tanggal).toISOString(),
+        verifiedAt: new Date().toISOString()
+      };
+      
+      await setDoc(doc(db, "iuran", iuranForm.id), payload);
+      addEditorLog(`✅ BERHASIL: Dokumen iuran berhasil ditulis ke Firestore.`);
+      showNotification("Data Iuran berhasil ditulis ke Firestore", "success");
+      
+      // Auto generate kas if marked Lunas
+      if (payload.status === "Lunas") {
+        addEditorLog(`Menulis transaksi kas otomatis untuk iuran...`);
+        const autoKasId = `TRX-${Date.now()}`;
+        const dateparsed = new Date(payload.tanggal);
+        const tanggalFormat = dateparsed.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        
+        const autoKasPayload = {
+          id: autoKasId,
+          tenantId: payload.tenantId,
+          rt: payload.rt,
+          tanggal: tanggalFormat,
+          tipe: "Masuk",
+          transaksi: payload.jenis,
+          nama: payload.namaPenyetor,
+          keterangan: payload.keterangan || `Pembayaran ${payload.jenis}`,
+          debit: payload.nominal,
+          kredit: 0,
+          strukUrl: payload.buktiUrl,
+          iuranId: payload.id
+        };
+        
+        await setDoc(doc(db, "kas", autoKasId), autoKasPayload);
+        addEditorLog(`✅ BERHASIL: Transaksi kas otomatis [ID: ${autoKasId}] ditulis ke Firestore.`);
+      }
+      
+      // Generate new ID for next input
+      setIuranForm(prev => ({ ...prev, id: `IUR-${Date.now()}` }));
+    } catch (err: any) {
+      console.error(err);
+      addEditorLog(`❌ GAGAL: ${err.message || String(err)}`);
+      showNotification(`Gagal menulis data: ${err.message}`, "error");
+    } finally {
+      setExecutingWrite(false);
+    }
+  };
+
+  const handleManualKasWrite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setExecutingWrite(true);
+    addEditorLog(`Memulai penulisan dokumen kas dengan ID: ${kasForm.id}`);
+    try {
+      const payload = {
+        ...kasForm,
+        debit: Number(kasForm.debit),
+        kredit: Number(kasForm.kredit)
+      };
+      await setDoc(doc(db, "kas", kasForm.id), payload);
+      addEditorLog(`✅ BERHASIL: Dokumen kas berhasil ditulis ke Firestore.`);
+      showNotification("Data Kas berhasil ditulis ke Firestore", "success");
+      
+      // Generate new ID for next input
+      setKasForm(prev => ({ ...prev, id: `TRX-${Date.now()}` }));
+    } catch (err: any) {
+      console.error(err);
+      addEditorLog(`❌ GAGAL: ${err.message || String(err)}`);
+      showNotification(`Gagal menulis data: ${err.message}`, "error");
+    } finally {
+      setExecutingWrite(false);
+    }
+  };
+
+  const handleCustomWrite = async () => {
+    if (!customDocId) {
+      addEditorLog(`⚠️ ERROR: Document ID wajib diisi.`);
+      return;
+    }
+    setExecutingWrite(true);
+    addEditorLog(`Menjalankan operasi '${customOp}' pada dokumen '${customDocId}' di koleksi '${customCollection}'`);
+    try {
+      const docRef = doc(db, customCollection, customDocId);
+      
+      if (customOp === "delete") {
+        await deleteDoc(docRef);
+        addEditorLog(`✅ BERHASIL: Dokumen [${customDocId}] dihapus dari koleksi [${customCollection}].`);
+        showNotification("Dokumen berhasil dihapus", "success");
+      } else {
+        let parsedData = {};
+        try {
+          parsedData = JSON.parse(customJson);
+        } catch (jsonErr: any) {
+          throw new Error(`Format JSON tidak valid: ${jsonErr.message}`);
+        }
+        
+        if (customOp === "set") {
+          await setDoc(docRef, parsedData, { merge: true });
+          addEditorLog(`✅ BERHASIL: Dokumen [${customDocId}] di-set (merge) dengan payload JSON.`);
+          showNotification("Dokumen berhasil di-set", "success");
+        } else if (customOp === "update") {
+          await updateDoc(docRef, parsedData);
+          addEditorLog(`✅ BERHASIL: Dokumen [${customDocId}] di-update dengan payload JSON.`);
+          showNotification("Dokumen berhasil di-update", "success");
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      addEditorLog(`❌ GAGAL: ${err.message || String(err)}`);
+      showNotification(`Operasi gagal: ${err.message}`, "error");
+    } finally {
+      setExecutingWrite(false);
+    }
+  };
 
   useEffect(() => {
     setNamaRt(settings?.nama_rt || "");
@@ -1173,8 +1345,36 @@ export default function PengaturanView({
         </div>
       </div>
 
-      {/* Pengaturan Utama */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-slate-200 pb-3">
+        <button
+          onClick={() => setSettingsTab("umum")}
+          className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-2 ${
+            settingsTab === "umum"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          Pengaturan Umum
+        </button>
+        <button
+          onClick={() => setSettingsTab("firestore")}
+          className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-2 ${
+            settingsTab === "firestore"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <Database className="w-3.5 h-3.5" />
+          Firestore Manual Editor & Bypass
+        </button>
+      </div>
+
+      {settingsTab === "umum" ? (
+        <>
+          {/* Pengaturan Utama */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
         <form onSubmit={handleSaveSettings}>
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center">
@@ -1732,6 +1932,152 @@ export default function PengaturanView({
           {isGenerating ? "Memproses..." : "Generate 120 Data Dummy"}
         </button>
       </div>
+      </>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8 p-6">
+          <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Database className="w-4 h-4 text-orange-600" />
+            Firestore Manual Editor & Bypass
+          </h3>
+          <p className="text-xs text-slate-500 mb-6 max-w-2xl">
+            Alat ini digunakan untuk memaksa penulisan ke database di luar UI utama aplikasi. 
+            Berguna untuk bypass masalah UI atau sinkronisasi relasi antar-koleksi.
+          </p>
+
+          <div className="flex gap-2 border-b border-slate-100 mb-6">
+            {(["iuran", "kas", "custom"] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setEditorSubTab(t)}
+                className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all ${
+                  editorSubTab === t
+                    ? "bg-slate-800 text-white"
+                    : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                }`}
+              >
+                {t.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              {editorSubTab === "iuran" && (
+                <form onSubmit={handleManualIuranWrite} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">ID Dokumen</label>
+                      <input type="text" value={iuranForm.id} onChange={e => setIuranForm(prev => ({...prev, id: e.target.value}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Tenant ID</label>
+                      <input type="text" value={iuranForm.tenantId} onChange={e => setIuranForm(prev => ({...prev, tenantId: e.target.value}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Nama Penyetor</label>
+                      <input type="text" value={iuranForm.namaPenyetor} onChange={e => setIuranForm(prev => ({...prev, namaPenyetor: e.target.value}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Nominal</label>
+                      <input type="number" value={iuranForm.nominal} onChange={e => setIuranForm(prev => ({...prev, nominal: Number(e.target.value)}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 mb-1 block">Tanggal Pembayaran</label>
+                    <input type="date" value={iuranForm.tanggal} onChange={e => setIuranForm(prev => ({...prev, tanggal: e.target.value}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                  </div>
+
+                  <button type="submit" disabled={executingWrite} className="w-full py-2 bg-orange-600 text-white font-bold rounded hover:bg-orange-700 text-xs disabled:opacity-50">
+                    Bypass & Tulis Iuran ke Firestore
+                  </button>
+                </form>
+              )}
+
+              {editorSubTab === "kas" && (
+                <form onSubmit={handleManualKasWrite} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">ID Dokumen</label>
+                      <input type="text" value={kasForm.id} onChange={e => setKasForm(prev => ({...prev, id: e.target.value}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Tenant ID</label>
+                      <input type="text" value={kasForm.tenantId} onChange={e => setKasForm(prev => ({...prev, tenantId: e.target.value}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Keterangan</label>
+                      <input type="text" value={kasForm.keterangan} onChange={e => setKasForm(prev => ({...prev, keterangan: e.target.value}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Debit (Pemasukan)</label>
+                      <input type="number" value={kasForm.debit} onChange={e => setKasForm(prev => ({...prev, debit: Number(e.target.value)}))} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" required />
+                    </div>
+                  </div>
+
+                  <button type="submit" disabled={executingWrite} className="w-full py-2 bg-orange-600 text-white font-bold rounded hover:bg-orange-700 text-xs disabled:opacity-50">
+                    Bypass & Tulis Kas ke Firestore
+                  </button>
+                </form>
+              )}
+
+              {editorSubTab === "custom" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Nama Koleksi</label>
+                      <input type="text" value={customCollection} onChange={e => setCustomCollection(e.target.value)} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" placeholder="misal: iuran, kas, data_warga" required />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">ID Dokumen</label>
+                      <input type="text" value={customDocId} onChange={e => setCustomDocId(e.target.value)} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded" placeholder="Doc ID" required />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 mb-1 block">Operasi (set = merge/create, update = field only)</label>
+                    <select value={customOp} onChange={e => setCustomOp(e.target.value as any)} className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded">
+                      <option value="set">Set (Merge / Create)</option>
+                      <option value="update">Update (Must Exist)</option>
+                      <option value="delete">Delete (Remove Doc)</option>
+                    </select>
+                  </div>
+
+                  {customOp !== "delete" && (
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Payload JSON</label>
+                      <textarea value={customJson} onChange={e => setCustomJson(e.target.value)} className="w-full text-[10px] p-3 font-mono bg-slate-900 text-green-400 border border-slate-800 rounded h-40" placeholder="{...}"></textarea>
+                    </div>
+                  )}
+
+                  <button onClick={handleCustomWrite} disabled={executingWrite} className="w-full py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 text-xs disabled:opacity-50">
+                    EKSEKUSI OPERASI CUSTOM
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Logs Window */}
+            <div className="bg-slate-900 rounded-lg p-4 border border-slate-800 flex flex-col h-[400px]">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">Execution Logs</h4>
+              <div className="flex-1 overflow-y-auto space-y-2 text-[10px] font-mono">
+                {editorLog.map((log, i) => (
+                  <div key={i} className={`p-1 rounded ${log.includes("ERROR") || log.includes("GAGAL") ? "text-red-400 bg-red-900/20" : log.includes("BERHASIL") ? "text-green-400 bg-green-900/20" : "text-slate-300"}`}>
+                    {log}
+                  </div>
+                ))}
+                {editorLog.length === 0 && <div className="text-slate-600 italic">Belum ada aktivitas.</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

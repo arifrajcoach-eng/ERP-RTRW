@@ -71,6 +71,7 @@ export function IuranView({
   
   const currentUserNik = currentUser?.nik || currentUser?.nikMapping || '';
   const currentUserUid = currentUser?.uid || currentUser?.authUid || currentUser?.id_user || '';
+  const currentUserDocId = currentUser?.id || currentUser?.docId || '';
 
   const [activeSubTab, setActiveSubTab] = useState<'pembayaran' | 'rekap'>('pembayaran');
   const [showForm, setShowForm] = useState(false);
@@ -87,13 +88,14 @@ export function IuranView({
       const u = wargaData.find(w => {
         const matchNik = currentUserNik && w.nik && String(w.nik).toLowerCase() === String(currentUserNik).toLowerCase();
         const matchUid = currentUserUid && (w.id === currentUserUid || w.docId === currentUserUid || w.uid === currentUserUid);
-        return matchNik || matchUid;
+        const matchDocId = currentUserDocId && (w.id === currentUserDocId || w.docId === currentUserDocId || w.uid === currentUserDocId);
+        return matchNik || matchUid || matchDocId;
       });
       if (u) {
         setSelectedWargaId(u.docId || u.id || u.nik);
       }
     }
-  }, [wargaData, currentUser, currentUserNik, currentUserUid]);
+  }, [wargaData, currentUser, currentUserNik, currentUserUid, currentUserDocId]);
   
   // Simulated PG States
   const [showPgModal, setShowPgModal] = useState(false);
@@ -156,7 +158,8 @@ export function IuranView({
     : sortedData.filter((i: any) => {
         const matchNik = currentUserNik && i.nik && String(i.nik).toLowerCase() === String(currentUserNik).toLowerCase();
         const matchUid = currentUserUid && i.userId && String(i.userId) === String(currentUserUid);
-        return matchNik || matchUid;
+        const matchDocId = currentUserDocId && i.userId && String(i.userId) === String(currentUserDocId);
+        return matchNik || matchUid || matchDocId;
       });
   
   const filteredTransactions = myTransactions.filter((i: any) => {
@@ -280,7 +283,8 @@ export function IuranView({
     const tenantName = kop.nama_rt || kop.nama_organisasi || getSetting("nama_organisasi") || "SmaRtRw AI";
     const tagline = kop.tagline || getSetting("tagline") || "Rukun Tetangga, Saling Berbagi dan Bergotong Royong";
 
-    const formattedNominal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(trx.nominal);
+    const nominalNum = typeof trx.nominal === 'number' ? trx.nominal : parseInt(String(trx.nominal || '0').replace(/\D/g, ''), 10) || 0;
+    const formattedNominal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(nominalNum);
     const dateStr = new Date(trx.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     // Header
@@ -387,6 +391,7 @@ export function IuranView({
   };
 
   const handleCreatePayment = async (e: React.FormEvent<HTMLFormElement>) => {
+    console.log("Attempting to create payment...");
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const id = editingTrx ? editingTrx.id : `IURAN-${Date.now()}`;
@@ -737,6 +742,7 @@ export function IuranView({
   };
 
   const handleApprove = async (trx: any) => {
+    console.log("Attempting to approve transaction:", trx);
     if (!window.confirm("Verifikasi dan terima pembayaran ini?")) return;
     setIsLoadingDB(true);
     try {
@@ -744,7 +750,8 @@ export function IuranView({
       const updatePayload = sanitizeForFirestore({
         status: 'Lunas',
         verifiedBy,
-        verifiedAt: new Date().toISOString()
+        verifiedAt: new Date().toISOString(),
+        tenantId: trx.tenantId || tenantId || "MASTER"
       });
       await updateDoc(doc(db, 'iuran', trx.id), updatePayload);
       setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Lunas', verifiedBy, verifiedAt: updatePayload.verifiedAt } : t));
@@ -792,7 +799,7 @@ export function IuranView({
         transaksi: trx.jenis || 'Iuran Warga',
         nama: trx.namaPenyetor || 'Warga',
         keterangan: trx.keterangan || `Pembayaran ${trx.jenis || 'Iuran'}`,
-        debit: trx.nominal || 0,
+        debit: typeof trx.nominal === 'number' ? trx.nominal : parseInt(String(trx.nominal || '0').replace(/\D/g, ''), 10) || 0,
         kredit: 0,
         strukUrl: trx.buktiUrl || '',
         iuranId: trx.id || ''
@@ -805,8 +812,9 @@ export function IuranView({
       
       showNotification('Pembayaran diverifikasi dan dicatat ke kas', 'success');
     } catch (err: any) {
+      console.error("Verification failed:", err);
       handleFirestoreError(err, 'update', 'iuran');
-      showNotification('Gagal verifikasi', 'error');
+      showNotification('Gagal verifikasi: ' + (err.message || String(err)), 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -820,8 +828,9 @@ export function IuranView({
       setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Ditolak' } : t));
       showNotification('Pembayaran ditolak', 'success');
     } catch (err: any) {
+      console.error("Rejection failed:", err);
       handleFirestoreError(err, 'update', 'iuran');
-      showNotification('Gagal menolak pembayaran', 'error');
+      showNotification('Gagal menolak pembayaran: ' + (err.message || String(err)), 'error');
     } finally {
       setIsLoadingDB(false);
     }
@@ -1054,7 +1063,7 @@ export function IuranView({
                       <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 italic truncate max-w-[220px]" title={trx.keterangan}>Memo: {trx.keterangan || '-'}</p>
                     </td>
                     <td className="px-10 py-6 text-right">
-                       <span className="text-[15px] font-black text-slate-800 dark:text-slate-100 group-hover:text-brand-blue transition-colors font-mono tracking-tighter">Rp {new Intl.NumberFormat('id-ID').format(trx.nominal)}</span>
+                       <span className="text-[15px] font-black text-slate-800 dark:text-slate-100 group-hover:text-brand-blue transition-colors font-mono tracking-tighter">Rp {new Intl.NumberFormat('id-ID').format(typeof trx.nominal === 'number' ? trx.nominal : parseInt(String(trx.nominal || '0').replace(/\D/g, ''), 10) || 0)}</span>
                     </td>
                     <td className="px-10 py-6 text-center">
                       <span className={`px-6 py-2 text-[10px] font-black rounded-full uppercase tracking-[0.2em] shadow-xl ${
@@ -1395,6 +1404,7 @@ export function IuranView({
                 <button 
                   type="submit" 
                   disabled={uploading}
+                  onClick={() => console.log("Attempting to record payment...")}
                   className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-5 h-5" />

@@ -408,18 +408,18 @@ export function SuratView({
 
     try {
       const canvas = await html2canvas(pdfNode, {
-        scale: 1.5,
+        scale: 0.4,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.6);
+      const imgData = canvas.toDataURL('image/jpeg', 0.2);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Surat_${surat.pemohon || 'Dokumen'}_${surat.id || 'Draft'}.pdf`);
       showNotification("PDF berhasil diunduh.", "success");
     } catch (err: any) {

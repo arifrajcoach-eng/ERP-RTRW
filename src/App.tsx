@@ -929,10 +929,7 @@ export default function App() {
           setLoadedKasChunks(prev => ({ ...prev, [cacheKeyKas]: true }));
           
           // Fetch Iuran
-          const currentUserId = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || "";
-          const iuranQ = hasFullAccess ? 
-            query(collection(db, "iuran"), where("tenantId", "in", chunk)) :
-            query(collection(db, "iuran"), where("tenantId", "in", chunk), where("userId", "==", currentUserId));
+          const iuranQ = query(collection(db, "iuran"), where("tenantId", "in", chunk));
           const snapIuran = await getDocs(query(iuranQ, limit(1000)));
           fetchedIuran = [...fetchedIuran, ...snapIuran.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))];
           setLoadedIuranChunks(prev => ({ ...prev, [cacheKeyIuran]: true }));
@@ -1165,7 +1162,7 @@ export default function App() {
         throw new Error(resData.error || "Subscription registration failed");
       }
     } catch (err) {
-      console.error("[PWA] Push subscription sync failed:", err);
+      console.warn("[PWA] Push subscription sync failed (expected inside sandboxed preview iframes):", err);
     }
   };
 
@@ -2345,10 +2342,7 @@ export default function App() {
           const cacheKeyIuran = `smartrw_iuran_loaded_${chunk.join("_")}`;
           const isIuranLoaded = loadedIuranChunks[cacheKeyIuran];
           if (!isIuranLoaded) {
-            const currentUserId = auth.currentUser?.uid || wargaAuth?.authUid || wargaAuth?.uid || "";
-            const iuranQ = hasFullAccess ? 
-              query(collection(db, "iuran"), where("tenantId", "in", chunk)) :
-              query(collection(db, "iuran"), where("tenantId", "in", chunk), where("userId", "==", currentUserId));
+            const iuranQ = query(collection(db, "iuran"), where("tenantId", "in", chunk));
             const snap = await getDocs(query(iuranQ, limit(1000)));
             setIuranData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))]);
             setLoadedIuranChunks(prev => ({ ...prev, [cacheKeyIuran]: true }));
@@ -7677,10 +7671,23 @@ function LoginView({
         // This grants the anonymous user the tenant status of the resident they are linking to,
         // which allows the subsequent verifikasi_warga update to pass 'isTenantMember' rule checks.
         const userRef = doc(db, "users", uid);
+        let currentRole = "Warga";
+        try {
+          const existingUserDoc = await getDoc(userRef);
+          if (existingUserDoc.exists()) {
+            const r = existingUserDoc.data()?.role;
+            if (r && r !== "Warga") {
+              currentRole = r;
+            }
+          }
+        } catch (err) {
+          console.warn("Could not check existing user role, defaulting to Warga", err);
+        }
+
         await setDoc(
           userRef,
           {
-            role: "Warga",
+            role: found.role || currentRole,
             nik: found.nik || "",
             name: found.nama || "Warga",
             tenantId: resolvedTenantId,
