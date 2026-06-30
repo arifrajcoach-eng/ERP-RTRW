@@ -291,7 +291,6 @@ export function KasView({
       return;
     }
 
-    console.log("File detected:", file.name, file.type, file.size);
 
     setIsScanning(true);
     showNotification("AI sedang memindai struk...", "info");
@@ -308,7 +307,6 @@ export function KasView({
       let processedFile = file;
       try {
         processedFile = await imageCompression(file, options);
-        console.log(`Struk compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(processedFile.size / 1024).toFixed(2)}KB`);
       } catch (compErr) {
         console.warn("Client-side image compression failed, falling back to original:", compErr);
       }
@@ -896,7 +894,6 @@ export function KasView({
 
     setIsLoadingDB(true);
     try {
-      console.log("Saving transaction to Firestore:", newTrx);
       if (isIuran) {
         const iuranPayload = sanitizeForFirestore({
           id: targetIuranId,
@@ -1623,7 +1620,6 @@ export function KasView({
                             let processedFile = file;
                             try {
                               processedFile = await imageCompression(file, options);
-                              console.log(`Struk compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(processedFile.size / 1024).toFixed(2)}KB`);
                             } catch (compErr) {
                               console.warn("Client-side image compression failed, falling back to original:", compErr);
                             }
