@@ -750,8 +750,7 @@ export function IuranView({
       const updatePayload = sanitizeForFirestore({
         status: 'Lunas',
         verifiedBy,
-        verifiedAt: new Date().toISOString(),
-        tenantId: trx.tenantId || tenantId || "MASTER"
+        verifiedAt: new Date().toISOString()
       });
       await updateDoc(doc(db, 'iuran', trx.id), updatePayload);
       setIuranData((prev: any) => prev.map((t: any) => t.id === trx.id ? { ...t, status: 'Lunas', verifiedBy, verifiedAt: updatePayload.verifiedAt } : t));

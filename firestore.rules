@@ -176,19 +176,20 @@ service cloud.firestore {
 
     match /kas/{id} {
       allow read: if isSignedIn();
-      allow create, update: if isPengurus() && (isTenantMember(request.resource.data.get('tenantId', 'MASTER')) || isTenantMember(resource.data.get('tenantId', 'MASTER')));
+      allow create, update: if isPengurus() && isTenantMember(request.resource.data.get('tenantId', 'MASTER'));
       allow delete: if isPengurus() && isTenantMember(resource.data.get('tenantId', 'MASTER'));
     }
 
     match /iuran/{id} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if (isPengurus() && (isTenantMember(resource.data.get('tenantId', 'MASTER')) || isTenantMember(request.resource.data.get('tenantId', 'MASTER')))) || (
+      allow update, delete: if (isPengurus() && isTenantMember(resource.data.get('tenantId', 'MASTER'))) || (
         isSignedIn() && resource != null && (
           resource.data.get('userId', '') == request.auth.uid ||
           resource.data.get('recordedBy', '') == request.auth.uid ||
           (getUserData() != null && 'nik' in getUserData() && resource.data.get('nik', '') == getUserData().nik) ||
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('nik', '') == resource.data.get('nik', ''))
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('nik', '') == resource.data.get('nik', '')) ||
+          (exists(/databases/$(database)/documents/data_warga/$(request.auth.uid)) && get(/databases/$(database)/documents/data_warga/$(request.auth.uid)).data.get('nik', '') == resource.data.get('nik', ''))
         )
       );
     }
