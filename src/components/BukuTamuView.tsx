@@ -277,7 +277,7 @@ export function BukuTamuView({
                className="bg-white text-slate-900 px-6 py-4 sm:px-10 sm:py-5 rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-[11px] uppercase tracking-[0.2em] sm:tracking-[0.3em] shadow-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer z-20"
              >
                 <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                Registrasi Tamu
+                Registrasi LAPOR TAMU
              </motion.button>
           </div>
         </div>
@@ -469,7 +469,7 @@ export function BukuTamuView({
                     <div className="p-2 bg-blue-600 text-white rounded-xl">
                       {formMode === 'view' ? <Eye className="w-4 h-4" /> : formMode === 'edit' ? <Edit className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
                     </div>
-                    {formMode === 'view' ? 'Detail Kunjungan Tamu' : formMode === 'edit' ? 'Edit Kunjungan Tamu' : 'Registrasi Kunjungan Tamu'}
+                    {formMode === 'view' ? 'Detail LAPOR TAMU' : formMode === 'edit' ? 'Edit LAPOR TAMU' : 'Registrasi LAPOR TAMU'}
                   </h3>
                   <button onClick={() => setShowForm(false)} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
                 </div>

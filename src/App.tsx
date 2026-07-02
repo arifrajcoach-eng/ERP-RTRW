@@ -279,7 +279,7 @@ export function getTrialStatus(tenant: any, currentUser?: any) {
     return { phase: "PAID" as const, daysRemainingActive: 9999, daysRemainingFrozen: 0 };
   }
 
-  const isPaidPremium = ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC"].some((st: string) => tenant.status?.toUpperCase()?.includes(st));
+  const isPaidPremium = ["FLASH", "PRO", "PREMIUM", "ENTERPRISE", "GOLD", "DIAMOND", "PRIME", "GOV", "RW", "BASIC", "RT", "LITE"].some((st: string) => tenant.status?.toUpperCase()?.includes(st)) || (tenant.parentId && tenant.parentId !== "MASTER" && tenant.id !== "MASTER");
 
   const isStarter = !isPaidPremium && (!tenant.status || 
                     ["STARTER", "TRIAL", "ACTIVE"].includes(tenant.status?.toUpperCase()));
@@ -668,7 +668,7 @@ export default function App() {
             const userEmailLow = user.email?.toLowerCase();
             const isMasterEmail = userEmailLow === "arifrajcoach@gmail.com";
             const isTrihUser = userEmailLow?.includes("trihprw26") || userEmailLow?.includes("handoko");
-            const allowedStatuses = ["STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE", "AKTIF"];
+            const allowedStatuses = ["STARTER", "FLASH", "PRO", "PREMIUM", "ENTERPRISE", "TRIAL", "ACTIVE", "AKTIF", "BASIC", "RT", "LITE"];
             const userStatus = (userData.status || "TRIAL").toUpperCase();
             
             if (!allowedStatuses.includes(userStatus) && !isMasterEmail) {
@@ -2146,7 +2146,9 @@ export default function App() {
       onDataLoaded();
       return () => {};
     })() : onSnapshot(doc(db, "tenants", tId), (snap) => {
-      if (snap.exists()) setCurrentTenant(snap.data());
+      if (snap.exists()) {
+        setCurrentTenant({ id: snap.id, ...snap.data() });
+      }
       onDataLoaded();
     });
 
@@ -2440,6 +2442,16 @@ export default function App() {
 
     return () => unsubs.forEach(u => u());
   }, [activeTab, activeTenantIdsStr, currentUser?.uid, chunkArray, quotaExceeded, wargaAuth]);
+
+  // Auto-reset E-Lapakita, Monitoring, and Governance tabs appropriately
+  useEffect(() => {
+    if (activeTab === "etoko" && currentTenant?.id === "rt03gas_rw27") {
+      setActiveTab("dashboard");
+    }
+    if (["monitoring", "audit"].includes(activeTab) && (!currentTenant || currentTenant.id !== "MASTER")) {
+      setActiveTab("dashboard");
+    }
+  }, [activeTab, currentTenant]);
 
   // 5. Surat, Voting, Booking & Misc Sync
   useEffect(() => {
@@ -3266,7 +3278,18 @@ export default function App() {
           auth.currentUser?.email?.toLowerCase() === "arifrajcoach@gmail.com";
         const restrictedItems = ["daftar-trial", "super-admin", "leads"];
         if (restrictedItems.includes(item.id) && !isPlatformOwner) return false;
-        
+
+        // Hide E-LAPAKITA (etoko) for tenant rt03gas_rw27
+        if (item.id === "etoko" && currentTenant?.id === "rt03gas_rw27") {
+          return false;
+        }
+
+        // Hide MONITORING and GOVERNANCE (audit) for all standard RT and RW tenants (except MASTER / super-admin)
+        if (["monitoring", "audit"].includes(item.id) && (!currentTenant || currentTenant.id !== "MASTER")) {
+          return false;
+        }
+
+
         if (isSuperAdmin) return true;
         if (
           role === "WARGA" &&
@@ -7855,7 +7878,7 @@ function LoginView({
                 const tenantData = tenantSnap.data();
                 const status = (tenantData?.status || 'STARTER').toUpperCase();
                 // Valid starter/allowed statuses:
-                const validStatuses = ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE', 'FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC'];
+                const validStatuses = ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE', 'FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC', 'RT', 'LITE'];
                 if (!validStatuses.includes(status)) {
                     await signOut(auth);
                     throw new Error("Akun Anda tidak memiliki langganan aktif yang valid (Minimal Paket Starter). Silakan hubungi admin.");

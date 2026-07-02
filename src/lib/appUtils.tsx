@@ -34,7 +34,14 @@ export const getPlanFeatures = (tenantOrStatus: any, parentTenant?: any) => {
     .replace("V4.0 ", "")
     .replace("PLAN", "")
     .trim();
-  const basePlan = PLAN_ALIASES[normalizedStatus] || normalizedStatus;
+  let basePlan = PLAN_ALIASES[normalizedStatus] || normalizedStatus;
+
+  // Automatically upgrade features for RT tenants (child tenants with parentId) to FLASH (BASIC) plan
+  const isRT = typeof tenantOrStatus === "object" && tenantOrStatus?.parentId && tenantOrStatus?.parentId !== "MASTER" && tenantOrStatus?.id !== "MASTER";
+  if (isRT && (basePlan === "TRIAL" || basePlan === "STARTER")) {
+    basePlan = "BASIC"; // BASIC corresponds to FLASH plan features
+  }
+
   const features = { ...(PLAN_FEATURES[basePlan] || PLAN_FEATURES.TRIAL) };
 
   // Apply Add-ons

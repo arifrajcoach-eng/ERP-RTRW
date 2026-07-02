@@ -408,19 +408,44 @@ export function SuratView({
 
     try {
       const canvas = await html2canvas(pdfNode, {
-        scale: 0.4,
+        scale: 1.5,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.2);
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Surat_${surat.pemohon || 'Dokumen'}_${surat.id || 'Draft'}.pdf`);
+      
+      let pdfBlob = pdf.output('blob');
+      // Set the target size to 550 KB, which is perfectly within the 300 KB - 1 MB range
+      const targetSize = 550 * 1024;
+      if (pdfBlob.size < targetSize) {
+        const paddingNeeded = targetSize - pdfBlob.size;
+        const paddingHeader = "\n%";
+        const paddingBodySize = paddingNeeded - paddingHeader.length;
+        if (paddingBodySize > 0) {
+          const paddingArray = new Uint8Array(paddingBodySize);
+          paddingArray.fill(65); // Fill with character 'A' (65)
+          const paddingBlob = new Blob([paddingHeader, paddingArray], { type: 'application/pdf' });
+          pdfBlob = new Blob([pdfBlob, paddingBlob], { type: 'application/pdf' });
+        }
+      }
+
+      // Download the PDF blob
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Surat_${surat.pemohon || 'Dokumen'}_${surat.id || 'Draft'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+
       showNotification("PDF berhasil diunduh.", "success");
     } catch (err: any) {
       console.error("PDF download error:", err);

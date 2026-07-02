@@ -526,7 +526,7 @@ export default function DashboardView({
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
 
-  const isPaidPremium = ['FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC'].some(st => currentTenant?.status?.toUpperCase()?.includes(st));
+  const isPaidPremium = ['FLASH', 'PRO', 'PREMIUM', 'ENTERPRISE', 'GOLD', 'DIAMOND', 'PRIME', 'GOV', 'RW', 'BASIC', 'RT', 'LITE'].some(st => currentTenant?.status?.toUpperCase()?.includes(st)) || (currentTenant?.parentId && currentTenant?.parentId !== "MASTER" && currentTenant?.id !== "MASTER");
 
   const isStarter = !isPaidPremium && (!currentTenant?.status || 
                     ['STARTER', 'GRATIS', 'FREE', 'TRIAL', 'ACTIVE'].includes(currentTenant?.status?.toUpperCase()));
@@ -785,7 +785,7 @@ export default function DashboardView({
                   { label: 'Belum Lunas', val: `${personalStats?.unpaidIuran} Bulan`, icon: CreditCard, color: 'text-rose-400', tab: 'keuangan' },
                   { label: 'Pesanan Lapak', val: `${personalStats?.pendingOrders} Proses`, icon: ShoppingBag, color: 'text-amber-400', tab: 'etoko' },
                   { label: 'Permohonan Surat', val: `${personalStats?.pendingLetters || 0} Aktif`, icon: FileText, color: 'text-cyan-400', tab: 'surat' },
-                ].map((item, i) => (
+                ].filter(item => !(item.tab === 'etoko' && currentTenant?.id === 'rt03gas_rw27')).map((item, i) => (
                   <div 
                     key={i}
                     onClick={() => item.tab && setActiveTab && setActiveTab(item.tab)}
@@ -1268,15 +1268,17 @@ export default function DashboardView({
                   </button>
                 )}
 
-                <button 
-                  onClick={() => setActiveTab('etoko')}
-                  className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
-                >
-                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
-                    <Smartphone className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">E-LAPAKITA</span>
-                </button>
+                {currentTenant?.id !== 'rt03gas_rw27' && (
+                  <button 
+                    onClick={() => setActiveTab('etoko')}
+                    className="w-full h-32 bg-white/10 hover:bg-white/20 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-white/10 backdrop-blur-xl shadow-lg"
+                  >
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                      <Smartphone className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">E-LAPAKITA</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -148,6 +148,9 @@ export function KasView({
       }
     }, (error) => {
       console.error("Error in kas summary listener for tenant:", tenantId, error);
+      if (handleFirestoreError) {
+        handleFirestoreError(error, "get", "kas_summary");
+      }
     });
 
     // Real-time listener for Kas Data (limit 20)
@@ -161,6 +164,9 @@ export function KasView({
       setHasMore(snapshot.docs.length === 20);
     }, (error) => {
       console.error("Error in kas listener for tenant:", tenantId, error);
+      if (handleFirestoreError) {
+        handleFirestoreError(error, "list", "kas");
+      }
     });
 
     // Real-time listener for Iuran Data
@@ -171,6 +177,9 @@ export function KasView({
       setIuranData(iuranList);
     }, (error) => {
       console.error("Error in iuran listener for tenant:", tenantId, error);
+      if (handleFirestoreError) {
+        handleFirestoreError(error, "list", "iuran");
+      }
     });
 
     const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
