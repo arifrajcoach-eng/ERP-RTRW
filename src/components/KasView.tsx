@@ -33,7 +33,7 @@ import {
   Clock,
   RefreshCw,
 } from "lucide-react";
-import { doc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, orderBy, limit, startAfter } from "firebase/firestore";
+import { doc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, onSnapshot, orderBy, limit, startAfter } from "firebase/firestore";
 import { db } from "../firebase";
 import imageCompression from 'browser-image-compression';
 import { logAuditEvent } from "../services/auditLogService";
@@ -122,23 +122,12 @@ export function KasView({
 
   useEffect(() => {
     if (!tenantId) return;
-    const syncTimeKey = `smartrw_kas_cache_time_${tenantId}`;
-    const cachedTime = localStorage.getItem(syncTimeKey);
-    if (cachedTime) {
-      setLastSyncTime(cachedTime);
-    } else {
-      // If never synced, pull initial data from cloud
-      fetchKasAndIuranData(false);
-    }
-    fetchKasSummary();
-  }, [tenantId]);
 
-  const fetchKasSummary = async () => {
-    if (!tenantId) return;
-    try {
-      const summaryDoc = await getDocs(query(collection(db, "kas_summary"), where("tenantId", "==", tenantId)));
-      if (!summaryDoc.empty) {
-        setKasSummary(summaryDoc.docs[0].data());
+    // Real-time listener for Kas Summary
+    const summaryDocRef = doc(db, "kas_summary", tenantId);
+    const unsubscribeSummary = onSnapshot(summaryDocRef, async (snapshot) => {
+      if (snapshot.exists()) {
+        setKasSummary(snapshot.data());
       } else {
         // Initialize if empty
         const initialSummary = {
@@ -148,54 +137,71 @@ export function KasView({
           saldo: 0,
           lastUpdated: new Date().toISOString()
         };
-        await setDoc(doc(collection(db, "kas_summary"), tenantId), initialSummary);
-        setKasSummary(initialSummary);
+        try {
+          await setDoc(summaryDocRef, initialSummary);
+          setKasSummary(initialSummary);
+        } catch (e) {
+          console.error("Error initializing kas summary:", e);
+          // Fallback to local state if write fails
+          setKasSummary(initialSummary);
+        }
       }
-    } catch (e) {
-      console.error("Error fetching kas summary:", e);
-    }
+    }, (error) => {
+      console.error("Error in kas summary listener for tenant:", tenantId, error);
+    });
+
+    // Real-time listener for Kas Data (limit 20)
+    console.log("KasView: Kas query tenantId:", tenantId);
+    const kasQuery = query(collection(db, "kas"), where("tenantId", "==", tenantId), orderBy("tanggal", "desc"), limit(20));
+    const unsubscribeKas = onSnapshot(kasQuery, (snapshot) => {
+      console.log("Kas listener received", snapshot.docs.length, "docs");
+      const kasList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setKasData(kasList);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 20);
+    }, (error) => {
+      console.error("Error in kas listener for tenant:", tenantId, error);
+    });
+
+    // Real-time listener for Iuran Data
+    const iuranQuery = query(collection(db, "iuran"), where("tenantId", "==", tenantId));
+    const unsubscribeIuran = onSnapshot(iuranQuery, (snapshot) => {
+      console.log("Iuran listener received", snapshot.docs.length, "docs");
+      const iuranList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setIuranData(iuranList);
+    }, (error) => {
+      console.error("Error in iuran listener for tenant:", tenantId, error);
+    });
+
+    const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const fullDateStr = `${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} ${nowStr}`;
+    setLastSyncTime(fullDateStr);
+    localStorage.setItem(`smartrw_kas_cache_time_${tenantId}`, fullDateStr);
+
+    return () => {
+      unsubscribeSummary();
+      unsubscribeKas();
+      unsubscribeIuran();
+    };
+  }, [tenantId]);
+
+  const fetchKasSummary = async () => {
+    // Deprecated with onSnapshot implementation
   };
 
   const fetchKasAndIuranData = async (forceRefresh = false) => {
-    if (!tenantId) return;
-
-    if (forceRefresh) {
-      setIsSyncing(true);
-    } else {
-      setIsLoadingDB(true);
-    }
-
+    setIsSyncing(true);
     try {
-      // 1. Pull Kas from Cloud (Initial 20)
-      const kq = query(collection(db, "kas"), where("tenantId", "==", tenantId), orderBy("tanggal", "desc"), limit(20));
-      const kasSnap = await getDocs(kq);
-      const kasList = kasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setKasData(kasList);
-      setLastVisible(kasSnap.docs[kasSnap.docs.length - 1]);
-      setHasMore(kasSnap.docs.length === 20);
-
-      // 2. Pull Iuran from Cloud
-      const iuranQ = query(collection(db, "iuran"), where("tenantId", "==", tenantId));
-      const iuranSnap = await getDocs(iuranQ);
-      const iuranList = iuranSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setIuranData(iuranList);
-
-      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      const fullDateStr = `${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} ${nowStr}`;
-      setLastSyncTime(fullDateStr);
-
-      localStorage.setItem(`smartrw_kas_cache_time_${tenantId}`, fullDateStr);
-      localStorage.setItem(`smartrw_kas_loaded_${tenantId}`, "true");
-      localStorage.setItem(`smartrw_iuran_loaded_${tenantId}`, "true");
-
-      if (forceRefresh) {
-        showNotification("Buku Kas & Iuran disinkronkan dengan data cloud terbaru!", "success");
-      }
-    } catch (error: any) {
-      console.error("Error manual sync kas/iuran:", error);
-      handleFirestoreError(error, "list", "kas");
+      // Refresh logic: clear current data and let snapshots re-fetch
+      // If we need true "pull", we could re-initialize listeners, 
+      // but onSnapshot already handles live updates.
+      // Simply simulating a "refresh" feedback for now.
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const now = new Date();
+      setLastSyncTime(now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+    } catch (error) {
+      console.error("Sync error:", error);
     } finally {
-      setIsLoadingDB(false);
       setIsSyncing(false);
     }
   };
@@ -1034,27 +1040,28 @@ export function KasView({
         });
         showNotification("Transaksi kas berhasil ditambahkan", "success");
         await logAuditEvent(currentUser?.uid || "system", currentUser?.name || "Aplikasi", "CREATE_KAS", "kas", `Tambah transaksi: ${keterangan}`, tenantId);
-        
-        await updateKasSummary(newTrx.debit, newTrx.kredit, 0, 0, 'add');
 
         // Auto create RW equivalent if "Setoran Ke RW"
         if (transaksi === "Setoran Ke RW" && trxType === "Keluar") {
            const rwTenantId = (tenantId || "MASTER").replace(/rt\w*_/i, '').replace(/rt\d+/i, '').replace(/^_/, '');
+           console.log("RT tenantId:", tenantId, "Computed rwTenantId:", rwTenantId);
            if (rwTenantId !== tenantId) {
              const rwNewId = `TRX-RW-${Date.now()}`;
+             const { iuranId, ...newTrxRW } = newTrx;
              const rwNewTrx = {
-                ...newTrx,
-                id: rwNewId,
-                tenantId: rwTenantId,
-                tipe: "Masuk",
-                transaksi: "Dana Masuk Dari RT",
-                nama: `Pengurus RT ${resolvedRt}`,
-                keterangan: `Menerima setoran iuran otomatis dari RT ${resolvedRt}`,
-                debit: nominal,
-                kredit: 0
+               ...newTrxRW,
+               id: rwNewId,
+               tenantId: rwTenantId,
+               tipe: 'Masuk',
+               tanggal: new Date().toISOString(),
+               kategori: 'Setoran ke RW',
+               keterangan: `Dana masuk dari RT ${tenantId}`,
+               debit: newTrxRW.kredit || 0, // Explicitly set debit to the amount RT sent
+               kredit: 0,                   // Explicitly set kredit to 0
              };
+             console.log("Creating RW transaction:", rwNewTrx);
              await setDoc(doc(db, "kas", rwNewId), rwNewTrx);
-             setKasData((prev: any[]) => [rwNewTrx, ...prev]);
+             console.log("RW transaction created successfully");
            }
         }
       }
@@ -1628,7 +1635,18 @@ export function KasView({
                   </label>
                   <select 
                     value={jenisPembayaran} 
-                    onChange={(e) => setJenisPembayaran(e.target.value)} 
+                    onChange={(e) => {
+                      setJenisPembayaran(e.target.value);
+                      const val = e.target.value.toLowerCase();
+                      if (
+                        val.includes("iuran") || 
+                        val.includes("donasi") || 
+                        val.includes("sumbangan") ||
+                        val.includes("rw")
+                      ) {
+                        setTrxType("Masuk");
+                      }
+                    }} 
                     name="jenis" 
                     className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                   >

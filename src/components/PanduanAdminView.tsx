@@ -242,7 +242,7 @@ export default function PanduanAdminView() {
                     <ul className="space-y-3 text-sm text-slate-600">
                       <li><strong>1. Menambahkan Warga Baru:</strong> Buka "Data Warga", klik "+ Warga Baru", isi formulir data diri.</li>
                       <li><strong>2. Verifikasi Warga Registrasi:</strong> Periksa warga di "Verifikasi Warga", bandingkan dokumen, lalu Terima/Tolak.</li>
-                      <li><strong>3. Buku Tamu/Satpam:</strong> Catat pengunjung masuk/keluar di "Buku Tamu".</li>
+                      <li><strong>3. LAPOR TAMU/Satpam:</strong> Catat pengunjung masuk/keluar di "LAPOR TAMU".</li>
                     </ul>
                   </div>
 

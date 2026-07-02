@@ -38,8 +38,8 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
       {/* Premium Tab Navigation */}
       <div className="flex w-full md:w-fit bg-slate-100/50 dark:bg-slate-800/50 p-1.5 sm:p-2 rounded-2xl md:rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700 justify-between md:justify-start">
         {[
-          { id: 'iuran', label: isApt ? "Internal IPL" : "Iuran Kolektif", icon: CreditCard, gradient: 'from-brand-blue to-indigo-600' },
-          { id: 'kas', label: "Ledger Kas", icon: Wallet, gradient: 'from-emerald-500 to-teal-600' },
+          { id: 'iuran', label: isApt ? "Internal IPL" : "IURAN WARGA", icon: CreditCard, gradient: 'from-brand-blue to-indigo-600' },
+          { id: 'kas', label: "Kas Besar", icon: Wallet, gradient: 'from-emerald-500 to-teal-600' },
           { id: 'rekomendasi', label: "Hitung Biaya", icon: PieChart, gradient: 'from-amber-500 to-orange-600' }
         ].filter(tab => (tab.id !== 'kas' && tab.id !== 'rekomendasi') || props.isPengurus).map((tab) => (
           <motion.button

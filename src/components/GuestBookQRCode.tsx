@@ -48,7 +48,7 @@ export const GuestBookQRCode = ({ tenantId }: { tenantId: string }) => {
         <MapPin className="w-6 h-6 text-blue-600 dark:text-blue-400" />
       </div>
       
-      <h3 className="font-bold text-slate-800 dark:text-white mb-1">QR Code Buku Tamu</h3>
+      <h3 className="font-bold text-slate-800 dark:text-white mb-1">QR Code LAPOR TAMU</h3>
       <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-6">
         Tempelkan QR ini di Pos Satpam agar tamu bisa melapor secara mandiri.
       </p>

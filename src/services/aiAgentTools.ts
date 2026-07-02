@@ -85,7 +85,7 @@ export async function getWasteBankSummary(tenantId: string) {
   }
 }
 
-// 5. BUKU TAMU
+// 5. LAPOR TAMU
 export async function getGuestBookSummary(tenantId: string) {
   try {
     if (!tenantId) throw new Error("Tenant ID required");

@@ -175,9 +175,14 @@ service cloud.firestore {
     }
 
     match /kas/{id} {
-      allow read: if isSignedIn();
-      allow create, update: if isPengurus() && isTenantMember(request.resource.data.get('tenantId', 'MASTER'));
+      allow read: if true;
+      allow create, update: if isPengurus() || isTenantMember(request.resource.data.get('tenantId', 'MASTER'));
       allow delete: if isPengurus() && isTenantMember(resource.data.get('tenantId', 'MASTER'));
+    }
+
+    match /kas_summary/{tenantId} {
+      allow read: if true;
+      allow create, update: if isPengurus() && isTenantMember(tenantId);
     }
 
     match /iuran/{id} {

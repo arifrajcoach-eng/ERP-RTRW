@@ -1339,7 +1339,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 - E-Posyandu: ${totalPosyandu} catatan kesehatan
 - Info Lahir & Wafat: ${totalLahir} kelahiran, ${totalWafat} kematian
 - Verifikasi Data Warga: ${pendingVerifikasi} warga butuh verifikasi
-- Buku Tamu: ${totalTamuAktif} tamu sedang berkunjung
+- LAPOR TAMU: ${totalTamuAktif} tamu sedang berkunjung
 - Monitor SOS: ${activeSOS} darurat aktif.
 
 Jika ditanya mengenai status, sampaikan data real-time ini. Data ini mencakup seluruh wilayah kerja Bapak/Ibu (pusat & sub-wilayah: ${tIds.filter(id => id !== tenantId).join(", ")}).`;

@@ -3104,7 +3104,7 @@ export default function App() {
       // --- KEBUTUHAN WARGA ---
       {
         id: "buku-tamu",
-        label: "Buku Tamu",
+        label: "LAPOR TAMU",
         icon: BookCopy,
         plan: "bukuTamu",
       },

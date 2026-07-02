@@ -757,6 +757,14 @@ export function IuranView({
       
       const kasId = `TRX-${Date.now()}`;
       
+      let finalTenantId = tenantId || trx.tenantId || "MASTER";
+      if ((trx.jenis === "Warga Donasi Ke RW" || trx.jenis === "Iuran Pengurus RT Ke RW") && finalTenantId.toLowerCase().startsWith("rt")) {
+          const parts = finalTenantId.split("_");
+          if (parts.length > 1) {
+              finalTenantId = parts.slice(1).join("_");
+          }
+      }
+      
       let dateparsed = new Date(trx.tanggal);
       if (isNaN(dateparsed.getTime())) {
         const parts = String(trx.tanggal).split(/\s+/);
@@ -789,9 +797,10 @@ export function IuranView({
       }
       const tanggalFormat = dateparsed.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 
-      const kasPayload = sanitizeForFirestore({
+      // Create the record in the RT Kas collection
+      const kasPayloadRT = sanitizeForFirestore({
         id: kasId,
-        tenantId: tenantId || trx.tenantId || "MASTER",
+        tenantId: tenantId, // Always record in RT's own ledger for transparency
         rt: trx.rt || '01',
         tanggal: tanggalFormat,
         tipe: 'Masuk',
@@ -803,11 +812,31 @@ export function IuranView({
         strukUrl: trx.buktiUrl || '',
         iuranId: trx.id || ''
       });
-      await setDoc(doc(db, 'kas', kasId), kasPayload);
+      await setDoc(doc(db, 'kas', kasId), kasPayloadRT);
+      
+      // If it's a Donasi/Iuran Ke RW, also create the record in the RW Kas collection
+      if (trx.jenis === "Warga Donasi Ke RW" || trx.jenis === "Iuran Pengurus RT Ke RW") {
+          // Robust RW tenant ID calculation: strip 'rtXX_' prefix if present
+          const rwTenantId = (tenantId || "MASTER").replace(/^rt\d+_/i, '');
+          
+          // Ensure we don't try to save to the same tenant twice
+          if (rwTenantId !== tenantId) {
+             const kasIdRW = `TRX-RW-${Date.now()}`;
+             const kasPayloadRW = { ...kasPayloadRT, id: kasIdRW, tenantId: rwTenantId };
+             try {
+               await setDoc(doc(db, 'kas', kasIdRW), kasPayloadRW);
+               console.log("IuranView: RW Kas record created successfully for tenant:", rwTenantId);
+             } catch (e) {
+               console.error("IuranView: Failed to create RW Kas record:", e);
+             }
+          }
+      }
+
       setKasData((prev: any) => {
         if (prev.some((k:any) => k.id === kasId)) return prev;
-        return [kasPayload, ...prev];
+        return [kasPayloadRT, ...prev];
       });
+
       
       showNotification('Pembayaran diverifikasi dan dicatat ke kas', 'success');
     } catch (err: any) {
@@ -1007,7 +1036,7 @@ export function IuranView({
               >
                 <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-full blur-xl -mr-6 -mt-6"></div>
                 <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-700" /> 
-                Input Transaksi
+                BAYAR KE RT/RW
               </motion.button>
             </div>
           </div>
@@ -1318,26 +1347,15 @@ export function IuranView({
                 <select value={jenisPembayaran} onChange={(e) => setJenisPembayaran(e.target.value)} name="jenis" className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm">
                   <option value="Iuran Pengurus RT Ke RW">Iuran Pengurus RT Ke RW</option>
                   <option value="Warga Donasi Ke RW">Warga Donasi Ke RW</option>
-                  <option value="Iuran RT">Iuran RT</option>
-                  <option value="Iuran RW">Iuran RW</option>
-                  <option value="Iuran Warga">Iuran Warga</option>
-                  <option value="Iuran Sampah">Iuran Sampah</option>
-                  <option value="Iuran 17 an">Iuran 17 an</option>
-                  <option value="Iuran PBB">Iuran PBB</option>
-                  <option value="Iuran Pembangunan/ Renovasi Balai">Iuran Pembangunan/ Renovasi Balai</option>
-                  <option value="Iuran Pembangunan/ Renovasi Kantor">Iuran Pembangunan/ Renovasi Kantor</option>
-                  <option value="Iuran Pembangunan/ Renovasi Pos Ronda">Iuran Pembangunan/ Renovasi Pos Ronda</option>
-                  <option value="Iuran Fasum">Iuran Fasum</option>
-                  <option value="Iuran Keamanan">Iuran Keamanan</option>
-                  <option value="Organisasi">Organisasi</option>
-                  <option value="Sumbangan">Sumbangan</option>
-                  <option value="Donasi">Donasi</option>
-                  <option value="Pembelian ATK">Pembelian ATK</option>
-                  <option value="Pembelian Aset">Pembelian Aset</option>
-                  <option value="Pembelian Elektronik">Pembelian Elektronik</option>
-                  <option value="Pembelian Furniture">Pembelian Furniture</option>
-                  <option value="Pembelian Alat Olahraga">Pembelian Alat Olahraga</option>
-                  <option value="Pembayaran Wifi">Pembayaran Wifi</option>
+                  <option value="Iuran Warga ke RT">Iuran Warga ke RT</option>
+                  <option value="Iuran Sampah ke RT">Iuran Sampah ke RT</option>
+                  <option value="Iuran 17 an ke RT">Iuran 17 an ke RT</option>
+                  <option value="Iuran PBB ke RT">Iuran PBB ke RT</option>
+                  <option value="Iuran Pembangunan/ Renovasi Balai ke RT">Iuran Pembangunan/ Renovasi Balai ke RT</option>
+                  <option value="Iuran Pembangunan/ Renovasi Kantor ke RT">Iuran Pembangunan/ Renovasi Kantor ke RT</option>
+                  <option value="Iuran Pembangunan/ Renovasi Pos Ronda ke RT">Iuran Pembangunan/ Renovasi Pos Ronda ke RT</option>
+                  <option value="Iuran Fasum ke RT">Iuran Fasum ke RT</option>
+                  <option value="Iuran Keamanan ke RT">Iuran Keamanan ke RT</option>
                 </select>
               </div>
 
