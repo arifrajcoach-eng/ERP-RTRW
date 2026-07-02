@@ -1994,13 +1994,14 @@ export default function App() {
 
       // Consolidate values using mergedWargaProfile to support both admin/operator and custom citizen login sessions safely
       const profile = mergedWargaProfile;
+      const finalTenantId = profile.tenantId || activeTenantId || currentTenant?.id || wargaAuth?.tenantId || currentUser?.tenantId || "rw26_berjuang";
       const addressStr = `Alamat: Blok ${profile.blok || "-"}, RT ${profile.rt || "-"}/RW ${profile.rw || "-"}`;
       const userPhone = profile.hp || profile.telepon || "";
       const userEmail = profile.email || "";
       const isMinePhoto = (currentUser as any)?.photoUrl || profile.foto || profile.ktpUrl || "";
 
       const sosData = {
-        tenantId: profile.tenantId || "",
+        tenantId: finalTenantId,
         id,
         userId: auth.currentUser?.uid || wargaAuth?.uid || "anonymous",
         userName: profile.nama || "Warga",
@@ -2024,7 +2025,7 @@ export default function App() {
       try {
         await setDoc(doc(db, "emergency_logs", id), {
           id,
-          tenantId: profile.tenantId || "",
+          tenantId: finalTenantId,
           userId: auth.currentUser?.uid || wargaAuth?.uid || "anonymous",
           userName: profile.nama || "Warga",
           userPhone: userPhone || "-",
@@ -2155,7 +2156,26 @@ export default function App() {
     // 3. SOS (Global) - Important for safety
     let isInitialLoad = true;
     let unsubEmergencies: (() => void)[] = [];
-    if (tIds.length > 0) {
+    if (currentUser?.isSuperAdmin && !selectedTenantId) {
+      unsubEmergencies.push(onSnapshot(
+        query(collection(db, "emergencies")),
+        (snap) => {
+          setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+          snap.docChanges().forEach(change => {
+             if (change.type === "added" && change.doc.data().status === "ACTIVE") {
+                const data = change.doc.data();
+                const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
+                const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
+                if (isNewSinceAppStart) {
+                   setHiddenEmergencyId(null);
+                }
+             }
+          });
+          isInitialLoad = false;
+        },
+        (err) => handleFirestoreError(err, "list", "emergencies")
+      ));
+    } else if (tIds.length > 0) {
       const chunks = chunkArray(tIds, 10);
       chunks.forEach(chunk => {
         unsubEmergencies.push(onSnapshot(
@@ -2269,7 +2289,7 @@ export default function App() {
     
     // We want these central collections to stay synced even if we move between tabs
     // that rely on them (warga, dashboard, users, complaint, search, etc)
-    const centralTabs = ["warga", "dashboard", "users", "complaint", "landing", "search", "verifikasi", "surat", "profile"];
+    const centralTabs = ["warga", "dashboard", "users", "complaint", "landing", "search", "verifikasi", "surat", "profile", "sos-monitor", "monitoring"];
     if (!centralTabs.includes(activeTab || "") && !wargaAuth) return;
 
     const tIds = activeTenantIdsStr ? activeTenantIdsStr.split(",") : [];
@@ -4774,10 +4794,13 @@ export default function App() {
           {activeTab === "sos-monitor" && (
             <SatpamDashboard 
               tenantId={
-                (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
-                  ? currentUser?.tenantId
-                  : (wargaAuth?.tenantId || "rw26_berjuang")
+                currentUser?.isSuperAdmin
+                  ? "MASTER"
+                  : (currentUser?.tenantId && currentUser?.tenantId !== "unknown")
+                    ? currentUser?.tenantId
+                    : (wargaAuth?.tenantId || "rw26_berjuang")
               } 
+              activeTenantIds={activeTenantIds}
               pushSubscriptionStatus={pushSubscriptionStatus}
               requestPushPermission={requestPushPermission}
             />

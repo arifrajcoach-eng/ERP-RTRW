@@ -1428,50 +1428,10 @@ export default function PengaturanView({
                   placeholder={`Contoh: PENGURUS ${getTranslatedLabel("RT", previewMode)} 04`}
                   className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
                 />
-                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
-                  Nama Fitur Lapak (Contoh: Pasar Warga / E-Toko)
-                </label>
-                <input
-                  name="nama_lapak"
-                  value={namaLapak}
-                  onChange={(e) => setNamaLapak(e.target.value)}
-                  placeholder="Contoh: Lapak Warga"
-                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
-                />
-                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
-                  Nama Fitur Bank Sampah (Contoh: Unit Pengolah, Greentec, dll)
-                </label>
-                <input
-                  name="nama_bank_sampah"
-                  value={namaBankSampah}
-                  onChange={(e) => setNamaBankSampah(e.target.value)}
-                  placeholder="Contoh: Bank Sampah"
-                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
-                />
-                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
-                  Nama Fitur Pemilu (Contoh: E-Voting Warga, Pemilihan, dll)
-                </label>
-                <input
-                  name="nama_epemilu"
-                  value={namaEpemilu}
-                  onChange={(e) => setNamaEpemilu(e.target.value)}
-                  placeholder="Contoh: e-Pemilu"
-                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
-                />
-                <label className="text-[10px] font-black text-blue-600 uppercase mb-2 mt-4 block tracking-wider">
-                  Nama Fitur Kesehatan (Contoh: Posyandu, Klinik, dll)
-                </label>
-                <input
-                  name="nama_kesehatan"
-                  value={namaKesehatan}
-                  onChange={(e) => setNamaKesehatan(e.target.value)}
-                  placeholder="Contoh: Kesehatan"
-                  className="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 shadow-sm"
-                />
-                <div className="flex items-start gap-2 mt-2">
+                <div className="flex items-start gap-2 mt-4">
                   <div className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
                   <p className="text-[10px] text-slate-500 italic leading-tight">
-                    Nama ini akan menjadi identitas utama di sidebar menu and
+                    Nama ini akan menjadi identitas utama di sidebar menu dan
                     kop surat dokumen {getTranslatedLabel("Warga", previewMode).toLowerCase()}.
                   </p>
                 </div>

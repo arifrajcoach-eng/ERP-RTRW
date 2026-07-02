@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { collection, query, where, onSnapshot, updateDoc, doc, orderBy, limit, deleteDoc } from 'firebase/firestore';
 import { EmergencyLog } from '../types';
@@ -54,22 +54,27 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
 
 interface SatpamDashboardProps {
   tenantId: string;
+  activeTenantIds?: string[];
   pushSubscriptionStatus?: string;
   requestPushPermission?: () => void;
 }
 
 export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({ 
   tenantId,
+  activeTenantIds = [],
   pushSubscriptionStatus,
   requestPushPermission
 }) => {
   const [emergencies, setEmergencies] = useState<EmergencyLog[]>([]);
   const [history, setHistory] = useState<EmergencyLog[]>([]);
-  const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
+  const lastNotificationIdRef = useRef<string | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [notesState, setNotesState] = useState<Record<string, string>>({});
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Stable string representation of active tenant IDs for useEffect dependencies
+  const activeTenantIdsStr = (activeTenantIds || []).slice().sort().join(",");
 
   const handleNoteChange = (id: string, value: string) => {
     setNotesState(prev => ({ ...prev, [id]: value }));
@@ -172,45 +177,69 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
 
   useEffect(() => {
     if (!tenantId) return;
-    // Pending alerts
+    
+    // Fetch all pending logs globally, then filter by tenantId in memory.
+    // This avoids needing complex multi-field Firestore indexes.
     const qPending = query(
       collection(db, 'emergency_logs'), 
-      where('tenantId', '==', tenantId),
       where('status', '==', 'pending')
     );
+
+    const idsToQuery = activeTenantIds && activeTenantIds.length > 0 ? activeTenantIds : [tenantId];
+
     const unsubscribe = onSnapshot(qPending, (snapshot) => {
-      const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmergencyLog));
+      let logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmergencyLog));
+      
+      // Filter by tenantId unless MASTER view
+      if (tenantId !== "MASTER") {
+        logs = logs.filter(log => log.tenantId && idsToQuery.includes(log.tenantId));
+      }
+
       // Sort pending logs by timestamp descending
       const sortedLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       
-      // Check for new emergency
-      if (sortedLogs.length > 0 && sortedLogs[0].id !== lastNotificationId) {
+      // Check for new emergency safely using ref
+      if (sortedLogs.length > 0 && sortedLogs[0].id !== lastNotificationIdRef.current) {
           playSOSSounds();
-          setLastNotificationId(sortedLogs[0].id);
+          lastNotificationIdRef.current = sortedLogs[0].id;
       }
       
       setEmergencies(sortedLogs);
+    }, (err) => {
+      console.error("Error subscribing to qPending:", err);
     });
     return () => unsubscribe();
-  }, [tenantId, lastNotificationId]);
+  }, [tenantId, activeTenantIdsStr]);
 
   useEffect(() => {
     if (!tenantId) return;
-    // Resolved history
+    
+    // Fetch latest 200 logs globally sorted by timestamp descending, then filter by tenantId in memory.
+    // This avoids needing complex composite indexes while guaranteeing we always get the newest logs first (and not old, alphabetical ones).
     const qResolved = query(
       collection(db, 'emergency_logs'), 
-      where('tenantId', '==', tenantId),
-      where('status', '==', 'resolved'),
-      limit(15)
+      orderBy('timestamp', 'desc'),
+      limit(200)
     );
+
+    const idsToQuery = activeTenantIds && activeTenantIds.length > 0 ? activeTenantIds : [tenantId];
+
     const unsubscribe = onSnapshot(qResolved, (snapshot) => {
-      const logs = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as EmergencyLog))
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      let logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmergencyLog));
+      
+      // Filter by tenantId unless MASTER view
+      if (tenantId !== "MASTER") {
+        logs = logs.filter(log => log.tenantId && idsToQuery.includes(log.tenantId));
+      }
+
+      // Sort in-memory to be absolutely sure they are sorted by timestamp desc
+      logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setHistory(logs);
+    }, (err) => {
+      console.error("Error subscribing to qResolved:", err);
     });
     return () => unsubscribe();
-  }, [tenantId]);
+  }, [tenantId, activeTenantIdsStr]);
 
   const handleResolve = async (id: string) => {
     try {
@@ -507,11 +536,18 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className="flex sm:flex-col items-end gap-2 self-start sm:self-auto shrink-0">
-                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-2.5 py-1.5 rounded-full border border-emerald-500/10">
-                      <CheckCircle size={12} />
-                      Resolved
-                    </div>
+                   <div className="flex sm:flex-col items-end gap-2 self-start sm:self-auto shrink-0">
+                    {item.status === 'pending' ? (
+                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-red-500 bg-red-500/10 px-2.5 py-1.5 rounded-full border border-red-500/20 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                        Active
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-2.5 py-1.5 rounded-full border border-emerald-500/10">
+                        <CheckCircle size={12} />
+                        Resolved
+                      </div>
+                    )}
                     {confirmDeleteId === item.id ? (
                       <div className="flex gap-2">
                         <button 
