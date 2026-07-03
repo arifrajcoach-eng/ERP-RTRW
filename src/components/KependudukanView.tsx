@@ -14,7 +14,8 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Printer,
-  X
+  X,
+  ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -43,6 +44,7 @@ interface KependudukanViewProps {
   setIsLoadingDB: (loading: boolean) => void;
   wargaData: any[];
   activePlanData?: any;
+  onBack?: () => void;
 }
 
 export default function KependudukanView({
@@ -54,7 +56,8 @@ export default function KependudukanView({
   handleFirestoreError,
   setIsLoadingDB,
   wargaData,
-  activePlanData
+  activePlanData,
+  onBack
 }: KependudukanViewProps) {
   const [activeTab, setActiveTab] = useState<'kelahiran' | 'kematian' | 'statistik'>('kelahiran');
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,7 +215,34 @@ export default function KependudukanView({
 
   return (
     <div className="space-y-6">
-      {/* Header & Stats Card */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div className="flex items-start gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
+                <BarChart3 className="w-8 h-8 text-brand-blue" />
+              </div>
+              <h2 className="text-3xl font-bold italic text-slate-900 dark:text-white font-outfit uppercase tracking-tight">
+                LAYANAN SIPIL
+              </h2>
+            </div>
+            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+              Digital & Otomatis • Layanan Kependudukan Terpadu
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Card Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-1 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-4 mb-4">
@@ -220,8 +250,8 @@ export default function KependudukanView({
               <BarChart3 className="w-6 h-6 text-brand-blue" />
             </div>
             <div>
-              <h2 className="text-xl font-bold italic text-slate-900 dark:text-white font-outfit">LAYANAN SIPIL</h2>
-              <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Digital & Otomatis</p>
+              <h2 className="text-xl font-bold italic text-slate-900 dark:text-white font-outfit uppercase">Ringkasan</h2>
+              <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Layanan Aktif</p>
             </div>
           </div>
           <div className="space-y-3">

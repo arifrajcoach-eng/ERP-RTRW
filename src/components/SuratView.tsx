@@ -34,7 +34,8 @@ import {
   RefreshCw,
   Archive,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  ChevronLeft
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -61,6 +62,7 @@ interface SuratViewProps {
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   settings?: any;
   handleFileUpload?: any;
+  onBack?: () => void;
 }
 
 export function SuratView({ 
@@ -78,7 +80,8 @@ export function SuratView({
   handleFirestoreError, 
   showNotification,
   settings,
-  handleFileUpload
+  handleFileUpload,
+  onBack
 }: SuratViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'berjalan' | 'arsip'>('berjalan');
   const [showForm, setShowForm] = useState(false);
@@ -750,21 +753,32 @@ export function SuratView({
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-4">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-widest mb-1.5 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-pink-400 animate-pulse" /> SmaRtRW Document Suite
-          </span>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight font-elegant flex items-center gap-3">
-            <span style={{ fontFamily: 'Outfit', fontWeight: 'bold', fontStyle: 'italic' }}>Administrasi Warga</span>
-            <span className={`text-[9px] sm:text-[10px] px-3 py-1 font-black uppercase tracking-wider rounded-full flex items-center gap-1.5 border transition-colors ${
-              activeSubTab === 'berjalan'
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${activeSubTab === 'berjalan' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
-              {activeSubTab === 'berjalan' ? 'Layanan Aktif' : 'Arsip Dokumen'}
+        <div className="flex items-start gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-widest mb-1.5 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-pink-400 animate-pulse" /> SmaRtRW Document Suite
             </span>
-          </h2>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight font-elegant flex items-center gap-3">
+              <span style={{ fontFamily: 'Outfit', fontWeight: 'bold', fontStyle: 'italic' }}>Administrasi Warga</span>
+              <span className={`text-[9px] sm:text-[10px] px-3 py-1 font-black uppercase tracking-wider rounded-full flex items-center gap-1.5 border transition-colors ${
+                activeSubTab === 'berjalan'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${activeSubTab === 'berjalan' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
+                {activeSubTab === 'berjalan' ? 'Layanan Aktif' : 'Arsip Dokumen'}
+              </span>
+            </h2>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 relative z-50">

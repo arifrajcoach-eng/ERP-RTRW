@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette, FileText, Printer, CheckCircle2, Heart, ShieldCheck, Zap, Loader2 } from 'lucide-react';
+import { BookOpen, Shield, Users, Mail, DollarSign, Store, Activity, AlertTriangle, MessageSquare, Info, Star, AlertOctagon, Lightbulb, Palette, FileText, Printer, CheckCircle2, Heart, ShieldCheck, Zap, Loader2, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export default function PanduanAdminView() {
+export default function PanduanAdminView({ onBack }: { onBack?: () => void }) {
   const [activeTab, setActiveTab] = useState<'fitur' | 'action' | 'peringatan' | 'sosialisasi'>('fitur');
   const [isPrinting, setIsPrinting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -78,6 +78,15 @@ export default function PanduanAdminView() {
 
       <div className="bg-white/40 backdrop-blur-xl p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-white/60 text-center print:hidden relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent pointer-events-none" />
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="absolute top-8 left-8 p-3 rounded-2xl bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-brand-blue border border-white/60 dark:border-slate-700 shadow-xl transition-all hover:scale-105 active:scale-95 z-20 backdrop-blur-md"
+            title="Kembali ke Dashboard"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+        )}
         <div className="relative z-10">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}

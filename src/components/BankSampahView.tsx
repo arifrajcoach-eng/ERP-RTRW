@@ -19,6 +19,7 @@ import {
   FileText,
   Upload,
   X,
+  ChevronLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import * as XLSX from "xlsx";
@@ -39,6 +40,7 @@ export default function BankSampahView({
   handleFirestoreError,
   showNotification,
   getSetting,
+  onBack,
 }: any) {
   const [activeSubTab, setActiveSubTab] = useState<
     | "dashboard"
@@ -722,14 +724,25 @@ export default function BankSampahView({
     <div className="space-y-6 pb-20">
       {/* Header & Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            <Recycle className="w-8 h-8 text-emerald-600" />
-            Bank Sampah
-          </h1>
-          <p className="text-slate-500 text-sm font-medium">
-            Ubah sampah menjadi tabungan bermanfaat
-          </p>
+        <div className="flex items-start gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 font-outfit">
+              <Recycle className="w-8 h-8 text-emerald-600" />
+              BANK SAMPAH
+            </h1>
+            <p className="text-slate-500 text-sm font-medium">
+              Ubah sampah menjadi tabungan bermanfaat • {nasabahSummary.length} Nasabah
+            </p>
+          </div>
         </div>
         <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
           {([

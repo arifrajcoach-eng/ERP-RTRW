@@ -4790,6 +4790,7 @@ export default function App() {
               currentUser={currentUser || wargaAuth}
               settings={settings}
               tenantsData={tenantsData}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "buku-tamu" && (
@@ -4804,6 +4805,7 @@ export default function App() {
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               showNotification={showNotification}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "sos-monitor" && (
@@ -4818,6 +4820,7 @@ export default function App() {
               activeTenantIds={activeTenantIds}
               pushSubscriptionStatus={pushSubscriptionStatus}
               requestPushPermission={requestPushPermission}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "organisasi" && (
@@ -4826,6 +4829,7 @@ export default function App() {
               currentTenant={currentTenant}
               settings={settings}
               showNotification={showNotification}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "verifikasi" && (
@@ -4859,6 +4863,7 @@ export default function App() {
                 showNotification={showNotification}
                 handleFirestoreError={handleFirestoreError}
                 currentUser={currentUser}
+                onBack={() => setActiveTab("dashboard")}
               />
             )
           )}
@@ -4894,6 +4899,7 @@ export default function App() {
               isPengurus={["ADMIN", "SUPER_ADMIN", "OWNER", "RW", "RT", "BENDAHARA", "SEKRETARIS", "KADER"].includes(
                 (currentUser?.role || wargaAuth?.role || "").toUpperCase(),
               )}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "posyandu" &&
@@ -4921,6 +4927,7 @@ export default function App() {
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
+                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -4955,6 +4962,7 @@ export default function App() {
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
+                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5011,6 +5019,7 @@ export default function App() {
                 showNotification={showNotification}
                 handleFileUpload={handleFileUpload}
                 setConfirmConfig={setConfirmConfig}
+                onBack={() => setActiveTab("dashboard")}
               />
             );
           })()}
@@ -5024,6 +5033,7 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
               wargaData={filteredWargaDataCentral}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "surat" && (
@@ -5046,6 +5056,7 @@ export default function App() {
                 usersData={filteredUsersDataCentral}
                 generateSuratHTML={generateSuratHTML}
                 settings={settings}
+                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <SuratView
@@ -5064,6 +5075,7 @@ export default function App() {
                 showNotification={showNotification}
                 settings={settings}
                 handleFileUpload={handleFileUpload}
+                onBack={() => setActiveTab("dashboard")}
               />
             )
           )}
@@ -5076,6 +5088,7 @@ export default function App() {
               wargaData={wargaData}
               verifikasiWargaData={verifikasiWargaData}
               quotaExceeded={quotaExceeded}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "booking" && (
@@ -5085,6 +5098,7 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               settings={settings}
               wargaData={wargaData}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "kop-template" && (
@@ -5093,6 +5107,7 @@ export default function App() {
               settings={settings}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
@@ -5103,6 +5118,7 @@ export default function App() {
               onAdd={() => setShowFreeTrialModal(true)} 
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
 
@@ -5116,6 +5132,7 @@ export default function App() {
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser || wargaAuth}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "leads" && (
@@ -5123,6 +5140,7 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               showNotification={showNotification}
               onAddLead={() => setShowFreeTrialModal(true)}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
 
@@ -5135,6 +5153,7 @@ export default function App() {
               showNotification={showNotification}
               setSelectedTenantId={setSelectedTenantId}
               selectedTenantId={selectedTenantId}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "pengaturan" && (
@@ -5149,9 +5168,10 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               currentUser={currentUser || wargaAuth}
               setActiveTab={setActiveTab}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
-          {activeTab === "panduan-admin" && <PanduanAdminView />}
+          {activeTab === "panduan-admin" && <PanduanAdminView onBack={() => setActiveTab("dashboard")} />}
           {activeTab === "voting" && (
             isLoadingDB ? (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5169,6 +5189,7 @@ export default function App() {
                 handleFirestoreError={handleFirestoreError}
                 handleFileUpload={handleFileUpload}
                 showNotification={showNotification}
+                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5205,7 +5226,7 @@ export default function App() {
               showNotification={showNotification}
               accessMode={getPlanFeatures(currentTenant, parentTenant).eLapak}
               setShowUpgradeModal={setShowUpgradeModal}
-              onBackToMain={() => setActiveTab("dashboard")}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "analitik" &&
@@ -5221,6 +5242,7 @@ export default function App() {
                 complaintData={complaintsData}
                 organizationName={currentTenant?.nama || currentTenant?.name || "RW DIGITAL"}
                 showNotification={showNotification}
+                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5249,10 +5271,11 @@ export default function App() {
               wargaData={wargaData}
               currentUser={currentUser || wargaAuth}
               wargaAuth={wargaAuth}
+              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "audit" && (
-            <AuditLogView logs={auditLogs} />
+            <AuditLogView logs={auditLogs} onBack={() => setActiveTab("dashboard")} />
           )}
         </div>
       </main>

@@ -37,6 +37,7 @@ export default function InventarisView({
   showNotification,
   handleFileUpload,
   setConfirmConfig,
+  onBack,
 }: any) {
   const roleUpperGlobal = currentUser?.role?.toUpperCase() || "";
   const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpperGlobal);
@@ -452,15 +453,29 @@ export default function InventarisView({
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 flex items-center">
-            <span className="bg-blue-600 w-1.5 h-6 rounded-full mr-2"></span>
-            Aset & Inventaris
-          </h2>
-          <p className="text-sm text-slate-500 mt-1 max-w-lg">
-            Kelola dan pantau aset yang dimiliki oleh organisasi, perbarui
-            kondisi, serta catat lokasi penyimpanannya di satu tempat.
-          </p>
+        <div className="flex items-start gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
+                <Package className="w-8 h-8 text-brand-blue" />
+              </div>
+              <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
+                INVENTARIS
+              </h2>
+            </div>
+            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+              Aset & Barang Lingkungan • {inventarisData.length} Barang
+            </p>
+          </div>
         </div>
         <div className="flex w-full md:w-auto items-center gap-3 relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3" />

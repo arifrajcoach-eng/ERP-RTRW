@@ -7,6 +7,7 @@ import {
   X,
   Eye,
   EyeOff,
+  ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
@@ -26,6 +27,7 @@ interface UsersViewProps {
   showNotification: (m: string, t?: any) => void;
   settings: any;
   currentUser: any;
+  onBack?: () => void;
 }
 
 export default function UsersView({
@@ -37,6 +39,7 @@ export default function UsersView({
   showNotification,
   settings,
   currentUser,
+  onBack,
 }: UsersViewProps) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
@@ -138,10 +141,21 @@ export default function UsersView({
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-sm font-bold text-slate-800 flex items-center">
-            <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
-            Manajemen Pengguna & Pemetaan Unit
-          </h3>
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
+                title="Kembali ke Dashboard"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+            <h3 className="text-sm font-bold text-slate-800 flex items-center">
+              <span className="bg-blue-600 w-1.5 h-4 rounded-full mr-2"></span>
+              Manajemen Pengguna & Pemetaan Unit
+            </h3>
+          </div>
           <div className="flex gap-2">
             {canCreate(currentUser?.role) && (
               <StyledButton

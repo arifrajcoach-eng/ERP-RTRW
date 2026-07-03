@@ -1,13 +1,24 @@
 import React from "react";
-import { Download } from "lucide-react";
+import { Download, ChevronLeft } from "lucide-react";
 
-export default function AuditLogView({ logs }: { logs: any[] }) {
+export default function AuditLogView({ logs, onBack }: { logs: any[], onBack?: () => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">
-          🛡️ AUDIT LOG & GOVERNANCE
-        </h2>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-3 rounded-2xl bg-white text-slate-400 hover:text-indigo-600 border border-slate-200 shadow-xl transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">
+            🛡️ AUDIT LOG & GOVERNANCE
+          </h2>
+        </div>
         <button
           onClick={() => {
             const csvContent =

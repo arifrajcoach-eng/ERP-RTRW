@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { collection, query, where, onSnapshot, updateDoc, doc, orderBy, limit, deleteDoc } from 'firebase/firestore';
 import { EmergencyLog } from '../types';
-import { ShieldAlert, MapPin, CheckCircle, History, Clock, Phone, Map as MapIcon, Bell, Trash2 } from 'lucide-react';
+import { ShieldAlert, MapPin, CheckCircle, History, Clock, Phone, Map as MapIcon, Bell, Trash2, ChevronLeft } from 'lucide-react';
 import { SOSDashboardMap } from './SOSDashboardMap';
 
 enum OperationType {
@@ -57,13 +57,15 @@ interface SatpamDashboardProps {
   activeTenantIds?: string[];
   pushSubscriptionStatus?: string;
   requestPushPermission?: () => void;
+  onBack?: () => void;
 }
 
 export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({ 
   tenantId,
   activeTenantIds = [],
   pushSubscriptionStatus,
-  requestPushPermission
+  requestPushPermission,
+  onBack
 }) => {
   const [emergencies, setEmergencies] = useState<EmergencyLog[]>([]);
   const [history, setHistory] = useState<EmergencyLog[]>([]);
@@ -281,7 +283,18 @@ export const SatpamDashboard: React.FC<SatpamDashboardProps> = ({
   return (
     <div className="p-6 bg-slate-950 text-white min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-black text-red-500 uppercase tracking-widest leading-none">Dashboard SOS</h1>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-red-500 border border-slate-800 shadow-sm transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <h1 className="text-2xl font-black text-red-500 uppercase tracking-widest leading-none">Dashboard SOS</h1>
+        </div>
         <button 
           onClick={() => setShowMap(!showMap)}
           className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-tighter transition-all border-none cursor-pointer ${showMap ? 'bg-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}

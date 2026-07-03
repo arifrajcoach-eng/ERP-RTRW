@@ -13,9 +13,9 @@ import {
   getDocs 
 } from 'firebase/firestore';
 import { motion } from 'motion/react';
-import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer, ShieldCheck, Eye, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, Building2, Check, X, Printer, ShieldCheck, Eye, RefreshCw, ChevronLeft } from 'lucide-react';
 
-export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, wargaData }: any) {
+export function BookingView({ currentUser, showNotification, handleFirestoreError, settings, wargaData, onBack }: any) {
   const [namaFasilitas, setNamaFasilitas] = useState('Aula RW');
   const [tanggal, setTanggal] = useState('');
   const [keperluan, setKeperluan] = useState('');
@@ -271,20 +271,37 @@ export function BookingView({ currentUser, showNotification, handleFirestoreErro
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
+                <Building2 className="w-8 h-8 text-brand-blue" />
+              </div>
+              <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
+                BOOKING FASUM
+              </h2>
+            </div>
+            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+              Reservasi Gedung & Inventaris Lingkungan • {bookings.length} Aktivitas
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 transition-all relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-[100px] group-hover:bg-emerald-500/10 transition-colors"></div>
         
-        <div className="flex items-center gap-5 mb-10">
-           <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-2xl flex items-center justify-center shadow-xl transition-transform group-hover:rotate-6">
-              <Building2 className="w-8 h-8" />
-           </div>
-           <div>
-              <h2 className="text-2xl font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none" style={{ fontFamily: 'Outfit' }}>Reservasi Fasilitas</h2>
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-2 opacity-80 italic">Peminjaman Gedung & Inventaris Lingkungan</p>
-           </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-3">

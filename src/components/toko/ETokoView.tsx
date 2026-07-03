@@ -25,6 +25,7 @@ import {
   Camera,
   MapPin,
   MinusCircle,
+  ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { db } from "../../firebase";
@@ -57,7 +58,7 @@ export default function ETokoView({
   showNotification,
   accessMode,
   setShowUpgradeModal,
-  onBackToMain,
+  onBack,
 }: {
   userRole: string;
   tenantId: string;
@@ -71,7 +72,7 @@ export default function ETokoView({
   showNotification: any;
   accessMode?: "LIHAT" | "READ" | "JUAL" | "PRIORITAS" | boolean;
   setShowUpgradeModal: any;
-  onBackToMain?: () => void;
+  onBack?: () => void;
 }) {
   const [view, setView] = useState<"buyer" | "seller">("buyer");
   const [activeTab, setActiveTab] = useState<"shop" | "orders">("shop");
@@ -419,13 +420,24 @@ export default function ETokoView({
         </div>
       )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h2 className="text-4xl font-black text-slate-800 tracking-tighter" style={{ fontFamily: 'Outfit' }}>
-            E-LAPAKITA
-          </h2>
-          <p className="text-slate-500 font-medium">
-            Beli kebutuhan harian lebih mudah & dukung UMKM warga
-          </p>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-3 rounded-2xl bg-white text-slate-400 hover:text-indigo-600 border border-slate-200 shadow-xl transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <div>
+            <h2 className="text-4xl font-black text-slate-800 tracking-tighter" style={{ fontFamily: 'Outfit' }}>
+              E-LAPAKITA
+            </h2>
+            <p className="text-slate-500 font-medium">
+              Beli kebutuhan harian lebih mudah & dukung UMKM warga
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -553,7 +565,7 @@ export default function ETokoView({
               onAddToCart={addToCart}
               showNotification={showNotification}
               onBackToMain={() => {
-                if (onBackToMain) onBackToMain();
+                if (onBack) onBack();
               }}
               onProductSelect={(p) => {
                 setSelectedProduct(p);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
 import { addDoc, collection, query, where, onSnapshot, orderBy, doc, updateDoc, limit, startAfter, getDocs } from 'firebase/firestore';
 import { motion } from 'motion/react';
-import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer, RefreshCw, Eye, User, ShieldCheck } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle2, AlertCircle, Check, X, Printer, RefreshCw, Eye, User, ShieldCheck, ChevronLeft } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 
 export function ComplaintView({ 
@@ -13,7 +13,8 @@ export function ComplaintView({
   complaintsData, 
   wargaData,
   verifikasiWargaData = [],
-  quotaExceeded = false
+  quotaExceeded = false,
+  onBack
 }: any) {
   const [jenisKeluhan, setJenisKeluhan] = useState('Kebersihan');
   const [deskripsi, setDeskripsi] = useState('');
@@ -244,20 +245,37 @@ export function ComplaintView({
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
+              title="Kembali ke Dashboard"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
+                <MessageSquare className="w-8 h-8 text-brand-blue" />
+              </div>
+              <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
+                LAPOR PAK
+              </h2>
+            </div>
+            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+              Sampaikan aspirasi demi kenyamanan bersama • {complaints.length} Laporan Tercatat
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-slate-900 p-4 sm:p-8 rounded-3xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 transition-all relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors"></div>
         
-        <div className="flex items-center gap-4 mb-8">
-           <div className="w-14 h-14 bg-gradient-to-br from-brand-blue to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">
-              <MessageSquare className="w-7 h-7" />
-           </div>
-           <div>
-              <h2 className="text-2xl font-outfit font-bold italic text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">LAPOR PAK</h2>
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5 opacity-70">Sampaikan aspirasi demi kenyamanan bersama</p>
-           </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">

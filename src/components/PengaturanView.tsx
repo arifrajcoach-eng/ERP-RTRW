@@ -10,6 +10,7 @@ import {
   VolumeX,
   Download,
   LayoutGrid,
+  ChevronLeft
 } from "lucide-react";
 import { motion } from "motion/react";
 import {
@@ -36,6 +37,7 @@ interface PengaturanViewProps {
   handleFirestoreError: any;
   currentUser: any;
   setActiveTab: any;
+  onBack?: () => void;
 }
 
 const QuotaProgress = ({
@@ -100,6 +102,7 @@ export default function PengaturanView({
   handleFirestoreError,
   currentUser,
   setActiveTab,
+  onBack,
 }: PengaturanViewProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState("");
@@ -1282,6 +1285,21 @@ export default function PengaturanView({
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-4 mb-4">
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="p-3 rounded-2xl bg-white text-slate-400 hover:text-indigo-600 border border-slate-200 shadow-xl transition-all hover:scale-105 active:scale-95"
+            title="Kembali ke Dashboard"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+        )}
+        <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">
+          ⚙️ PENGATURAN SISTEM
+        </h2>
+      </div>
+
       {/* Package Summary */}
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden p-6 relative">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -z-0 opacity-50"></div>
