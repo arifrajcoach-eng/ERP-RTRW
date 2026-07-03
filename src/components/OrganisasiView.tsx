@@ -20,8 +20,7 @@ import {
   AlertTriangle,
   RefreshCw,
   FolderOpen,
-  X,
-  ChevronLeft
+  X
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -44,7 +43,6 @@ interface OrganisasiViewProps {
   currentTenant: any;
   settings?: any;
   showNotification: (msg: string, type: "success" | "error") => void;
-  onBack?: () => void;
 }
 
 const GRADIENT_THEMES = [
@@ -56,7 +54,7 @@ const GRADIENT_THEMES = [
   { id: "cyan", name: "Ocean Breeze", classes: "from-cyan-600 via-cyan-500 to-sky-500 bg-cyan-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-400" },
 ];
 
-export function OrganisasiView({ currentUser, currentTenant, settings, showNotification, onBack }: OrganisasiViewProps) {
+export function OrganisasiView({ currentUser, currentTenant, settings, showNotification }: OrganisasiViewProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [pendingMembers, setPendingMembers] = useState<Member[]>([]);
   const [hasPendingChanges, setHasPendingChanges] = useState<boolean>(false);
@@ -398,27 +396,19 @@ export function OrganisasiView({ currentUser, currentTenant, settings, showNotif
       {/* Visual Ambient Panel */}
       <div className="bg-gradient-to-r from-brand-blue/10 via-indigo-500/5 to-purple-500/10 p-6 md:p-8 shrink-0">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            {onBack && (
-              <button 
-                onClick={onBack}
-                className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-                title="Kembali ke Dashboard"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-            )}
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-brand-blue to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-brand-blue/20">
+              <Network className="w-7 h-7" />
+            </div>
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
-                  <Network className="w-8 h-8 text-brand-blue" />
-                </div>
-                <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
-                  STRUKTUR ORGANISASI
-                </h2>
-              </div>
-              <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                Peta kepengurusan rukun tetangga dan rukun warga • {pendingMembers.length} Personel
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2" style={{ fontFamily: 'Outfit' }}>
+                STRUKTUR ORGANISASI
+                <span className="text-[10px] uppercase font-black tracking-widest bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full px-3 py-1 font-sans">
+                  Optimized
+                </span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Peta kepengurusan rukun tetangga dan rukun warga dengan optimasi penyimpanan dan performa kilat
               </p>
             </div>
           </div>

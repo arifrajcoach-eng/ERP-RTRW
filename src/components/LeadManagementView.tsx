@@ -32,8 +32,7 @@ import {
   UserPlus,
   Trash2,
   Package,
-  Check,
-  ChevronLeft
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -56,7 +55,7 @@ interface Lead {
   emailFollowUpCount?: number;
 }
 
-export default function LeadManagementView({ handleFirestoreError, onAddLead, showNotification, onBack }: any) {
+export default function LeadManagementView({ handleFirestoreError, onAddLead, showNotification }: any) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
@@ -267,20 +266,9 @@ export default function LeadManagementView({ handleFirestoreError, onAddLead, sh
     <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="flex items-start gap-4">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-          <div>
-            <h1 className="text-4xl font-bold italic text-slate-800 tracking-tighter uppercase font-outfit">CRM & Lead Hub</h1>
-            <p className="text-slate-400 font-bold text-sm uppercase tracking-[0.3em] mt-2">Kelola Registrasi Paket Gratis & Follow-up Otomatis</p>
-          </div>
+        <div>
+          <h1 className="text-4xl font-bold italic text-slate-800 tracking-tighter uppercase font-outfit">CRM & Lead Hub</h1>
+          <p className="text-slate-400 font-bold text-sm uppercase tracking-[0.3em] mt-2">Kelola Registrasi Paket Gratis & Follow-up Otomatis</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">

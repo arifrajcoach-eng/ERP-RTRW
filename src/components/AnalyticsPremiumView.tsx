@@ -18,7 +18,6 @@ import {
   MessageSquare,
   ChevronDown,
   RefreshCw,
-  ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
@@ -216,7 +215,6 @@ export function AnalyticsPremiumView({
   complaintData = [],
   organizationName = "RW DIGITAL",
   showNotification,
-  onBack,
 }: any) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState("");
@@ -738,20 +736,9 @@ export function AnalyticsPremiumView({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="p-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 border border-slate-200 dark:border-slate-700 shadow-xl transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-          <h2 className="text-2xl font-black text-slate-800 tracking-tighter">
-            ANALYTICS AI
-          </h2>
-        </div>
+        <h2 className="text-2xl font-black text-slate-800 tracking-tighter">
+          ANALYTICS AI
+        </h2>
         <div className="flex gap-3">
           <button
             onClick={generateReport}

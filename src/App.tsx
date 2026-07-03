@@ -198,7 +198,7 @@ import { StyledButton } from "./components/StyledButton";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
 import KependudukanView from "./components/KependudukanView";
 import InventarisView from "./components/InventarisView";
-import { MessageSquare, Bot, Send, Mail } from "lucide-react";
+import { MessageSquare, Bot, Send, Mail, ArrowLeft } from "lucide-react";
 import { getTranslatedLabel } from "./lib/langUtils";
 import { getTenantId } from "./lib/appUtils";
 import CommandPalette from "./components/CommandPalette";
@@ -1544,7 +1544,18 @@ export default function App() {
 
   const activeEmergency = emergenciesData.find((e) => {
     if (e.status !== "ACTIVE" || e.id === hiddenEmergencyId) return false;
-    const emTime = e.timestamp ? new Date(e.timestamp).getTime() : (e.createdAt?.toMillis?.() || Date.now());
+    
+    let emTime = 0;
+    if (e.timestamp) {
+      const parsed = new Date(e.timestamp).getTime();
+      if (!isNaN(parsed)) emTime = parsed;
+    } else if (e.createdAt) {
+      if (typeof e.createdAt.toMillis === "function") emTime = e.createdAt.toMillis();
+      else {
+        const parsed = new Date(e.createdAt).getTime();
+        if (!isNaN(parsed)) emTime = parsed;
+      }
+    }
     
     // Identify if the active emergency belongs to the currently logged in user
     const currentUserId = auth.currentUser?.uid || wargaAuth?.uid;
@@ -1555,24 +1566,14 @@ export default function App() {
     const myTenantId = currentUser?.tenantId || wargaAuth?.tenantId || selectedTenantId;
     const isMineTenant = e.tenantId === myTenantId || (activeTenantIdsStr && activeTenantIdsStr.includes(e.tenantId));
     
-    const isNewSinceAppStart = emTime > appStartTime.current - 30000; // 30s buffer for clock drift
-    const isRecent = (Date.now() - emTime) < 300000; // 5 minutes max age for automatic display to prevent popping up stale SOS
     const isAuthorized = currentUser?.isSuperAdmin || ["RW", "RT", "SATPAM"].includes(currentUser?.role || "");
+    const isTargetUser = isMine || isMineTenant || isAuthorized;
     
-    console.log("App.tsx: Evaluating activeEmergency:", JSON.stringify(e));
+    // PENTING: Hanya tampilkan modal alarm SOS penuh (sirene merah) jika sinyal darurat terjadi SETELAH aplikasi dibuka (live real-time alert)
+    // Sinyal lama yang ada sebelum aplikasi dibuka tidak boleh langsung muncul otomatis saat login/buka aplikasi
+    const isLive = emTime > appStartTime.current;
     
-    // Always show if it's the user's own active SOS and is relatively recent (24 hours)
-    // This allows them to see & stop/resolve it if they left it active, but prevents 
-    // ancient "ghost" emergencies from popping up forever.
-    const isMineAndRecent = isMine && (Date.now() - emTime) < 86400000;
-    if (isMineAndRecent) return true;
-    
-    // For other users, show only if it is live (triggered while app was open) or highly recent (under 10 minutes old)
-    const isTargetUser = isMineTenant || isAuthorized;
-    const isRecentStrict = (Date.now() - emTime) < 600000; // 10 minutes
-    const isLiveOrRecent = isNewSinceAppStart || isRecentStrict;
-    
-    return isTargetUser && isLiveOrRecent;
+    return isTargetUser && isLive;
   });
 
   useEffect(() => {
@@ -2075,12 +2076,19 @@ export default function App() {
   };
 
   const handleResolveSOS = async (id: string) => {
+    // 1. Langsung tutup sirene dan sembunyikan dari state lokal secara instan agar UI langsung bersih
+    setIsLocalAlarmActive(false);
+    setHiddenEmergencyId(id);
+    const resolverName = currentUser?.name || wargaAuth?.nama || "Warga";
+    setEmergenciesData(prev => prev.map(item => item.id === id ? {
+      ...item,
+      status: "RESOLVED",
+      resolvedBy: resolverName,
+      resolvedAt: new Date().toISOString()
+    } : item));
+
     if (!currentUser && !wargaAuth) return;
     try {
-      // Deactivate local alarm loop when resolved
-      setIsLocalAlarmActive(false);
-
-      const resolverName = currentUser?.name || wargaAuth?.nama || "Warga";
       await updateDoc(doc(db, "emergencies", id), {
         status: "RESOLVED",
         resolvedBy: resolverName,
@@ -2165,16 +2173,19 @@ export default function App() {
         query(collection(db, "emergencies")),
         (snap) => {
           setEmergenciesData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
-          snap.docChanges().forEach(change => {
-             if (change.type === "added" && change.doc.data().status === "ACTIVE") {
-                const data = change.doc.data();
-                const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
-                const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
-                if (isNewSinceAppStart) {
-                   setHiddenEmergencyId(null);
-                }
-             }
-          });
+          if (!isInitialLoad) {
+            snap.docChanges().forEach(change => {
+               if (change.type === "added" && change.doc.data().status === "ACTIVE") {
+                  const data = change.doc.data();
+                  let sosTime = 0;
+                  if (data.timestamp) sosTime = new Date(data.timestamp).getTime() || 0;
+                  else if (data.createdAt?.toMillis) sosTime = data.createdAt.toMillis();
+                  if (sosTime > appStartTime.current) {
+                     setHiddenEmergencyId(null);
+                  }
+               }
+            });
+          }
           isInitialLoad = false;
         },
         (err) => handleFirestoreError(err, "list", "emergencies")
@@ -2189,20 +2200,19 @@ export default function App() {
                const filtered = prev.filter(p => !chunk.includes((p as any).tenantId));
                return [...filtered, ...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any))];
             });
-            snap.docChanges().forEach(change => {
-               if (change.type === "added" && change.doc.data().status === "ACTIVE") {
-                  const data = change.doc.data();
-                  const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
-                  
-                  const isMine = data.userId === (auth.currentUser?.uid || wargaAuth?.uid);
-                  const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
-                  
-                  if (isNewSinceAppStart) {
-                     // Reveal ONLY truly new SOS triggered while the app is open
-                     setHiddenEmergencyId(null);
-                  }
-               }
-            });
+            if (!isInitialLoad) {
+              snap.docChanges().forEach(change => {
+                 if (change.type === "added" && change.doc.data().status === "ACTIVE") {
+                    const data = change.doc.data();
+                    let sosTime = 0;
+                    if (data.timestamp) sosTime = new Date(data.timestamp).getTime() || 0;
+                    else if (data.createdAt?.toMillis) sosTime = data.createdAt.toMillis();
+                    if (sosTime > appStartTime.current) {
+                       setHiddenEmergencyId(null);
+                    }
+                 }
+              });
+            }
             isInitialLoad = false;
           },
           (err) => handleFirestoreError(err, "list", "emergencies")
@@ -4740,9 +4750,21 @@ export default function App() {
 
         {/* Content Area */}
         <div className={`flex-1 overflow-y-auto overflow-x-hidden print:overflow-visible print:h-auto print:p-0 relative z-10 ${activeTab === 'super-admin' ? 'p-0' : 'p-3 md:p-6'}`}>
+          {activeTab !== "dashboard" && (
+            <div className={`mb-4 print:hidden flex items-center justify-between ${activeTab === 'super-admin' ? 'p-4 md:p-6 pb-0' : ''}`}>
+              <button
+                onClick={() => setActiveTab("dashboard")}
+                title="Kembali ke Dashboard"
+                className="w-11 h-11 bg-sky-100 hover:bg-sky-200 dark:bg-sky-500/20 dark:hover:bg-sky-500/30 text-sky-600 dark:text-sky-400 rounded-2xl flex items-center justify-center shadow-md hover:shadow-lg border border-sky-300/60 dark:border-sky-500/40 transition-all duration-300 active:scale-95 group cursor-pointer"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.75] group-hover:-translate-x-0.5 transition-transform duration-300" />
+              </button>
+            </div>
+          )}
           {activeTab === "dashboard" && (
             <DashboardView
               allowedMenuItems={renderableNavItems}
+              activeEmergency={activeEmergency || null}
               kasData={filteredKasDataCentral}
               wargaData={filteredWargaDataCentral}
               suratData={filteredSuratDataCentral}
@@ -4790,7 +4812,6 @@ export default function App() {
               currentUser={currentUser || wargaAuth}
               settings={settings}
               tenantsData={tenantsData}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "buku-tamu" && (
@@ -4805,7 +4826,6 @@ export default function App() {
               setIsLoadingDB={setIsLoadingDB}
               handleFirestoreError={handleFirestoreError}
               showNotification={showNotification}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "sos-monitor" && (
@@ -4820,7 +4840,6 @@ export default function App() {
               activeTenantIds={activeTenantIds}
               pushSubscriptionStatus={pushSubscriptionStatus}
               requestPushPermission={requestPushPermission}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "organisasi" && (
@@ -4829,7 +4848,6 @@ export default function App() {
               currentTenant={currentTenant}
               settings={settings}
               showNotification={showNotification}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "verifikasi" && (
@@ -4863,7 +4881,6 @@ export default function App() {
                 showNotification={showNotification}
                 handleFirestoreError={handleFirestoreError}
                 currentUser={currentUser}
-                onBack={() => setActiveTab("dashboard")}
               />
             )
           )}
@@ -4899,7 +4916,6 @@ export default function App() {
               isPengurus={["ADMIN", "SUPER_ADMIN", "OWNER", "RW", "RT", "BENDAHARA", "SEKRETARIS", "KADER"].includes(
                 (currentUser?.role || wargaAuth?.role || "").toUpperCase(),
               )}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "posyandu" &&
@@ -4927,7 +4943,6 @@ export default function App() {
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
-                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -4962,7 +4977,6 @@ export default function App() {
                 handleFirestoreError={handleFirestoreError}
                 showNotification={showNotification}
                 getSetting={getSetting}
-                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5019,7 +5033,6 @@ export default function App() {
                 showNotification={showNotification}
                 handleFileUpload={handleFileUpload}
                 setConfirmConfig={setConfirmConfig}
-                onBack={() => setActiveTab("dashboard")}
               />
             );
           })()}
@@ -5033,7 +5046,6 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               setIsLoadingDB={setIsLoadingDB}
               wargaData={filteredWargaDataCentral}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "surat" && (
@@ -5056,7 +5068,6 @@ export default function App() {
                 usersData={filteredUsersDataCentral}
                 generateSuratHTML={generateSuratHTML}
                 settings={settings}
-                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <SuratView
@@ -5075,7 +5086,6 @@ export default function App() {
                 showNotification={showNotification}
                 settings={settings}
                 handleFileUpload={handleFileUpload}
-                onBack={() => setActiveTab("dashboard")}
               />
             )
           )}
@@ -5088,7 +5098,6 @@ export default function App() {
               wargaData={wargaData}
               verifikasiWargaData={verifikasiWargaData}
               quotaExceeded={quotaExceeded}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "booking" && (
@@ -5098,7 +5107,6 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               settings={settings}
               wargaData={wargaData}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "kop-template" && (
@@ -5107,7 +5115,6 @@ export default function App() {
               settings={settings}
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {/* Updated tab 'kas' was here, merged into 'keuangan' */}
@@ -5118,7 +5125,6 @@ export default function App() {
               onAdd={() => setShowFreeTrialModal(true)} 
               showNotification={showNotification}
               handleFirestoreError={handleFirestoreError}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
 
@@ -5132,7 +5138,6 @@ export default function App() {
               showNotification={showNotification}
               settings={settings}
               currentUser={currentUser || wargaAuth}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "leads" && (
@@ -5140,7 +5145,6 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               showNotification={showNotification}
               onAddLead={() => setShowFreeTrialModal(true)}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
 
@@ -5153,7 +5157,6 @@ export default function App() {
               showNotification={showNotification}
               setSelectedTenantId={setSelectedTenantId}
               selectedTenantId={selectedTenantId}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "pengaturan" && (
@@ -5168,10 +5171,9 @@ export default function App() {
               handleFirestoreError={handleFirestoreError}
               currentUser={currentUser || wargaAuth}
               setActiveTab={setActiveTab}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
-          {activeTab === "panduan-admin" && <PanduanAdminView onBack={() => setActiveTab("dashboard")} />}
+          {activeTab === "panduan-admin" && <PanduanAdminView />}
           {activeTab === "voting" && (
             isLoadingDB ? (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5189,7 +5191,6 @@ export default function App() {
                 handleFirestoreError={handleFirestoreError}
                 handleFileUpload={handleFileUpload}
                 showNotification={showNotification}
-                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5226,7 +5227,7 @@ export default function App() {
               showNotification={showNotification}
               accessMode={getPlanFeatures(currentTenant, parentTenant).eLapak}
               setShowUpgradeModal={setShowUpgradeModal}
-              onBack={() => setActiveTab("dashboard")}
+              onBackToMain={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "analitik" &&
@@ -5242,7 +5243,6 @@ export default function App() {
                 complaintData={complaintsData}
                 organizationName={currentTenant?.nama || currentTenant?.name || "RW DIGITAL"}
                 showNotification={showNotification}
-                onBack={() => setActiveTab("dashboard")}
               />
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -5271,11 +5271,10 @@ export default function App() {
               wargaData={wargaData}
               currentUser={currentUser || wargaAuth}
               wargaAuth={wargaAuth}
-              onBack={() => setActiveTab("dashboard")}
             />
           )}
           {activeTab === "audit" && (
-            <AuditLogView logs={auditLogs} onBack={() => setActiveTab("dashboard")} />
+            <AuditLogView logs={auditLogs} />
           )}
         </div>
       </main>

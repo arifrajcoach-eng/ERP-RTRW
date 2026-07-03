@@ -2,27 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db, storage } from '../firebase';
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { Settings, Save, Upload, FileText, PlusCircle, CheckCircle, ChevronLeft } from 'lucide-react';
+import { Settings, Save, Upload, FileText, PlusCircle, CheckCircle } from 'lucide-react';
 import { SuratTemplate } from './SuratTemplate';
 import { StyledButton } from './StyledButton';
 
-export default function KopTemplateManagementView({ currentUser, settings, showNotification, handleFirestoreError, onBack }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any, onBack?: () => void }) {
+export default function KopTemplateManagementView({ currentUser, settings, showNotification, handleFirestoreError }: { currentUser: any, settings: any, showNotification: (msg: string, type?: 'success' | 'error' | 'info') => void, handleFirestoreError: any }) {
   const [activeSub, setActiveSub] = useState('branding');
   
   return (
     <div className="p-6">
-      <div className="flex items-center gap-4 mb-6">
-        {onBack && (
-          <button 
-            onClick={onBack}
-            className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-            title="Kembali ke Dashboard"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-        )}
-        <h2 className="text-2xl font-bold">Manajemen KOP & Template</h2>
-      </div>
+      <h2 className="text-2xl font-bold mb-6">Manajemen KOP & Template</h2>
         <div className="flex gap-4 mb-6">
           <StyledButton 
             label="Branding"

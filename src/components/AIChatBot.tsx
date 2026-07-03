@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, Send, MessageSquare, User, Loader2, Mic, MicOff, Volume2, VolumeX, Square, X, ChevronLeft, RadioReceiver, Phone, PhoneOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import Markdown from 'react-markdown';
 import VoiceAgentOverlay from './VoiceAgentOverlay';
 import { PLAN_FEATURES } from '../constants';
 import { 
@@ -43,7 +42,7 @@ export default function AIChatBot(props: any) {
   return <AIChatBotInner {...props} currentUser={optimizedUser} />;
 }
 
-function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startVoiceImmediately }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string, onClose?: () => void, startVoiceImmediately?: boolean }) {
+function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { currentUser: any, agentType?: 'cs' | 'admin' | 'auto', plan?: string, onClose?: () => void }) {
   const roleUpper = currentUser?.role?.toUpperCase() || '';
   const isPrivileged = agentType === 'cs' ? false :
                        agentType === 'admin' ? true :
@@ -59,8 +58,8 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startV
   const agentTitle = isPrivileged ? "Chaty - AI Asisten Ketua" : "Chaty - AI Asisten Warga";
 
   const welcomeMessage = isPrivileged 
-    ? `Selamat datang Bapak/Ibu Ketua. Chaty siap membantu Anda mengelola wilayah dengan cerdas dan tertata rapi hari ini. Silakan sampaikan jika ada data atau informasi yang ingin Bapak/Ibu periksa.`
-    : `Halo Bapak/Ibu Pengurus. Selamat datang di SmaRtRw AI. Chaty siap membantu keperluan administrasi dan layanan warga dengan sigap. Ada yang bisa Chaty bantu hari ini?`;
+    ? `Halo, selamat hari yang luar biasa, Ketua ! Chaty senang sekali bisa menyapa Bapak Ibu hari ini. Ada yang bisa Chaty bantu untuk keperluan wilayah kita hari ini, Pimpinan? Chaty siap membantu dengan penuh semangat!`
+    : `Halo Bapak/ Ibu Pengurus RT RW ! Selamat datang, Chaty senang sekali bisa menyapa Bapak/ Ibu hari ini. 😊✨ Ada yang bisa Chaty bantu untuk keperluan administrasi, pembuatan surat, atau layanan warga lainnya hari ini ? Silakan beri tahu Chaty ya, Chaty siap membantu dengan senang hati! 🙏`;
 
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
     { role: 'bot', text: welcomeMessage }
@@ -93,16 +92,6 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startV
   const lastSpokenTextRef = useRef<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const mountedRef = useRef(true);
-
-  useEffect(() => {
-    if (startVoiceImmediately && !isLiveMode) {
-      // Small delay to ensure contexts are ready
-      const timer = setTimeout(() => {
-        startLiveSession();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [startVoiceImmediately]);
 
   // Helper to convert PCM to WAV Blob
   const pcmToWavBlob = (pcmData: Uint8Array, sampleRate: number) => {
@@ -464,90 +453,81 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startV
       
       {/* Premium Header for Chairman */}
       {isPrivileged ? (
-        <div className="px-6 py-5 border-b border-sky-400/10 bg-slate-950/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-4">
+        <div className="px-6 py-4 border-b border-slate-800/60 bg-slate-900/50 backdrop-blur-md flex items-center justify-between">
+          <div className="flex items-center gap-3">
             {onClose && (
               <button 
                 onClick={onClose}
-                className="p-2.5 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white transition-all border border-slate-700/50"
+                className="mr-1 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all border border-slate-700/50"
                 title="Kembali"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} />
               </button>
             )}
-            <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
-                <Bot className="w-6 h-6 text-white" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-4 border-slate-950 shadow-sm"></div>
+            <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/30">
+              <Bot className="w-4 h-4 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white tracking-tight uppercase font-elegant">{agentTitle}</h2>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[10px] font-black text-sky-400/80 uppercase tracking-widest">Sistem Intelijen Aktif</span>
-              </div>
+              <h2 className="text-sm font-bold text-slate-200 tracking-wide">{agentTitle}</h2>
+              <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Sistem Intelijen Aktif</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={startLiveSession}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border ${
-                isLiveMode 
-                  ? 'bg-sky-500 text-white border-sky-400 shadow-lg shadow-sky-500/30' 
-                  : 'bg-sky-500/10 text-sky-400 border-sky-400/20 hover:bg-sky-500/20'
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                isLiveMode ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700/50'
               }`}
+              title={isLiveMode ? "Stop Voice Mode" : "Start Live Voice Mode (Deep Thinking)"}
             >
-              {isLiveMode ? <RadioReceiver size={14} className="animate-pulse" /> : <Mic size={14} />}
-              {isLiveMode ? "LIVE CHATY" : "VOICE MODE"}
+              {isLiveMode ? <PhoneOff size={14} className="animate-pulse" /> : <Phone size={14} />}
+              {isLiveMode ? "LIVE" : "VOICE MODE"}
             </button>
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+            </span>
             {onClose && (
               <button 
                 onClick={onClose}
-                className="p-3 rounded-2xl bg-slate-800/50 text-slate-400 hover:text-white transition-all border border-slate-700/50"
+                className="p-1.5 rounded-full hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-all"
                 title="Tutup Chat"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="px-6 py-5 border-b border-sky-100 bg-white/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-3">
+        <div className="px-5 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
             {onClose && (
               <button 
                 onClick={onClose}
-                className="p-2.5 rounded-xl hover:bg-sky-50 text-sky-500 hover:text-sky-700 transition-all border border-sky-100"
+                className="p-1.5 rounded-full hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-all"
               >
                 <ChevronLeft size={20} />
               </button>
             )}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-sky-600" />
-              </div>
-              <h2 className="text-base font-bold text-slate-800">{agentTitle}</h2>
-            </div>
+            <h2 className="text-sm font-semibold text-slate-700">{agentTitle}</h2>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={startLiveSession}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all border ${
-                isLiveMode 
-                  ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-600/20' 
-                  : 'bg-sky-50 text-sky-600 hover:bg-sky-100 border-sky-100'
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                isLiveMode ? 'bg-red-500/10 text-red-500 border border-red-500/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
               }`}
+              title={isLiveMode ? "Stop Voice Mode" : "Start Live Voice Mode"}
             >
-              {isLiveMode ? <RadioReceiver size={14} className="animate-pulse" /> : <Mic size={14} />}
-              {isLiveMode ? "LIVE" : "VOICE"}
+              {isLiveMode ? <PhoneOff size={14} className="animate-pulse" /> : <Phone size={14} />}
+              {isLiveMode ? "LIVE" : "VOICE MODE"}
             </button>
             {onClose && (
               <button 
                 onClick={onClose}
-                className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
+                className="p-1.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             )}
           </div>
@@ -555,17 +535,11 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startV
       )}
 
       {/* Main Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth relative">
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#38bdf8 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
-        
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
         {isLiveMode && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-5 bg-sky-500/10 border border-sky-400/20 text-sky-400 text-xs font-black uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-4 mb-4 backdrop-blur-md">
-            <div className="flex gap-1">
-              <span className="w-1 h-3 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></span>
-              <span className="w-1 h-3 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-              <span className="w-1 h-3 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-            </div>
-            {liveModeStatus || "Chaty Voice Agent Active"}
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-medium rounded-xl flex items-center justify-center gap-3 mb-4">
+            <RadioReceiver className="w-5 h-5 animate-pulse" />
+            {liveModeStatus || "Voice Mode Active"}
           </motion.div>
         )}
         {ttsError && (
@@ -595,26 +569,29 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startV
                  </div>
               )}
               
-                <div className={`
-                  relative px-5 py-4 rounded-2xl text-[14px] leading-relaxed shadow-sm transition-all
-                  ${msg.role === 'user' 
-                    ? 'bg-sky-500 text-white rounded-tr-none' 
-                    : isPrivileged
-                      ? 'bg-slate-900/80 text-sky-50 border border-sky-400/10 rounded-tl-none backdrop-blur-md'
-                      : 'bg-white text-slate-800 border border-sky-100 rounded-tl-none'
-                  }
-                `}>
-                  <Markdown>{msg.text}</Markdown>
-                  
-                  {msg.role === 'bot' && (
-                    <button 
-                      onClick={() => handleSpeak(msg.text)} 
-                      className={`absolute -bottom-3 ${isPrivileged ? '-right-3 bg-sky-500 border-sky-400 text-white' : '-right-3 bg-white border-sky-200 text-sky-600'} p-2 rounded-full border shadow-lg transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 hover:scale-110`}
-                    >
-                      {isSpeaking ? <VolumeX size={14}/> : <Volume2 size={14}/>}
-                    </button>
-                  )}
-                </div>
+              <div className={`
+                relative px-5 py-3.5 rounded-2xl max-w-[85%] text-[13px] md:text-sm leading-relaxed
+                ${msg.role === 'user' 
+                  ? isPrivileged 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20 rounded-tr-sm' 
+                    : 'bg-blue-600 text-white shadow-md rounded-tr-sm' 
+                  : isPrivileged
+                    ? 'bg-slate-900/80 text-slate-300 border border-slate-800/80 rounded-tl-sm backdrop-blur-sm'
+                    : 'bg-slate-100 text-slate-800 rounded-tl-sm'
+                }
+              `}>
+                <div className="whitespace-pre-wrap">{msg.text}</div>
+                
+                {msg.role === 'bot' && (
+                  <button 
+                    onClick={() => handleSpeak(msg.text)} 
+                    className={`absolute -bottom-3 ${isPrivileged ? '-right-3 bg-slate-800 border-slate-700 text-slate-400 hover:text-blue-400' : '-right-3 bg-white border-slate-200 text-slate-500 hover:text-blue-600'} p-1.5 rounded-full border shadow-sm transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100`}
+                    title="Putar Suara"
+                  >
+                    {isSpeaking ? <VolumeX size={12}/> : <Volume2 size={12}/>}
+                  </button>
+                )}
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -648,30 +625,43 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startV
       />
 
       {/* Input Area */}
-      <div className={`p-5 md:p-6 ${isPrivileged ? 'bg-slate-950 border-t border-sky-400/10' : 'bg-white border-t border-sky-100'}`}>
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
+      <div className={`p-4 md:p-5 ${isPrivileged ? 'bg-slate-900 border-t border-slate-800/80' : 'bg-white border-t border-slate-100'}`}>
+        <div className="flex items-center gap-2 md:gap-3">
           <button 
             onClick={toggleListening} 
-            className={`p-4 rounded-2xl transition-all shrink-0 border shadow-sm
+            className={`p-3 rounded-xl transition-all shrink-0
               ${isListening 
-                ? 'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse' 
+                ? 'bg-red-500/20 text-red-500 animate-pulse' 
                 : isPrivileged 
-                  ? 'bg-sky-500/10 text-sky-400 border-sky-400/20 hover:bg-sky-500/20' 
-                  : 'bg-sky-50 text-sky-600 border-sky-100 hover:bg-sky-100'
+                  ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white' 
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
               }`}
+            title="Dikte Suara"
           >
-            {isListening ? <Square size={20}/> : <Mic size={20}/>}
+            {isListening ? <Square size={18}/> : <Mic size={18}/>}
           </button>
           
-          <div className="flex-1 relative group">
+          <button 
+            onClick={() => setIsAutoSpeak(!isAutoSpeak)} 
+            className={`p-3 rounded-xl transition-all shrink-0 hidden sm:flex
+              ${isAutoSpeak 
+                ? isPrivileged ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600' 
+                : isPrivileged ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            title={isAutoSpeak ? "Suara Otomatis Aktif" : "Suara Otomatis Nonaktif"}
+          >
+            {isAutoSpeak ? <Volume2 size={18}/> : <VolumeX size={18}/>}
+          </button>
+          
+          <div className="flex-1 relative">
             <input 
               value={input} 
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              className={`w-full pl-6 pr-14 py-4 rounded-2xl text-[15px] transition-all focus:outline-none focus:ring-4
+              className={`w-full pl-4 pr-12 py-3.5 rounded-xl text-sm transition-all focus:outline-none focus:ring-2
                 ${isPrivileged 
-                  ? 'bg-slate-900 border-sky-400/10 text-sky-50 placeholder:text-slate-600 focus:border-sky-500/40 focus:ring-sky-500/10 border' 
-                  : 'bg-slate-50 border border-sky-100 text-slate-800 focus:border-sky-500 focus:ring-sky-500/10 focus:bg-white'
+                  ? 'bg-slate-800 border-none text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50' 
+                  : 'bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white'
                 }
               `}
               placeholder="Tanya Chaty sesuatu..." 
@@ -680,21 +670,18 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose, startV
             <button 
               onClick={handleSend} 
               disabled={isLoading || !input.trim()}
-              className={`absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-xl transition-all
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all
                 ${!input.trim() 
-                  ? 'opacity-30 cursor-not-allowed text-slate-500' 
-                  : 'bg-sky-500 text-white hover:bg-sky-400 shadow-lg shadow-sky-500/25 hover:translate-x-1'
+                  ? 'opacity-50 cursor-not-allowed text-slate-400' 
+                  : 'bg-blue-600 text-white hover:bg-blue-500 shadow-md hover:shadow-blue-600/25 shadow-blue-600/20'
                 }
               `}
             >
-              <Send size={20} className={isLoading ? 'opacity-0' : 'opacity-100'} />
-              {isLoading && <Loader2 size={20} className="absolute inset-0 m-auto animate-spin" />}
+              <Send size={16} className={isLoading ? 'opacity-0' : 'opacity-100'} />
+              {isLoading && <Loader2 size={16} className="absolute inset-0 m-auto animate-spin" />}
             </button>
           </div>
         </div>
-        <p className="text-center text-[10px] font-black text-sky-400/30 mt-4 uppercase tracking-[0.3em]">
-          Powered by SmaRtRw AI Core v4.0 Tech
-        </p>
       </div>
     </div>
   );

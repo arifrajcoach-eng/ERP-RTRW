@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
-import { Mail, Phone, Users, UserPlus, CheckCircle2, Trash2, X, Send, AlertTriangle, Loader2, FileText, Check, ArrowRight, Clock, CreditCard, ShieldCheck, Eye, RefreshCw, AlertCircle, ChevronLeft } from 'lucide-react';
+import { Mail, Phone, Users, UserPlus, CheckCircle2, Trash2, X, Send, AlertTriangle, Loader2, FileText, Check, ArrowRight, Clock, CreditCard, ShieldCheck, Eye, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const EMAIL_TEMPLATES = [
@@ -66,7 +66,7 @@ SmaRtRw Enterprise Partnership`
   }
 ];
 
-export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification, handleFirestoreError, onBack }: any) {
+export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification, handleFirestoreError }: any) {
   const [registrants, setRegistrants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -318,23 +318,12 @@ export function DaftarPendaftarTrialView({ currentUser, onAdd, showNotification,
     <div className="p-6 max-w-7xl mx-auto" id="trial-tenants-view">
       {/* Header section styled to match professional dashboards */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-        <div className="flex items-start gap-4">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-          <div>
-            <h2 className="text-xl font-bold font-sans tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              <span>Pendaftar Tenant Trial</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">Kelola dan hubungi pendaftar sistem baru yang menggunakan mode 'Mulai Gratis'</p>
-          </div>
+        <div>
+          <h2 className="text-xl font-bold font-sans tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600" />
+            <span>Pendaftar Tenant Trial</span>
+          </h2>
+          <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">Kelola dan hubungi pendaftar sistem baru yang menggunakan mode 'Mulai Gratis'</p>
         </div>
         <button 
           id="btn-tambah-trial"

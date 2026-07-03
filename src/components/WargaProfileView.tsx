@@ -86,7 +86,6 @@ interface WargaProfileViewProps {
   generateSuratHTML: any;
   settings: any;
   onEnterAppPortal?: () => void;
-  onBack?: () => void;
 }
 
 export function WargaProfileView({ 
@@ -107,8 +106,7 @@ export function WargaProfileView({
   usersData, 
   generateSuratHTML, 
   settings,
-  onEnterAppPortal,
-  onBack
+  onEnterAppPortal
 }: WargaProfileViewProps) {
   const wargaData = React.useMemo(() => {
     return normalizeProfileData(rawWargaData);
@@ -711,23 +709,12 @@ export function WargaProfileView({
               {activeCitizenTab === 'profil' && (
                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="max-w-4xl mx-auto space-y-12">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                       <div className="flex items-start gap-4">
-                          {onBack && (
-                             <button 
-                                onClick={onBack}
-                                className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-                                title="Kembali ke Dashboard"
-                             >
-                                <ChevronLeft className="w-6 h-6" />
-                             </button>
-                          )}
-                          <div>
-                            <h1 className="text-[2.5rem] font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase font-elegant leading-none">Dashboard Personal</h1>
-                            <div className="flex items-center gap-2 mt-4">
-                               <div className="w-1.5 h-1.5 rounded-full bg-brand-blue"></div>
-                               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Profil Terdaftar di Node: {wargaData.rt || '01'}</p>
-                            </div>
-                          </div>
+                       <div>
+                         <h1 className="text-[2.5rem] font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase font-elegant leading-none">Dashboard Personal</h1>
+                         <div className="flex items-center gap-2 mt-4">
+                            <div className="w-1.5 h-1.5 rounded-full bg-brand-blue"></div>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Profil Terdaftar di Node: {wargaData.rt || '01'}</p>
+                         </div>
                        </div>
                        <motion.button 
                           whileHover={{ scale: 1.05, y: -2 }}

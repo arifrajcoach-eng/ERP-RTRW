@@ -25,7 +25,6 @@ import {
   TrendingUp,
   LayoutDashboard,
   Zap,
-  ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import * as XLSX from "xlsx";
@@ -61,7 +60,6 @@ interface PosyanduViewProps {
   handleFirestoreError: (err: any, op?: string, path?: string) => void;
   showNotification: (msg: string, type?: "success" | "error" | "info") => void;
   getSetting?: (key: string) => any;
-  onBack?: () => void;
 }
 
 export default function PosyanduView({
@@ -86,7 +84,6 @@ export default function PosyanduView({
   handleFirestoreError,
   showNotification,
   getSetting,
-  onBack,
 }: PosyanduViewProps) {
   const roleUpper = currentUser?.role?.toUpperCase() || "";
   const isViewer = ["WARGA", "VIEWER", "TAMU"].includes(roleUpper);
@@ -472,36 +469,23 @@ export default function PosyanduView({
 
   return (
     <div className="space-y-6 container mx-auto px-4 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-        <div className="flex items-start gap-4">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="bg-rose-500/10 p-2.5 rounded-2xl">
-                <Baby className="w-8 h-8 text-rose-500" />
-              </div>
-              <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
-                POSYANDU
-              </h2>
-            </div>
-            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-              Layanan Kesehatan Terpadu • {balitaData.length + ibuHamilData.length} Jiwa Terpantau
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Header Panel */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-rose-50 dark:bg-rose-900/30 rounded-2xl">
+              <Baby className="w-6 h-6 text-rose-500" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-slate-800 dark:text-white">
+                Layanan Posyandu Digital
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">
+                Pemantauan tumbuh kembang balita dan kesehatan ibu hamil
+              </p>
+            </div>
+          </div>
+
           <div className="relative z-50">
             <button
               onClick={() => setShowSuiteMenu(!showSuiteMenu)}

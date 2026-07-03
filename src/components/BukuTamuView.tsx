@@ -21,8 +21,7 @@ import {
   Edit,
   LogOut,
   Image,
-  RefreshCw,
-  ChevronLeft
+  RefreshCw
 } from 'lucide-react';
 import { 
   collection, 
@@ -48,7 +47,6 @@ interface BukuTamuViewProps {
   setIsLoadingDB: React.Dispatch<React.SetStateAction<boolean>>;
   handleFirestoreError: (error: any, operation: string, path: string) => void;
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
-  onBack?: () => void;
 }
 
 export function BukuTamuView({ 
@@ -57,8 +55,7 @@ export function BukuTamuView({
   tenantId, 
   setIsLoadingDB, 
   handleFirestoreError, 
-  showNotification,
-  onBack
+  showNotification 
 }: BukuTamuViewProps) {
   const [tamuData, setTamuData] = useState<any[]>([]);
   const [lastVisible, setLastVisible] = useState<any>(null);
@@ -249,15 +246,6 @@ export function BukuTamuView({
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
-      {onBack && (
-        <button 
-          onClick={onBack}
-          className="p-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 border border-slate-200 dark:border-slate-700 shadow-xl transition-all hover:scale-105 active:scale-95 ml-4 mt-4 shrink-0"
-          title="Kembali"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-      )}
       {/* CCTV & Status Security */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-3 bg-slate-900 rounded-3xl sm:rounded-[3.5rem] p-4 sm:p-6 shadow-2xl relative overflow-hidden h-[250px] sm:h-[350px] lg:h-[400px] border-4 sm:border-8 border-slate-800 group w-full">

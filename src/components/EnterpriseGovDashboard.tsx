@@ -9,7 +9,6 @@ import {
   MapPin,
   BarChart3,
   Globe,
-  ChevronLeft
 } from "lucide-react";
 import { motion } from "motion/react";
 import {
@@ -30,13 +29,11 @@ export default function EnterpriseGovDashboard({
   wargaData = [],
   currentUser,
   wargaAuth,
-  onBack,
 }: {
   tenantId: string;
   wargaData: any[];
   currentUser: any;
   wargaAuth?: any;
-  onBack?: () => void;
 }) {
   const defaultRegion = useMemo(() => {
     const rawRw = currentUser?.rw || wargaAuth?.rw || "26";
@@ -151,29 +148,18 @@ export default function EnterpriseGovDashboard({
   return (
     <div className="space-y-8 pb-20">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="p-3 rounded-2xl bg-white text-slate-400 hover:text-indigo-600 border border-slate-200 shadow-xl transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
-                🏛️ DASHBOARD KELURAHAN
-              </h1>
-              <span className="bg-indigo-900 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-200">
-                Enterprise
-              </span>
-            </div>
-            <p className="text-slate-500 font-medium">
-              Monitoring Real-time & Decision Support Wilayah Terintegrasi.
-            </p>
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+              🏛️ DASHBOARD KELURAHAN
+            </h1>
+            <span className="bg-indigo-900 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-200">
+              Enterprise
+            </span>
           </div>
+          <p className="text-slate-500 font-medium">
+            Monitoring Real-time & Decision Support Wilayah Terintegrasi.
+          </p>
         </div>
         <div className="flex gap-4">
           <button

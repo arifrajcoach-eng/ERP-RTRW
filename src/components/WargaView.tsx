@@ -27,7 +27,6 @@ interface WargaViewProps {
   currentUser: any;
   settings?: any;
   tenantsData?: any[];
-  onBack?: () => void;
 }
 
 const calculateAge = (tglLahir: string) => {
@@ -84,8 +83,7 @@ function WargaView(props: WargaViewProps) {
       showNotification, 
       currentUser,
       settings,
-      tenantsData,
-      onBack
+      tenantsData
   } = props;
 
   // Restriction: WARGA cannot access Data Warga
@@ -969,29 +967,18 @@ function WargaView(props: WargaViewProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-        <div className="flex items-start gap-4">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
-                <Users className="w-8 h-8 text-brand-blue" />
-              </div>
-              <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
-                DATA WARGA
-              </h2>
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
+              <Users className="w-8 h-8 text-brand-blue" />
             </div>
-            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-              Platform {currentTenant?.name || ''} • {filteredWargaData.length} {getTranslatedLabel("Warga", settings?.themeMode)} Terdaftar
-            </p>
+            <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
+              DATA WARGA
+            </h2>
           </div>
+          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+            Platform {currentTenant?.name || ''} • {filteredWargaData.length} {getTranslatedLabel("Warga", settings?.themeMode)} Terdaftar
+          </p>
         </div>
         
         <div className="flex flex-wrap gap-3 items-center">

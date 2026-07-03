@@ -15,7 +15,6 @@ import {
   EyeOff,
   Info,
   AlertCircle,
-  ChevronLeft
 } from "lucide-react";
 import {
   collection,
@@ -41,7 +40,6 @@ export default function TenantsView({
   showNotification,
   setSelectedTenantId,
   selectedTenantId,
-  onBack,
 }: {
   tenantsData: any[];
   isLoadingDB: boolean;
@@ -50,7 +48,6 @@ export default function TenantsView({
   showNotification: any;
   setSelectedTenantId: any;
   selectedTenantId: string | null;
-  onBack?: () => void;
 }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
@@ -367,15 +364,6 @@ export default function TenantsView({
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none"></div>
           
           <div className="flex flex-col md:flex-row items-center md:items-start gap-10 relative z-10 w-full xl:w-auto">
-            {onBack && (
-              <button 
-                onClick={onBack}
-                className="p-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-xl transition-all hover:scale-105 active:scale-95 shrink-0 self-start"
-                title="Kembali ke Dashboard"
-              >
-                <ChevronLeft className="w-8 h-8" />
-              </button>
-            )}
             <div className="p-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-900 text-white rounded-[3.5rem] shadow-2xl shrink-0 ring-8 ring-blue-50/50">
               <Shield className="w-14 h-14" />
             </div>

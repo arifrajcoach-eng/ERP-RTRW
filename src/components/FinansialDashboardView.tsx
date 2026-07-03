@@ -3,9 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   CreditCard, 
   Wallet, 
-  PieChart,
-  ChevronLeft,
-  DollarSign
+  PieChart
 } from 'lucide-react';
 import { StyledButton } from './StyledButton';
 import { IuranView } from './IuranView';
@@ -29,7 +27,6 @@ interface FinansialDashboardViewProps {
   isPengurus: boolean;
   plan?: string;
   refreshKeuangan?: () => Promise<void> | void;
-  onBack?: () => void;
 }
 
 export function FinansialDashboardView(props: FinansialDashboardViewProps) {
@@ -38,33 +35,6 @@ export function FinansialDashboardView(props: FinansialDashboardViewProps) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-start gap-4">
-          {props.onBack && (
-            <button 
-              onClick={props.onBack}
-              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="bg-brand-blue/10 p-2.5 rounded-2xl">
-                <DollarSign className="w-8 h-8 text-brand-blue" />
-              </div>
-              <h2 className="text-3xl font-bold italic text-slate-800 dark:text-slate-100 tracking-tight uppercase font-outfit">
-                KEUANGAN
-              </h2>
-            </div>
-            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-              Transparansi & Akuntabilitas Kas Lingkungan • {props.kasData.length + props.iuranData.length} Catatan
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Premium Tab Navigation */}
       <div className="flex w-full md:w-fit bg-slate-100/50 dark:bg-slate-800/50 p-1.5 sm:p-2 rounded-2xl md:rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl backdrop-blur-3xl animate-in fade-in slide-in-from-left-4 duration-700 justify-between md:justify-start">
         {[

@@ -11,8 +11,7 @@ import {
   Trash2, 
   X, 
   ShieldAlert,
-  Clock,
-  ChevronLeft
+  Clock
 } from 'lucide-react';
 import { doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -26,7 +25,6 @@ interface VerifikasiAdminViewProps {
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   handleFirestoreError: (error: any, operation: string, path: string) => void;
   currentUser: any;
-  onBack?: () => void;
 }
 
 const normalizeVerifItem = (item: any) => {
@@ -67,8 +65,7 @@ export function VerifikasiAdminView({
   setIsLoadingDB, 
   showNotification, 
   handleFirestoreError, 
-  currentUser,
-  onBack
+  currentUser 
 }: VerifikasiAdminViewProps) {
   const [filter, setFilter] = useState<'All' | 'Menunggu Persetujuan' | 'Disetujui' | 'Ditolak'>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -652,32 +649,21 @@ export function VerifikasiAdminView({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 w-full">
         <div className="w-full relative group">
           <div className="absolute -left-12 -top-12 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-500/10 transition-colors duration-1000"></div>
-          <div className="relative z-10 flex items-start gap-6">
-            {onBack && (
-              <button 
-                onClick={onBack}
-                className="mt-2 p-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-600 border border-slate-200 dark:border-slate-700 shadow-xl transition-all hover:scale-105 active:scale-95 shrink-0"
-                title="Kembali ke Dashboard"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-            )}
-            <div>
-              <div className="flex items-center gap-4 mb-3">
-                <div className="p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 rounded-[2rem] shadow-2xl shadow-blue-500/30 ring-4 ring-white/50">
-                  <ShieldCheck className="w-8 h-8 text-white shrink-0" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.35em] text-blue-500 mb-1 block">Administrative Hub</span>
-                  <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-tight">
-                    <span className="bg-gradient-to-r from-slate-800 to-slate-500 bg-clip-text text-transparent">Verifikasi</span> <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Data</span>
-                  </h1>
-                </div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 rounded-[2rem] shadow-2xl shadow-blue-500/30 ring-4 ring-white/50">
+                <ShieldCheck className="w-8 h-8 text-white shrink-0" />
               </div>
-              <p className="text-xs md:text-sm text-slate-400 font-medium max-w-lg leading-relaxed">
-                Otorisasi and sinkronisasi perubahan identitas warga. Pastikan data yang diajukan sesuai dengan dokumen resmi kependudukan.
-              </p>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-blue-500 mb-1 block">Administrative Hub</span>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-tight">
+                  <span className="bg-gradient-to-r from-slate-800 to-slate-500 bg-clip-text text-transparent">Verifikasi</span> <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Data</span>
+                </h1>
+              </div>
             </div>
+            <p className="text-xs md:text-sm text-slate-400 font-medium max-w-lg leading-relaxed">
+              Otorisasi and sinkronisasi perubahan identitas warga. Pastikan data yang diajukan sesuai dengan dokumen resmi kependudukan.
+            </p>
           </div>
         </div>
         

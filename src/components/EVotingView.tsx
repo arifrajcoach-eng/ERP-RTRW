@@ -9,8 +9,7 @@ import {
   BarChart3,
   Users2,
   Settings2,
-  FileText,
-  ChevronLeft
+  FileText
 } from "lucide-react";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -27,7 +26,6 @@ export function EVotingView({
   handleFirestoreError,
   handleFileUpload,
   showNotification,
-  onBack
 }: {
   userRole: string;
   tenantId: string;
@@ -40,7 +38,6 @@ export function EVotingView({
   handleFileUpload: (file: File, folder: string) => Promise<string>;
   showNotification: any;
   localTitleOverride?: string;
-  onBack?: () => void;
 }) {
   const localTitleProp = arguments[0]?.localTitleOverride;
   const [activeView, setActiveView] = useState<"vote" | "admin">("vote");
@@ -187,52 +184,41 @@ export function EVotingView({
   return (
     <div className="max-w-6xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-        <div className="flex items-start gap-4">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="mt-1 p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-blue border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:scale-105 active:scale-95"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
+        <div>
+          {activeView === "admin" && isAdmin ? (
+             <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="text"
+                  className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tighter uppercase italic bg-transparent border-b-2 border-slate-200 outline-none focus:border-brand-blue w-full"
+                  value={localTitle}
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    setLocalTitle(newTitle);
+                    // Debounced update to avoid too many writes
+                    clearTimeout((window as any).titleTimeout);
+                    (window as any).titleTimeout = setTimeout(async () => {
+                      if (!isAdmin) return;
+                      try {
+                        await setDoc(doc(db, "voting_config", config?.id || tenantId), { title: newTitle }, { merge: true });
+                      } catch (err) {}
+                    }, 500);
+                  }}
+                />
+             </div>
+          ) : (
+             <h2 
+               className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic flex items-center gap-3"
+               style={{ fontSize: '30px' }}
+             >
+               {config?.title || localTitle}
+             </h2>
           )}
-          <div>
-            {activeView === "admin" && isAdmin ? (
-               <div className="flex items-center gap-2 mb-2">
-                  <input
-                    type="text"
-                    className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic bg-transparent border-b-2 border-slate-200 outline-none focus:border-brand-blue w-full"
-                    value={localTitle}
-                    onChange={(e) => {
-                      const newTitle = e.target.value;
-                      setLocalTitle(newTitle);
-                      // Debounced update to avoid too many writes
-                      clearTimeout((window as any).titleTimeout);
-                      (window as any).titleTimeout = setTimeout(async () => {
-                        if (!isAdmin) return;
-                        try {
-                          await setDoc(doc(db, "voting_config", config?.id || tenantId), { title: newTitle }, { merge: true });
-                        } catch (err) {}
-                      }, 500);
-                    }}
-                  />
-               </div>
-            ) : (
-               <h2 
-                 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic flex items-center gap-3"
-                 style={{ fontSize: '30px' }}
-               >
-                 {config?.title || localTitle}
-               </h2>
-            )}
-            <div className="flex items-center gap-3 mt-1">
-              <span
-                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${!isVotingClosed() ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}
-              >
-                {getStatusText()}
-              </span>
-            </div>
+          <div className="flex items-center gap-3 mt-1">
+            <span
+              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${!isVotingClosed() ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}
+            >
+              {getStatusText()}
+            </span>
           </div>
         </div>
 
