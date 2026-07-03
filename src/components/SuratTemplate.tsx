@@ -52,7 +52,7 @@ export const SuratTemplate = ({ surat, kop, settings }: { surat: any, kop: any, 
 
             {/* In a real app, logic for specific letter fields would be here based on surat.jenisSurat */}
             <div className="mt-6 leading-relaxed">
-              <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {surat?.rt || kop?.rt || '...'} / RW {kop?.rw || '...'} Kelurahan {(kop?.kelurahan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())} Kecamatan {(kop?.kecamatan || '...').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())} {((kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kabupaten') || (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kota') ? '' : 'Kabupaten ') + (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().replace(/\b\w/g, s => s.toUpperCase())}</p>
+              <p className="mb-4">Yang bertanda tangan di bawah ini Ketua RT {surat?.rt || kop?.rt || '...'} / RW {kop?.rw || '...'} Kelurahan {(kop?.kelurahan || '...').toLowerCase().replace(/\b\w/g, (s: any) => s.toUpperCase())} Kecamatan {(kop?.kecamatan || '...').toLowerCase().replace(/\b\w/g, (s: any) => s.toUpperCase())} {((kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kabupaten') || (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().includes('kota') ? '' : 'Kabupaten ') + (kop?.kabupaten || settings?.kabupaten || 'Bekasi').toLowerCase().replace(/\b\w/g, (s: any) => s.toUpperCase())}</p>
               <p className="mb-4">Dengan ini menerangkan bahwa :</p>
               <div className="grid grid-cols-[180px_10px_1fr] gap-2 ml-4">
                  <div>Nama</div><div>:</div><div><strong>{surat?.pemohon || '...'}</strong></div>

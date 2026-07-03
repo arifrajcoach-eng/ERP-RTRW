@@ -642,14 +642,14 @@ export default function ETokoView({
              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
                <h4 className="text-sm font-black uppercase tracking-[0.2em] mb-6 text-slate-400">Pesanan Masuk</h4>
                <div className="space-y-4">
-                 {orders.filter(o => o.items.some(item => {
+                 {orders.filter((o: any) => o.items.some((item: any) => {
                    const p = products.find(prod => prod.id === item.id);
                    return p?.sellerId === (wargaAuth?.nik || currentUser?.uid);
                  })).map(order => (
                    <div key={order.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
                      <div>
                        <p className="font-black text-slate-700 text-xs uppercase tracking-widest mb-1">{order.customerName}</p>
-                       <p className="text-[10px] font-bold text-slate-400 italic mb-2">{order.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
+                       <p className="text-[10px] font-bold text-slate-400 italic mb-2">{order.items.map((i: any) => `${i.qty}x ${i.name}`).join(', ')}</p>
                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${order.status === 'COMPLETED' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
                          {order.status}
                        </span>

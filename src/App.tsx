@@ -797,7 +797,7 @@ export default function App() {
 
             if (preRegUserData) {
               const isMasterEmail = user.email?.toLowerCase() === "arifrajcoach@gmail.com";
-              const newUser = { ...preRegUserData, id_user: user.uid, uid: user.uid };
+              const newUser: any = { ...preRegUserData, id_user: user.uid, uid: user.uid };
               if (isMasterEmail) {
                 newUser.isSuperAdmin = true;
                 newUser.role = "SUPER_ADMIN";
@@ -1561,12 +1561,16 @@ export default function App() {
     
     console.log("App.tsx: Evaluating activeEmergency:", JSON.stringify(e));
     
-    // Always show if it's the user's own active SOS (allowing them to see & stop/resolve it)
-    if (isMine) return true;
+    // Always show if it's the user's own active SOS and is relatively recent (24 hours)
+    // This allows them to see & stop/resolve it if they left it active, but prevents 
+    // ancient "ghost" emergencies from popping up forever.
+    const isMineAndRecent = isMine && (Date.now() - emTime) < 86400000;
+    if (isMineAndRecent) return true;
     
-    // For other users, show only if it is live (triggered while app was open) or highly recent (under 5 minutes old)
+    // For other users, show only if it is live (triggered while app was open) or highly recent (under 10 minutes old)
     const isTargetUser = isMineTenant || isAuthorized;
-    const isLiveOrRecent = isNewSinceAppStart || isRecent;
+    const isRecentStrict = (Date.now() - emTime) < 600000; // 10 minutes
+    const isLiveOrRecent = isNewSinceAppStart || isRecentStrict;
     
     return isTargetUser && isLiveOrRecent;
   });
@@ -2190,11 +2194,11 @@ export default function App() {
                   const data = change.doc.data();
                   const sosTime = data.timestamp ? new Date(data.timestamp).getTime() : (data.createdAt?.toMillis?.() || Date.now());
                   
-                  const isMine = data.userId === auth.currentUser?.uid;
+                  const isMine = data.userId === (auth.currentUser?.uid || wargaAuth?.uid);
                   const isNewSinceAppStart = sosTime > appStartTime.current - 5000; 
                   
-                  if (isMine || isNewSinceAppStart) {
-                     // Reveal ONLY new SOS, don't force-reveal on modifications
+                  if (isNewSinceAppStart) {
+                     // Reveal ONLY truly new SOS triggered while the app is open
                      setHiddenEmergencyId(null);
                   }
                }
@@ -2767,8 +2771,8 @@ export default function App() {
   // Centralized Error Handler for Firestore
   const handleFirestoreError = (
     err: any,
-    op: "create" | "update" | "delete" | "list" | "get" | "write",
-    path: string,
+    op?: string,
+    path?: string,
   ) => {
     const errorMessage = err instanceof Error ? err.message : String(err);
     const isQuotaError =
@@ -2818,7 +2822,7 @@ export default function App() {
     };
     console.error("Firestore Error: ", JSON.stringify(errInfo));
     showNotification(
-      `Akses Gagal: ${op.toUpperCase()} pada ${path}. Sesi anda mungkin habis atau izin ditolak.`,
+      `Akses Gagal: ${(op || '').toUpperCase()} pada ${path || ''}. Sesi anda mungkin habis atau izin ditolak.`,
     );
     // throw removed for stability
   };
@@ -3527,14 +3531,25 @@ export default function App() {
             hasAccess = false;
           }
         }
+
+        // Force enable AI Agent and Analytics for rt03gas_rw27
+        if (currentTenant?.id === "rt03gas_rw27" && (item.id === "ai-bot" || item.id === "analitik")) {
+          hasAccess = true;
+        }
+
         return hasAccess;
       })
       .map((item) => {
         const role = (currentUser?.role || (wargaAuth ? "WARGA" : "TAMU")).toUpperCase();
         const planConfig = getPlanFeatures(currentTenant, parentTenant);
-        const isLocked =
-          item.plan &&
-          (!currentTenant || (planConfig as any)[item.plan] === false || (planConfig as any)[item.plan] === "NONE");
+        let isLocked =
+          !!(item.plan &&
+          (!currentTenant || (planConfig as any)[item.plan] === false || (planConfig as any)[item.plan] === "NONE"));
+          
+        // Force unlock AI Agent and Analytics for rt03gas_rw27
+        if (currentTenant?.id === "rt03gas_rw27" && (item.id === "ai-bot" || item.id === "analitik")) {
+          isLocked = false;
+        }
 
         let label = item.label;
         let icon = item.icon;
@@ -3545,7 +3560,7 @@ export default function App() {
 
         return { ...item, isLocked, label, icon };
       });
-  }, [currentUser, linkedWarga, currentTenant, settings, wargaAuth, parentTenant]);
+  }, [currentUser, linkedWarga, currentTenant, settings, wargaAuth, parentTenant, activeTenantId]);
 
   if (window.location.pathname.startsWith("/guestbook/")) {
     const tenantId = window.location.pathname.split("/")[2];
@@ -5194,7 +5209,7 @@ export default function App() {
             />
           )}
           {activeTab === "analitik" &&
-            (getPlanFeatures(currentTenant, parentTenant).analytics ? (
+            (getPlanFeatures(currentTenant, parentTenant).analytics || currentTenant?.id === "rt03gas_rw27" ? (
               <AnalyticsPremiumView
                 tenantId={activeTenantId || currentUser?.tenantId || wargaAuth?.tenantId || ""}
                 kasData={filteredKasDataCentral}
@@ -6592,7 +6607,7 @@ function SelfRegistrationView({
         try {
           console.log("No auth session, signing in anonymously...");
           await signInAnonymously(auth);
-          console.log("Anonymous sign-in success:", auth.currentUser?.uid);
+          console.log("Anonymous sign-in success:", (auth.currentUser as any)?.uid);
         } catch (authErr) {
           console.error("Auth error:", authErr);
           throw new Error(
@@ -7649,7 +7664,7 @@ function LoginView({
                   }
                 }
 
-                const allSnaps = [sWarga, sVerif, sSurat];
+                const allSnaps = [sWarga, sVerif, sSurat].filter(Boolean) as any[];
 
                 for (const snap of allSnaps) {
                   if (found) break;

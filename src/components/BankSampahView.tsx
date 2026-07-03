@@ -421,7 +421,7 @@ export default function BankSampahView({
   };
 
   const exportAllSetoranExcel = () => {
-    const data = sampahSetoranData.map((s) => ({
+    const data = sampahSetoranData.map((s: any) => ({
       Nasabah: s.namaNasabah,
       Kategori: s.namaKategori,
       "Berat (kg)": s.berat,
@@ -533,10 +533,10 @@ export default function BankSampahView({
     const transactions = [
       ...sampahSetoranData
         .filter((s: any) => s.nasabahId === nasabah.nik)
-        .map((s) => ({ ...s, type: "Setoran", amount: s.total })),
+        .map((s: any) => ({ ...s, type: "Setoran", amount: s.total })),
       ...sampahTarikSaldoData
         .filter((t: any) => t.nasabahId === nasabah.nik)
-        .map((t) => ({ ...t, type: "Penarikan", amount: -t.nominal })),
+        .map((t: any) => ({ ...t, type: "Penarikan", amount: -t.nominal })),
     ].sort(
       (a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime(),
     );
@@ -587,10 +587,10 @@ export default function BankSampahView({
     const transactions = [
       ...sampahSetoranData
         .filter((s: any) => s.nasabahId === nasabah.nik)
-        .map((s) => ({ ...s, type: "Setoran", amount: s.total })),
+        .map((s: any) => ({ ...s, type: "Setoran", amount: s.total })),
       ...sampahTarikSaldoData
         .filter((t: any) => t.nasabahId === nasabah.nik)
-        .map((t) => ({ ...t, type: "Penarikan", amount: -t.nominal })),
+        .map((t: any) => ({ ...t, type: "Penarikan", amount: -t.nominal })),
     ].sort(
       (a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime(),
     );
@@ -620,7 +620,7 @@ export default function BankSampahView({
   };
 
   const exportNasabahSummaryExcel = () => {
-    const data = nasabahSummary.map((n) => {
+    const data = nasabahSummary.map((n: any) => {
       const totalDitarik = sampahTarikSaldoData
         .filter((t: any) => t.nasabahId === n.nik)
         .reduce(
@@ -1206,10 +1206,10 @@ export default function BankSampahView({
                   {[
                     ...sampahSetoranData
                       .filter((s: any) => s.nasabahId === selectedNasabah.nik)
-                      .map((s) => ({ ...s, type: "setoran" })),
+                      .map((s: any) => ({ ...s, type: "setoran" })),
                     ...sampahTarikSaldoData
                       .filter((t: any) => t.nasabahId === selectedNasabah.nik)
-                      .map((t) => ({ ...t, type: "tarik" })),
+                      .map((t: any) => ({ ...t, type: "tarik" })),
                   ]
                     .sort(
                       (a, b) =>

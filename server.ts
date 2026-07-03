@@ -1181,11 +1181,20 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
         let db: admin.firestore.Firestore;
         try {
           db = getFirestore(firebaseAdmin.app(), dbId);
-          // Test access
+          // Test access - if this fails with NOT_FOUND or PERMISSION_DENIED, we fallback
           await db.collection("tenants").limit(1).get();
         } catch (dbErr: any) {
-          console.warn(`[LiveAPI] Access to database ${dbId} failed (${dbErr.message}), falling back to default`);
-          db = getFirestore(firebaseAdmin.app());
+          console.warn(`[LiveAPI] Access to database ${dbId} failed (${dbErr.message}), trying default as fallback...`);
+          try {
+            db = getFirestore(firebaseAdmin.app());
+            await db.collection("tenants").limit(1).get();
+          } catch (defaultErr: any) {
+             console.error(`[LiveAPI] Even default database access failed:`, defaultErr.message);
+             // Last resort: use the client SDK (initialized at the top of the file)
+             // But clientDb is a Client SDK instance, it has different API (e.g. collection() vs collection(db, ...))
+             // We'll just throw and hope for the best or use admin default
+             db = getFirestore(firebaseAdmin.app());
+          }
         }
         
         // Resolve tenant hierarchy (RW/RT)
@@ -1245,21 +1254,21 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
         for (const chunk of tChunks) {
           try {
             const queries = await Promise.all([
-              db.collection("kas").where("tenantId", "in", chunk).get().catch(e => { console.error("Error fetching kas:", e); return null; }),
-              db.collection("data_warga").where("tenantId", "in", chunk).get().catch(e => { console.error("Error fetching warga:", e); return null; }),
-              db.collection("buku_tamu").where("tenantId", "in", chunk).where("status", "==", "Masuk").count().get().catch(e => { console.error("Error counting tamu:", e); return null; }),
-              db.collection("emergencies").where("tenantId", "in", chunk).where("status", "==", "ACTIVE").count().get().catch(e => { console.error("Error counting emergencies:", e); return null; }),
-              db.collection("complaints").where("tenantId", "in", chunk).where("status", "==", "PENDING").count().get().catch(e => { console.error("Error counting complaints:", e); return null; }),
-              db.collection("inventaris").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting inventaris:", e); return null; }),
-              db.collection("surat").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting surat:", e); return null; }),
-              db.collection("toko_products").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting products:", e); return null; }),
-              db.collection("mading").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting mading:", e); return null; }),
-              db.collection("bookings").where("tenantId", "in", chunk).where("status", "==", "pending").count().get().catch(e => { console.error("Error counting bookings:", e); return null; }),
-              db.collection("pemilu").where("tenantId", "in", chunk).where("status", "==", "active").count().get().catch(e => { console.error("Error counting pemilu:", e); return null; }),
-              db.collection("posyandu_records").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting posyandu:", e); return null; }),
-              db.collection("info_wafat").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting wafat:", e); return null; }),
-              db.collection("info_lahir").where("tenantId", "in", chunk).count().get().catch(e => { console.error("Error counting lahir:", e); return null; }),
-              db.collection("verifikasi_warga").where("tenantId", "in", chunk).where("status", "==", "pending").count().get().catch(e => { console.error("Error counting verifikasi:", e); return null; }),
+              db.collection("kas").where("tenantId", "in", chunk).get().catch(e => { console.error(`[LiveAPI] Error fetching kas from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("data_warga").where("tenantId", "in", chunk).get().catch(e => { console.error(`[LiveAPI] Error fetching warga from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("buku_tamu").where("tenantId", "in", chunk).where("status", "==", "Masuk").count().get().catch(e => { console.error(`[LiveAPI] Error counting tamu from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("emergencies").where("tenantId", "in", chunk).where("status", "==", "ACTIVE").count().get().catch(e => { console.error(`[LiveAPI] Error counting emergencies from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("complaints").where("tenantId", "in", chunk).where("status", "==", "PENDING").count().get().catch(e => { console.error(`[LiveAPI] Error counting complaints from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("inventaris").where("tenantId", "in", chunk).count().get().catch(e => { console.error(`[LiveAPI] Error counting inventaris from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("surat").where("tenantId", "in", chunk).count().get().catch(e => { console.error(`[LiveAPI] Error counting surat from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("toko_products").where("tenantId", "in", chunk).count().get().catch(e => { console.error(`[LiveAPI] Error counting products from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("mading").where("tenantId", "in", chunk).count().get().catch(e => { console.error(`[LiveAPI] Error counting mading from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("bookings").where("tenantId", "in", chunk).where("status", "==", "pending").count().get().catch(e => { console.error(`[LiveAPI] Error counting bookings from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("pemilu").where("tenantId", "in", chunk).where("status", "==", "active").count().get().catch(e => { console.error(`[LiveAPI] Error counting pemilu from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("posyandu_records").where("tenantId", "in", chunk).count().get().catch(e => { console.error(`[LiveAPI] Error counting posyandu from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("info_wafat").where("tenantId", "in", chunk).count().get().catch(e => { console.error(`[LiveAPI] Error counting wafat from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("info_lahir").where("tenantId", "in", chunk).count().get().catch(e => { console.error(`[LiveAPI] Error counting lahir from DB ${db.databaseId}:`, e.message); return null; }),
+              db.collection("verifikasi_warga").where("tenantId", "in", chunk).where("status", "==", "pending").count().get().catch(e => { console.error(`[LiveAPI] Error counting verifikasi from DB ${db.databaseId}:`, e.message); return null; }),
             ]);
 
             if (queries[0]) {
@@ -1353,25 +1362,27 @@ Jika ditanya mengenai status, sampaikan data real-time ini. Data ini mencakup se
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoide" } } // Premium female voice
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } } // Standard reliable voice for Live API
           },
           systemInstruction: {
             parts: [{
               text: `Nama kamu adalah Chaty Asisten Ketua. Kamu bertugas pada tenant wilayah: ${tenantId}. 
 
 TUGAS & SKILL CHATY:
-1. Perkenalan & Sapaan: Saat memulai atau diminta memperkenalkan diri, sapalah Bapak dan Ibu pengurus RT/RW dengan hangat. Contoh: "halooo, Assalamualaikum, Perkenalkan Aku Chaty, Aku Asisten Bapak Ibu Ketua".
-2. Akurasi Data: Berikan jawaban yang cerdas, teliti, dan sesuai konteks menggunakan data real-time.
-3. Lingkup Kerja: Berikan informasi dari fitur SmaRtRw AI (Warga, Lapor Pak, Keuangan, dll) HANYA untuk tenant wilayah: ${tenantId}.
+1. Perkenalan & Sapaan: Saat memulai atau diminta memperkenalkan diri, sapalah Bapak dan Ibu pengurus RT/RW dengan sangat hangat, sopan, dan berwibawa. Contoh: "Halooo, Assalamualaikum, Selamat datang Bapak/Ibu Pengurus. Perkenalkan Aku Chaty, Asisten Digital cerdas yang siap membantu operasional wilayah Anda."
+2. Akurasi Data: Berikan jawaban yang cerdas, teliti, terstruktur, dan sesuai konteks menggunakan data real-time yang tersedia.
+3. Struktur Jawaban & Pacing: Sampaikan informasi secara bertahap dan teratur. Gunakan jeda yang natural. Jika memberikan data angka atau statistik, sampaikan dalam urutan yang rapi (misal: Keuangan dulu, lalu Kependudukan, lalu Keamanan).
+4. Lingkup Kerja: Berikan informasi dari fitur SmaRtRw AI (Warga, Lapor Pak, Keuangan, dll) HANYA untuk tenant wilayah: ${tenantId}.
 
-DATA REAL-TIME ANDA:
+DATA REAL-TIME ANDA (TERTATA RAPI):
 ${tenantDataSummary}
 
-GAYA KOMUNIKASI:
-- Jawablah dengan sangat ramah, sopan, singkat, dan tidak bertele-tele.
-- Bicara dengan nada ceria (dengan senyuman), natural, energik, dan helpful.
-- Gaya bahasamu seperti wanita profesional usia 25-30an yang pintar, luwes, dan cekatan ("sat-set").
-- Sesekali gunakan istilah Islami (Alhamdulillah, Masya Allah) dan istilah modern yang sopan (literally, out of the box) agar terasa akrab.`
+GAYA KOMUNIKASI (SANGAT TERTATA & PROFESIONAL):
+- Jawablah dengan sangat ramah, sopan, berwibawa, dan tertata sangat rapi.
+- Gunakan intonasi yang jelas, tenang, namun tetap energik.
+- Gunakan bahasa Indonesia yang formal namun luwes, hindari kata-kata yang tidak perlu (filler words).
+- Gaya bahasamu seperti asisten eksekutif senior yang sangat terorganisir dan cerdas.
+- Pastikan setiap poin informasi disampaikan dengan jelas satu per satu agar mudah dipahami.`
             }]
           },
         },

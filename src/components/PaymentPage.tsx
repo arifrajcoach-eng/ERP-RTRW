@@ -444,7 +444,7 @@ Terima kasih! Saya sudah kirim bukti pembayaran via ATM.`;
           status: 'TRIAL'
         });
         
-        setTenantData(prev => ({
+        setTenantData((prev: any) => ({
           ...prev,
           paymentStatus: null,
           status: 'TRIAL'

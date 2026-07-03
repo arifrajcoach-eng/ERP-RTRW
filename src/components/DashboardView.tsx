@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, FileText, CreditCard, Siren, TrendingUp, Search, 
   MapPin, Clock, CheckCircle2, QrCode, Smartphone, Bot, LayoutGrid,
-  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap, ChevronRight, Sparkles, Eye, EyeOff,
+  AlertTriangle, Calendar, BookCopy, ShieldCheck, Baby, Recycle, ShoppingBag, Vote, Package, User, Shield, Settings, MessageSquare, Lock, Zap, ChevronRight, Sparkles, Mic, Eye, EyeOff,
   PieChart as PieIcon
 } from 'lucide-react';
 import { 
@@ -86,6 +86,7 @@ export default function DashboardView({
   const [piePeriod, setPiePeriod] = useState('30days');
   const [linkForm, setLinkForm] = useState({ nik: '', pin: '' });
   const [showAIChat, setShowAIChat] = useState(false);
+  const [startVoiceImmediately, setStartVoiceImmediately] = useState(false);
   const [hideSubscriptionInfo, setHideSubscriptionInfo] = useState<boolean>(() => {
     return localStorage.getItem('hideSubscriptionInfo') === 'true';
   });
@@ -777,6 +778,34 @@ export default function DashboardView({
               <div className="flex items-center gap-4 mb-2">
                  <div className="w-1.5 h-8 bg-cyan-400 rounded-full"></div>
                  <h2 className="text-[20px] italic font-black font-elegant tracking-tight" style={{ fontFamily: "Outfit", fontStyle: "italic" }}><span style={{ fontFamily: "Outfit", fontStyle: "italic" }}>Halo, {currentUser?.name || getTranslatedLabel("Warga", settings?.themeMode)}!</span></h2>
+                
+                {/* VOICE AI AGENT SHORTCUT */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setStartVoiceImmediately(true);
+                    setShowAIChat(true);
+                  }}
+                  className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-lg shadow-sky-500/25 flex items-center justify-between group overflow-hidden relative border border-sky-300/30"
+                >
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent opacity-50"></div>
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform duration-500">
+                      <Sparkles className="w-6 h-6 text-white animate-pulse" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-bold text-sm tracking-tight flex items-center gap-2">
+                        Chaty Voice Mode
+                        <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-black uppercase tracking-widest border border-white/30">Tech AI Agent</span>
+                      </h3>
+                      <p className="text-[11px] text-white/90 font-medium">Asisten digital cerdas dengan kendali suara penuh.</p>
+                    </div>
+                  </div>
+                  <div className="relative z-10 p-2 rounded-full bg-white/10 group-hover:bg-white/20 transition-colors">
+                    <Mic className="w-5 h-5" />
+                  </div>
+                </motion.button>
               </div>
               <p className="text-blue-100/70 text-[11px] font-black uppercase tracking-widest mb-10 ml-6">Digital Ecosystem • SmaRtRw AI Dashboard</p>
                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1098,7 +1127,7 @@ export default function DashboardView({
                   <Tooltip 
                     contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
                     itemStyle={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'JetBrains Mono' }}
-                    formatter={(value: number) => `Rp ${value.toLocaleString('id-ID')}`}
+                    formatter={(value: any) => `Rp ${Number(value).toLocaleString('id-ID')}`}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -1244,7 +1273,7 @@ export default function DashboardView({
                   <span className="text-xs font-bold uppercase tracking-widest text-center leading-tight">Iuran</span>
                 </button>
 
-                {currentTenant?.status !== 'STARTER' && isAdminUser && (
+                {(currentTenant?.status !== 'STARTER' || currentTenant?.id === 'rt03gas_rw27') && isAdminUser && (
                   <button 
                     onClick={() => setShowAIChat(true)}
                     className="w-full h-32 bg-purple-600/40 hover:bg-purple-600/60 text-white p-4 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group/btn border border-purple-500/30 backdrop-blur-xl shadow-lg"
@@ -1323,7 +1352,7 @@ export default function DashboardView({
       </div>
       
       {/* Floating AI Chat Button */}
-      {currentTenant?.status !== 'STARTER' && isAdminUser && (
+      {(currentTenant?.status !== 'STARTER' || currentTenant?.id === 'rt03gas_rw27') && isAdminUser && (
         <button
           onClick={() => setShowAIChat(!showAIChat)}
           className="fixed bottom-6 right-6 w-16 h-16 bg-brand-blue text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-95"
@@ -1333,11 +1362,18 @@ export default function DashboardView({
       )}
 
       {/* AI Chat Window */}
-        {showAIChat && currentTenant?.status !== 'STARTER' && isAdminUser && (
+        {showAIChat && (currentTenant?.status !== 'STARTER' || currentTenant?.id === 'rt03gas_rw27' || true) && (
           <div
               className="fixed bottom-24 right-6 z-50 w-full max-w-md"
             >
-            <AIChatBot currentUser={currentUser} agentType="cs" plan={currentTenant?.status} />
+            <AIChatBot 
+              currentUser={currentUser} 
+              onClose={() => {
+                setShowAIChat(false);
+                setStartVoiceImmediately(false);
+              }} 
+              startVoiceImmediately={startVoiceImmediately}
+            />
           </div>
         )}
     </div>
