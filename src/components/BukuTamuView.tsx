@@ -252,10 +252,10 @@ export function BukuTamuView({
       {onBack && (
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors font-black uppercase tracking-widest text-[10px] ml-4 mt-4"
+          className="p-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 border border-slate-200 dark:border-slate-700 shadow-xl transition-all hover:scale-105 active:scale-95 ml-4 mt-4 shrink-0"
+          title="Kembali"
         >
-          <ChevronLeft className="w-5 h-5" />
-          Kembali
+          <ChevronLeft className="w-6 h-6" />
         </button>
       )}
       {/* CCTV & Status Security */}
