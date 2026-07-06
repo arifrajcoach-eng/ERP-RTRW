@@ -569,24 +569,22 @@ export function SuratView({
 
     const tenantId = currentWarga?.tenantId || currentUser.tenantId;
     console.log("[SuratView] Calculating rwTenantId for:", { tenantId, currentWarga, currentUser });
-    let rwTenantId = tenantId;
+    let rwTenantId = null;
     try {
       const tenantDoc = await getDoc(doc(db, "tenants", tenantId));
-      if (tenantDoc.exists()) {
-        rwTenantId = tenantDoc.data().parentId || tenantId;
-        console.log("[SuratView] Found parentId:", tenantDoc.data().parentId);
-      } else {
-        console.warn("[SuratView] Tenant doc not found for:", tenantId);
+      if (tenantDoc.exists() && tenantDoc.data().parentId) {
+        rwTenantId = tenantDoc.data().parentId;
+        console.log("[SuratView] Found parentId:", rwTenantId);
       }
     } catch (e) {
       console.error("Error fetching tenant for rwTenantId:", e);
     }
     console.log("[SuratView] Resulting rwTenantId:", rwTenantId);
 
-    const payload = {
+    const payload: any = {
       id,
       tenantId,
-      rwTenantId,
+      ...(rwTenantId ? { rwTenantId } : {}),
       rt: finalRt,
       rw: finalRw,
       tanggal: new Date().toISOString(),

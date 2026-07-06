@@ -153,15 +153,14 @@ service cloud.firestore {
     }
 
     match /verifikasi_warga/{id} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow read, create: if true;
       allow update: if isSignedIn() && (isPengurus() || isAdmin());
       allow delete: if isAdmin();
     }
 
     match /surat/{id} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && (!('rwTenantId' in request.resource.data) || (request.resource.data.rwTenantId is string && request.resource.data.rwTenantId != ""));
       allow update: if isAdmin() || (
         isSignedIn() && (
           resource.data.authUid == request.auth.uid || 
