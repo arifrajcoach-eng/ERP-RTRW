@@ -36,7 +36,7 @@ import {
   ChevronDown,
   Sparkles
 } from 'lucide-react';
-import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, query, collection, where, orderBy, limit, startAfter, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -96,6 +96,14 @@ export function SuratView({
   const [showWargaDropdown, setShowWargaDropdown] = useState(false);
   const [showSuiteMenu, setShowSuiteMenu] = useState(false);
   
+  // New pagination and filtering state
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [paginatedSuratData, setPaginatedSuratData] = useState<any[]>([]);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  
   const formRef = useRef<HTMLFormElement>(null);
   
   const normalizedRole = (userRole || '').toUpperCase();
@@ -133,6 +141,63 @@ export function SuratView({
     nextStatus?: string;
   } | null>(null);
 
+  const fetchSuratData = async (isLoadMore = false) => {
+    if (loadingMore || (!hasMore && isLoadMore)) return;
+    
+    setLoadingMore(true);
+    try {
+      const suratCollection = collection(db, 'surat');
+      
+      // Calculate start and end date for the selected month/year
+      const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+      const endDate = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
+      
+      let q;
+      if (isRWUser) {
+        const actualRWTenantId = currentUser?.tenantId || tenantId;
+        q = query(
+          suratCollection,
+          where('rwTenantId', '==', actualRWTenantId),
+          where('tanggal', '>=', startDate.toISOString()),
+          where('tanggal', '<=', endDate.toISOString()),
+          orderBy('tanggal', 'desc'),
+          limit(10)
+        );
+      } else {
+        q = query(
+          suratCollection,
+          where('tenantId', '==', tenantId),
+          where('tanggal', '>=', startDate.toISOString()),
+          where('tanggal', '<=', endDate.toISOString()),
+          orderBy('tanggal', 'desc'),
+          limit(10)
+        );
+      }
+      
+      if (isLoadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+      
+      const snapshot = await getDocs(q);
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      if (isLoadMore) {
+        setPaginatedSuratData(prev => [...prev, ...docs]);
+      } else {
+        setPaginatedSuratData(docs);
+      }
+      
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(docs.length === 10);
+      
+    } catch (err: any) {
+      handleFirestoreError(err, 'read', 'surat');
+      showNotification('Gagal memuat data surat', 'error');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     if (editingSurat) {
       setKtpUrl(editingSurat.ktpUrl || "");
@@ -150,6 +215,13 @@ export function SuratView({
       }
     }
   }, [editingSurat, showForm, selectedWargaId, wargaData]);
+
+  useEffect(() => {
+    setPaginatedSuratData([]);
+    setLastVisible(null);
+    setHasMore(true);
+    fetchSuratData(false);
+  }, [activeSubTab, selectedMonth, selectedYear, tenantId]);
 
   const currentWarga = wargaData.find((w: any) => (w.id || w.docId || w.nik) === selectedWargaId);
   
@@ -190,7 +262,7 @@ export function SuratView({
     return "";
   };
 
-  const filteredSurat = suratData.filter(s => {
+  const filteredSurat = paginatedSuratData.filter(s => {
     // Role based access
     if (!isPengurus) {
       const citizenNik = currentUser?.nik || currentUser?.nikMapping || "";
@@ -495,9 +567,26 @@ export function SuratView({
     const phone = formData.get('phone') as string || "";
     const email = formData.get('email') as string || "";
 
+    const tenantId = currentWarga?.tenantId || currentUser.tenantId;
+    console.log("[SuratView] Calculating rwTenantId for:", { tenantId, currentWarga, currentUser });
+    let rwTenantId = tenantId;
+    try {
+      const tenantDoc = await getDoc(doc(db, "tenants", tenantId));
+      if (tenantDoc.exists()) {
+        rwTenantId = tenantDoc.data().parentId || tenantId;
+        console.log("[SuratView] Found parentId:", tenantDoc.data().parentId);
+      } else {
+        console.warn("[SuratView] Tenant doc not found for:", tenantId);
+      }
+    } catch (e) {
+      console.error("Error fetching tenant for rwTenantId:", e);
+    }
+    console.log("[SuratView] Resulting rwTenantId:", rwTenantId);
+
     const payload = {
       id,
-      tenantId: currentWarga?.tenantId || currentUser.tenantId,
+      tenantId,
+      rwTenantId,
       rt: finalRt,
       rw: finalRw,
       tanggal: new Date().toISOString(),
@@ -598,26 +687,30 @@ export function SuratView({
                         
     const isWaitingRW = currentStatus.includes('RW');
 
+    // Admin RW dapat menyetujui jika dalam tahap Menunggu RW atau jika mereka ingin mengambil alih (opsional)
+    // Admin RT dapat menyetujui jika dalam tahap Menunggu RT
+
+    let canApprove = false;
+    if (isRWUser && (isWaitingRW || isWaitingRT)) { // RW bisa menyetujui RT maupun RW
+        canApprove = true;
+    } else if (isRTUser && isWaitingRT) {
+        canApprove = true;
+    }
+
+    if (!canApprove) {
+      showNotification('Anda tidak memiliki wewenang untuk menyetujui surat ini pada tahap ini', 'error');
+      return;
+    }
+
     if (isRWUser) {
-      // RW authority can finalize immediately
       nextStatus = 'Selesai';
       msg = 'Surat disetujui secara resmi oleh RW/Otoritas Pusat. Selesai.';
-    } else if (isRTUser && (isWaitingRT || currentStatus === '')) {
+    } else if (isRTUser && isWaitingRT) {
       nextStatus = 'Menunggu Persetujuan RW';
       msg = 'Disetujui oleh RT. Sekarang menunggu persetujuan RW.';
-    } else if (isRWUser && isWaitingRW) {
-      nextStatus = 'Selesai';
-      msg = 'Surat disetujui oleh RW. Selesai.';
     } else {
-      // Fallback if somehow triggered by non-authorized user
-      if (isWaitingRW && !isRWUser) {
-        showNotification('Hanya RW yang dapat menyetujui tahap ini', 'error');
-        return;
-      }
-      if (isWaitingRT && !isRTUser) {
-        showNotification('Hanya RT yang dapat menyetujui tahap ini', 'error');
-        return;
-      }
+      showNotification('Surat tidak dapat diproses', 'error');
+      return;
     }
 
     setApprovalConfirm({
@@ -656,6 +749,18 @@ export function SuratView({
           updatedAt: new Date().toISOString(),
           tenantId: s.tenantId || tenantId || ''
         };
+
+        // Ensure rwTenantId is set
+        if (!s.rwTenantId) {
+          const tenantDoc = await getDoc(doc(db, "tenants", updateData.tenantId));
+          if (tenantDoc.exists()) {
+            updateData.rwTenantId = tenantDoc.data().parentId || updateData.tenantId;
+          } else {
+            updateData.rwTenantId = updateData.tenantId;
+          }
+        } else {
+          updateData.rwTenantId = s.rwTenantId;
+        }
         
         if (nextStatus === 'Selesai') {
           updateData.approvedAt = new Date().toISOString();
@@ -680,10 +785,15 @@ export function SuratView({
 
         console.log("[SuratView] Writing approved status update to firestore", { id: s.id, updateData });
         await updateDoc(doc(db, 'surat', s.id), updateData);
+        console.log("[SuratView] State update triggered", { id: s.id, updateData });
+        setPaginatedSuratData(prev => prev.map(item => item.id === s.id ? { ...item, ...updateData } : item));
         showNotification(msg, 'success');
       } else if (action === 'reject') {
         console.log("[SuratView] Writing rejected status update to firestore", { id: s.id });
-        await updateDoc(doc(db, 'surat', s.id), { status: 'Ditolak', tenantId: s.tenantId || tenantId || '' });
+        const rejectData = { status: 'Ditolak', tenantId: s.tenantId || tenantId || '' };
+        await updateDoc(doc(db, 'surat', s.id), rejectData);
+        console.log("[SuratView] Reject state update triggered", { id: s.id, rejectData });
+        setPaginatedSuratData(prev => prev.map(item => item.id === s.id ? { ...item, ...rejectData } : item));
         showNotification('Surat ditolak', 'success');
       }
     } catch (err: any) {
@@ -908,6 +1018,27 @@ export function SuratView({
           </div>
 
           <div className="flex flex-wrap gap-4 w-full lg:w-auto">
+            <div className="flex gap-2">
+              <select 
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(Number(e.target.value))}
+                className="bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[13px] font-bold rounded-2xl p-4 shadow-sm"
+              >
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                  <option key={m} value={i + 1}>{m}</option>
+                ))}
+              </select>
+              <select 
+                value={selectedYear}
+                onChange={e => setSelectedYear(Number(e.target.value))}
+                className="bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[13px] font-bold rounded-2xl p-4 shadow-sm"
+              >
+                {[2025, 2026, 2027].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            
             <div className="relative flex-1 lg:flex-none group">
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
               <input 
@@ -923,7 +1054,10 @@ export function SuratView({
               <motion.button 
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => showNotification("Data telah disinkronisasi", "success")} 
+                onClick={() => {
+                  showNotification("Sinkronisasi data...", "info");
+                  fetchSuratData(false);
+                }} 
                 className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-md bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                 title="Syncronize Data"
               >
@@ -1042,11 +1176,22 @@ export function SuratView({
                 </tbody>
               </table>
 
-              {/* Swipe/Scroll Reminder for Smartphone users */}
               <div className="md:hidden flex items-center justify-center gap-1.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-50/50 dark:bg-slate-800/20 py-2.5 rounded-xl mt-4">
                 <span>GESER KANAN UNTUK LAINNYA</span>
                 <ChevronRight className="w-4 h-4 text-brand-blue animate-bounceHorizontal" />
               </div>
+
+              {hasMore && (
+                <div className="mt-6 flex justify-center">
+                  <button 
+                    onClick={() => fetchSuratData(true)}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all disabled:opacity-50"
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? 'Memuat...' : 'Muat Lebih Banyak'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

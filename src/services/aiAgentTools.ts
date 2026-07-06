@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where, addDoc, getCountFromServer, limit, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, getCountFromServer, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // 1. KEUANGAN
@@ -261,8 +261,22 @@ export async function createSurat(data: {
     }
     const finalRt = data.rt || '01';
     const finalRw = data.rw || '26';
+    
+    // Look up parentId (RW tenant ID)
+    let rwTenantId = "";
+    console.log("[createSurat] Calculating rwTenantId for", data.tenantId);
+    const tenantDoc = await getDoc(doc(db, "tenants", data.tenantId));
+    if (tenantDoc.exists()) {
+      rwTenantId = tenantDoc.data().parentId || data.tenantId;
+      console.log("[createSurat] Found parentId:", rwTenantId);
+    } else {
+      rwTenantId = data.tenantId; // Fallback
+      console.log("[createSurat] No tenantDoc, using fallback:", rwTenantId);
+    }
+
     const docRef = await addDoc(collection(db, 'surat'), {
       ...data,
+      rwTenantId,
       rt: finalRt,
       rw: finalRw,
       jenis: data.jenisSurat || 'Pengantar',

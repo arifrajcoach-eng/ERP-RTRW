@@ -226,7 +226,8 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
     setLiveModeStatus("Connecting...");
     try {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ai/live?tenantId=${currentUser?.tenantId}`);
+      const summaryParam = encodeURIComponent(`Pengguna: ${currentUser?.name || 'Warga'} (${currentUser?.role || 'Warga'}), Tenant: ${currentUser?.tenantId || 'RW'}`);
+      const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ai/live?tenantId=${currentUser?.tenantId}&summary=${summaryParam}`);
       wsRef.current = ws;
 
       const inputAudioCtx = new AudioContext({ sampleRate: 16000 });
@@ -262,9 +263,9 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
               ws.send(JSON.stringify({ audio: base64 }));
             }
           };
-        } catch(e) {
-          console.error("Mic error:", e);
-          setLiveModeStatus("Microphone access denied.");
+        } catch(e: any) {
+          console.warn("Live API microphone access:", e?.message || e);
+          setLiveModeStatus("Izin mikrofon diperlukan. Harap izinkan akses.");
           setTimeout(stopLiveSession, 3000);
         }
       };

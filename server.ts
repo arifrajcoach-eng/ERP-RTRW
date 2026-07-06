@@ -351,14 +351,8 @@ async function startServer() {
       // Verify access with a very simple request
       await db.collection("tenants").limit(1).get();
     } catch (e: any) {
-      console.log(`[CRON] Access to DB ${dbId} failed (${e.message}), trying default...`);
-      try {
-        db = getFirestore(firebaseAdmin.app());
-        await db.collection("tenants").limit(1).get();
-      } catch (e2: any) {
-        console.error(`[CRON] Total DB failure:`, e2.message);
-        return;
-      }
+      console.log(`[CRON] Access to DB ${dbId} unavailable in current container credentials (${e.message}). Skipping maintenance cron check.`);
+      return;
     }
     
     const now = new Date();
@@ -1174,20 +1168,32 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 
       // Fetch brief summary for tenant to provide context to the agent
       let tenantDataSummary = "";
-      try {
-        const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
-        console.log(`[LiveAPI] Connecting to Firestore for tenant: ${tenantId}, intended DB: ${dbId}`);
-        
-        let db: admin.firestore.Firestore;
+      const clientSummaryParam = url.searchParams.get("summary");
+      if (clientSummaryParam) {
         try {
-          db = getFirestore(firebaseAdmin.app(), dbId);
-          // Test access
-          await db.collection("tenants").limit(1).get();
-        } catch (dbErr: any) {
-          console.warn(`[LiveAPI] Access to database ${dbId} failed (${dbErr.message}), falling back to default`);
-          db = getFirestore(firebaseAdmin.app());
+          tenantDataSummary = decodeURIComponent(clientSummaryParam);
+        } catch (e) {
+          tenantDataSummary = clientSummaryParam;
         }
-        
+      }
+      
+      try {
+      let hasDbAccess = false;
+      let db: admin.firestore.Firestore = null as any;
+      if (!tenantDataSummary) {
+        try {
+          const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+          console.log(`[LiveAPI] Connecting to Firestore for tenant: ${tenantId}, intended DB: ${dbId}`);
+          db = getFirestore(firebaseAdmin.app(), dbId);
+          await db.collection("tenants").limit(1).get();
+          hasDbAccess = true;
+        } catch (dbErr: any) {
+          console.log(`[LiveAPI] Admin SDK access unavailable in current container credentials (${dbErr.message}). Using general tenant summary.`);
+          tenantDataSummary = `Sistem SmartRW AI aktif untuk tenant: ${tenantId}.`;
+        }
+      }
+
+      if (hasDbAccess && db && !tenantDataSummary) {
         // Resolve tenant hierarchy (RW/RT)
         const activeTenantIds = new Set<string>();
         if (tenantId && tenantId !== 'unknown' && tenantId !== 'undefined' && tenantId !== 'null') {
@@ -1343,6 +1349,7 @@ Untuk tetap dapat mengakses analisis data mendalam antar RW, visualisasi data, r
 - Monitor SOS: ${activeSOS} darurat aktif.
 
 Jika ditanya mengenai status, sampaikan data real-time ini. Data ini mencakup seluruh wilayah kerja Bapak/Ibu (pusat & sub-wilayah: ${tIds.filter(id => id !== tenantId).join(", ")}).`;
+      }
       } catch (err) {
         console.error("Error fetching tenant summary for voice agent:", err);
       }
