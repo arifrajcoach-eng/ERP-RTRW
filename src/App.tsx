@@ -1731,8 +1731,33 @@ export default function App() {
   const linkedWarga = useMemo(() => {
     const targetNik = currentUser?.nikMapping || currentUser?.nik || wargaAuth?.nik;
     if (!targetNik) return null;
-    return filteredWargaDataCentral.find((w: any) => w.nik === targetNik) || null;
-  }, [currentUser, filteredWargaDataCentral, wargaAuth]);
+    return wargaData.find((w: any) => w.nik === targetNik) || null;
+  }, [currentUser, wargaData, wargaAuth]);
+
+  // Synchronize live citizen data from Firestore back into wargaAuth session and localStorage
+  useEffect(() => {
+    if (linkedWarga && wargaAuth) {
+      const hasChanges = 
+        linkedWarga.hp !== wargaAuth.hp ||
+        linkedWarga.telepon !== wargaAuth.telepon ||
+        linkedWarga.nama !== wargaAuth.nama ||
+        linkedWarga.email !== wargaAuth.email ||
+        linkedWarga.kk !== wargaAuth.kk ||
+        linkedWarga.blok !== wargaAuth.blok ||
+        linkedWarga.alamat !== wargaAuth.alamat ||
+        linkedWarga.rt !== wargaAuth.rt ||
+        linkedWarga.rw !== wargaAuth.rw ||
+        linkedWarga.terverifikasi !== wargaAuth.terverifikasi;
+        
+      if (hasChanges) {
+        setWargaAuth((prev: any) => ({
+          ...prev,
+          ...linkedWarga,
+          listWargaInKK: prev?.listWargaInKK || []
+        }));
+      }
+    }
+  }, [linkedWarga]);
 
   const mergedWargaProfile = useMemo(() => {
     return {
@@ -2543,7 +2568,7 @@ export default function App() {
     }
 
     // Verifikasi
-    if (activeTab === "dashboard" || activeTab === "ai-bot" || activeTab === "warga") {
+    if (activeTab === "dashboard" || activeTab === "ai-bot" || activeTab === "warga" || activeTab === "verifikasi" || activeTab === "surat" || activeTab === "profile") {
       tIdsChunks.forEach(chunk => {
          unsubs.push(onSnapshot(query(collection(db, "verifikasi_warga"), where("tenantId", "in", chunk), limit(5)), 
            snap => setVerifikasiWargaData(prev => [...prev.filter(p => !chunk.includes(p.tenantId)), ...snap.docs.map(d => ({ id: d.id, ...d.data() } as any))]),
