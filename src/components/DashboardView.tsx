@@ -158,15 +158,19 @@ export default function DashboardView({
     const currentMonth = new Date().getMonth();
     let unpaidCount = 0;
     
-    for (let m = 0; m <= currentMonth; m++) {
-      const isPaid = myIuran.some((trx: any) => {
-        if (trx.status !== 'Lunas') return false;
-        const d = parseSafeDate(trx.tanggal);
-        const matchesDate = d.getMonth() === m && d.getFullYear() === currentYear;
-        const isIuranWajib = trx.jenis?.toLowerCase().includes('iuran') || trx.keterangan?.toLowerCase().includes('iuran');
-        return matchesDate && isIuranWajib;
-      });
-      if (!isPaid) unpaidCount++;
+    if (myIuran.length > 0) {
+      for (let m = 0; m <= currentMonth; m++) {
+        const isPaid = myIuran.some((trx: any) => {
+          if (trx.status?.toString().trim().toLowerCase() !== 'lunas') return false;
+          const d = parseSafeDate(trx.tanggal);
+          const matchesDate = d.getMonth() === m && d.getFullYear() === currentYear;
+          const jenis = trx.jenis?.toLowerCase() || "";
+          const ket = trx.keterangan?.toLowerCase() || "";
+          const isIuranWajib = jenis.includes('iuran') || ket.includes('iuran') || jenis.includes('ipl') || ket.includes('ipl') || jenis.includes('donasi') || ket.includes('donasi');
+          return matchesDate && isIuranWajib;
+        });
+        if (!isPaid) unpaidCount++;
+      }
     }
 
     const myOrders = tokoOrders.filter((o: any) => o.customerId === currentUser?.uid || o.customerId === (currentUser?.nik || ''));

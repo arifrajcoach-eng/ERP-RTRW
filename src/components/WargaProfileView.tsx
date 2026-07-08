@@ -1471,7 +1471,7 @@ export function WargaProfileView({
                              <div className="flex-1 space-y-1">
                                 <h4 className="text-xs font-black text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">Informasi Sinkronisasi</h4>
                                 <p className="text-[11px] font-bold text-indigo-700/80 dark:text-indigo-350 leading-relaxed uppercase tracking-wide">
-                                   Data yang Anda ubah akan ditinjau oleh Admin (RT/RW) sebelum diperbarui di sistem utama. Lampirkan Foto KTP/KK untuk mempercepat proses verifikasi.
+                                   Data yang Anda ubah akan ditinjau oleh Admin (RT/RW) sebelum diperbarui di sistem utama.
                                 </p>
                              </div>
                           </div>
@@ -1493,28 +1493,28 @@ export function WargaProfileView({
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor NIK</label>
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor NIK (Opsional)</label>
                                    <div className="relative">
                                       <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
                                       <input type="text" value={formData.nik || ''} onChange={e => setFormData({...formData, nik: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor NIK (16 digit)" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor KK</label>
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor KK (Opsional)</label>
                                    <div className="relative">
                                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
                                       <input type="text" value={formData.kk || ''} onChange={e => setFormData({...formData, kk: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor KK (16 digit)" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor HP / WhatsApp</label>
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Nomor HP / WhatsApp (Opsional)</label>
                                    <div className="relative">
                                       <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
                                       <input type="text" value={formData.hp || ''} onChange={e => setFormData({...formData, hp: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Nomor HP atau Whatsapp aktif" />
                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Email</label>
+                                   <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Email (Opsional)</label>
                                    <div className="relative">
                                       <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600" />
                                       <input type="email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-550 outline-none transition-all placeholder:font-medium placeholder:text-slate-400" placeholder="Alamat Email" />
@@ -1684,7 +1684,7 @@ export function WargaProfileView({
 
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Foto KTP / Profil</span>
+                                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Foto KTP / Profil (Opsional)</span>
                                    <label className="block w-full cursor-pointer group">
                                       <div className="aspect-video bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center group-hover:border-indigo-400 dark:group-hover:border-indigo-600 group-hover:bg-indigo-50/20 dark:group-hover:bg-indigo-950/10 transition-all overflow-hidden relative shadow-sm">
                                          {files.ktp ? (
@@ -1702,7 +1702,7 @@ export function WargaProfileView({
                                    </label>
                                 </div>
                                 <div className="space-y-2">
-                                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Foto Kartu Keluarga</span>
+                                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Foto Kartu Keluarga (Opsional)</span>
                                    <label className="block w-full cursor-pointer group">
                                       <div className="aspect-video bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center group-hover:border-indigo-400 dark:group-hover:border-indigo-600 group-hover:bg-indigo-50/20 dark:group-hover:bg-indigo-950/10 transition-all overflow-hidden relative shadow-sm">
                                          {files.kk ? (

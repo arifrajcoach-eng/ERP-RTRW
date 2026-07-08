@@ -3006,7 +3006,7 @@ export default function App() {
   }, [suratData, activeTenantId]);
 
   useEffect(() => {
-    if (activeTenantId && iuranData && iuranData.length > 0) {
+    if (activeTenantId && iuranData) {
       safeLocalStorage.setItem(`${activeTenantId}_iuranData`, JSON.stringify(iuranData));
     }
   }, [iuranData, activeTenantId]);

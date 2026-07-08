@@ -465,7 +465,7 @@ export function IuranView({
     }
 
     // Auto-route to central RW tenant, bypassing RT
-    if ((currentJenis === "Warga Donasi Ke RW" || currentJenis === "Iuran Pengurus RT Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
+    if ((currentJenis === "Iuran Warga (Donasi) ke RW" || currentJenis === "Iuran Pengurus RT Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
       const parts = resolvedTenant.split("_");
       if (parts.length > 1) {
         resolvedTenant = parts.slice(1).join("_");
@@ -671,7 +671,7 @@ export function IuranView({
     }
 
     // Auto-route to central RW tenant, bypassing RT
-    if ((pgFormState.jenis === "Warga Donasi Ke RW" || pgFormState.jenis === "Iuran Pengurus RT Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
+    if ((pgFormState.jenis === "Iuran Warga (Donasi) ke RW" || pgFormState.jenis === "Iuran Pengurus RT Ke RW") && resolvedTenant.toLowerCase().startsWith("rt")) {
       const parts = resolvedTenant.split("_");
       if (parts.length > 1) {
         resolvedTenant = parts.slice(1).join("_");
@@ -758,7 +758,7 @@ export function IuranView({
       const kasId = `TRX-${Date.now()}`;
       
       let finalTenantId = tenantId || trx.tenantId || "MASTER";
-      if ((trx.jenis === "Warga Donasi Ke RW" || trx.jenis === "Iuran Pengurus RT Ke RW") && finalTenantId.toLowerCase().startsWith("rt")) {
+      if ((trx.jenis === "Iuran Warga (Donasi) ke RW" || trx.jenis === "Iuran Pengurus RT Ke RW") && finalTenantId.toLowerCase().startsWith("rt")) {
           const parts = finalTenantId.split("_");
           if (parts.length > 1) {
               finalTenantId = parts.slice(1).join("_");
@@ -815,7 +815,7 @@ export function IuranView({
       await setDoc(doc(db, 'kas', kasId), kasPayloadRT);
       
       // If it's a Donasi/Iuran Ke RW, also create the record in the RW Kas collection
-      if (trx.jenis === "Warga Donasi Ke RW" || trx.jenis === "Iuran Pengurus RT Ke RW") {
+      if (trx.jenis === "Iuran Warga (Donasi) ke RW" || trx.jenis === "Iuran Pengurus RT Ke RW") {
           // Robust RW tenant ID calculation: strip 'rtXX_' prefix if present
           const rwTenantId = (tenantId || "MASTER").replace(/^rt\d+_/i, '');
           
@@ -1346,7 +1346,7 @@ export function IuranView({
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Alokasi / Jenis Pembayaran</label>
                 <select value={jenisPembayaran} onChange={(e) => setJenisPembayaran(e.target.value)} name="jenis" className="w-full px-5 py-4 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm">
                   <option value="Iuran Pengurus RT Ke RW">Iuran Pengurus RT Ke RW</option>
-                  <option value="Warga Donasi Ke RW">Warga Donasi Ke RW</option>
+                  <option value="Iuran Warga (Donasi) ke RW">Iuran Warga (Donasi) ke RW</option>
                   <option value="Iuran Warga ke RT">Iuran Warga ke RT</option>
                   <option value="Iuran Sampah ke RT">Iuran Sampah ke RT</option>
                   <option value="Iuran 17 an ke RT">Iuran 17 an ke RT</option>

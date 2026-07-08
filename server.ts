@@ -485,6 +485,46 @@ async function startServer() {
   };
 
   // API Routes
+  app.get("/api/debug-kas", async (req, res) => {
+    try {
+      const db = getFirestore(firebaseAdmin.app(), 'ai-studio-7a2064eb-10a9-4045-8dbe-e2fd2430e875');
+      const snapshot = await db.collection('kas').where('jenis', '==', 'Warga Donasi Ke RW').limit(5).get();
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      res.json({ success: true, data });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get("/api/run-migration", async (req, res) => {
+    try {
+      const db = getFirestore(firebaseAdmin.app(), 'ai-studio-7a2064eb-10a9-4045-8dbe-e2fd2430e875');
+      const kasRef = db.collection('kas');
+      const snapshot = await kasRef.where('jenis', 'in', ['Warga Donasi Ke RW', 'Warga Donasi ke RW']).get();
+      
+      let count = 0;
+      const batch = db.batch();
+      
+      for (const doc of snapshot.docs) {
+          batch.update(doc.ref, { 
+              jenis: 'Iuran Warga (Donasi) ke RW',
+              status: 'Lunas' 
+          });
+          count++;
+          if (count % 500 === 0) {
+              await batch.commit();
+          }
+      }
+      
+      if (count > 0) {
+          await batch.commit();
+      }
+      res.json({ success: true, migratedCount: count });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post("/api/tripay/webhook", express.json({ type: 'application/json' }), async (req: express.Request, res: express.Response) => {
     const signature = req.headers["x-callback-signature"] as string;
     const body = JSON.stringify(req.body);

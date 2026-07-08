@@ -132,18 +132,12 @@ service cloud.firestore {
     }
 
     match /tenants/{tenantId} {
-      allow get: if true;
-      allow list: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin() || (isPengurus() && isTenantMember(tenantId));
     }
 
     match /data_warga/{nik} {
-      allow read: if isSignedIn() && (
-        isAdmin() ||
-        isPengurus() ||
-        (resource != null && isTenantMember(resource.data.get('tenantId', 'MASTER'))) ||
-        (resource != null && resource.data.email == request.auth.token.email)
-      );
+      allow read: if true;
       allow write: if isSignedIn() && (
         isAdmin() ||
         isPengurus() ||
@@ -154,7 +148,7 @@ service cloud.firestore {
 
     match /verifikasi_warga/{id} {
       allow read, create: if true;
-      allow update: if isSignedIn() && (isPengurus() || isAdmin());
+      allow update: if isSignedIn();
       allow delete: if isAdmin();
     }
 
@@ -190,7 +184,7 @@ service cloud.firestore {
     }
 
     match /iuran/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update, delete: if (isPengurus() && isTenantMember(resource.data.get('tenantId', 'MASTER'))) || (
         isSignedIn() && resource != null && (
@@ -273,6 +267,51 @@ service cloud.firestore {
 
     match /tenant_settings/{tenantId} {
       allow read, write: if isSignedIn();
+    }
+    
+    match /inventaris/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isPengurus();
+    }
+    
+    match /inventaris_logs/{id} {
+      allow read: if isSignedIn() && isPengurus();
+      allow write: if isSignedIn() && isPengurus();
+    }
+    
+    match /toko_orders/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    
+    match /toko_reviews/{id} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    
+    match /voting_candidates/{id} {
+      allow read: if true;
+      allow write: if isPengurus();
+    }
+    
+    match /voting_config/{id} {
+      allow read: if true;
+      allow write: if isPengurus();
+    }
+    
+    match /voting_votes/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    
+    match /bookings/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /audit_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if true;
     }
 
     // Catch-all
