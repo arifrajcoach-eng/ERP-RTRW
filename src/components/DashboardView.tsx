@@ -151,7 +151,16 @@ export default function DashboardView({
     const totalTarik = myTarik.reduce((acc, curr) => acc + (curr.jumlah || 0), 0);
     const saldoSampah = totalSetoran - totalTarik;
 
-    const myIuran = iuranData.filter((i: any) => i.nik === currentUser?.nik || i.userId === currentUser?.uid || i.namaPenyetor?.toLowerCase().includes(currentUser?.name?.toLowerCase() || ''));
+    const myIuran = iuranData.filter((i: any) => {
+      const matchNik = i.nik && currentUser?.nik && i.nik !== '-' && i.nik === currentUser?.nik;
+      const matchUserId = i.userId && (i.userId === currentUser?.uid || i.userId === currentUser?.id_user || i.userId === currentUser?.docId);
+      
+      const cleanTrxNama = i.namaPenyetor?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const cleanWargaNama = currentUser?.name?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const matchNama = !!cleanTrxNama && !!cleanWargaNama && (cleanTrxNama.includes(cleanWargaNama) || cleanWargaNama.includes(cleanTrxNama));
+      
+      return matchNik || matchUserId || matchNama;
+    });
     
     // Calculate missing months for the current year
     const currentYear = new Date().getFullYear();

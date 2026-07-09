@@ -201,15 +201,42 @@ export function KasView({
   const fetchKasAndIuranData = async (forceRefresh = false) => {
     setIsSyncing(true);
     try {
-      // Refresh logic: clear current data and let snapshots re-fetch
-      // If we need true "pull", we could re-initialize listeners, 
-      // but onSnapshot already handles live updates.
-      // Simply simulating a "refresh" feedback for now.
-      await new Promise(resolve => setTimeout(resolve, 800));
+      if (forceRefresh && tenantId) {
+        // Fetch all kas transactions for this tenant to recalculate summary
+        const allKasQuery = query(collection(db, "kas"), where("tenantId", "==", tenantId));
+        const allKasSnap = await getDocs(allKasQuery);
+        
+        let calculatedMasuk = 0;
+        let calculatedKeluar = 0;
+        
+        allKasSnap.forEach((doc) => {
+          const data = doc.data();
+          const debit = parseFloat(data.debit) || data.debit || 0;
+          const kredit = parseFloat(data.kredit) || data.kredit || 0;
+          calculatedMasuk += debit;
+          calculatedKeluar += kredit;
+        });
+        
+        const recalculatedSummary = {
+          tenantId,
+          totalMasuk: calculatedMasuk,
+          totalKeluar: calculatedKeluar,
+          saldo: calculatedMasuk - calculatedKeluar,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        await setDoc(doc(db, "kas_summary", tenantId), recalculatedSummary);
+        setKasSummary(recalculatedSummary);
+        
+        showNotification("Data keuangan berhasil disinkronisasi ulang langsung dari database cloud!", "success");
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
       const now = new Date();
       setLastSyncTime(now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
     } catch (error) {
       console.error("Sync error:", error);
+      showNotification("Gagal menyinkronkan data keuangan: " + (error instanceof Error ? error.message : ""), "error");
     } finally {
       setIsSyncing(false);
     }

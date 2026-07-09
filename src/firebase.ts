@@ -33,7 +33,8 @@ try {
 }
 
 // AI Studio uses Enterprise Firestore which requires the databaseId
-// experimentalForceLongPolling is often needed in container environments
+// Force HTTP long-polling immediately because the sandboxed iframe environment restricts WebSockets,
+// preventing probe failures and warning logs.
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   localCache: cacheConfig,

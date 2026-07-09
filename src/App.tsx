@@ -8130,25 +8130,15 @@ function LoginView({
             const matchedWargaDoc = sortedDocs[0];
             const matchedWarga = matchedWargaDoc.data();
             
-            if (matchedWarga.terverifikasi === true || matchedWarga.terverifikasi === 'true' || matchedWarga.terverifikasi === 'TRUE') {
-              isPreRegistered = true;
-              isVerifiedResident = true;
-              preRegisteredRole = "Warga";
-              preRegisteredTenant = matchedWarga.tenantId; // FORCE the tenant from verified record
-              userDataExtra = {
-                nik: matchedWarga.nik || "",
-                linkedResidentId: matchedWargaDoc.id,
-              };
-              console.log("Verified Resident Found via Email! Tenant:", preRegisteredTenant);
-            } else {
-              // Registered but not verified
-              await signOut(auth);
-              setError(
-                `Email Anda (${user.email}) terdaftar di Data Warga, namun status Anda belum 'Terverifikasi' oleh Admin Wilayah. Silakan hubungi Ketua RT/RW di wilayah Anda untuk memverifikasi data Anda agar dapat login.`,
-              );
-              setIsLoading(false);
-              return;
-            }
+            isPreRegistered = true;
+            isVerifiedResident = matchedWarga.terverifikasi === true || matchedWarga.terverifikasi === 'true' || matchedWarga.terverifikasi === 'TRUE';
+            preRegisteredRole = isVerifiedResident ? "Warga" : "Viewer";
+            preRegisteredTenant = matchedWarga.tenantId; 
+            userDataExtra = {
+              nik: matchedWarga.nik || "",
+              linkedResidentId: matchedWargaDoc.id,
+            };
+            console.log("Resident Found via Email! Verified:", isVerifiedResident, "Tenant:", preRegisteredTenant);
           }
         } catch (e: any) {
           console.error("Error querying data_warga:", e);
