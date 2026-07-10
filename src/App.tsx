@@ -8777,7 +8777,7 @@ function LoginView({
                     boxShadow: "0 15px 20px -7px rgba(16, 185, 129, 0.45)"
                   }}
                   whileTap={{ scale: 0.95 }}
-                  href="https://smartrwai.vercel.app/"
+                  href="https://ais-pre-5te7kbdyjdhkr7zf2s2ghi-258944774610.asia-southeast1.run.app/"
                   target="_blank"
                   className="py-4 bg-gradient-to-tr from-emerald-250 via-teal-100 to-green-300 hover:from-emerald-350 hover:via-teal-200 hover:to-green-400 border border-emerald-300/60 rounded-[1.25rem] flex items-center justify-center gap-2.5 transition-all duration-300 relative overflow-hidden group cursor-pointer font-bold shadow-md shadow-emerald-100/50"
                 >
