@@ -181,7 +181,7 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
     return btoa(binary);
   };
 
-  const playLiveAudioChunk = (ctx: AudioContext, base64: string) => {
+  const playLiveAudioChunk = async (ctx: AudioContext, base64: string) => {
     try {
       const binaryString = atob(base64);
       const len = binaryString.length;
@@ -206,8 +206,12 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
       };
       
       const currentTime = ctx.currentTime;
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      
       if (liveNextStartTimeRef.current < currentTime) {
-        liveNextStartTimeRef.current = currentTime;
+        liveNextStartTimeRef.current = currentTime + 0.1; // Increased to 100ms safety buffer
       }
       setIsAgentSpeaking(true);
       source.start(liveNextStartTimeRef.current);
@@ -432,7 +436,42 @@ function AIChatBotInner({ currentUser, agentType = 'auto', plan, onClose }: { cu
           byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
       const byteArray = new Uint8Array(byteNumbers);
-      const audioBlob = new Blob([byteArray], {type: 'audio/wav'});
+      
+      // Wrap PCM in WAV header
+      const sampleRate = 24000;
+      const numChannels = 1;
+      const bitsPerSample = 16;
+      const blockAlign = (numChannels * bitsPerSample) / 8;
+      const byteRate = sampleRate * blockAlign;
+      const dataSize = byteArray.length;
+      
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+      
+      const writeString = (offset: number, string: string) => {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset + i, string.charCodeAt(i));
+        }
+      };
+      
+      writeString(0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(8, 'WAVE');
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true); // Subchunk1Size
+      view.setUint16(20, 1, true); // AudioFormat (PCM)
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitsPerSample, true);
+      writeString(36, 'data');
+      view.setUint32(40, dataSize, true);
+      
+      const wavData = new Uint8Array(buffer);
+      wavData.set(byteArray, 44);
+      
+      const audioBlob = new Blob([wavData], {type: 'audio/wav'});
       
       const audioUrl = URL.createObjectURL(audioBlob);
       audioRef.current = new Audio(audioUrl);
